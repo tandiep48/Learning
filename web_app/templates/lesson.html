@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lesson Practice</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        .chip-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+            min-height: 50px;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            border: 1px dashed rgba(255,255,255,0.2);
+        }
+        .chip {
+            background: var(--primary);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: 'Noto Sans SC', sans-serif;
+            font-size: 20px;
+            user-select: none;
+            transition: transform 0.1s;
+        }
+        .chip:hover {
+            transform: scale(1.05);
+            background: var(--primary-hover);
+        }
+        .passage-list {
+            max-height: 500px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        .passage-section {
+            margin-bottom: 20px;
+        }
+        .passage-section h3 {
+            margin-bottom: 10px;
+            color: var(--primary);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 5px;
+        }
+        .passage-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container" style="max-width: 800px;">
+        <!-- SCREEN: Main Menu -->
+        <div id="screen-menu" class="screen active">
+            <div style="margin-bottom: 20px;">
+                <a href="/" style="color: var(--primary); text-decoration: none;">&larr; Back to Dashboard</a>
+            </div>
+            <h1>Lesson Practice</h1>
+            <p class="subtitle">Select a passage to practice</p>
+            
+            <div class="form-group" style="margin-bottom: 20px;">
+                <input type="text" id="search-input" placeholder="Search passage ID..." onkeyup="filterPassages()">
+            </div>
+
+            <div id="passage-container" class="passage-list">
+                <p>Loading passages...</p>
+            </div>
+        </div>
+
+        <!-- SCREEN: Loading -->
+        <div id="screen-loading" class="screen">
+            <div class="loader"></div>
+            <p>Generating lesson tasks...</p>
+        </div>
+
+        <!-- SCREEN: Training -->
+        <div id="screen-training" class="screen">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            <div class="task-counter" id="task-counter">Task 1/10</div>
+
+            <div class="task-card">
+                <div id="task-instruction" class="instruction"></div>
+                
+                <div id="word-display" class="chinese-word" style="display:none; font-size: 40px; line-height: 1.4;"></div>
+                
+                <div id="audio-controls" style="display:none;" class="audio-controls">
+                    <button class="btn-audio" onclick="playCurrentAudio()">🔊 Play Audio</button>
+                    <audio id="audio-player"></audio>
+                </div>
+
+                <!-- Multiple Choice Area -->
+                <div id="mc-area" class="mc-grid" style="display:none;"></div>
+
+                <!-- Typing Area -->
+                <div id="typing-area" class="typing-container" style="display:none;">
+                    <input type="text" id="typing-input" lang="zh-CN" placeholder="Type the sentence here..." autocomplete="off">
+                    <div id="typing-feedback" style="display:none; margin-top: 10px; margin-bottom: 15px; text-align: center; font-size: 22px; padding: 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.2); width: 100%; box-sizing: border-box;"></div>
+                    <button class="btn primary" onclick="submitTyping()">Submit</button>
+                </div>
+
+                <!-- Reorder Area -->
+                <div id="reorder-area" style="display:none; width: 100%;">
+                    <p style="color: var(--text-muted); margin-bottom: 5px; text-align:left;">Your Sentence:</p>
+                    <div id="reorder-target" class="chip-container"></div>
+                    
+                    <p style="color: var(--text-muted); margin-bottom: 5px; text-align:left;">Available Words:</p>
+                    <div id="reorder-source" class="chip-container" style="border: none; background: transparent;"></div>
+                    
+                    <div id="reorder-feedback" style="display:none; margin-bottom: 15px; text-align: center; font-size: 24px; padding: 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.2);"></div>
+                    
+                    <button class="btn primary" style="width: 100%;" onclick="submitReorder()">Submit Sentence</button>
+                </div>
+
+            </div>
+            
+            <div id="wrong-answer-next" style="display:none; margin-top: 20px; text-align: center;">
+                <button class="btn warning" onclick="nextTaskManual()" style="width: 100%; padding: 15px; font-size: 18px; color: white; justify-content: center;">Next Question &rarr;</button>
+            </div>
+
+            <div class="nav-buttons end-session">
+                <button class="btn secondary" onclick="goHome()">Quit Session</button>
+            </div>
+        </div>
+
+        <!-- SCREEN: Session Complete -->
+        <div id="screen-complete" class="screen">
+            <h1>🎉 Lesson Complete!</h1>
+            <p>You have successfully finished this practice.</p>
+            <div id="recap-area" class="recap-area">
+                <h3>Missed Tasks Recap</h3>
+                <ul id="recap-list"></ul>
+                <div class="nav-buttons">
+                    <button class="btn secondary" onclick="goHome()">Back to Menu</button>
+                    <button class="btn primary" id="btn-retry" onclick="retryMissed()">Retry Missed</button>
+                </div>
+            </div>
+            <div id="perfect-area" class="nav-buttons">
+                <button class="btn primary" onclick="goHome()">Back to Menu</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="/static/lesson.js"></script>
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reading Lesson</title>
+    <!-- Google Fonts: Inter for UI, Noto Sans SC for Chinese -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        .passage-section {
+            margin-bottom: 20px;
+        }
+        .passage-section h3 {
+            margin-bottom: 10px;
+            color: var(--primary);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 5px;
+        }
+        .passage-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .passage-list {
+            max-height: 500px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        
+        .reading-line {
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+        
+        .reading-text {
+            flex: 1;
+        }
+        
+        .hanzi-text {
+            font-size: 32px;
+            font-family: 'Noto Sans SC', sans-serif;
+            color: var(--text-main);
+            margin-bottom: 5px;
+            line-height: 1.4;
+        }
+        
+        .pinyin-text {
+            font-size: 20px;
+            color: var(--primary);
+            margin-bottom: 5px;
+            display: none; /* hidden by default */
+        }
+        
+        .pinyin-text.show {
+            display: block;
+        }
+        
+        .meaning-text {
+            font-size: 16px;
+            color: var(--text-muted);
+            display: none;
+        }
+        
+        .meaning-text.show {
+            display: block;
+        }
+        
+        .audio-btn {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: white;
+            padding: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+        .audio-btn:hover {
+            background: var(--primary);
+        }
+        
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container" style="max-width: 800px;">
+        <!-- SCREEN: Main Menu -->
+        <div id="screen-menu" class="screen active">
+            <div style="margin-bottom: 20px;">
+                <a href="/" style="color: var(--primary); text-decoration: none;">&larr; Back to Dashboard</a>
+            </div>
+            <h1>Reading Lesson</h1>
+            <p class="subtitle">Select a passage to read</p>
+            
+            <div class="form-group" style="margin-bottom: 20px;">
+                <input type="text" id="search-input" placeholder="Search passage ID..." onkeyup="filterPassages()">
+            </div>
+            
+            <div id="passage-container" class="passage-list">
+                <p>Loading passages...</p>
+            </div>
+        </div>
+
+        <!-- SCREEN: Loading -->
+        <div id="screen-loading" class="screen">
+            <div class="loader"></div>
+            <p>Loading passage...</p>
+        </div>
+
+        <!-- SCREEN: Reading -->
+        <div id="screen-reading" class="screen">
+            <div class="toolbar">
+                <button class="btn secondary" onclick="goHome()">&larr; Back to Menu</button>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn" id="toggle-pinyin-btn" onclick="togglePinyin()">Show Pinyin</button>
+                    <button class="btn" id="toggle-meaning-btn" onclick="toggleMeaning()">Show Meaning</button>
+                </div>
+            </div>
+            
+            <h2 id="reading-title" style="margin-bottom: 20px; color: var(--primary);">Passage Title</h2>
+            
+            <div id="reading-content" style="max-height: 60vh; overflow-y: auto; padding-right: 10px;">
+                <!-- Content injected via JS -->
+            </div>
+            
+            <div class="nav-buttons end-session" style="margin-top: 20px;">
+                <button class="btn primary" onclick="goHome()">Finished Reading</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/reading.js"></script>
+</body>
+</html>

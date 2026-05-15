@@ -1,0 +1,26 @@
+# folder cache and environment variables
+.env
+__pycache__
+.vscode
+
+# folder sharing_file
+sharing_file
+
+# unused folder
+unused_file
+
+# audio folder
+output_audio
+web_app/data/vocab_audio
+web_app/data/lesson_audio
+web_app/data/lesson_practice
+web_app/data/vocab_data
+
+# console app folder
+console_app
+
+# excel folder
+excel_file
+
+# schema_sql folder
+schema_sql_file

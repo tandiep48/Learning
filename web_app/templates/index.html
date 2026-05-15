@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learning Dashboard</title>
+    <!-- Google Fonts: Inter for UI -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="app-container" style="max-width: 800px;">
+        <h1>Learning Dashboard</h1>
+        <p class="subtitle">Choose what you want to practice today</p>
+        
+        <div class="dashboard-container">
+            <a href="/vocab" class="dash-card">
+                <div class="dash-icon">🔤</div>
+                <div class="dash-title">Vocabulary Trainer</div>
+                <div class="dash-desc">Practice isolated words (HSK list), review difficult words, strokes, and more.</div>
+            </a>
+            
+            <a href="/reading" class="dash-card">
+                <div class="dash-icon">📖</div>
+                <div class="dash-title">Reading Lesson</div>
+                <div class="dash-desc">Read passages, toggle Pinyin, and listen to audio before practicing.</div>
+            </a>
+
+            <a href="/lesson" class="dash-card">
+                <div class="dash-icon">🎧</div>
+                <div class="dash-title">Lesson Practice</div>
+                <div class="dash-desc">Practice listening, translating, reordering, and typing full sentences from lesson passages.</div>
+            </a>
+        </div>
+    </div>
+</body>
+</html>
