@@ -249,12 +249,16 @@ def get_hard_stroke_learned_words(conn):
 
 def get_passages_summary(conn, hsk_level=None):
     if not conn: return []
-    query = "SELECT passage_id, hsk_level, jsonb_array_length(content->'lines') as line_count FROM lesson_passages"
+    query = """
+        SELECT p.passage_id, p.hsk_level, count(l.id) as line_count 
+        FROM lesson_passages p
+        LEFT JOIN lesson_lines l ON p.passage_id = l.passage_id
+    """
     params = ()
     if hsk_level:
-        query += " WHERE hsk_level = %s"
+        query += " WHERE p.hsk_level = %s"
         params = (hsk_level,)
-    query += " ORDER BY passage_id"
+    query += " GROUP BY p.passage_id, p.hsk_level ORDER BY p.passage_id"
     
     with conn.cursor() as cur:
         cur.execute(query, params)
@@ -264,19 +268,44 @@ def get_passages_summary(conn, hsk_level=None):
 def get_passage_content(conn, passage_id):
     if not conn: return None
     with conn.cursor() as cur:
-        cur.execute("SELECT hsk_level, content FROM lesson_passages WHERE passage_id = %s", (passage_id,))
+        cur.execute("SELECT hsk_level FROM lesson_passages WHERE passage_id = %s", (passage_id,))
         row = cur.fetchone()
-        if row:
-            content = row[1]
-            content['hsk_level'] = row[0]
-            return content
-        return None
+        if not row:
+            return None
+        hsk_level = row[0]
+        
+        cur.execute("""
+            SELECT line_id, speaker, content, pinyin, audio_key, translation_en, translation_vi, tokens
+            FROM lesson_lines
+            WHERE passage_id = %s
+            ORDER BY line_id
+        """, (passage_id,))
+        lines = []
+        for r in cur.fetchall():
+            lines.append({
+                "line_id": r[0],
+                "speaker": r[1],
+                "content": r[2],
+                "pinyin": r[3],
+                "audio_key": r[4],
+                "translations": {
+                    "en": r[5],
+                    "vi": r[6]
+                },
+                "tokens": r[7] if r[7] else []
+            })
+            
+        return {
+            "passage_id": passage_id,
+            "hsk_level": hsk_level,
+            "lines": lines
+        }
 
-def get_vocab_by_source(conn, source):
+def get_course_vocab(conn):
     import pandas as pd
     if not conn: return pd.DataFrame()
     with conn.cursor() as cur:
-        cur.execute("SELECT cn as word, pinyin, meaning_vn, meaning_en, audio_key, hsk_level as level FROM vocabulary WHERE source = %s", (source,))
+        cur.execute("SELECT cn as word, pinyin, meaning_vn, meaning_en, audio_key, hsk_level as level FROM vocabulary WHERE hsk_level IS NOT NULL AND hsk_level != ''")
         rows = cur.fetchall()
         df = pd.DataFrame(rows, columns=['word', 'pinyin', 'meaning_vn', 'meaning_en', 'audio_key', 'level'])
         return df

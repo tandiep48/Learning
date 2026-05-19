@@ -16,10 +16,11 @@ from db import (
     get_unlearned_words_from_db, 
     get_unsure_words_from_db, 
     get_hard_semantic_learned_words, 
-    get_hard_stroke_learned_words
+    get_hard_stroke_learned_words,
+    get_course_vocab
 )
 
-from db import get_vocab_by_source
+
 
 vocab_bp = Blueprint('vocab', __name__, url_prefix='/api/vocab')
 
@@ -27,10 +28,10 @@ USER_ID = "default_user_1"
 
 def get_full_lesson_records():
     conn = get_db_connection()
-    df = get_vocab_by_source(conn, 'course')
+    df = get_course_vocab(conn)
     conn.close()
     if not df.empty:
-        return df[['word','pinyin','meaning_en','meaning_vn', 'audio_key']].dropna(subset=['word']).drop_duplicates(subset=['word']).reset_index(drop=True)
+        return df[['word','pinyin','meaning_en','meaning_vn', 'audio_key', 'level']].dropna(subset=['word']).drop_duplicates(subset=['word']).reset_index(drop=True)
     return pd.DataFrame()
 
 @vocab_bp.route('/preview', methods=['POST'])
@@ -77,6 +78,10 @@ def start_session():
     
     if mode == "1":
         hsk_level = data.get("hsk_level", "H1")
+        # Normalize "H1" to "HSK1" to match database formatting
+        if hsk_level.startswith("H") and len(hsk_level) == 2:
+            hsk_level = "HSK" + hsk_level[1]
+            
         start_idx = int(data.get("start_idx", 0))
         end_idx = int(data.get("end_idx", 10))
         

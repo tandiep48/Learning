@@ -21,3 +21,8 @@ console_app
 
 # excel folder
 excel_file
+
+analyze_db.py
+analyze_sd.py
+check_schema.py
+db_analysis.txt
