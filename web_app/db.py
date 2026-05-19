@@ -246,3 +246,44 @@ def get_hard_stroke_learned_words(conn):
         print(f"⚠️ Database query failed (get_hard_stroke_learned_words): {e}")
         return []
 
+
+def get_passages_summary(conn, hsk_level=None):
+    if not conn: return []
+    query = "SELECT passage_id, hsk_level, jsonb_array_length(content->'lines') as line_count FROM lesson_passages"
+    params = ()
+    if hsk_level:
+        query += " WHERE hsk_level = %s"
+        params = (hsk_level,)
+    query += " ORDER BY passage_id"
+    
+    with conn.cursor() as cur:
+        cur.execute(query, params)
+        rows = cur.fetchall()
+        return [{"passage_id": r[0], "hsk_level": r[1], "line_count": r[2]} for r in rows]
+
+def get_passage_content(conn, passage_id):
+    if not conn: return None
+    with conn.cursor() as cur:
+        cur.execute("SELECT hsk_level, content FROM lesson_passages WHERE passage_id = %s", (passage_id,))
+        row = cur.fetchone()
+        if row:
+            content = row[1]
+            content['hsk_level'] = row[0]
+            return content
+        return None
+
+def get_vocab_by_source(conn, source):
+    import pandas as pd
+    if not conn: return pd.DataFrame()
+    with conn.cursor() as cur:
+        cur.execute("SELECT cn as word, pinyin, meaning_vn, meaning_en, audio_key, hsk_level as level FROM vocabulary WHERE source = %s", (source,))
+        rows = cur.fetchall()
+        df = pd.DataFrame(rows, columns=['word', 'pinyin', 'meaning_vn', 'meaning_en', 'audio_key', 'level'])
+        return df
+
+def get_all_vn_meanings(conn):
+    if not conn: return []
+    with conn.cursor() as cur:
+        cur.execute("SELECT DISTINCT meaning_vn FROM vocabulary WHERE meaning_vn IS NOT NULL AND meaning_vn != ''")
+        rows = cur.fetchall()
+        return [r[0] for r in rows]

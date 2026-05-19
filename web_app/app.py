@@ -25,20 +25,32 @@ def vocab_page():
     return render_template('vocab.html')
 
 @app.route('/lesson')
-def lesson_page():
-    return render_template('lesson.html')
+def lesson_dashboard():
+    return render_template('level_select.html', app_mode='lesson')
+
+@app.route('/lesson/<hsk_level>')
+def lesson_page(hsk_level):
+    return render_template('lesson.html', hsk_level=hsk_level)
 
 @app.route('/reading')
-def reading_page():
-    return render_template('reading.html')
+def reading_dashboard():
+    return render_template('level_select.html', app_mode='reading')
+
+@app.route('/reading/<hsk_level>')
+def reading_page(hsk_level):
+    return render_template('reading.html', hsk_level=hsk_level)
+
+GCS_BUCKET_URL = "https://storage.googleapis.com/chinese-learning-audio-assets"
 
 @app.route('/audio/<path:filename>')
 def serve_audio(filename):
-    return send_from_directory(AUDIO_FOLDER, filename)
+    from flask import redirect
+    return redirect(f"{GCS_BUCKET_URL}/vocab_audio/{filename}")
 
 @app.route('/lesson_audio/<path:filename>')
 def serve_lesson_audio(filename):
-    return send_from_directory(LESSON_AUDIO_FOLDER, filename)
+    from flask import redirect
+    return redirect(f"{GCS_BUCKET_URL}/lesson_audio/{filename}")
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
