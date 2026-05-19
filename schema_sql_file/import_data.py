@@ -127,15 +127,27 @@ def import_data():
             df_map = pd.read_excel(mapping_path)
             # Schema: ['Course', 'Lesson', 'Part', 'NoID', 'cn', 'word_id', 'pinyin', 'meaning_vn', 'meaning_en', 'passage_id']
             map_records = []
+            # Get valid passage_ids
+            cur.execute("SELECT passage_id FROM lesson_passages")
+            valid_passages = set(row[0] for row in cur.fetchall())
+            
+            # Get valid word_ids
+            cur.execute("SELECT id FROM chinese_dict")
+            valid_words = set(row[0] for row in cur.fetchall())
+            
             for _, row in df_map.iterrows():
                 passage_id = str(row.get('passage_id'))
                 cn = str(row.get('cn'))
+                word_id_val = row.get('word_id')
+                word_id = int(word_id_val) if pd.notna(word_id_val) else None
+                
                 if pd.notna(passage_id) and pd.notna(cn) and passage_id != 'nan' and cn != 'nan':
-                    map_records.append((passage_id, cn))
+                    if passage_id in valid_passages and (word_id is None or word_id in valid_words):
+                        map_records.append((passage_id, word_id, cn))
             
-            # Use ON CONFLICT DO NOTHING to ignore duplicates
+            # Insert into passage_vocabulary
             cur.executemany(
-                "INSERT INTO passage_vocabulary (passage_id, cn) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+                "INSERT INTO passage_vocabulary (passage_id, word_id, cn) VALUES (%s, %s, %s)",
                 map_records
             )
             print(f"Imported {len(map_records)} passage-vocabulary mappings.")
