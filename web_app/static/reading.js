@@ -6,44 +6,40 @@ let currentAudio = null;
 // Fetch passages on load
 window.onload = async () => {
     try {
-        const res = await fetch('/api/lesson/passages');
+        const hskLevel = window.hskLevel || "";
+        const url = hskLevel ? `/api/lesson/passages?hsk_level=${hskLevel}` : `/api/lesson/passages`;
+        const res = await fetch(url);
         const data = await res.json();
         const container = document.getElementById('passage-container');
         container.innerHTML = '';
+        
+        // Add back button
+        const backBtnContainer = document.createElement('div');
+        backBtnContainer.innerHTML = `<a href="/reading" style="display:inline-block; margin-bottom:20px; color:#3b82f6; text-decoration:none;">← Back to Levels</a>`;
+        container.appendChild(backBtnContainer);
 
-        const grouped = {};
+        const section = document.createElement('div');
+        section.className = 'passage-section';
+        
+        const header = document.createElement('h3');
+        header.innerText = hskLevel || "All Passages";
+        section.appendChild(header);
+
+        const grid = document.createElement('div');
+        grid.className = 'dashboard-container';
+        grid.style.marginTop = '10px';
+
         data.passages.forEach(p => {
-            const level = p.hsk_level || "Other";
-            if (!grouped[level]) grouped[level] = [];
-            grouped[level].push(p);
+            const btn = document.createElement('div');
+            btn.className = 'dash-card';
+            btn.style.padding = '15px';
+            btn.innerHTML = `<div class="dash-title" style="font-size:18px;">${p.passage_id}</div><div class="dash-desc">${p.line_count} sentences</div>`;
+            btn.onclick = () => loadPassage(p.passage_id);
+            grid.appendChild(btn);
         });
 
-        const levels = Object.keys(grouped).sort();
-
-        levels.forEach(level => {
-            const section = document.createElement('div');
-            section.className = 'passage-section';
-            
-            const header = document.createElement('h3');
-            header.innerText = level;
-            section.appendChild(header);
-
-            const grid = document.createElement('div');
-            grid.className = 'dashboard-container';
-            grid.style.marginTop = '10px';
-
-            grouped[level].forEach(p => {
-                const btn = document.createElement('div');
-                btn.className = 'dash-card';
-                btn.style.padding = '15px';
-                btn.innerHTML = `<div class="dash-title" style="font-size:18px;">${p.passage_id}</div><div class="dash-desc">${p.line_count} sentences</div>`;
-                btn.onclick = () => loadPassage(p.passage_id);
-                grid.appendChild(btn);
-            });
-
-            section.appendChild(grid);
-            container.appendChild(section);
-        });
+        section.appendChild(grid);
+        container.appendChild(section);
     } catch (e) {
         document.getElementById('passage-container').innerHTML = '<p>Error loading passages.</p>';
     }

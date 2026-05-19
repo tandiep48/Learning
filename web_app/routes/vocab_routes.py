@@ -19,32 +19,19 @@ from db import (
     get_hard_stroke_learned_words
 )
 
-def load_word_to_audio_map(json_path):
-    try:
-        with open(json_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            return {item['cn']: item['audio_key'] for item in data}
-    except Exception as e:
-        print(f"Error loading JSON mapping: {e}")
-        return {}
+from db import get_vocab_by_source
 
 vocab_bp = Blueprint('vocab', __name__, url_prefix='/api/vocab')
 
 USER_ID = "default_user_1"
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-FILE_PATH = os.path.join(BASE_DIR, "data", "vocab_data", "chinese_vocabulary.xlsx")
-JSON_PATH = os.path.join(BASE_DIR, "data", "vocab_data", "final_chinese_dict.json")
 
-word_to_audio = load_word_to_audio_map(JSON_PATH)
-
-def load_lesson_data():
-    q = pd.read_excel(FILE_PATH)
-    q.loc[q['level'].isnull(), 'level'] = 'H8'
-    q = q[~q['level'].isin(['char','eng'])]
-    return q
-
-full_lesson_df = load_lesson_data()
-full_lesson_records = full_lesson_df[['word','pinyin','meaning_en','meaning_vn']].dropna().drop_duplicates().reset_index(drop=True)
+def get_full_lesson_records():
+    conn = get_db_connection()
+    df = get_vocab_by_source(conn, 'course')
+    conn.close()
+    if not df.empty:
+        return df[['word','pinyin','meaning_en','meaning_vn', 'audio_key']].dropna(subset=['word']).drop_duplicates(subset=['word']).reset_index(drop=True)
+    return pd.DataFrame()
 
 @vocab_bp.route('/preview', methods=['POST'])
 def preview_mode():
@@ -73,6 +60,10 @@ def preview_mode():
     if not words:
         return jsonify({"words": []})
         
+    full_lesson_records = get_full_lesson_records()
+    if full_lesson_records.empty:
+        return jsonify({"words": []})
+        
     subset_df = full_lesson_records[full_lesson_records["word"].isin(words)].drop_duplicates("word").reset_index(drop=True)
     word_list = subset_df.to_dict('records')
     return jsonify({"words": word_list})
@@ -89,9 +80,11 @@ def start_session():
         start_idx = int(data.get("start_idx", 0))
         end_idx = int(data.get("end_idx", 10))
         
-        lesson = full_lesson_df[full_lesson_df['level'] == hsk_level][['word','pinyin','meaning_en','meaning_vn']].dropna().drop_duplicates().reset_index(drop=True)
-        subset = lesson.iloc[start_idx:end_idx+1].reset_index(drop=True)
-        subset_words = subset["word"].tolist()
+        full_lesson_records = get_full_lesson_records()
+        if not full_lesson_records.empty:
+            lesson = full_lesson_records[full_lesson_records['level'] == hsk_level].reset_index(drop=True)
+            subset = lesson.iloc[start_idx:end_idx+1].reset_index(drop=True)
+            subset_words = subset["word"].tolist()
         
     else:
         db_conn = get_db_connection()
@@ -121,6 +114,10 @@ def start_session():
     if not subset_words:
         return jsonify({"error": "No words found for this selection."}), 404
         
+    full_lesson_records = get_full_lesson_records()
+    if full_lesson_records.empty:
+        return jsonify({"error": "No lesson records available."}), 404
+
     subset_df = full_lesson_records[full_lesson_records["word"].isin(subset_words)].reset_index(drop=True)
     task_types = ["listen", "typing", "meaning"]
     
@@ -133,7 +130,7 @@ def start_session():
                 "meaning_en": row["meaning_en"],
                 "meaning_vn": row["meaning_vn"],
                 "type": t_type,
-                "audio_key": word_to_audio.get(row["word"])
+                "audio_key": row.get("audio_key", "")
             }
             
             if t_type in ["listen", "meaning"]:
