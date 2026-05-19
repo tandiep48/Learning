@@ -7,51 +7,25 @@ from datetime import datetime
 from flask import Blueprint, request, jsonify
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from db import get_db_connection, insert_lesson_progress
+from db import get_db_connection, insert_lesson_progress, get_passages_summary, get_passage_content, get_all_vn_meanings
 
 lesson_bp = Blueprint('lesson', __name__, url_prefix='/api/lesson')
 
 USER_ID = "default_user_1"
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LESSON_DATA_DIR = os.path.join(BASE_DIR, "data", "lesson_practice")
-
-def load_lesson_data():
-    all_data = []
-    target_files = ["HSK1_pinyin.json", "HSK2_pinyin.json", "HSK3_pinyin.json", "HSK4_pinyin.json"]
-    
-    for filename in target_files:
-        file_path = os.path.join(LESSON_DATA_DIR, filename)
-        if os.path.exists(file_path):
-            try:
-                with open(file_path, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    level = filename.split('_')[0]
-                    for p in data:
-                        p['hsk_level'] = level
-                    all_data.extend(data)
-            except Exception as e:
-                print(f"Error loading lesson data from {filename}: {e}")
-                
-    return all_data
-
-lesson_data_cache = load_lesson_data()
-
-global_vn_meanings = list(set(
-    line["translations"]["vi"] 
-    for p in lesson_data_cache 
-    for line in p.get("lines", []) 
-    if "translations" in line and "vi" in line["translations"]
-))
 
 @lesson_bp.route('/passages', methods=['GET'])
 def get_passages():
-    # Return a list of available passages
-    passages = [{"passage_id": p["passage_id"], "line_count": len(p["lines"]), "hsk_level": p.get("hsk_level", "Unknown")} for p in lesson_data_cache]
+    hsk_level = request.args.get('hsk_level')
+    conn = get_db_connection()
+    passages = get_passages_summary(conn, hsk_level)
+    conn.close()
     return jsonify({"passages": passages})
 
 @lesson_bp.route('/passage/<passage_id>', methods=['GET'])
 def get_passage_detail(passage_id):
-    passage = next((p for p in lesson_data_cache if p["passage_id"] == passage_id), None)
+    conn = get_db_connection()
+    passage = get_passage_content(conn, passage_id)
+    conn.close()
     if not passage:
         return jsonify({"error": "Passage not found"}), 404
     return jsonify({"passage": passage})
@@ -61,11 +35,16 @@ def start_lesson():
     data = request.json
     passage_id = data.get("passage_id")
     
-    passage = next((p for p in lesson_data_cache if p["passage_id"] == passage_id), None)
+    conn = get_db_connection()
+    passage = get_passage_content(conn, passage_id)
     if not passage:
+        conn.close()
         return jsonify({"error": "Passage not found"}), 404
         
-    lines = passage["lines"]
+    global_vn_meanings = get_all_vn_meanings(conn)
+    conn.close()
+    
+    lines = passage.get("lines", [])
     
     # We will generate a mix of tasks for the lines in this passage
     tasks = []
