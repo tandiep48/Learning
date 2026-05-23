@@ -7,7 +7,7 @@ from datetime import datetime
 from flask import Blueprint, request, jsonify
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from db import get_db_connection, insert_lesson_progress, get_passages_summary, get_passage_content, get_all_vn_meanings
+from db import get_db_connection, insert_lesson_progress, get_passages_summary, get_passage_content, get_all_vn_meanings, get_passage_vocab
 
 lesson_bp = Blueprint('lesson', __name__, url_prefix='/api/lesson')
 
@@ -29,6 +29,13 @@ def get_passage_detail(passage_id):
     if not passage:
         return jsonify({"error": "Passage not found"}), 404
     return jsonify({"passage": passage})
+
+@lesson_bp.route('/vocab/<passage_id>', methods=['GET'])
+def get_passage_vocab_api(passage_id):
+    conn = get_db_connection()
+    vocab = get_passage_vocab(conn, passage_id)
+    conn.close()
+    return jsonify({"passage_id": passage_id, "vocab": vocab})
 
 @lesson_bp.route('/start', methods=['POST'])
 def start_lesson():

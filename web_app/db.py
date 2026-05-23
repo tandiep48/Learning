@@ -316,3 +316,28 @@ def get_all_vn_meanings(conn):
         cur.execute("SELECT DISTINCT meaning_vn FROM vocabulary WHERE meaning_vn IS NOT NULL AND meaning_vn != ''")
         rows = cur.fetchall()
         return [r[0] for r in rows]
+
+def get_passage_vocab(conn, passage_id):
+    """Return vocabulary words linked to a passage via passage_vocabulary."""
+    if not conn: return []
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT v.cn, v.pinyin, v.meaning_vn, v.meaning_en, v.audio_key, v.hsk_level
+            FROM passage_vocabulary pv
+            JOIN vocabulary v ON v.cn = pv.cn
+            WHERE pv.passage_id = %s
+            ORDER BY v.cn
+        """, (passage_id,))
+        rows = cur.fetchall()
+        return [
+            {
+                "cn":          r[0],
+                "pinyin":      r[1] or "",
+                "meaning_vn":  r[2] or "",
+                "meaning_en":  r[3] or "",
+                "audio_key":   r[4] or "",
+                "hsk_level":   r[5] or ""
+            }
+            for r in rows
+        ]
+
