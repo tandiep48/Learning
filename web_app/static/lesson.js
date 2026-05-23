@@ -41,10 +41,19 @@ window.onload = async () => {
 
         section.appendChild(grid);
         container.appendChild(section);
+
+        // Auto-start if ?passage_id= is in the URL (deep-link from reading page)
+        const params = new URLSearchParams(window.location.search);
+        const autoPassage = params.get('passage_id');
+        if (autoPassage) {
+            startSession(autoPassage);
+        }
+
     } catch (e) {
         document.getElementById('passage-container').innerHTML = '<p>Error loading passages.</p>';
     }
 };
+
 
 function switchScreen(screenId) {
     document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
