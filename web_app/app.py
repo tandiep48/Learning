@@ -47,9 +47,23 @@ def reading_page(hsk_level):
 def practice_dashboard():
     return render_template('practice_select.html')
 
+@app.route('/recommend')
+def recommend_page():
+    return render_template('recommend.html')
+
 @app.route('/practice/<int:number>')
-def practice_page(number):
-    return render_template('practice.html', number=number)
+def practice_lesson_select(number):
+    return render_template('practice_lesson_select.html', number=number)
+
+@app.route('/practice/<int:number>/<lesson_id>')
+def practice_page(number, lesson_id):
+    return render_template('practice.html', number=number, lesson_id=lesson_id)
+
+@app.route('/practice/<int:number>/<lesson_id>/<path:progress>')
+def practice_progress_group(number, lesson_id, progress):
+    """Deep-link: opens practice.html scoped to a specific progress group."""
+    return render_template('practice.html', number=number, lesson_id=lesson_id,
+                           progress_filter=progress)
 
 @app.route('/practice_image/<int:level>/<path:filename>')
 def serve_practice_image(level, filename):

@@ -62,6 +62,25 @@ def insert_lesson_progress(conn, user_id, session_id, passage_id, line_id, mode,
         print(f"⚠️ Database lesson insert failed: {e}")
         conn.rollback()
 
+def insert_practice_progress(conn, user_id, session_id, hsk_level, lesson, question_no, skill, question_type, user_answer, is_correct):
+    if not conn:
+        return
+        
+    query = """
+        INSERT INTO practice_record 
+        (user_id, session_id, hsk_level, lesson, question_no, skill, question_type, user_answer, is_correct)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """
+    try:
+        with conn.cursor() as cur:
+            cur.execute(query, (
+                user_id, str(session_id), hsk_level, str(lesson), question_no, skill, question_type, user_answer, is_correct
+            ))
+        conn.commit()
+    except Exception as e:
+        print(f"⚠️ Database practice insert failed: {e}")
+        conn.rollback()
+
 def get_learned_words(conn):
     """
     Returns a list of words that have been fully learned 
@@ -101,7 +120,131 @@ def get_learned_words(conn):
         print(f"⚠️ Database query failed (get_learned_words): {e}")
         return []
 
+def get_recommended_practices(conn, user_id, threshold=0.75):
+    """
+    Returns practice progress groups the user is ready for.
+    Uses question_bank + learning_units + vocab_records — NO CSV loading.
+
+    A group is recommended when coverage = known_words/total_words >= threshold.
+    Excludes groups where the user's latest session was 100% correct.
+
+    Returns list of dicts:
+      {level, lesson, progress, skill, type, unit_ids,
+       total_words, known_words, coverage, coverage_pct, questions: [...]}
+    """
+    if not conn:
+        return []
+
+    try:
+        # 1. Get mastered words (3-mode logic) — from vocab_records only
+        mastered = get_learned_words(conn)
+        if not mastered:
+            return []
+
+        # 2. Compute coverage per unit_id via SQL — practice units start with HP
+        coverage_sql = """
+            SELECT
+                lu.unit_id,
+                COUNT(DISTINCT lu.unique_word)                                              AS total_words,
+                COUNT(DISTINCT CASE WHEN lu.unique_word = ANY(%s) THEN lu.unique_word END)  AS known_words
+            FROM learning_units lu
+            WHERE lu.unit_id LIKE 'HP%%'
+            GROUP BY lu.unit_id
+            HAVING COUNT(DISTINCT lu.unique_word) > 0
+        """
+        with conn.cursor() as cur:
+            cur.execute(coverage_sql, (list(mastered),))
+            unit_coverage = {
+                row[0]: {'total_words': row[1], 'known_words': row[2],
+                         'coverage': row[2] / row[1]}
+                for row in cur.fetchall()
+                if row[1] > 0
+            }
+
+        # 3. Filter units meeting threshold
+        ready_units = {uid for uid, d in unit_coverage.items() if d['coverage'] >= threshold}
+        if not ready_units:
+            return []
+
+        # 4. Fetch all questions for ready units from question_bank
+        questions_sql = """
+            SELECT level, lesson, progress, skill, type, unit_id,
+                   no, content, question, answer, audio_key, image, options
+            FROM question_bank
+            WHERE category = 'practice' AND unit_id = ANY(%s)
+            ORDER BY level, lesson, no
+        """
+        with conn.cursor() as cur:
+            cur.execute(questions_sql, (list(ready_units),))
+            cols = ['level', 'lesson', 'progress', 'skill', 'type', 'unit_id',
+                    'no', 'content', 'question', 'answer', 'audio_key', 'image', 'options']
+            rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+
+        # 5. Group by (level, lesson, progress)
+        from collections import defaultdict
+        groups = defaultdict(lambda: {'questions': [], 'unit_ids': set()})
+        for r in rows:
+            key = (r['level'], r['lesson'], r['progress'])
+            groups[key]['questions'].append(r)
+            groups[key]['unit_ids'].add(r['unit_id'])
+
+        # 6. Find 100%-complete latest sessions to exclude
+        with conn.cursor() as cur:
+            cur.execute("""
+                WITH session_results AS (
+                    SELECT hsk_level, lesson, session_id,
+                           SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)::float / COUNT(*) AS pct,
+                           MAX(created_at) AS session_end
+                    FROM practice_record WHERE user_id = %s
+                    GROUP BY hsk_level, lesson, session_id
+                ),
+                latest AS (
+                    SELECT hsk_level, lesson, pct,
+                           ROW_NUMBER() OVER (PARTITION BY hsk_level, lesson ORDER BY session_end DESC) AS rn
+                    FROM session_results
+                )
+                SELECT hsk_level::int, lesson::int FROM latest WHERE rn = 1 AND pct = 1.0
+            """, (user_id,))
+            completed_lessons = set((r[0], int(r[1])) for r in cur.fetchall())
+
+        # 7. Build results — one per progress group
+        results = []
+        for (level, lesson, progress), gdata in groups.items():
+            if (level, lesson) in completed_lessons:
+                continue
+            unit_ids = gdata['unit_ids']
+            qs = gdata['questions']
+            total = sum(unit_coverage[uid]['total_words'] for uid in unit_ids if uid in unit_coverage)
+            known = sum(unit_coverage[uid]['known_words'] for uid in unit_ids if uid in unit_coverage)
+            if total == 0:
+                continue
+            coverage = known / total
+            if coverage < threshold:
+                continue
+            first = qs[0]
+            results.append({
+                'level':        level,
+                'lesson':       lesson,
+                'progress':     progress,
+                'skill':        first.get('skill') or 'listening',
+                'type':         first.get('type'),
+                'unit_ids':     sorted(unit_ids),
+                'total_words':  total,
+                'known_words':  known,
+                'coverage':     round(coverage, 4),
+                'coverage_pct': round(coverage * 100, 1),
+                'questions':    qs,
+            })
+
+        results.sort(key=lambda x: x['coverage'], reverse=True)
+        return results
+
+    except Exception as e:
+        print(f"[WARN] get_recommended_practices failed: {e}")
+        return []
+
 def get_unlearned_words_from_db(conn):
+
     """
     Returns a list of words from the history that have NOT been fully learned 
     (less than 3 distinct correct modes in round 1).
