@@ -9,6 +9,8 @@ let groups = [];
 let currentGroupIndex = 0;
 let score = 0;
 let totalQuestions = 0;
+let sessionAnswers = [];
+let practiceSessionId = null;
 
 // Per-group state (reset each renderGroup)
 let userAnswers = {};      // { blockId: selectedKey }
@@ -86,13 +88,34 @@ function makeAudioBtn(key, label) {
 async function init() {
     showScreen('screen-loading');
     try {
-        const res = await fetch(`/api/practice/${NUM}`);
-        if (!res.ok) throw new Error();
-        const data = await res.json();
+        let data;
+        const progressFilter = window.progressFilter || '';
+
+        if (progressFilter) {
+            // Deep-link mode: fetch only this specific progress group
+            const res = await fetch(`/api/practice/${NUM}/${window.lessonId}/${encodeURIComponent(progressFilter)}`);
+            if (!res.ok) throw new Error();
+            const groupData = await res.json();
+            // Wrap single progress group into the expected {groups:[]} shape
+            data = {
+                groups: [{
+                    progress: groupData.progress,
+                    questions: groupData.questions,
+                }]
+            };
+        } else {
+            // Normal mode: fetch the full lesson
+            const res = await fetch(`/api/practice/${NUM}/${window.lessonId}`);
+            if (!res.ok) throw new Error();
+            data = await res.json();
+        }
+
         groups = data.groups;
         totalQuestions = groups.reduce((s, g) => s + g.questions.length, 0);
         currentGroupIndex = 0;
         score = 0;
+        sessionAnswers = [];
+        practiceSessionId = crypto.randomUUID();
         renderGroup();
         showScreen('screen-practice');
     } catch (e) {
@@ -139,8 +162,7 @@ function renderGroup() {
         const q0 = group.questions[0];
         const optVals = Object.values(q0.options || {});
         const isImgGroup = optVals.every(v => isImageFilename(String(v)));
-        const isBlankGroup = group.questions.some(q => hasBlank(q.content));
-        if (!isImgGroup && !isBlankGroup) {
+        if (!isImgGroup) {
             renderType5ReadingMatchGroup(card, group);
         } else {
             group.questions.forEach((q, idx) => card.appendChild(renderQuestion(q, idx)));
@@ -344,7 +366,7 @@ function renderType5ReadingMatchGroup(card, group) {
         sentPart.className = 't5r-sentence-part';
         const sentEl = document.createElement('span');
         sentEl.className = 't5r-sentence';
-        sentEl.textContent = q.content || '';
+        sentEl.innerHTML = replaceAllBlanks(q.content || '', null, false, blockId);
         sentPart.appendChild(sentEl);
 
         // Letter selector on right (circular buttons)
@@ -852,8 +874,7 @@ function checkAnswers() {
     const isT5LGroup = type === 5 && group.questions[0]?.skill === 'listening' && group.questions.length > 1;
     const q0opts = group.questions[0]?.options || {};
     const isT5RGroup = type === 5 && group.questions[0]?.skill !== 'listening' && group.questions.length > 1
-        && !Object.values(q0opts).every(v => isImageFilename(String(v)))
-        && !group.questions.some(q => hasBlank(q.content));
+        && !Object.values(q0opts).every(v => isImageFilename(String(v)));
 
     if (isT5LGroup) {
         const fb = document.getElementById('feedback-t5l-group');
@@ -868,6 +889,22 @@ function checkAnswers() {
             fb.textContent = `${groupCorrect} / ${group.questions.length} correct`;
         }
     }
+
+    // Save to sessionAnswers
+    group.questions.forEach((q, idx) => {
+        const blockId = `q-${idx}`;
+        const chosen  = (userAnswers[blockId] || '').toString().trim().toUpperCase();
+        const correct = String(q.answer).trim().toUpperCase();
+        const isCorrect = chosen === correct;
+        
+        sessionAnswers.push({
+            question_no: q.no,
+            skill: q.skill || 'listening',
+            type: q.type,
+            user_answer: chosen,
+            is_correct: isCorrect
+        });
+    });
 
     score += groupCorrect;
     document.getElementById('score-val').textContent = score;
@@ -918,20 +955,39 @@ function highlightAnswer(block, q, blockId, chosen, correct, isCorrect) {
 
 // ── Navigation ─────────────────────────────────────────────────
 
-function nextGroup() {
+async function nextGroup() {
     stopAudio();
     currentGroupIndex++;
-    if (currentGroupIndex >= groups.length) { showResult(); return; }
-    renderGroup();
-}
+    if (currentGroupIndex >= groups.length) {
+        // Submit answers
+        document.getElementById('btn-next').disabled = true;
+        document.getElementById('btn-next').textContent = 'Submitting...';
+        
+        try {
+            await fetch('/api/practice/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    session_id: practiceSessionId,
+                    hsk_level: NUM,
+                    lesson: window.lessonId,
+                    answers: sessionAnswers
+                })
+            });
+        } catch (e) {
+            console.error("Failed to submit practice progress", e);
+        }
 
-function showResult() {
-    document.getElementById('result-number').textContent = NUM;
-    document.getElementById('result-score').textContent  = `${score} / ${totalQuestions}`;
-    const pct = totalQuestions > 0 ? score / totalQuestions : 0;
-    document.getElementById('result-emoji').textContent  =
-        pct >= 0.9 ? '🏆' : pct >= 0.7 ? '🎉' : pct >= 0.5 ? '😊' : '💪';
-    showScreen('screen-result');
+        // Show result
+        document.getElementById('result-number').textContent = NUM;
+        document.getElementById('result-score').textContent  = `${score} / ${totalQuestions}`;
+        const pct = totalQuestions > 0 ? score / totalQuestions : 0;
+        document.getElementById('result-emoji').textContent  =
+            pct >= 0.9 ? '🏆' : pct >= 0.7 ? '🎉' : pct >= 0.5 ? '😊' : '💪';
+        showScreen('screen-result');
+    } else {
+        renderGroup();
+    }
 }
 
 // ── Boot ────────────────────────────────────────────────────────

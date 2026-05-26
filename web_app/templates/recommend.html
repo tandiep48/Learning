@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recommended Lessons</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/recommend.css">
+</head>
+<body>
+    <div class="recommend-container">
+        <a href="/" class="page-back">← Back to Dashboard</a>
+
+        <div class="page-header">
+            <h1 class="page-title">📡 Recommended Lessons</h1>
+            <p class="page-subtitle">Practice lessons matched to the vocabulary you've already mastered.</p>
+        </div>
+
+        <!-- Dynamic content injected by recommend.js -->
+        <div id="rec-container">
+            <div class="state-box">
+                <div class="loading-dots">
+                    <span></span><span></span><span></span>
+                </div>
+                <div class="state-title" style="margin-top:16px;">Finding recommendations…</div>
+                <div class="state-sub">Analysing your vocabulary progress.</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/recommend.js"></script>
+</body>
+</html>
