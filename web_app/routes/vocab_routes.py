@@ -1,11 +1,12 @@
 import os
 import sys
-import uuid
+import time
 import random
 import json
 import pandas as pd
 from datetime import datetime
 from flask import Blueprint, request, jsonify
+from flask_login import login_required, current_user
 
 # Add web_app directory to sys.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -21,10 +22,7 @@ from db import (
 )
 
 
-
 vocab_bp = Blueprint('vocab', __name__, url_prefix='/api/vocab')
-
-USER_ID = "default_user_1"
 
 def get_full_lesson_records():
     conn = get_db_connection()
@@ -70,6 +68,7 @@ def preview_mode():
     return jsonify({"words": word_list})
 
 @vocab_bp.route('/start', methods=['POST'])
+@login_required
 def start_session():
     data = request.json
     mode = str(data.get("mode"))
@@ -151,11 +150,12 @@ def start_session():
     random.shuffle(tasks)
     
     return jsonify({
-        "session_id": str(uuid.uuid4()),
+        "session_id": int(time.time() * 1000),
         "tasks": tasks
     })
 
 @vocab_bp.route('/submit', methods=['POST'])
+@login_required
 def submit_progress():
     data = request.json
     session_id = data.get("session_id")
@@ -171,7 +171,7 @@ def submit_progress():
     if db_conn:
         insert_learning_progress(
             conn=db_conn,
-            user_id=USER_ID,
+            user_id=current_user.id,
             session_id=session_id,
             mode=mode,
             word=word,

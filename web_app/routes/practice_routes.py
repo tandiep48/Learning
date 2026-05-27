@@ -4,6 +4,7 @@ import ast
 import json
 
 from flask import Blueprint, jsonify, request
+from flask_login import login_required, current_user
 from db import get_db_connection, insert_practice_progress, get_recommended_practices
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -41,7 +42,8 @@ def parse_audio_key(raw):
     return [raw]
 
 
-@practice_bp.route('/<int:number>')
+@practice_bp.route('/<int:number>', methods=['GET'])
+@login_required
 def get_practice_lessons(number):
     """Load practice-{number}.json and return unique available lessons."""
     json_path = os.path.join(SHARING_DIR, 'practice', f'practice-{number}.json')
@@ -65,8 +67,9 @@ def get_practice_lessons(number):
         'lessons': sorted_lessons
     })
 
-@practice_bp.route('/<int:number>/<lesson_id>')
-def get_practice_for_lesson(number, lesson_id):
+@practice_bp.route('/<int:number>/<lesson_id>', methods=['GET'])
+@login_required
+def get_practice_details(number, lesson_id):
     """Load practice-{number}.json, filter by lesson, group questions by progress."""
     json_path = os.path.join(SHARING_DIR, 'practice', f'practice-{number}.json')
 
@@ -123,6 +126,7 @@ def get_practice_for_lesson(number, lesson_id):
     })
 
 @practice_bp.route('/submit', methods=['POST'])
+@login_required
 def submit_practice():
     data = request.json
     session_id = data.get("session_id")
@@ -130,15 +134,12 @@ def submit_practice():
     lesson = data.get("lesson")
     user_answers = data.get("answers", []) # list of { question_no, skill, type, user_answer, is_correct }
     
-    # Dummy user for now
-    USER_ID = "default_user_1"
-    
     db_conn = get_db_connection()
     if db_conn:
         for ans in user_answers:
             insert_practice_progress(
                 conn=db_conn,
-                user_id=USER_ID,
+                user_id=current_user.id,
                 session_id=session_id,
                 hsk_level=hsk_level,
                 lesson=lesson,
@@ -154,17 +155,18 @@ def submit_practice():
 
 
 @practice_bp.route('/recommend', methods=['GET'])
+@login_required
 def get_recommendations():
     """Return ranked practice progress groups the user is ready for (coverage >= 0.75).
     Data comes entirely from question_bank + learning_units + vocab_records.
     """
-    USER_ID = 'default_user_1'
+    
     db_conn = get_db_connection()
     if not db_conn:
         return jsonify({'error': 'Database unavailable'}), 503
 
     try:
-        groups = get_recommended_practices(db_conn, USER_ID, threshold=0.75)
+        groups = get_recommended_practices(db_conn, current_user.id, threshold=0.75)
     finally:
         db_conn.close()
 
@@ -203,6 +205,7 @@ def get_recommendations():
 
 
 @practice_bp.route('/<int:level>/<int:lesson>/<path:progress>', methods=['GET'])
+@login_required
 def get_progress_group(level, lesson, progress):
     """Return all questions for a specific progress group from question_bank."""
     db_conn = get_db_connection()
