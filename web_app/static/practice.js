@@ -10,6 +10,7 @@ let currentGroupIndex = 0;
 let score = 0;
 let totalQuestions = 0;
 let sessionAnswers = [];
+let sessionCounter = 1;
 let practiceSessionId = null;
 
 // Per-group state (reset each renderGroup)
@@ -115,7 +116,7 @@ async function init() {
         currentGroupIndex = 0;
         score = 0;
         sessionAnswers = [];
-        practiceSessionId = crypto.randomUUID();
+        practiceSessionId = sessionCounter++;
         renderGroup();
         showScreen('screen-practice');
     } catch (e) {

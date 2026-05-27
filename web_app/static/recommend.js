@@ -1,3 +1,7 @@
+let allRecommendations = [];
+let currentLevelTab = 'all';
+let currentSkillTab = 'all';
+
 async function fetchRecommendations() {
     const container = document.getElementById('rec-container');
 
@@ -10,35 +14,50 @@ async function fetchRecommendations() {
             return;
         }
 
-        const recs = data.recommendations || [];
-        if (recs.length === 0) {
-            showEmpty(container);
-            return;
-        }
-
-        container.innerHTML = '';
-
-        const countEl = document.createElement('p');
-        countEl.className = 'results-count';
-        countEl.innerHTML = `Found <strong>${recs.length}</strong> question group${recs.length > 1 ? 's' : ''} ready to practice.`;
-        container.appendChild(countEl);
-
-        const grid = document.createElement('div');
-        grid.className = 'rec-grid';
-        recs.forEach(rec => grid.appendChild(buildCard(rec)));
-        container.appendChild(grid);
-
-        // Animate coverage bars after paint
-        requestAnimationFrame(() => {
-            document.querySelectorAll('.coverage-bar-fill').forEach(bar => {
-                bar.style.width = bar.dataset.pct + '%';
-            });
-        });
+        allRecommendations = data.recommendations || [];
+        renderRecommendations();
 
     } catch (e) {
         showError(container, 'Could not connect to the server.');
     }
 }
+
+function renderRecommendations() {
+    const container = document.getElementById('rec-container');
+    
+    // Filter by tab
+    const recs = allRecommendations.filter(r => {
+        const matchLevel = currentLevelTab === 'all' || r.level == currentLevelTab;
+        const matchSkill = currentSkillTab === 'all' || r.skill === currentSkillTab;
+        return matchLevel && matchSkill;
+    });
+
+    if (recs.length === 0) {
+        showEmpty(container);
+        return;
+    }
+
+    container.innerHTML = '';
+
+    const countEl = document.createElement('p');
+    countEl.className = 'results-count';
+    countEl.innerHTML = `Found <strong>${recs.length}</strong> question group${recs.length > 1 ? 's' : ''} ready to practice.`;
+    container.appendChild(countEl);
+
+    const grid = document.createElement('div');
+    grid.className = 'rec-grid';
+    recs.forEach(rec => grid.appendChild(buildCard(rec)));
+    container.appendChild(grid);
+
+    // Animate coverage bars after paint
+    requestAnimationFrame(() => {
+        document.querySelectorAll('.coverage-bar-fill').forEach(bar => {
+            bar.style.width = bar.dataset.pct + '%';
+        });
+    });
+}
+
+
 
 function progressLabel(progress) {
     if (!progress) return '—';
@@ -128,5 +147,24 @@ function escapeHtml(str) {
     div.textContent = str || '';
     return div.innerHTML;
 }
+
+// Setup Tabs
+document.querySelectorAll('.tab-btn:not(.skill-btn)').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn:not(.skill-btn)').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentLevelTab = btn.dataset.level;
+        if (allRecommendations.length > 0) renderRecommendations();
+    });
+});
+
+document.querySelectorAll('.skill-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.skill-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentSkillTab = btn.dataset.skill;
+        if (allRecommendations.length > 0) renderRecommendations();
+    });
+});
 
 fetchRecommendations();
