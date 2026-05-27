@@ -62,16 +62,28 @@ CREATE TABLE IF NOT EXISTS chinese_stroke_info (
 );
 
 -- ==========================================
--- 3. User Progress and Records
+-- 3. Users and Authentication
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS users (
+    id BIGSERIAL PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    level SMALLINT DEFAULT 1
+);
+
+-- ==========================================
+-- 4. User Progress and Records
 -- ==========================================
 
 CREATE TABLE IF NOT EXISTS lesson_records (
     id SERIAL PRIMARY KEY,
-    user_id VARCHAR(255),
-    session_id UUID,
+    user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+    session_id BIGINT,
     passage_id VARCHAR(255),
     line_id INTEGER,
-    mode VARCHAR(50), 
+    mode SMALLINT,
     game_info TEXT,
     user_answer TEXT,
     is_correct BOOLEAN,
@@ -82,8 +94,8 @@ CREATE TABLE IF NOT EXISTS lesson_records (
 
 CREATE TABLE IF NOT EXISTS vocab_records (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id VARCHAR(255) NOT NULL,
-    session_id UUID NOT NULL,
+    user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+    session_id BIGINT NOT NULL,
     mode VARCHAR(50) NOT NULL,            -- e.g., 'listen', 'typing', 'meaning'
     word VARCHAR(100) NOT NULL,           -- the vocabulary word being tested
     round_num INTEGER DEFAULT 1,          -- tracks retry rounds for missed words
@@ -92,7 +104,7 @@ CREATE TABLE IF NOT EXISTS vocab_records (
     is_correct BOOLEAN NOT NULL,          -- whether the answer was marked correct
     response_time_ms INTEGER,             -- time taken to provide an answer
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    update_at TIMESTAMP WITH TIME ZONE    -- time after a user answers the question
+    updated_at TIMESTAMP WITH TIME ZONE    -- time after a user answers the question
 );
 
 CREATE INDEX IF NOT EXISTS idx_user_learning_userid ON vocab_records(user_id);
@@ -101,8 +113,8 @@ CREATE INDEX IF NOT EXISTS idx_user_learning_user_word ON vocab_records(user_id,
 
 CREATE TABLE IF NOT EXISTS practice_record (
     id SERIAL PRIMARY KEY,
-    user_id VARCHAR(255) NOT NULL,
-    session_id UUID NOT NULL,
+    user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+    session_id BIGINT NOT NULL,
     hsk_level INTEGER,
     lesson VARCHAR(50),
     question_no INTEGER,
@@ -118,7 +130,7 @@ CREATE INDEX IF NOT EXISTS idx_practice_record_user_session ON practice_record(u
 CREATE INDEX IF NOT EXISTS idx_practice_record_lesson ON practice_record(hsk_level, lesson);
 
 -- ==========================================
--- 4. Question Bank and Recommendations
+-- 5. Question Bank and Recommendations
 -- ==========================================
 
 -- Enum for question category

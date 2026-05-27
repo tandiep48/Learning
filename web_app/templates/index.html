@@ -10,7 +10,18 @@
 </head>
 <body>
     <div class="app-container" style="max-width: 800px;">
-        <h1>Learning Dashboard</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h1>Learning Dashboard</h1>
+            <div>
+                {% if current_user.is_authenticated %}
+                    <span>Welcome, {{ current_user.username }}!</span> |
+                    <a href="{{ url_for('auth.logout') }}" style="color: #f44336; text-decoration: none; font-weight: 600;">Logout</a>
+                {% else %}
+                    <a href="{{ url_for('auth.login') }}" style="color: #007bff; text-decoration: none; font-weight: 600;">Login</a> |
+                    <a href="{{ url_for('auth.register') }}" style="color: #28a745; text-decoration: none; font-weight: 600;">Register</a>
+                {% endif %}
+            </div>
+        </div>
         <p class="subtitle">Choose what you want to practice today</p>
         
         <div class="dashboard-container">

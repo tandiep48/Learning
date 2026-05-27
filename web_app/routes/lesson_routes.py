@@ -3,15 +3,15 @@ import sys
 import uuid
 import random
 import json
+import time
 from datetime import datetime
 from flask import Blueprint, request, jsonify
+from flask_login import login_required, current_user
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from db import get_db_connection, insert_lesson_progress, get_passages_summary, get_passage_content, get_all_vn_meanings, get_passage_vocab
 
 lesson_bp = Blueprint('lesson', __name__, url_prefix='/api/lesson')
-
-USER_ID = "default_user_1"
 
 @lesson_bp.route('/passages', methods=['GET'])
 def get_passages():
@@ -38,7 +38,8 @@ def get_passage_vocab_api(passage_id):
     return jsonify({"passage_id": passage_id, "vocab": vocab})
 
 @lesson_bp.route('/start', methods=['POST'])
-def start_lesson():
+@login_required
+def start_session():
     data = request.json
     passage_id = data.get("passage_id")
     
@@ -131,17 +132,20 @@ def start_lesson():
         tasks = tasks[:limit]
         
     return jsonify({
-        "session_id": str(uuid.uuid4()),
+        "session_id": int(time.time() * 1000),
         "tasks": tasks
     })
 
 @lesson_bp.route('/submit', methods=['POST'])
+@login_required
 def submit_lesson():
     data = request.json
     session_id = data.get("session_id")
     passage_id = data.get("passage_id")
     line_id = data.get("line_id")
-    mode = data.get("type")
+    mode_str = data.get("type")
+    mode_map = {'meaning': 1, 'typing': 2, 'type': 2, 'reorder': 3, 'listening': 4, 'listen': 4}
+    mode = mode_map.get(mode_str, 1)
     user_answer = data.get("user_answer")
     is_correct = data.get("is_correct")
     response_time_ms = data.get("response_time_ms", 0)
@@ -151,7 +155,7 @@ def submit_lesson():
     if db_conn:
         insert_lesson_progress(
             conn=db_conn,
-            user_id=USER_ID,
+            user_id=current_user.id,
             session_id=session_id,
             passage_id=passage_id,
             line_id=line_id,
