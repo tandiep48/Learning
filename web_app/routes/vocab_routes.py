@@ -18,7 +18,9 @@ from db import (
     get_unsure_words_from_db, 
     get_hard_semantic_learned_words, 
     get_hard_stroke_learned_words,
-    get_course_vocab
+    get_course_vocab,
+    has_vocab_history,
+    get_vocab_lessons
 )
 
 
@@ -32,7 +34,39 @@ def get_full_lesson_records():
         return df[['word','pinyin','meaning_en','meaning_vn', 'audio_key', 'level']].dropna(subset=['word']).drop_duplicates(subset=['word']).reset_index(drop=True)
     return pd.DataFrame()
 
+@vocab_bp.route('/has_history', methods=['GET'])
+@login_required
+def check_has_history():
+    """Returns whether the current user has any vocab learning history."""
+    db_conn = get_db_connection()
+    if not db_conn:
+        return jsonify({"has_history": False})
+    result = has_vocab_history(db_conn, current_user.id)
+    db_conn.close()
+    return jsonify({"has_history": result})
+
+@vocab_bp.route('/lessons/<hsk_level>', methods=['GET'])
+@login_required
+def get_lessons_for_level(hsk_level):
+    """Returns lesson groups (chunks of 10 words) for a given HSK level."""
+    # Normalize: H1 -> HSK1
+    if hsk_level.startswith("H") and len(hsk_level) == 2:
+        hsk_level = "HSK" + hsk_level[1]
+
+    db_conn = get_db_connection()
+    if not db_conn:
+        return jsonify({"error": "Database connection failed."}), 500
+
+    lessons = get_vocab_lessons(db_conn, hsk_level)
+    db_conn.close()
+
+    if not lessons:
+        return jsonify({"error": f"No vocabulary found for {hsk_level}."}), 404
+
+    return jsonify({"hsk_level": hsk_level, "lessons": lessons})
+
 @vocab_bp.route('/preview', methods=['POST'])
+@login_required
 def preview_mode():
     data = request.json
     mode = str(data.get("mode"))
@@ -43,13 +77,13 @@ def preview_mode():
     
     words = []
     if mode == "2":
-        words = get_unlearned_words_from_db(db_conn)
+        words = get_unlearned_words_from_db(db_conn, current_user.id)
     elif mode == "3":
-        words = get_unsure_words_from_db(db_conn)
+        words = get_unsure_words_from_db(db_conn, current_user.id)
     elif mode == "4":
-        words = get_hard_semantic_learned_words(db_conn)
+        words = get_hard_semantic_learned_words(db_conn, current_user.id)
     elif mode == "5":
-        words = get_hard_stroke_learned_words(db_conn)
+        words = get_hard_stroke_learned_words(db_conn, current_user.id)
     else:
         db_conn.close()
         return jsonify({"error": "Invalid preview mode."}), 400
@@ -96,13 +130,13 @@ def start_session():
             return jsonify({"error": "Database connection failed."}), 500
         
         if mode == "2":
-            words = get_unlearned_words_from_db(db_conn)
+            words = get_unlearned_words_from_db(db_conn, current_user.id)
         elif mode == "3":
-            words = get_unsure_words_from_db(db_conn)
+            words = get_unsure_words_from_db(db_conn, current_user.id)
         elif mode == "4":
-            words = get_hard_semantic_learned_words(db_conn)
+            words = get_hard_semantic_learned_words(db_conn, current_user.id)
         elif mode == "5":
-            words = get_hard_stroke_learned_words(db_conn)
+            words = get_hard_stroke_learned_words(db_conn, current_user.id)
         else:
             db_conn.close()
             return jsonify({"error": "Invalid mode."}), 400

@@ -1,11 +1,15 @@
+import os
 import psycopg2
+from dotenv import load_dotenv
 
-# --- DATABASE CONFIG ---
-DB_HOST = "localhost"
-DB_PORT = "5432"
-DB_NAME = "chinese" # Please update with actual database name
-DB_USER = "postgres" # Please update with actual user
-DB_PASS = "admin" # Please update with actual password
+load_dotenv()
+
+# --- DATABASE CONFIG (loaded from .env) ---
+DB_HOST = os.getenv('DB_HOST', 'localhost')
+DB_PORT = os.getenv('DB_PORT', '5432')
+DB_NAME = os.getenv('DB_NAME', 'chinese')
+DB_USER = os.getenv('DB_USER', 'postgres')
+DB_PASS = os.getenv('DB_PASSWORD', 'admin')
 
 def get_db_connection():
     try:
@@ -81,9 +85,9 @@ def insert_practice_progress(conn, user_id, session_id, hsk_level, lesson, quest
         print(f"⚠️ Database practice insert failed: {e}")
         conn.rollback()
 
-def get_learned_words(conn):
+def get_learned_words(conn, user_id):
     """
-    Returns a list of words that have been fully learned 
+    Returns a list of words that have been fully learned by the given user
     (3 correct modes in round 1).
     """
     if not conn:
@@ -98,6 +102,7 @@ def get_learned_words(conn):
         FROM vocab_records
         WHERE mode IN ('typing', 'listen', 'meaning')
           AND round_num = 1
+          AND user_id = %s
         GROUP BY word, DATE(updated_at)
     ),
     latest_status AS (
@@ -113,7 +118,7 @@ def get_learned_words(conn):
     """
     try:
         with conn.cursor() as cur:
-            cur.execute(query)
+            cur.execute(query, (user_id,))
             rows = cur.fetchall()
             return [row[0] for row in rows]
     except Exception as e:
@@ -137,7 +142,7 @@ def get_recommended_practices(conn, user_id, threshold=0.75):
 
     try:
         # 1. Get mastered words (3-mode logic) — from vocab_records only
-        mastered = get_learned_words(conn)
+        mastered = get_learned_words(conn, user_id)
         if not mastered:
             return []
 
@@ -243,10 +248,10 @@ def get_recommended_practices(conn, user_id, threshold=0.75):
         print(f"[WARN] get_recommended_practices failed: {e}")
         return []
 
-def get_unlearned_words_from_db(conn):
+def get_unlearned_words_from_db(conn, user_id):
 
     """
-    Returns a list of words from the history that have NOT been fully learned 
+    Returns a list of words from the user's history that have NOT been fully learned 
     (less than 3 distinct correct modes in round 1).
     """
     if not conn:
@@ -262,6 +267,7 @@ with daily_attempts as (
     from vocab_records
     where mode in ('typing', 'listen', 'meaning')
       and round_num = 1
+      and user_id = %s
     group by word, DATE(updated_at)
 ),
 latest_status as (
@@ -279,16 +285,16 @@ where rn = 1 and successful_modes < 3
     """
     try:
         with conn.cursor() as cur:
-            cur.execute(query)
+            cur.execute(query, (user_id,))
             rows = cur.fetchall()
             return [row[0] for row in rows]
     except Exception as e:
         print(f"⚠️ Database query failed (get_unlearned_words_from_db): {e}")
         return []
 
-def get_unsure_words_from_db(conn):
+def get_unsure_words_from_db(conn, user_id):
     """
-    Returns a list of unsure words that the user has learned but takes a longer time to answer.
+    Returns a list of unsure words that the given user has learned but takes a longer time to answer.
     """
     if not conn:
         return []
@@ -298,6 +304,7 @@ def get_unsure_words_from_db(conn):
         SELECT word
         FROM vocab_records 
         WHERE is_correct = true
+          AND user_id = %s
         GROUP BY word
         HAVING COUNT(*) >= 3
     ),
@@ -307,28 +314,30 @@ def get_unsure_words_from_db(conn):
                NULLIF(STDDEV(a.response_time_ms), 0) AS std_rt
         FROM vocab_records a
         JOIN learned_words b ON a.word = b.word
+        WHERE a.user_id = %s
         GROUP BY a.mode
     )
     SELECT a.word
     FROM vocab_records a
     JOIN learned_words b ON a.word = b.word
     JOIN stats s ON a.mode = s.mode
-    WHERE s.std_rt IS NOT NULL AND (a.response_time_ms - s.avg_rt) / s.std_rt > 1.0
+    WHERE a.user_id = %s
+      AND s.std_rt IS NOT NULL AND (a.response_time_ms - s.avg_rt) / s.std_rt > 1.0
     GROUP BY a.word
     ORDER BY MAX((a.response_time_ms - s.avg_rt) / s.std_rt) DESC;
     """
     try:
         with conn.cursor() as cur:
-            cur.execute(query)
+            cur.execute(query, (user_id, user_id, user_id))
             rows = cur.fetchall()
             return [row[0] for row in rows]
     except Exception as e:
         print(f"⚠️ Database query failed (get_unsure_words_from_db): {e}")
         return []
 
-def get_hard_semantic_learned_words(conn):
+def get_hard_semantic_learned_words(conn, user_id):
     """
-    Returns a list of learned words but difficult in semantic.
+    Returns a list of learned words (by the given user) but difficult in semantic.
     """
     if not conn:
         return []
@@ -338,6 +347,7 @@ def get_hard_semantic_learned_words(conn):
         SELECT word
         FROM vocab_records 
         WHERE is_correct IS TRUE
+          AND user_id = %s
         GROUP BY word
         HAVING COUNT(*) >= 3
     )
@@ -350,16 +360,16 @@ def get_hard_semantic_learned_words(conn):
     """
     try:
         with conn.cursor() as cur:
-            cur.execute(query)
+            cur.execute(query, (user_id,))
             rows = cur.fetchall()
             return [row[0] for row in rows]
     except Exception as e:
         print(f"⚠️ Database query failed (get_hard_semantic_learned_words): {e}")
         return []
 
-def get_hard_stroke_learned_words(conn):
+def get_hard_stroke_learned_words(conn, user_id):
     """
-    Returns a list of learned words but difficult in strokes.
+    Returns a list of learned words (by the given user) but difficult in strokes.
     """
     if not conn:
         return []
@@ -369,6 +379,7 @@ def get_hard_stroke_learned_words(conn):
         SELECT word
         FROM vocab_records 
         WHERE is_correct IS TRUE
+          AND user_id = %s
         GROUP BY word
         HAVING COUNT(*) >= 3
     )
@@ -382,7 +393,7 @@ def get_hard_stroke_learned_words(conn):
     """
     try:
         with conn.cursor() as cur:
-            cur.execute(query)
+            cur.execute(query, (user_id,))
             rows = cur.fetchall()
             return [row[0] for row in rows]
     except Exception as e:
@@ -448,10 +459,54 @@ def get_course_vocab(conn):
     import pandas as pd
     if not conn: return pd.DataFrame()
     with conn.cursor() as cur:
-        cur.execute("SELECT cn as word, pinyin, meaning_vn, meaning_en, audio_key, hsk_level as level FROM vocabulary WHERE hsk_level IS NOT NULL AND hsk_level != ''")
+        cur.execute("SELECT cn as word, pinyin, meaning_vn, meaning_en, audio_key, hsk_level as level FROM vocabulary WHERE hsk_level IS NOT NULL AND hsk_level != '' ORDER BY hsk_level, id")
         rows = cur.fetchall()
         df = pd.DataFrame(rows, columns=['word', 'pinyin', 'meaning_vn', 'meaning_en', 'audio_key', 'level'])
         return df
+
+def has_vocab_history(conn, user_id):
+    """Returns True if the user has any vocab_records entries."""
+    if not conn:
+        return False
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM vocab_records WHERE user_id = %s LIMIT 1", (user_id,))
+            return cur.fetchone() is not None
+    except Exception as e:
+        print(f"⚠️ Database query failed (has_vocab_history): {e}")
+        return False
+
+def get_vocab_lessons(conn, hsk_level, lesson_size=10):
+    """
+    Returns a list of lesson groups for a given HSK level.
+    Each lesson contains lesson_size words.
+    Returns: [{lesson: 1, start_idx: 0, end_idx: 9, word_count: 10, preview: ['你','好',...]}, ...]
+    """
+    import pandas as pd
+    if not conn:
+        return []
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT cn FROM vocabulary WHERE hsk_level = %s ORDER BY id",
+                (hsk_level,)
+            )
+            rows = cur.fetchall()
+        words = [r[0] for r in rows]
+        lessons = []
+        for i in range(0, len(words), lesson_size):
+            chunk = words[i:i + lesson_size]
+            lessons.append({
+                "lesson": (i // lesson_size) + 1,
+                "start_idx": i,
+                "end_idx": i + len(chunk) - 1,
+                "word_count": len(chunk),
+                "preview": chunk[:4]  # first 4 words as preview
+            })
+        return lessons
+    except Exception as e:
+        print(f"⚠️ Database query failed (get_vocab_lessons): {e}")
+        return []
 
 def get_all_vn_meanings(conn):
     if not conn: return []
