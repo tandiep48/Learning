@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vocab Learning – {{ hsk_level }}</title>
+    <script>window.hskLevel = "{{ hsk_level }}";</script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/shared/styles.css">
+    <link rel="stylesheet" href="/static/vocab_learning/vocab_learning.css">
+</head>
+<body>
+<div class="vl-container">
+
+    <a href="/vocab-learning" class="vl-back">← Back to Level Select</a>
+
+    <h1 style="text-align:left; margin-bottom:4px;">📚 {{ hsk_level }} — Vocab Learning</h1>
+    <p id="vl-level-subtitle" style="color:var(--text-muted); margin-bottom:24px;"></p>
+
+    <!-- ── SCREEN: Lesson Picker ── -->
+    <div id="screen-picker">
+        <div id="vl-lesson-list" class="vl-lesson-list">
+            <div class="vl-loading">
+                <div class="loader"></div>
+                <p>Loading lessons…</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── SCREEN: Loading ── -->
+    <div id="screen-loading" style="display:none;">
+        <div class="vl-loading">
+            <div class="loader"></div>
+            <p>Loading words…</p>
+        </div>
+    </div>
+
+    <!-- ── SCREEN: Learning Card ── -->
+    <div id="screen-learning" style="display:none;">
+
+        <!-- Top bar -->
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+            <button class="vl-back" style="background:none; border:none; cursor:pointer; padding:0;" onclick="backToLessons()">
+                ← Back to Lessons
+            </button>
+            <span id="vl-counter" class="vl-counter" style="margin:0;"></span>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="vl-progress-bar">
+            <div id="vl-progress-fill" class="vl-progress-fill" style="width:0%"></div>
+        </div>
+
+        <!-- Word Card -->
+        <div class="vl-card" id="vl-card">
+            <div id="vl-hanzi" class="vl-hanzi">—</div>
+            <div id="vl-pinyin" class="vl-pinyin"></div>
+            <div id="vl-meaning" class="vl-meaning"></div>
+
+            <button id="btn-audio" class="vl-audio-btn" onclick="playAudio()">
+                🔊 Play Audio
+            </button>
+            <audio id="vl-audio"></audio>
+        </div>
+
+        <!-- Navigation -->
+        <div class="vl-nav-row" style="margin-top:20px;">
+            <button id="btn-prev" class="vl-nav-btn" onclick="prevWord()" title="Previous (←)">← Prev</button>
+
+            <button class="vl-train-btn" onclick="goToTrainer()">
+                🎯 Train This Lesson
+            </button>
+
+            <button id="btn-next" class="vl-nav-btn" onclick="nextWord()" title="Next (→)">Next →</button>
+        </div>
+
+        <p style="text-align:center; color:var(--text-muted); font-size:0.78rem; margin-top:14px;">
+            Tip: Use ← → arrow keys to navigate · Space to replay audio
+        </p>
+
+    </div>
+
+</div>
+
+<script src="/static/vocab_learning/vocab_learning.js"></script>
+</body>
+</html>
