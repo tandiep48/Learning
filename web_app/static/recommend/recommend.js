@@ -15,6 +15,19 @@ async function fetchRecommendations() {
         }
 
         allRecommendations = data.recommendations || [];
+
+        // If no recommendations, check whether the user is brand-new
+        if (allRecommendations.length === 0) {
+            try {
+                const histRes = await fetch('/api/vocab/has_history');
+                const histData = await histRes.json();
+                if (!histData.has_history) {
+                    showNewUser(container);
+                    return;
+                }
+            } catch (_) { /* fallthrough to normal empty state */ }
+        }
+
         renderRecommendations();
 
     } catch (e) {
@@ -120,6 +133,22 @@ function buildCard(rec) {
     `;
 
     return card;
+}
+
+function showNewUser(container) {
+    container.innerHTML = `
+        <div class="state-box new-user-box">
+            <div class="state-icon">🌱</div>
+            <div class="state-title">Welcome! You're just getting started.</div>
+            <div class="state-sub">
+                You haven't practiced any vocabulary yet.<br>
+                Recommended lessons unlock automatically as you learn words — start with the <strong>Vocabulary Trainer</strong>!
+            </div>
+            <a href="/vocab" class="btn-start-practice" style="margin-top:20px; display:inline-block; padding: 12px 28px; font-size:1rem;">
+                📖 Go to Vocabulary Trainer
+            </a>
+        </div>
+    `;
 }
 
 function showEmpty(container) {

@@ -1,0 +1,215 @@
+/* ── Vocab Learning Page Layout ── */
+body { align-items: flex-start; padding: 40px 20px; }
+
+.vl-container {
+    width: 100%;
+    max-width: 680px;
+    margin: 0 auto;
+}
+
+.vl-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+    margin-bottom: 28px;
+    transition: color 0.2s;
+}
+.vl-back:hover { color: var(--primary); }
+
+/* ── Lesson Picker ── */
+.vl-lesson-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 480px;
+    overflow-y: auto;
+    padding-right: 4px;
+    margin-top: 16px;
+}
+.vl-lesson-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 14px 18px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    text-decoration: none;
+}
+.vl-lesson-card:hover {
+    background: rgba(67,97,238,0.12);
+    border-color: rgba(67,97,238,0.4);
+    transform: translateX(3px);
+}
+.vl-lesson-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 4px;
+}
+.vl-lesson-preview {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    font-family: 'Noto Sans SC', sans-serif;
+}
+.vl-lesson-badge {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    background: rgba(255,255,255,0.06);
+    padding: 4px 10px;
+    border-radius: 20px;
+    flex-shrink: 0;
+}
+
+/* ── Word Card ── */
+.vl-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 24px;
+    padding: 40px 32px;
+    text-align: center;
+    animation: fadeSlide 0.3s ease;
+}
+@keyframes fadeSlide {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.vl-counter {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    text-align: right;
+    margin-bottom: 16px;
+}
+
+.vl-progress-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 99px;
+    margin-bottom: 28px;
+    overflow: hidden;
+}
+.vl-progress-fill {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 99px;
+    transition: width 0.4s ease;
+}
+
+.vl-hanzi {
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 80px;
+    font-weight: 700;
+    color: var(--text-main);
+    line-height: 1.2;
+    margin-bottom: 10px;
+    letter-spacing: 4px;
+}
+.vl-pinyin {
+    font-size: 1.3rem;
+    color: var(--primary);
+    font-weight: 600;
+    margin-bottom: 10px;
+    min-height: 1.8rem;
+}
+.vl-meaning {
+    font-size: 1.05rem;
+    color: var(--text-muted);
+    margin-bottom: 28px;
+    min-height: 1.5rem;
+}
+
+/* ── Audio Button ── */
+.vl-audio-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    padding: 10px 24px;
+    border-radius: 24px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.2s ease;
+    margin-bottom: 32px;
+}
+.vl-audio-btn:hover {
+    background: rgba(67,97,238,0.12);
+    transform: scale(1.04);
+}
+.vl-audio-btn.playing {
+    background: rgba(67,97,238,0.2);
+    border-color: var(--primary);
+}
+
+/* ── Navigation Row ── */
+.vl-nav-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 8px;
+}
+.vl-nav-btn {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-main);
+    padding: 12px 22px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.2s ease;
+    min-width: 52px;
+}
+.vl-nav-btn:hover:not(:disabled) {
+    background: rgba(255,255,255,0.12);
+    transform: translateY(-2px);
+}
+.vl-nav-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* ── Train This Lesson Button ── */
+.vl-train-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 13px 24px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    flex: 1;
+    justify-content: center;
+}
+.vl-train-btn:hover {
+    background: var(--primary-hover);
+    box-shadow: 0 4px 18px rgba(67,97,238,0.4);
+    transform: translateY(-2px);
+}
+
+/* ── Loading State ── */
+.vl-loading {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+}
+.vl-loading .loader {
+    margin: 0 auto 20px;
+}

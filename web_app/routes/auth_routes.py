@@ -57,7 +57,7 @@ def login():
         else:
             flash('Invalid username or password', 'error')
             
-    return render_template('login.html')
+    return render_template('shared/login.html')
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
@@ -95,7 +95,7 @@ def register():
         finally:
             conn.close()
             
-    return render_template('register.html')
+    return render_template('shared/register.html')
 
 @auth_bp.route('/logout')
 @login_required
