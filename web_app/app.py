@@ -95,8 +95,9 @@ def practice_page(number, lesson_id):
 @login_required
 def practice_progress_group(number, lesson_id, progress):
     """Deep-link: opens practice.html scoped to a specific progress group."""
+    category = request.args.get('category', 'practice')
     return render_template('practice/practice.html', number=number, lesson_id=lesson_id,
-                           progress_filter=progress)
+                           progress_filter=progress, category=category)
 
 @app.route('/practice_image/<int:level>/<path:filename>')
 def serve_practice_image(level, filename):
@@ -105,7 +106,8 @@ def serve_practice_image(level, filename):
 
 @app.route('/practice_audio/<int:number>/<path:filename>')
 def serve_practice_audio(number, filename):
-    return redirect(f"{GCS_BUCKET_URL}/question_bank/practice/practice-{number}/{filename}")
+    category = request.args.get('category', 'practice')
+    return redirect(f"{GCS_BUCKET_URL}/question_bank/{category}/{category}-{number}/{filename}")
 
 @app.route('/audio/<path:filename>')
 def serve_audio(filename):
