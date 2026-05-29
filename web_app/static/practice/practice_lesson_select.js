@@ -25,6 +25,10 @@ async function fetchLessons() {
             card.innerHTML = `
                 <div class="lesson-label">Lesson ${lesson}</div>
             `;
+            // Set referrer so practice.js can build the correct Back button
+            card.addEventListener('click', () => {
+                sessionStorage.setItem('practice_referrer', `practice-${num}`);
+            });
             grid.appendChild(card);
         });
     } catch (e) {
@@ -32,4 +36,17 @@ async function fetchLessons() {
     }
 }
 
+// Update Back button based on where the user came from
+function applyReferrer() {
+    const referrer = sessionStorage.getItem('practice_referrer');
+    const backLink = document.querySelector('.page-back');
+    if (!backLink) return;
+    if (referrer === 'recommend') {
+        backLink.href = '/recommend';
+        backLink.textContent = '← Back to Recommendations';
+    }
+    // Don't clear here — keep it so the lesson card click can override
+}
+
+applyReferrer();
 fetchLessons();
