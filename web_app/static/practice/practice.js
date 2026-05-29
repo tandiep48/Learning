@@ -31,7 +31,8 @@ function stopAudio() {
 
 function playAudio(key, btnEl) {
     stopAudio();
-    audioEl.src = `/practice_audio/${NUM}/${key}.mp3`;
+    const cat = window.practiceCategory || 'practice';
+    audioEl.src = `/practice_audio/${NUM}/${key}.mp3?category=${cat}`;
     audioEl.play().catch(() => {});
     if (btnEl) {
         btnEl.classList.add('playing');
@@ -114,7 +115,8 @@ async function init() {
 
         if (progressFilter) {
             // Deep-link mode: fetch only this specific progress group
-            const res = await fetch(`/api/practice/${NUM}/${window.lessonId}/${encodeURIComponent(progressFilter)}`);
+            const catParam = window.practiceCategory ? `?category=${window.practiceCategory}` : '';
+            const res = await fetch(`/api/practice/${NUM}/${window.lessonId}/${encodeURIComponent(progressFilter)}${catParam}`);
             if (!res.ok) throw new Error();
             const groupData = await res.json();
             // Wrap single progress group into the expected {groups:[]} shape
