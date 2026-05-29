@@ -100,7 +100,7 @@ function buildCard(rec) {
     const previewText = previewQ ? previewQ.content.split('\n')[0] : '—';
 
     // Deep-link URL
-    const startUrl = `/practice/${rec.level}/${rec.lesson}/${encodeURIComponent(rec.progress)}`;
+    const startUrl = `/practice/${rec.level}/${rec.lesson}/${encodeURIComponent(rec.progress)}?category=${rec.category || 'practice'}`;
 
     card.innerHTML = `
         <div class="rec-card-header">

@@ -27,12 +27,21 @@ def parse_options(raw):
 
 
 def parse_audio_key(raw):
-    """Audio key can be a string or a list of strings."""
-    if raw is None:
+    """Audio key can be a string, a list of strings, or a JSON array string."""
+    import json
+    if not raw:
         return []
     if isinstance(raw, list):
         return raw
-    return [raw]
+    if isinstance(raw, str):
+        raw = raw.strip()
+        if raw.startswith('['):
+            try:
+                return json.loads(raw)
+            except Exception:
+                pass
+        return [raw]
+    return []
 
 
 @practice_bp.route('/<int:number>', methods=['GET'])
@@ -179,7 +188,7 @@ def get_recommendations():
                 'content':  q['content'],
                 'question': q['question'],
                 'answer':   q['answer'],
-                'audio_key': q['audio_key'],
+                'audio_key': parse_audio_key(q['audio_key']),
                 'image':    q['image'],
                 'options':  q['options'],   # already a dict from JSONB
                 'progress': q['progress'],
@@ -207,6 +216,8 @@ def get_recommendations():
 @login_required
 def get_progress_group(level, lesson, progress):
     """Return all questions for a specific progress group from question_bank."""
+    category = request.args.get('category', 'practice')
+
     db_conn = get_db_connection()
     if not db_conn:
         return jsonify({'error': 'Database unavailable'}), 503
@@ -215,15 +226,17 @@ def get_progress_group(level, lesson, progress):
         with db_conn.cursor() as cur:
             cur.execute("""
                 SELECT no, skill, type, content, question, answer,
-                       audio_key, image, options, progress, unit_id
+                       audio_key, image, options, progress, unit_id, level, category
                 FROM question_bank
-                WHERE category = 'practice' AND level = %s
+                WHERE category = %s AND level = %s
                   AND lesson = %s AND progress = %s
                 ORDER BY no
-            """, (level, lesson, progress))
+            """, (category, level, lesson, progress))
             cols = ['no','skill','type','content','question','answer',
-                    'audio_key','image','options','progress','unit_id']
+                    'audio_key','image','options','progress','unit_id','level','category']
             questions = [dict(zip(cols, r)) for r in cur.fetchall()]
+            for q in questions:
+                q['audio_key'] = parse_audio_key(q['audio_key'])
     finally:
         db_conn.close()
 
