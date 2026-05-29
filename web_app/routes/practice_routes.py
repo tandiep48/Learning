@@ -1,20 +1,13 @@
 import os
 import sys
 import ast
-import json
-
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from db import get_db_connection, insert_practice_progress, get_recommended_practices
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 practice_bp = Blueprint('practice', __name__, url_prefix='/api/practice')
-
-# Base directory: web_app/
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# sharing_file is two levels up from web_app
-SHARING_DIR = os.path.abspath(os.path.join(BASE_DIR, '..', 'sharing_file'))
 
 
 def parse_options(raw):
@@ -45,81 +38,85 @@ def parse_audio_key(raw):
 @practice_bp.route('/<int:number>', methods=['GET'])
 @login_required
 def get_practice_lessons(number):
-    """Load practice-{number}.json and return unique available lessons."""
-    json_path = os.path.join(SHARING_DIR, 'practice', f'practice-{number}.json')
-    if not os.path.exists(json_path):
-        return jsonify({'error': f'Practice file {number} not found'}), 404
+    """Return unique available lessons for practice level <number> from question_bank."""
+    db_conn = get_db_connection()
+    if not db_conn:
+        return jsonify({'error': 'Database unavailable'}), 503
 
-    with open(json_path, 'r', encoding='utf-8') as f:
-        raw_data = json.load(f)
+    try:
+        with db_conn.cursor() as cur:
+            cur.execute("""
+                SELECT DISTINCT lesson
+                FROM question_bank
+                WHERE category = 'practice' AND level = %s
+                ORDER BY lesson
+            """, (number,))
+            lessons = [str(row[0]) for row in cur.fetchall()]
+    finally:
+        db_conn.close()
 
-    lessons = set()
-    for item in raw_data:
-        lesson = item.get('lesson')
-        if lesson is not None:
-            lessons.add(str(lesson))
+    if not lessons:
+        return jsonify({'error': f'No lessons found for Practice {number}'}), 404
 
-    # Try to sort numerically if possible, otherwise alphabetically
-    sorted_lessons = sorted(list(lessons), key=lambda x: int(x) if x.isdigit() else x)
-    
-    return jsonify({
-        'number': number,
-        'lessons': sorted_lessons
-    })
+    return jsonify({'number': number, 'lessons': lessons})
 
 @practice_bp.route('/<int:number>/<lesson_id>', methods=['GET'])
 @login_required
 def get_practice_details(number, lesson_id):
-    """Load practice-{number}.json, filter by lesson, group questions by progress."""
-    json_path = os.path.join(SHARING_DIR, 'practice', f'practice-{number}.json')
+    """Return all questions for level <number> lesson <lesson_id>, grouped by progress."""
+    db_conn = get_db_connection()
+    if not db_conn:
+        return jsonify({'error': 'Database unavailable'}), 503
 
-    if not os.path.exists(json_path):
-        return jsonify({'error': f'Practice file {number} not found'}), 404
+    try:
+        with db_conn.cursor() as cur:
+            cur.execute("""
+                SELECT level, lesson, no, skill, type, content, question,
+                       answer, audio_key, image, options, progress, unit_id, category
+                FROM question_bank
+                WHERE category = 'practice' AND level = %s AND lesson = %s
+                ORDER BY no
+            """, (number, lesson_id))
+            cols = ['level', 'lesson', 'no', 'skill', 'type', 'content', 'question',
+                    'answer', 'audio_key', 'image', 'options', 'progress', 'unit_id', 'category']
+            rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+    finally:
+        db_conn.close()
 
-    with open(json_path, 'r', encoding='utf-8') as f:
-        raw_data = json.load(f)
-
-    # Filter and Normalize each question
-    questions = []
-    for item in raw_data:
-        if str(item.get('lesson', '')) != str(lesson_id):
-            continue
-            
-        questions.append({
-            'level':     item.get('level'),
-            'lesson':    item.get('lesson'),
-            'no':        item.get('no'),
-            'skill':     item.get('skill', 'listening'),
-            'type':      item.get('type'),
-            'content':   item.get('content'),
-            'question':  item.get('question'),
-            'answer':    str(item.get('answer', '')),
-            'audio_key': parse_audio_key(item.get('audio_key')),
-            'image':     item.get('image'),
-            'options':   parse_options(item.get('options')),
-            'progress':  str(item.get('progress', '')),
-        })
-
-    if not questions:
+    if not rows:
         return jsonify({'error': f'No questions found for lesson {lesson_id}'}), 404
 
-    # Group questions by progress
+    # Normalise and group by progress
     groups_order = []
     groups_map = {}
-    for q in questions:
-        group_key = q['progress']
-        if group_key not in groups_map:
-            groups_map[group_key] = []
-            groups_order.append(group_key)
-        groups_map[group_key].append(q)
+    for item in rows:
+        q = {
+            'level':     item['level'],
+            'lesson':    item['lesson'],
+            'no':        item['no'],
+            'skill':     item['skill'] or 'listening',
+            'type':      item['type'],
+            'content':   item['content'],
+            'question':  item['question'],
+            'answer':    str(item['answer'] or ''),
+            'audio_key': parse_audio_key(item['audio_key']),
+            'image':     item['image'],
+            'options':   parse_options(item['options']),
+            'progress':  str(item['progress'] or ''),
+            'category':  item['category'],
+        }
+        key = q['progress']
+        if key not in groups_map:
+            groups_map[key] = []
+            groups_order.append(key)
+        groups_map[key].append(q)
 
-    groups = [{'progress': k, 'lesson': groups_map[k][0]['lesson'], 'questions': groups_map[k]} for k in groups_order]
-
-    level = raw_data[0].get('level', number) if raw_data else number
+    groups = [{'progress': k, 'lesson': groups_map[k][0]['lesson'],
+               'questions': groups_map[k]} for k in groups_order]
 
     return jsonify({
         'number': number,
-        'level': level,
+        'level': rows[0]['level'],
         'lesson': lesson_id,
         'total_groups': len(groups),
         'groups': groups
@@ -187,6 +184,7 @@ def get_recommendations():
                 'options':  q['options'],   # already a dict from JSONB
                 'progress': q['progress'],
                 'unit_id':  q['unit_id'],
+                'category': q.get('category', 'practice'),
             })
         results.append({
             'level':        g['level'],
@@ -194,6 +192,7 @@ def get_recommendations():
             'progress':     g['progress'],
             'skill':        g['skill'],
             'type':         g['type'],
+            'category':     g.get('category', 'practice'),
             'unit_ids':     g['unit_ids'],
             'total_words':  g['total_words'],
             'known_words':  g['known_words'],
