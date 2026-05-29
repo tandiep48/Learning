@@ -146,50 +146,60 @@ def get_recommended_practices(conn, user_id, threshold=0.75):
         if not mastered:
             return []
 
-        # 2. Compute coverage per unit_id — includes both practice (HP) and exam (HE) units
+        # 2. Compute coverage per progress group — includes both practice and exam
         coverage_sql = """
             SELECT
-                lu.unit_id,
+                qb.category, qb.level, qb.lesson, qb.progress,
                 COUNT(DISTINCT lu.unique_word)                                              AS total_words,
                 COUNT(DISTINCT CASE WHEN lu.unique_word = ANY(%s) THEN lu.unique_word END)  AS known_words
             FROM learning_units lu
-            WHERE lu.unit_id LIKE 'HP%%' OR lu.unit_id LIKE 'HE%%'
-            GROUP BY lu.unit_id
+            JOIN question_bank qb ON lu.unit_id = qb.unit_id
+            WHERE qb.category IN ('practice', 'exam')
+            GROUP BY qb.category, qb.level, qb.lesson, qb.progress
             HAVING COUNT(DISTINCT lu.unique_word) > 0
         """
         with conn.cursor() as cur:
             cur.execute(coverage_sql, (list(mastered),))
-            unit_coverage = {
-                row[0]: {'total_words': row[1], 'known_words': row[2],
-                         'coverage': row[2] / row[1]}
+            group_coverage = {
+                (row[0], row[1], row[2], row[3]): {
+                    'total_words': row[4],
+                    'known_words': row[5],
+                    'coverage': row[5] / row[4]
+                }
                 for row in cur.fetchall()
-                if row[1] > 0
+                if row[4] > 0
             }
 
-        # 3. Filter units meeting threshold
-        ready_units = {uid for uid, d in unit_coverage.items() if d['coverage'] >= threshold}
-        if not ready_units:
+        # 3. Filter groups meeting threshold
+        ready_keys = {k for k, d in group_coverage.items() if d['coverage'] >= threshold}
+        if not ready_keys:
             return []
 
-        # 4. Fetch all questions for ready units from question_bank (practice + exam)
-        questions_sql = """
+        # 4. Fetch all questions for ready groups
+        where_clauses = []
+        params = []
+        for cat, lvl, les, prog in ready_keys:
+            where_clauses.append("(category = %s AND level = %s AND lesson = %s AND progress = %s)")
+            params.extend([cat, lvl, les, prog])
+        
+        questions_sql = f"""
             SELECT level, lesson, progress, skill, type, unit_id,
                    no, content, question, answer, audio_key, image, options, category
             FROM question_bank
-            WHERE category IN ('practice', 'exam') AND unit_id = ANY(%s)
+            WHERE {' OR '.join(where_clauses)}
             ORDER BY level, lesson, no
         """
         with conn.cursor() as cur:
-            cur.execute(questions_sql, (list(ready_units),))
+            cur.execute(questions_sql, params)
             cols = ['level', 'lesson', 'progress', 'skill', 'type', 'unit_id',
                     'no', 'content', 'question', 'answer', 'audio_key', 'image', 'options', 'category']
             rows = [dict(zip(cols, r)) for r in cur.fetchall()]
 
-        # 5. Group by (level, lesson, progress)
+        # 5. Group by (category, level, lesson, progress)
         from collections import defaultdict
         groups = defaultdict(lambda: {'questions': [], 'unit_ids': set()})
         for r in rows:
-            key = (r['level'], r['lesson'], r['progress'])
+            key = (r['category'], r['level'], r['lesson'], r['progress'])
             groups[key]['questions'].append(r)
             groups[key]['unit_ids'].add(r['unit_id'])
 
@@ -214,18 +224,14 @@ def get_recommended_practices(conn, user_id, threshold=0.75):
 
         # 7. Build results — one per progress group
         results = []
-        for (level, lesson, progress), gdata in groups.items():
+        for (category, level, lesson, progress), gdata in groups.items():
             if (level, lesson) in completed_lessons:
                 continue
-            unit_ids = gdata['unit_ids']
             qs = gdata['questions']
-            total = sum(unit_coverage[uid]['total_words'] for uid in unit_ids if uid in unit_coverage)
-            known = sum(unit_coverage[uid]['known_words'] for uid in unit_ids if uid in unit_coverage)
-            if total == 0:
-                continue
-            coverage = known / total
-            if coverage < threshold:
-                continue
+            total = group_coverage[(category, level, lesson, progress)]['total_words']
+            known = group_coverage[(category, level, lesson, progress)]['known_words']
+            coverage = group_coverage[(category, level, lesson, progress)]['coverage']
+            
             first = qs[0]
             # Derive skill via majority vote — avoids NULL first-row mislabelling
             skills = [q.get('skill') for q in qs if q.get('skill')]
@@ -236,8 +242,8 @@ def get_recommended_practices(conn, user_id, threshold=0.75):
                 'progress':     progress,
                 'skill':        skill,
                 'type':         first.get('type'),
-                'category':     first.get('category', 'practice'),
-                'unit_ids':     sorted(unit_ids),
+                'category':     category,
+                'unit_ids':     sorted(gdata['unit_ids']),
                 'total_words':  total,
                 'known_words':  known,
                 'coverage':     round(coverage, 4),
