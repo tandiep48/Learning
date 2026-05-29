@@ -1,7 +1,7 @@
 import os
 import secrets
 from dotenv import load_dotenv
-from flask import Flask, render_template, redirect, url_for
+from flask import Flask, render_template, redirect, url_for, request
 from flask_cors import CORS
 from flask_login import LoginManager, login_required
 from routes.vocab_routes import vocab_bp
@@ -100,7 +100,8 @@ def practice_progress_group(number, lesson_id, progress):
 
 @app.route('/practice_image/<int:level>/<path:filename>')
 def serve_practice_image(level, filename):
-    return redirect(f"{GCS_BUCKET_URL}/images/practice/{level}/{filename}")
+    category = request.args.get('category', 'practice')
+    return redirect(f"{GCS_BUCKET_URL}/images/{category}/{level}/{filename}")
 
 @app.route('/practice_audio/<int:number>/<path:filename>')
 def serve_practice_audio(number, filename):
