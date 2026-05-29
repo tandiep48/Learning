@@ -44,8 +44,9 @@ function showScreen(id) {
     document.getElementById(id).classList.add('active');
 }
 
-function imageUrl(level, filename) {
-    return `/practice_image/${level}/${filename}`;
+function imageUrl(level, filename, category) {
+    const cat = category || 'practice';
+    return `/practice_image/${level}/${filename}?category=${cat}`;
 }
 
 // Detect any kind of blank: （ ）, （）, ( ), ()
@@ -88,6 +89,25 @@ function makeAudioBtn(key, label) {
 
 async function init() {
     showScreen('screen-loading');
+
+    // Context-aware Back button — read and clear referrer set by previous page
+    const referrer = sessionStorage.getItem('practice_referrer');
+    sessionStorage.removeItem('practice_referrer');
+    const backBtn = document.querySelector('.p-back-btn');
+    if (backBtn) {
+        if (referrer === 'recommend') {
+            backBtn.href = '/recommend';
+            backBtn.title = 'Back to Recommendations';
+        } else if (referrer && referrer.startsWith('practice-')) {
+            const lvl = referrer.split('-')[1];
+            backBtn.href = `/practice/${lvl}`;
+            backBtn.title = `Back to HSK ${lvl} Lessons`;
+        } else {
+            backBtn.href = '/practice';
+            backBtn.title = 'Back to Practice';
+        }
+    }
+
     try {
         let data;
         const progressFilter = window.progressFilter || '';
@@ -255,7 +275,7 @@ function renderType5ListeningGroup(card, group) {
             const col = document.createElement('div');
             col.className = 't5l-img-col';
             const img = document.createElement('img');
-            img.src = imageUrl(q0.level, filename);
+            img.src = imageUrl(q0.level, filename, q0.category);
             img.alt = key;
             img.className = 't5l-img';
             const lbl = document.createElement('div');
@@ -617,7 +637,7 @@ function renderType1(block, q, blockId, skill) {
     if (imgFile) {
         const img = document.createElement('img');
         img.className = 'p-image';
-        img.src = imageUrl(q.level, imgFile);
+        img.src = imageUrl(q.level, imgFile, q.category);
         block.appendChild(img);
     }
 
@@ -752,7 +772,7 @@ function renderType5Images(block, q, blockId, skill) {
         lbl.className = 'img-label';
         lbl.textContent = key;
         const img = document.createElement('img');
-        img.src = imageUrl(q.level, filename);
+        img.src = imageUrl(q.level, filename, q.category);
         img.alt = key;
         cell.appendChild(img);
         cell.appendChild(lbl);

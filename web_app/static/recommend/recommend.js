@@ -1,6 +1,7 @@
 let allRecommendations = [];
 let currentLevelTab = 'all';
 let currentSkillTab = 'all';
+let currentCategoryTab = 'all';
 
 async function fetchRecommendations() {
     const container = document.getElementById('rec-container');
@@ -40,9 +41,10 @@ function renderRecommendations() {
     
     // Filter by tab
     const recs = allRecommendations.filter(r => {
-        const matchLevel = currentLevelTab === 'all' || r.level == currentLevelTab;
-        const matchSkill = currentSkillTab === 'all' || r.skill === currentSkillTab;
-        return matchLevel && matchSkill;
+        const matchLevel    = currentLevelTab    === 'all' || r.level == currentLevelTab;
+        const matchSkill    = currentSkillTab    === 'all' || r.skill === currentSkillTab;
+        const matchCategory = currentCategoryTab === 'all' || r.category === currentCategoryTab;
+        return matchLevel && matchSkill && matchCategory;
     });
 
     if (recs.length === 0) {
@@ -90,6 +92,8 @@ function buildCard(rec) {
     const skillIcon = rec.skill === 'listening' ? '🎧' : '📖';
     const skillLabel = rec.skill ? rec.skill.charAt(0).toUpperCase() + rec.skill.slice(1) : '';
     const qCount = rec.questions ? rec.questions.length : 0;
+    const categoryLabel = rec.category === 'exam' ? '📝 Exam' : '📋 Practice';
+    const categoryClass = rec.category === 'exam' ? 'badge-exam' : 'badge-practice';
 
     // Preview: first non-null content line
     const previewQ = rec.questions && rec.questions.find(q => q.content);
@@ -103,6 +107,7 @@ function buildCard(rec) {
             <span class="hsk-badge hsk-${rec.level}">HSK ${rec.level}</span>
             <span class="rec-card-title">Lesson ${rec.lesson}</span>
             <span class="rec-card-skill">${skillIcon} ${skillLabel}</span>
+            <span class="category-badge ${categoryClass}">${categoryLabel}</span>
         </div>
 
         <div class="rec-progress-label">${progressLabel(rec.progress)} &nbsp;·&nbsp; ${qCount} question${qCount !== 1 ? 's' : ''}</div>
@@ -126,9 +131,9 @@ function buildCard(rec) {
             <span class="word-count">
                 <strong>${rec.known_words}</strong> / ${rec.total_words} words mastered
             </span>
-            <a href="${startUrl}" class="btn-start-practice">
+            <button class="btn-start-practice" onclick="startFromRecommend('${startUrl}')">
                 &#9654; Start
-            </a>
+            </button>
         </div>
     `;
 
@@ -177,21 +182,38 @@ function escapeHtml(str) {
     return div.innerHTML;
 }
 
-// Setup Tabs
-document.querySelectorAll('.tab-btn:not(.skill-btn)').forEach(btn => {
+// Navigate from recommend — sets referrer for context-aware Back button
+function startFromRecommend(url) {
+    sessionStorage.setItem('practice_referrer', 'recommend');
+    window.location.href = url;
+}
+
+// Setup Tabs — Level
+document.querySelectorAll('.tab-btn:not(.skill-btn):not(.category-btn)').forEach(btn => {
     btn.addEventListener('click', () => {
-        document.querySelectorAll('.tab-btn:not(.skill-btn)').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-btn:not(.skill-btn):not(.category-btn)').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         currentLevelTab = btn.dataset.level;
         if (allRecommendations.length > 0) renderRecommendations();
     });
 });
 
+// Setup Tabs — Skill
 document.querySelectorAll('.skill-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('.skill-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         currentSkillTab = btn.dataset.skill;
+        if (allRecommendations.length > 0) renderRecommendations();
+    });
+});
+
+// Setup Tabs — Category
+document.querySelectorAll('.category-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentCategoryTab = btn.dataset.category;
         if (allRecommendations.length > 0) renderRecommendations();
     });
 });
