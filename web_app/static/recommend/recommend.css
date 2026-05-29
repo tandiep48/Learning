@@ -150,9 +150,19 @@ body { align-items: flex-start; padding: 40px 20px; }
 .rec-card-skill {
     font-size: 0.8rem;
     color: var(--text-muted);
-    margin-left: auto;
     flex-shrink: 0;
 }
+.category-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 20px;
+    letter-spacing: 0.03em;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+.badge-practice { background: rgba(67,97,238,0.18); color: #7b9ff7; }
+.badge-exam     { background: rgba(139,92,246,0.18); color: #c4b5fd; }
 
 /* ── Progress Group Label ── */
 .rec-progress-label {
@@ -236,10 +246,13 @@ body { align-items: flex-start; padding: 40px 20px; }
     background: var(--primary);
     color: white;
     text-decoration: none;
+    border: none;
+    cursor: pointer;
     padding: 9px 18px;
     border-radius: 10px;
     font-size: 0.88rem;
     font-weight: 600;
+    font-family: inherit;
     transition: all 0.2s ease;
 }
 .btn-start-practice:hover {
