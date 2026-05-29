@@ -146,14 +146,14 @@ def get_recommended_practices(conn, user_id, threshold=0.75):
         if not mastered:
             return []
 
-        # 2. Compute coverage per unit_id via SQL — practice units start with HP
+        # 2. Compute coverage per unit_id — includes both practice (HP) and exam (HE) units
         coverage_sql = """
             SELECT
                 lu.unit_id,
                 COUNT(DISTINCT lu.unique_word)                                              AS total_words,
                 COUNT(DISTINCT CASE WHEN lu.unique_word = ANY(%s) THEN lu.unique_word END)  AS known_words
             FROM learning_units lu
-            WHERE lu.unit_id LIKE 'HP%%'
+            WHERE lu.unit_id LIKE 'HP%%' OR lu.unit_id LIKE 'HE%%'
             GROUP BY lu.unit_id
             HAVING COUNT(DISTINCT lu.unique_word) > 0
         """
@@ -171,18 +171,18 @@ def get_recommended_practices(conn, user_id, threshold=0.75):
         if not ready_units:
             return []
 
-        # 4. Fetch all questions for ready units from question_bank
+        # 4. Fetch all questions for ready units from question_bank (practice + exam)
         questions_sql = """
             SELECT level, lesson, progress, skill, type, unit_id,
-                   no, content, question, answer, audio_key, image, options
+                   no, content, question, answer, audio_key, image, options, category
             FROM question_bank
-            WHERE category = 'practice' AND unit_id = ANY(%s)
+            WHERE category IN ('practice', 'exam') AND unit_id = ANY(%s)
             ORDER BY level, lesson, no
         """
         with conn.cursor() as cur:
             cur.execute(questions_sql, (list(ready_units),))
             cols = ['level', 'lesson', 'progress', 'skill', 'type', 'unit_id',
-                    'no', 'content', 'question', 'answer', 'audio_key', 'image', 'options']
+                    'no', 'content', 'question', 'answer', 'audio_key', 'image', 'options', 'category']
             rows = [dict(zip(cols, r)) for r in cur.fetchall()]
 
         # 5. Group by (level, lesson, progress)
@@ -227,12 +227,16 @@ def get_recommended_practices(conn, user_id, threshold=0.75):
             if coverage < threshold:
                 continue
             first = qs[0]
+            # Derive skill via majority vote — avoids NULL first-row mislabelling
+            skills = [q.get('skill') for q in qs if q.get('skill')]
+            skill = max(set(skills), key=skills.count) if skills else 'listening'
             results.append({
                 'level':        level,
                 'lesson':       lesson,
                 'progress':     progress,
-                'skill':        first.get('skill') or 'listening',
+                'skill':        skill,
                 'type':         first.get('type'),
+                'category':     first.get('category', 'practice'),
                 'unit_ids':     sorted(unit_ids),
                 'total_words':  total,
                 'known_words':  known,
