@@ -3,6 +3,8 @@ let pinyinVisible  = false;
 let meaningVisible = false;
 let currentAudio   = null;
 let vocabLoaded    = false;   // cache: don't re-fetch each open
+let currentVocabList = [];
+let isPlayingAll = false;
 
 // ── Init ─────────────────────────────────────────────────────
 window.onload = async () => {
@@ -180,7 +182,8 @@ async function openVocabPanel() {
         const res  = await fetch(`/api/lesson/vocab/${currentPassage.passage_id}`);
         const data = await res.json();
         vocabLoaded = true;
-        renderVocabTable(data.vocab || []);
+        currentVocabList = data.vocab || [];
+        renderVocabTable(currentVocabList);
     } catch (e) {
         body.innerHTML = '<div class="vocab-empty">Failed to load vocabulary.</div>';
     }
@@ -207,12 +210,13 @@ function renderVocabTable(vocab) {
     table.innerHTML = `
         <thead>
             <tr>
-                <th></th>
-                <th>Character</th>
-                <th>Pinyin</th>
-                <th>Meaning (VN)</th>
-                <th>Meaning (EN)</th>
-                <th>Level</th>
+                <th style="width: 80px;">
+                    <button class="vocab-header-icon-btn" onclick="playAllVocabAudio()" title="Play All">▶</button>
+                    <button class="vocab-header-icon-btn" onclick="shuffleVocab()" title="Shuffle">🔀</button>
+                </th>
+                <th onclick="toggleVocabColumn('cn')">CHARACTER</th>
+                <th onclick="toggleVocabColumn('py')">PINYIN</th>
+                <th onclick="toggleVocabColumn('vn')">MEANING (VN)</th>
             </tr>
         </thead>
         <tbody id="vocab-tbody"></tbody>`;
@@ -223,14 +227,12 @@ function renderVocabTable(vocab) {
         const tr = document.createElement('tr');
         const audioCell = w.audio_key
             ? `<button class="vocab-audio-btn" onclick="playVocabAudio('${w.audio_key}')" title="Play">🔊</button>`
-            : '';
+            : '<span style="color:#666">-</span>';
         tr.innerHTML = `
             <td>${audioCell}</td>
-            <td><span class="vocab-cn">${w.cn}</span></td>
-            <td><span class="vocab-pinyin">${w.pinyin}</span></td>
-            <td><span class="vocab-meaning">${w.meaning_vn}</span></td>
-            <td><span class="vocab-meaning">${w.meaning_en}</span></td>
-            <td><span class="vocab-level">${w.hsk_level}</span></td>`;
+            <td class="vocab-cn">${w.cn}</td>
+            <td class="vocab-pinyin">${w.pinyin}</td>
+            <td class="vocab-meaning-vn">${w.meaning_vn}</td>`;
         tbody.appendChild(tr);
     });
 
@@ -241,6 +243,52 @@ function renderVocabTable(vocab) {
 function playVocabAudio(audioKey) {
     const src = `/audio/${audioKey}.mp3`;
     playAudio(src);
+}
+
+function toggleVocabColumn(col) {
+    const table = document.querySelector('.vocab-table');
+    if (table) {
+        table.classList.toggle(`hide-${col}`);
+    }
+}
+
+function shuffleVocab() {
+    currentVocabList.sort(() => Math.random() - 0.5);
+    const oldTable = document.querySelector('.vocab-table');
+    const hiddenClasses = Array.from(oldTable?.classList || []).filter(c => c.startsWith('hide-'));
+    
+    renderVocabTable(currentVocabList);
+    
+    const newTable = document.querySelector('.vocab-table');
+    if (newTable) hiddenClasses.forEach(c => newTable.classList.add(c));
+}
+
+async function playAllVocabAudio() {
+    if (isPlayingAll) {
+        isPlayingAll = false;
+        if (currentAudio) {
+            currentAudio.pause();
+            currentAudio = null;
+        }
+        return;
+    }
+    isPlayingAll = true;
+    for (let w of currentVocabList) {
+        if (!isPlayingAll) break;
+        if (w.audio_key) {
+            await new Promise(resolve => {
+                const src = `/audio/${w.audio_key}.mp3`;
+                if (currentAudio) currentAudio.pause();
+                currentAudio = new Audio(src);
+                currentAudio.onended = resolve;
+                currentAudio.onerror = resolve;
+                currentAudio.play().catch(resolve);
+            });
+            if (!isPlayingAll) break;
+            await new Promise(resolve => setTimeout(resolve, 600));
+        }
+    }
+    isPlayingAll = false;
 }
 
 // ── Start Lesson Practice ─────────────────────────────────────

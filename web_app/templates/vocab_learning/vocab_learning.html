@@ -8,6 +8,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/shared/styles.css">
     <link rel="stylesheet" href="/static/vocab_learning/vocab_learning.css">
+    <link rel="stylesheet" href="/static/shared/vocab_table.css">
+    <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
 </head>
 <body>
 <div class="vl-container">
@@ -60,6 +62,9 @@
             <button id="btn-audio" class="vl-audio-btn" onclick="playAudio()">
                 🔊 Play Audio
             </button>
+            <button id="btn-stroke" class="vl-stroke-btn" onclick="openStrokeModal()">
+                ✏️ Stroke Order
+            </button>
             <audio id="vl-audio"></audio>
         </div>
 
@@ -80,8 +85,50 @@
 
     </div>
 
+    <!-- ── SCREEN: Summary ── -->
+    <div id="screen-summary" style="display:none; margin-top:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+            <button class="vl-back" style="background:none; border:none; cursor:pointer; padding:0;" onclick="backToLessons()">
+                ← Back to Lessons
+            </button>
+            <h2 style="color:var(--text-main); margin:0;">Lesson Summary</h2>
+        </div>
+        <div id="vl-summary-body" style="background: #1a1b26; border-radius: 12px; padding: 20px;">
+            <!-- Table injected via JS -->
+        </div>
+    </div>
+
 </div>
 
 <script src="/static/vocab_learning/vocab_learning.js"></script>
+
+<!-- ── Stroke Order Modal ── -->
+<div id="stroke-modal-overlay" class="stroke-modal-overlay" onclick="closeStrokeModalIfBackground(event)">
+    <div class="stroke-modal">
+        <div class="stroke-modal-header">
+            <div>
+                <div id="stroke-modal-word" class="stroke-modal-word"></div>
+                <div id="stroke-modal-pinyin" class="stroke-modal-pinyin"></div>
+            </div>
+            <button class="stroke-modal-close" onclick="closeStrokeModal()">✕</button>
+        </div>
+
+        <!-- Character tabs (for multi-char words) -->
+        <div id="stroke-char-tabs" class="stroke-char-tabs"></div>
+
+        <!-- Canvas area -->
+        <div class="stroke-canvas-wrap">
+            <div id="stroke-canvas-container"></div>
+        </div>
+
+        <!-- Controls -->
+        <div class="stroke-controls">
+            <button class="stroke-btn" onclick="strokeAnimate()">▶ Animate</button>
+            <button class="stroke-btn" onclick="strokeQuiz()" id="btn-stroke-quiz">✏️ Practice</button>
+            <button class="stroke-btn secondary" onclick="strokeReset()">↺ Reset</button>
+        </div>
+        <p class="stroke-hint">Click on a character tab above to switch · Animate shows stroke order step by step</p>
+    </div>
+</div>
 </body>
 </html>
