@@ -5,69 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Select HSK Level - {{ app_mode | title }}</title>
     <link rel="stylesheet" href="/static/shared/styles.css">
-    <style>
-        .dashboard-container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 40px 20px;
-            text-align: center;
-        }
-        .dashboard-title {
-            font-size: 2.5rem;
-            color: #1f2937;
-            margin-bottom: 10px;
-        }
-        .dashboard-subtitle {
-            font-size: 1.1rem;
-            color: #6b7280;
-            margin-bottom: 40px;
-        }
-        .level-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-        }
-        .level-card {
-            background-color: white;
-            border-radius: 16px;
-            padding: 30px 20px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            cursor: pointer;
-            transition: all 0.2s ease-in-out;
-            text-decoration: none;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            border: 2px solid transparent;
-        }
-        .level-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            border-color: #3b82f6;
-        }
-        .level-icon {
-            font-size: 3rem;
-            margin-bottom: 15px;
-            color: #3b82f6;
-        }
-        .level-name {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #1f2937;
-            margin-bottom: 5px;
-        }
-        .nav-back {
-            display: inline-block;
-            margin-top: 40px;
-            color: #4b5563;
-            text-decoration: none;
-            font-weight: 500;
-        }
-        .nav-back:hover {
-            color: #1f2937;
-            text-decoration: underline;
-        }
-    </style>
+    <link rel="stylesheet" href="/static/shared/level_select.css">
 </head>
 <body class="bg-gray-50">
     <div class="dashboard-container">

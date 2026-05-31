@@ -7,139 +7,7 @@
     <!-- Google Fonts: Inter for UI, Noto Sans SC for Chinese -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/shared/styles.css">
-    <style>
-        /* ── Level Picker Grid ── */
-        .level-picker-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-            gap: 14px;
-            margin-top: 24px;
-        }
-        .level-picker-card {
-            background: rgba(255,255,255,0.05);
-            border: 2px solid rgba(255,255,255,0.08);
-            border-radius: 16px;
-            padding: 24px 16px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-        }
-        .level-picker-card:hover {
-            background: rgba(67,97,238,0.15);
-            border-color: var(--primary);
-            transform: translateY(-3px);
-            box-shadow: 0 8px 24px rgba(67,97,238,0.2);
-        }
-        .level-picker-card .level-icon { font-size: 2rem; }
-        .level-picker-card .level-name {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: var(--text-main);
-        }
-
-        /* ── Lesson List ── */
-        .lesson-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            max-height: 420px;
-            overflow-y: auto;
-            padding-right: 4px;
-            margin-top: 16px;
-        }
-        .lesson-card {
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 12px;
-            padding: 14px 18px;
-            cursor: pointer;
-            transition: all 0.18s ease;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .lesson-card:hover {
-            background: rgba(67,97,238,0.12);
-            border-color: rgba(67,97,238,0.4);
-            transform: translateX(3px);
-        }
-        .lesson-card-left { display: flex; flex-direction: column; gap: 4px; }
-        .lesson-card-title {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--text-main);
-        }
-        .lesson-card-preview {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            font-family: 'Noto Sans SC', sans-serif;
-        }
-        .lesson-card-count {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            background: rgba(255,255,255,0.06);
-            padding: 4px 10px;
-            border-radius: 20px;
-            flex-shrink: 0;
-        }
-
-        /* ── Quit Modal Overlay ── */
-        .quit-modal-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.65);
-            z-index: 2000;
-            align-items: center;
-            justify-content: center;
-        }
-        .quit-modal-overlay.open {
-            display: flex;
-            animation: fadeIn 0.15s ease;
-        }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .quit-modal {
-            background: #1a1b26;
-            border: 1px solid rgba(255,255,255,0.12);
-            border-radius: 20px;
-            padding: 36px 32px;
-            max-width: 380px;
-            width: 90%;
-            text-align: center;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-            animation: slideUp 0.2s ease;
-        }
-        @keyframes slideUp { from { transform: translateY(16px); opacity:0; } to { transform: none; opacity:1; } }
-        .quit-modal h3 { font-size: 1.3rem; color: var(--text-main); margin-bottom: 10px; }
-        .quit-modal p  { font-size: 0.95rem; color: var(--text-muted); margin-bottom: 26px; line-height: 1.5; }
-        .quit-modal-btns { display: flex; gap: 12px; justify-content: center; }
-
-        /* ── Keyboard Hint Badge ── */
-        .key-hint {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 22px; height: 22px;
-            border-radius: 6px;
-            background: rgba(255,255,255,0.12);
-            border: 1px solid rgba(255,255,255,0.2);
-            font-size: 0.7rem;
-            font-weight: 700;
-            color: var(--text-muted);
-            margin-right: 8px;
-            flex-shrink: 0;
-            font-family: 'Inter', sans-serif;
-        }
-        .mc-btn-inner {
-            display: flex;
-            align-items: center;
-            width: 100%;
-        }
-    </style>
+    <link rel="stylesheet" href="/static/vocab/vocab.css">
 </head>
 <body>
     <div class="app-container">
@@ -163,13 +31,17 @@
                     <span class="btn-title">Unsure Words</span>
                     <span class="btn-desc">Practice slow-response learned words</span>
                 </button>
-                <button class="btn warning" onclick="showSetup('4')">
+                <button class="btn warning" onclick="showSetup('4')" style="display: none;">
                     <span class="btn-title">Hard Semantic</span>
                     <span class="btn-desc">Practice difficult semantic words</span>
                 </button>
-                <button class="btn danger" onclick="showSetup('5')">
+                <button class="btn danger" onclick="showSetup('5')" style="display: none;">
                     <span class="btn-title">Hard Stroke</span>
                     <span class="btn-desc">Practice complex stroke words</span>
+                </button>
+                <button class="btn info" onclick="window.location.href='/vocab-learning'">
+                    <span class="btn-title">Vocab Reading</span>
+                    <span class="btn-desc">Browse vocabulary by lesson and listen to audio</span>
                 </button>
             </div>
         </div>

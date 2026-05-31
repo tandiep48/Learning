@@ -9,54 +9,7 @@
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/shared/styles.css">
-    <style>
-        .chip-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            justify-content: center;
-            margin-bottom: 20px;
-            min-height: 50px;
-            padding: 10px;
-            background: rgba(0,0,0,0.2);
-            border-radius: 8px;
-            border: 1px dashed rgba(255,255,255,0.2);
-        }
-        .chip {
-            background: var(--primary);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-family: 'Noto Sans SC', sans-serif;
-            font-size: 20px;
-            user-select: none;
-            transition: transform 0.1s;
-        }
-        .chip:hover {
-            transform: scale(1.05);
-            background: var(--primary-hover);
-        }
-        .passage-list {
-            max-height: 500px;
-            overflow-y: auto;
-            padding-right: 10px;
-        }
-        .passage-section {
-            margin-bottom: 20px;
-        }
-        .passage-section h3 {
-            margin-bottom: 10px;
-            color: var(--primary);
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            padding-bottom: 5px;
-        }
-        .passage-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-    </style>
+    <link rel="stylesheet" href="/static/lesson/lesson.css">
 </head>
 <body>
     <div class="app-container" style="max-width: 800px;">

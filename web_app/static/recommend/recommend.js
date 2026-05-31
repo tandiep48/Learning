@@ -64,12 +64,7 @@ function renderRecommendations() {
     recs.forEach(rec => grid.appendChild(buildCard(rec)));
     container.appendChild(grid);
 
-    // Animate coverage bars after paint
-    requestAnimationFrame(() => {
-        document.querySelectorAll('.coverage-bar-fill').forEach(bar => {
-            bar.style.width = bar.dataset.pct + '%';
-        });
-    });
+    // Removed coverage bar animation
 }
 
 
@@ -95,9 +90,7 @@ function buildCard(rec) {
     const categoryLabel = rec.category === 'exam' ? '📝 Exam' : '📋 Practice';
     const categoryClass = rec.category === 'exam' ? 'badge-exam' : 'badge-practice';
 
-    // Preview: first non-null content line
-    const previewQ = rec.questions && rec.questions.find(q => q.content);
-    const previewText = previewQ ? previewQ.content.split('\n')[0] : '—';
+    // Removed preview text
 
     // Deep-link URL
     const startUrl = `/practice/${rec.level}/${rec.lesson}/${encodeURIComponent(rec.progress)}?category=${rec.category || 'practice'}`;
@@ -112,26 +105,8 @@ function buildCard(rec) {
 
         <div class="rec-progress-label">${progressLabel(rec.progress)} &nbsp;·&nbsp; ${qCount} question${qCount !== 1 ? 's' : ''}</div>
 
-        <div class="coverage-section">
-            <div class="coverage-label">
-                <span>Vocabulary coverage</span>
-                <span class="coverage-pct">${pct}%</span>
-            </div>
-            <div class="coverage-bar-track">
-                <div class="coverage-bar-fill ${barClass}" data-pct="${pct}" style="width:0%"></div>
-            </div>
-        </div>
-
-        <div class="rec-preview">
-            <div class="preview-label">Preview</div>
-            <div class="preview-text">${escapeHtml(previewText)}</div>
-        </div>
-
         <div class="rec-card-footer">
-            <span class="word-count">
-                <strong>${rec.known_words}</strong> / ${rec.total_words} words mastered
-            </span>
-            <button class="btn-start-practice" onclick="startFromRecommend('${startUrl}')">
+            <button class="btn-start-practice" onclick="startFromRecommend('${startUrl}')" style="width: 100%; margin-top: 10px;">
                 &#9654; Start
             </button>
         </div>
