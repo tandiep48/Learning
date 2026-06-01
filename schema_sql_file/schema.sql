@@ -178,3 +178,24 @@ CREATE TABLE IF NOT EXISTS learning_units (
 
 CREATE INDEX IF NOT EXISTS idx_lu_unit_id ON learning_units(unit_id);
 CREATE INDEX IF NOT EXISTS idx_lu_word    ON learning_units(unique_word);
+
+-- ==========================================
+-- 6. Grammar
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS grammar_rule (
+    id SERIAL PRIMARY KEY,
+    grammar_id VARCHAR(50) NOT NULL,
+    type SMALLINT,
+    passage_number SMALLINT,
+    vietnamese_content TEXT,
+    english_content TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_grammar_rule_id_passage ON grammar_rule(grammar_id, passage_number);
+
+CREATE TABLE IF NOT EXISTS grammar_context (
+    id SERIAL PRIMARY KEY,
+    grammar_id VARCHAR(50) NOT NULL,
+    content_json JSONB
+);

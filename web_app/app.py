@@ -99,6 +99,12 @@ def practice_progress_group(number, lesson_id, progress):
     return render_template('practice/practice.html', number=number, lesson_id=lesson_id,
                            progress_filter=progress, category=category)
 
+@app.route('/practice/multi')
+@login_required
+def practice_multi():
+    """Multi-select practice mode."""
+    return render_template('practice/practice.html', multi_mode=True)
+
 @app.route('/practice_image/<int:level>/<path:filename>')
 def serve_practice_image(level, filename):
     category = request.args.get('category', 'practice')

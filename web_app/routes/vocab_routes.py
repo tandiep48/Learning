@@ -172,13 +172,14 @@ def start_session():
             }
             
             if t_type in ["listen", "meaning"]:
-                other_words_pool = full_lesson_records[full_lesson_records["word"] != row["word"]]["meaning_vn"].dropna().unique().tolist()
-                sample_size = min(3, len(other_words_pool))
-                other_words = random.sample(other_words_pool, sample_size)
+                # Use only other words from the same lesson as distractors
+                lesson_pool = subset_df[subset_df["word"] != row["word"]]["meaning_vn"].dropna().unique().tolist()
+                sample_size = min(3, len(lesson_pool))
+                other_words = random.sample(lesson_pool, sample_size)
                 options = [row["meaning_vn"]] + other_words
                 random.shuffle(options)
                 task["options"] = options
-                
+            
             tasks.append(task)
             
     random.shuffle(tasks)

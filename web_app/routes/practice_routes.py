@@ -131,6 +131,89 @@ def get_practice_details(number, lesson_id):
         'groups': groups
     })
 
+@practice_bp.route('/multi', methods=['POST'])
+@login_required
+def get_practice_multi():
+    """Fetch combined questions for multiple selected practice groups."""
+    data = request.json
+    items = data.get('items', [])
+    if not items:
+        return jsonify({'error': 'No items selected'}), 400
+
+    db_conn = get_db_connection()
+    if not db_conn:
+        return jsonify({'error': 'Database unavailable'}), 503
+
+    try:
+        where_clauses = []
+        params = []
+        for item in items:
+            where_clauses.append("(category = %s AND level = %s AND lesson = %s AND progress = %s)")
+            params.extend([item.get('category', 'practice'), item['level'], item['lesson'], item['progress']])
+
+        questions_sql = f"""
+            SELECT level, lesson, no, skill, type, content, question,
+                   answer, audio_key, image, options, progress, unit_id, category
+            FROM question_bank
+            WHERE {' OR '.join(where_clauses)}
+            ORDER BY level, lesson, progress, no
+        """
+        
+        with db_conn.cursor() as cur:
+            cur.execute(questions_sql, params)
+            cols = ['level', 'lesson', 'no', 'skill', 'type', 'content', 'question',
+                    'answer', 'audio_key', 'image', 'options', 'progress', 'unit_id', 'category']
+            rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+    finally:
+        db_conn.close()
+
+    if not rows:
+        return jsonify({'error': 'No questions found for the selected items'}), 404
+
+    # Group by (level, lesson, progress, category) to maintain proper question type boundaries
+    groups_order = []
+    groups_map = {}
+    for item in rows:
+        q = {
+            'level':     item['level'],
+            'lesson':    item['lesson'],
+            'no':        item['no'],
+            'skill':     item['skill'] or 'listening',
+            'type':      item['type'],
+            'content':   item['content'],
+            'question':  item['question'],
+            'answer':    str(item['answer'] or ''),
+            'audio_key': parse_audio_key(item['audio_key']),
+            'image':     item['image'],
+            'options':   parse_options(item['options']),
+            'progress':  str(item['progress'] or ''),
+            'category':  item['category'],
+            'unit_id':   item['unit_id']
+        }
+        key = f"{q['category']}-{q['level']}-{q['lesson']}-{q['progress']}"
+        if key not in groups_map:
+            groups_map[key] = []
+            groups_order.append(key)
+        groups_map[key].append(q)
+
+    groups = []
+    for k in groups_order:
+        groups.append({
+            'progress': groups_map[k][0]['progress'],
+            'lesson': groups_map[k][0]['lesson'],
+            'category': groups_map[k][0]['category'],
+            'questions': groups_map[k]
+        })
+
+    return jsonify({
+        'number': 'Multi',
+        'level': 'Multi',
+        'lesson': 'Multi',
+        'total_groups': len(groups),
+        'groups': groups
+    })
+
+
 @practice_bp.route('/submit', methods=['POST'])
 @login_required
 def submit_practice():
@@ -147,8 +230,8 @@ def submit_practice():
                 conn=db_conn,
                 user_id=current_user.id,
                 session_id=session_id,
-                hsk_level=hsk_level,
-                lesson=lesson,
+                hsk_level=ans.get("hsk_level", hsk_level),
+                lesson=str(ans.get("lesson", lesson)),
                 question_no=ans.get("question_no"),
                 skill=ans.get("skill"),
                 question_type=ans.get("type"),
@@ -206,6 +289,7 @@ def get_recommendations():
             'total_words':  g['total_words'],
             'known_words':  g['known_words'],
             'coverage_pct': g['coverage_pct'],
+            'status':       g.get('status', 'Not start'),
             'questions':    qs,
         })
 

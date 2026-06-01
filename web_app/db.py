@@ -203,7 +203,7 @@ def get_recommended_practices(conn, user_id, threshold=0.75):
             groups[key]['questions'].append(r)
             groups[key]['unit_ids'].add(r['unit_id'])
 
-        # 6. Find 100%-complete latest sessions to exclude
+        # 6. Find latest sessions to determine status
         with conn.cursor() as cur:
             cur.execute("""
                 WITH session_results AS (
@@ -218,15 +218,20 @@ def get_recommended_practices(conn, user_id, threshold=0.75):
                            ROW_NUMBER() OVER (PARTITION BY hsk_level, lesson ORDER BY session_end DESC) AS rn
                     FROM session_results
                 )
-                SELECT hsk_level::int, lesson::int FROM latest WHERE rn = 1 AND pct = 1.0
+                SELECT hsk_level::int, lesson::int, pct FROM latest WHERE rn = 1
             """, (user_id,))
-            completed_lessons = set((r[0], int(r[1])) for r in cur.fetchall())
+            lesson_status = {}
+            for r in cur.fetchall():
+                lvl, les, pct = int(r[0]), int(r[1]), r[2]
+                if pct == 1.0:
+                    lesson_status[(lvl, les)] = "Finish and success"
+                else:
+                    lesson_status[(lvl, les)] = "Finish and fail"
 
         # 7. Build results — one per progress group
         results = []
         for (category, level, lesson, progress), gdata in groups.items():
-            if (level, lesson) in completed_lessons:
-                continue
+            status = lesson_status.get((level, lesson), "Not start")
             qs = gdata['questions']
             total = group_coverage[(category, level, lesson, progress)]['total_words']
             known = group_coverage[(category, level, lesson, progress)]['known_words']
@@ -243,6 +248,7 @@ def get_recommended_practices(conn, user_id, threshold=0.75):
                 'skill':        skill,
                 'type':         first.get('type'),
                 'category':     category,
+                'status':       status,
                 'unit_ids':     sorted(gdata['unit_ids']),
                 'total_words':  total,
                 'known_words':  known,
@@ -549,3 +555,32 @@ def get_passage_vocab(conn, passage_id):
             for r in rows
         ]
 
+
+
+def get_grammar_for_passage(conn, hsk_level, lesson, passage_number):
+    try:
+        prefix = f'H{hsk_level}-{lesson}-%'
+        with conn.cursor() as cur:
+            cur.execute('''
+                SELECT r.grammar_id, r.type, r.vietnamese_content, r.english_content, 
+                       c_vn.content_json AS vn_context,
+                       c_en.content_json AS en_context
+                FROM grammar_rule r
+                LEFT JOIN grammar_context c_vn ON r.vietnamese_content = c_vn.grammar_id AND r.type = 4
+                LEFT JOIN grammar_context c_en ON r.english_content = c_en.grammar_id AND r.type = 4
+                WHERE r.grammar_id LIKE %s AND r.passage_number = %s
+                ORDER BY r.id ASC
+            ''', (prefix, passage_number))
+            cols = ['grammar_id', 'type', 'vietnamese_content', 'english_content', 'vn_context', 'en_context']
+            results = []
+            for row in cur.fetchall():
+                d = dict(zip(cols, row))
+                if d.get('vn_context') is None:
+                    d.pop('vn_context', None)
+                if d.get('en_context') is None:
+                    d.pop('en_context', None)
+                results.append(d)
+            return results
+    except Exception as e:
+        print(f'[WARN] get_grammar_for_passage failed: {e}')
+        return []

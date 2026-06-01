@@ -113,7 +113,23 @@ async function init() {
         let data;
         const progressFilter = window.progressFilter || '';
 
-        if (progressFilter) {
+        if (window.multiMode) {
+            // Multi-select mode
+            const rawQueue = sessionStorage.getItem('multi_practice_queue');
+            if (!rawQueue) {
+                alert('No practice items selected.');
+                window.location.href = '/recommend';
+                return;
+            }
+            const items = JSON.parse(rawQueue);
+            const res = await fetch('/api/practice/multi', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items })
+            });
+            if (!res.ok) throw new Error();
+            data = await res.json();
+        } else if (progressFilter) {
             // Deep-link mode: fetch only this specific progress group
             const catParam = window.practiceCategory ? `?category=${window.practiceCategory}` : '';
             const res = await fetch(`/api/practice/${NUM}/${window.lessonId}/${encodeURIComponent(progressFilter)}${catParam}`);
@@ -921,6 +937,8 @@ function checkAnswers() {
         const isCorrect = chosen === correct;
         
         sessionAnswers.push({
+            hsk_level: q.level,
+            lesson: q.lesson,
             question_no: q.no,
             skill: q.skill || 'listening',
             type: q.type,

@@ -2,6 +2,8 @@ let allRecommendations = [];
 let currentLevelTab = 'all';
 let currentSkillTab = 'all';
 let currentCategoryTab = 'all';
+let currentStatusTab = 'all';
+let selectedMultiItems = [];
 
 async function fetchRecommendations() {
     const container = document.getElementById('rec-container');
@@ -44,7 +46,8 @@ function renderRecommendations() {
         const matchLevel    = currentLevelTab    === 'all' || r.level == currentLevelTab;
         const matchSkill    = currentSkillTab    === 'all' || r.skill === currentSkillTab;
         const matchCategory = currentCategoryTab === 'all' || r.category === currentCategoryTab;
-        return matchLevel && matchSkill && matchCategory;
+        const matchStatus   = currentStatusTab   === 'all' || r.status === currentStatusTab;
+        return matchLevel && matchSkill && matchCategory && matchStatus;
     });
 
     if (recs.length === 0) {
@@ -65,6 +68,56 @@ function renderRecommendations() {
     container.appendChild(grid);
 
     // Removed coverage bar animation
+    
+    // Clear selections if they are no longer in the filtered list (optional, but good practice)
+    updateMultiSelectUI();
+}
+
+function updateMultiSelectUI() {
+    const bar = document.getElementById('multi-select-bar');
+    const countEl = document.getElementById('multi-select-count');
+    
+    if (selectedMultiItems.length > 0) {
+        bar.classList.remove('hidden');
+        countEl.textContent = `${selectedMultiItems.length} item${selectedMultiItems.length > 1 ? 's' : ''} selected`;
+    } else {
+        bar.classList.add('hidden');
+    }
+}
+
+function toggleMultiSelect(checkbox, recJson) {
+    const rec = JSON.parse(decodeURIComponent(recJson));
+    const isChecked = checkbox.checked;
+    
+    if (isChecked) {
+        // Add if not already present
+        const exists = selectedMultiItems.some(i => 
+            i.level === rec.level && i.lesson === rec.lesson && 
+            i.progress === rec.progress && i.category === rec.category
+        );
+        if (!exists) {
+            selectedMultiItems.push({
+                level: rec.level,
+                lesson: rec.lesson,
+                progress: rec.progress,
+                category: rec.category || 'practice'
+            });
+        }
+    } else {
+        // Remove
+        selectedMultiItems = selectedMultiItems.filter(i => 
+            !(i.level === rec.level && i.lesson === rec.lesson && 
+              i.progress === rec.progress && i.category === (rec.category || 'practice'))
+        );
+    }
+    updateMultiSelectUI();
+}
+
+function startMultiRecommend() {
+    if (selectedMultiItems.length === 0) return;
+    sessionStorage.setItem('multi_practice_queue', JSON.stringify(selectedMultiItems));
+    sessionStorage.setItem('practice_referrer', 'recommend');
+    window.location.href = '/practice/multi';
 }
 
 
@@ -94,13 +147,25 @@ function buildCard(rec) {
 
     // Deep-link URL
     const startUrl = `/practice/${rec.level}/${rec.lesson}/${encodeURIComponent(rec.progress)}?category=${rec.category || 'practice'}`;
+    const recJson = encodeURIComponent(JSON.stringify({
+        level: rec.level, lesson: rec.lesson, progress: rec.progress, category: rec.category
+    }));
+    
+    const isSelected = selectedMultiItems.some(i => 
+        i.level === rec.level && i.lesson === rec.lesson && 
+        i.progress === rec.progress && i.category === (rec.category || 'practice')
+    );
 
     card.innerHTML = `
         <div class="rec-card-header">
+            <input type="checkbox" class="rec-card-checkbox" ${isSelected ? 'checked' : ''} onchange="toggleMultiSelect(this, '${recJson}')">
             <span class="hsk-badge hsk-${rec.level}">HSK ${rec.level}</span>
             <span class="rec-card-title">Lesson ${rec.lesson}</span>
+        </div>
+        <div class="rec-card-meta" style="display: flex; align-items: center; gap: 10px; margin-top: -6px;">
             <span class="rec-card-skill">${skillIcon} ${skillLabel}</span>
-            <span class="category-badge ${categoryClass}">${categoryLabel}</span>
+            <span class="category-badge ${categoryClass}" style="margin-left: 0;">${categoryLabel}</span>
+            <span class="status-badge" style="font-size: 0.8em; margin-left: auto; color: var(--text-muted);">${rec.status || 'Not start'}</span>
         </div>
 
         <div class="rec-progress-label">${progressLabel(rec.progress)} &nbsp;·&nbsp; ${qCount} question${qCount !== 1 ? 's' : ''}</div>
@@ -164,9 +229,9 @@ function startFromRecommend(url) {
 }
 
 // Setup Tabs — Level
-document.querySelectorAll('.tab-btn:not(.skill-btn):not(.category-btn)').forEach(btn => {
+document.querySelectorAll('.tab-btn:not(.skill-btn):not(.category-btn):not(.status-btn)').forEach(btn => {
     btn.addEventListener('click', () => {
-        document.querySelectorAll('.tab-btn:not(.skill-btn):not(.category-btn)').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-btn:not(.skill-btn):not(.category-btn):not(.status-btn)').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         currentLevelTab = btn.dataset.level;
         if (allRecommendations.length > 0) renderRecommendations();
@@ -189,6 +254,16 @@ document.querySelectorAll('.category-btn').forEach(btn => {
         document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         currentCategoryTab = btn.dataset.category;
+        if (allRecommendations.length > 0) renderRecommendations();
+    });
+});
+
+// Setup Tabs — Status
+document.querySelectorAll('.status-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentStatusTab = btn.dataset.status;
         if (allRecommendations.length > 0) renderRecommendations();
     });
 });

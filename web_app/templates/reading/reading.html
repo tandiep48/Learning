@@ -44,6 +44,7 @@
                 <div class="toolbar-right">
                     <button class="btn" id="toggle-pinyin-btn" onclick="togglePinyin()">Show Pinyin</button>
                     <button class="btn" id="toggle-meaning-btn" onclick="toggleMeaning()">Show Meaning</button>
+                    <button class="btn" id="show-grammar-btn" onclick="openGrammarPanel()">📐 Grammar</button>
                     <button class="btn" id="show-vocab-btn" onclick="openVocabPanel()">📚 Vocab</button>
                 </div>
             </div>
@@ -66,7 +67,6 @@
 
     </div><!-- /app-container -->
 
-    <!-- ── Vocab Slide Panel ── -->
     <div id="vocab-panel-overlay" class="vocab-panel-overlay" onclick="closeVocabIfBackground(event)">
         <div class="vocab-panel">
             <div class="vocab-panel-header">
@@ -74,6 +74,19 @@
                 <button class="vocab-close-btn" onclick="closeVocabPanel()">✕</button>
             </div>
             <div class="vocab-panel-body" id="vocab-panel-body">
+                <div class="vocab-loading">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Grammar Slide Panel ── -->
+    <div id="grammar-panel-overlay" class="vocab-panel-overlay" onclick="closeGrammarIfBackground(event)">
+        <div class="vocab-panel">
+            <div class="vocab-panel-header">
+                <h3 id="grammar-panel-title">Grammar Rules</h3>
+                <button class="vocab-close-btn" onclick="closeGrammarPanel()">✕</button>
+            </div>
+            <div class="vocab-panel-body" id="grammar-panel-body">
                 <div class="vocab-loading">Loading...</div>
             </div>
         </div>

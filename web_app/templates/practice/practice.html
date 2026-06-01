@@ -5,10 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Practice {{ number }}</title>
     <script>
-        window.practiceNumber = {{ number }};
-        window.lessonId = "{{ lesson_id }}";
+        window.practiceNumber = {{ number if number is defined else 'null' }};
+        window.lessonId = "{{ lesson_id if lesson_id is defined else '' }}";
         window.progressFilter = "{{ progress_filter if progress_filter is defined else '' }}";
         window.practiceCategory = "{{ category if category is defined else 'practice' }}";
+        window.multiMode = {{ 'true' if multi_mode else 'false' }};
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/shared/styles.css">

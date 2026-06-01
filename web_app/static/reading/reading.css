@@ -73,3 +73,45 @@
     gap: 12px;
     flex-wrap: wrap;
 }
+
+.grammar-content { padding: 15px; }
+.grammar-title { color: var(--primary); font-size: 1.2rem; margin-top: 15px; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; }
+.grammar-desc { color: var(--text-main); line-height: 1.6; margin-bottom: 10px; }
+.grammar-example { background: rgba(0,0,0,0.15); padding: 12px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid var(--secondary); }
+.ex-cn { font-family: 'Noto Sans SC', sans-serif; font-size: 1.15rem; color: #fff; margin-bottom: 4px; }
+.ex-vn { font-size: 0.95rem; color: #aaa; }
+.grammar-table-ref { margin-top: 10px; margin-bottom: 15px; padding: 10px; background: rgba(16, 185, 129, 0.1); border: 1px dashed #10b981; color: #10b981; border-radius: 6px; text-align: center; font-size: 0.9rem; }
+
+/* ── Grammar Table ── */
+.grammar-table-container {
+    overflow-x: auto;
+    margin: 15px 0;
+    border-radius: 8px;
+    background: rgba(0,0,0,0.15);
+    border: 1px solid rgba(255,255,255,0.08);
+}
+.grammar-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+.grammar-table th, .grammar-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.grammar-table th {
+    background: rgba(67, 97, 238, 0.15);
+    color: #818cf8;
+    font-weight: 600;
+}
+.grammar-table td {
+    color: var(--text-main);
+    font-family: 'Noto Sans SC', 'Inter', sans-serif;
+}
+.grammar-table tr:last-child td {
+    border-bottom: none;
+}
+.grammar-table tbody tr:hover {
+    background: rgba(255,255,255,0.03);
+}

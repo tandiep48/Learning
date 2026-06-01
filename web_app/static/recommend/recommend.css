@@ -292,3 +292,57 @@ body { align-items: flex-start; padding: 40px 20px; }
 }
 .new-user-box .state-sub strong { color: var(--text-main); }
 
+.new-user-box .state-sub strong { color: var(--text-main); }
+
+/* ── Multi-select Checkbox ── */
+.rec-card-checkbox {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    cursor: pointer;
+    background: transparent;
+    transition: all 0.2s ease;
+    margin-right: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.rec-card-checkbox:checked {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+.rec-card-checkbox:checked::after {
+    content: '✓';
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+/* ── Multi-select Sticky Bar ── */
+.multi-select-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: rgba(30, 31, 46, 0.95);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 1000;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+    transform: translateY(0);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.multi-select-bar.hidden {
+    transform: translateY(100%);
+}
+#multi-select-count {
+    color: var(--text-main);
+    font-weight: 600;
+    font-size: 1rem;
+}
