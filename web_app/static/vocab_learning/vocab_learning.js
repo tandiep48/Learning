@@ -9,6 +9,21 @@ const hskLevel = window.hskLevel; // injected by Flask template
 
 document.addEventListener('DOMContentLoaded', () => {
     loadLessons();
+    
+    // Typing input logic
+    const typingInput = document.getElementById('vl-typing-input');
+    if (typingInput) {
+        typingInput.addEventListener('input', (e) => {
+            const word = words[currentIndex];
+            if (!word) return;
+            if (e.target.value.trim() === word.word) {
+                e.target.classList.add('success-highlight');
+                playAudio();
+            } else {
+                e.target.classList.remove('success-highlight');
+            }
+        });
+    }
 });
 
 // ─── Lesson Picker ────────────────────────────────────────────────────────────
@@ -123,6 +138,13 @@ function renderWord() {
     document.getElementById('vl-hanzi').textContent = word.word;
     document.getElementById('vl-pinyin').textContent = word.pinyin || '';
     document.getElementById('vl-meaning').textContent = word.meaning_vn || word.meaning_en || '';
+
+    // Clear typing input
+    const typingInput = document.getElementById('vl-typing-input');
+    if (typingInput) {
+        typingInput.value = '';
+        typingInput.classList.remove('success-highlight');
+    }
 
     // Navigation buttons
     document.getElementById('btn-prev').disabled = currentIndex === 0;
@@ -265,9 +287,9 @@ function renderVocabTable() {
             <tbody>
     `;
 
-    tableVocabList.forEach(v => {
+    tableVocabList.forEach((v, index) => {
         html += `
-            <tr>
+            <tr id="vl-tr-${index}" data-audio="${v.audio_key || ''}">
                 <td>
                     ${v.audio_key ? `<button class="vocab-audio-btn" onclick="playSingleVocabAudio('${v.audio_key}')">🔊</button>` : '<span style="color:#666">-</span>'}
                 </td>
@@ -304,8 +326,8 @@ function playSingleVocabAudio(audioKey) {
 function playAllVocabAudio() {
     if (isAudioPlaying) return; 
 
-    // Create a queue of words that have audio
-    audioQueue = tableVocabList.filter(v => v.audio_key);
+    // Create a queue of words that have audio, store their index
+    audioQueue = tableVocabList.map((v, i) => ({...v, originalIndex: i})).filter(v => v.audio_key);
     if (audioQueue.length === 0) return;
 
     isAudioPlaying = true;
@@ -313,12 +335,23 @@ function playAllVocabAudio() {
 }
 
 function playNextInQueue() {
+    // Clear previous highlights
+    document.querySelectorAll('#vl-summary-table tr').forEach(tr => tr.classList.remove('playing-highlight'));
+
     if (!isAudioPlaying || audioQueue.length === 0) {
         isAudioPlaying = false;
         return;
     }
 
     const nextWord = audioQueue.shift();
+    
+    // Highlight the row
+    const tr = document.getElementById(`vl-tr-${nextWord.originalIndex}`);
+    if (tr) {
+        tr.classList.add('playing-highlight');
+        tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
     const audio = new Audio(`/audio/${nextWord.audio_key}.mp3`);
     
     audio.onended = () => {
