@@ -9,7 +9,7 @@ from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from db import get_db_connection, insert_lesson_progress, get_passages_summary, get_passage_content, get_all_vn_meanings, get_passage_vocab
+from db import get_db_connection, insert_lesson_progress, get_passages_summary, get_passage_content, get_all_vn_meanings, get_passage_vocab, get_grammar_for_passage
 
 lesson_bp = Blueprint('lesson', __name__, url_prefix='/api/lesson')
 
@@ -36,6 +36,21 @@ def get_passage_vocab_api(passage_id):
     vocab = get_passage_vocab(conn, passage_id)
     conn.close()
     return jsonify({"passage_id": passage_id, "vocab": vocab})
+
+@lesson_bp.route('/grammar/<passage_id>', methods=['GET'])
+def get_passage_grammar(passage_id):
+    try:
+        parts = passage_id.split('_')
+        hsk_level = parts[0].replace('H', '')
+        lesson = parts[1]
+        passage_number = parts[2]
+        
+        conn = get_db_connection()
+        grammar = get_grammar_for_passage(conn, hsk_level, lesson, passage_number)
+        conn.close()
+        return jsonify({"grammar": grammar})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 @lesson_bp.route('/start', methods=['POST'])
 @login_required
