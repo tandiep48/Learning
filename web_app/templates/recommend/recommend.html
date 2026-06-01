@@ -42,6 +42,14 @@
                 <button class="tab-btn category-btn" data-category="practice">📋 Practice</button>
                 <button class="tab-btn category-btn" data-category="exam">📝 Exam</button>
             </div>
+
+            <div class="tabs-container">
+                <span class="tab-label">Status:</span>
+                <button class="tab-btn status-btn active" data-status="all">All</button>
+                <button class="tab-btn status-btn" data-status="Not start">Not start</button>
+                <button class="tab-btn status-btn" data-status="Finish and success">Finish and success</button>
+                <button class="tab-btn status-btn" data-status="Finish and fail">Finish and fail</button>
+            </div>
         </div>
 
         <!-- Dynamic content injected by recommend.js -->
@@ -54,6 +62,14 @@
                 <div class="state-sub">Analysing your vocabulary progress.</div>
             </div>
         </div>
+    </div>
+
+    <!-- Sticky Multi-select Bar -->
+    <div id="multi-select-bar" class="multi-select-bar hidden">
+        <span id="multi-select-count">0 items selected</span>
+        <button id="btn-start-multi" class="btn-start-practice" onclick="startMultiRecommend()">
+            ▶ Start Selected
+        </button>
     </div>
 
     <script src="/static/recommend/recommend.js"></script>
