@@ -370,3 +370,14 @@ input:focus {
     color: var(--text-muted);
     font-size: 14px;
 }
+
+/* Table Row Highlight */
+.playing-highlight {
+    background-color: rgba(59, 130, 246, 0.1) !important;
+}
+
+/* Typing Input Success */
+.success-highlight {
+    border-color: #10b981 !important;
+    background-color: rgba(16, 185, 129, 0.05) !important;
+}
