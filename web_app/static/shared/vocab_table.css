@@ -128,3 +128,17 @@
     transform: scale(1.1);
 }
 .vocab-empty { text-align: center; color: var(--text-muted); padding: 24px; }
+
+/* Hide/Show logic for Vocab Table */
+.clickable-cell {
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+.clickable-cell:hover {
+    background-color: rgba(255,255,255,0.05);
+}
+.hidden-cell {
+    color: transparent !important;
+    background-color: rgba(0, 0, 0, 0.5) !important;
+    border-radius: 4px;
+}
