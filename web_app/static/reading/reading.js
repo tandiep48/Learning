@@ -8,57 +8,22 @@ let isPlayingAll = false;
 
 // ── Init ─────────────────────────────────────────────────────
 window.onload = async () => {
-    try {
-        const hskLevel = window.hskLevel || "";
-        const url = hskLevel
-            ? `/api/lesson/passages?hsk_level=${hskLevel}`
-            : `/api/lesson/passages`;
-        const res  = await fetch(url);
-        const data = await res.json();
-        const container = document.getElementById('passage-container');
-        container.innerHTML = '';
-
-        const backDiv = document.createElement('div');
-        backDiv.innerHTML = `<a href="/reading" style="display:inline-block;margin-bottom:20px;color:#3b82f6;text-decoration:none;">← Back to Levels</a>`;
-        container.appendChild(backDiv);
-
-        const section = document.createElement('div');
-        section.className = 'passage-section';
-
-        const header = document.createElement('h3');
-        header.innerText = hskLevel || "All Passages";
-        section.appendChild(header);
-
-        const grid = document.createElement('div');
-        grid.className = 'dashboard-container';
-        grid.style.marginTop = '10px';
-
-        data.passages.forEach(p => {
-            const btn = document.createElement('div');
-            btn.className = 'dash-card';
-            btn.style.padding = '15px';
-            btn.innerHTML = `<div class="dash-title" style="font-size:18px;">${p.passage_id}</div>
-                             <div class="dash-desc">${p.line_count} sentences</div>`;
-            btn.onclick = () => loadPassage(p.passage_id);
-            grid.appendChild(btn);
-        });
-
-        section.appendChild(grid);
-        container.appendChild(section);
-    } catch (e) {
-        document.getElementById('passage-container').innerHTML = '<p>Error loading passages.</p>';
-    }
+    Picker.init((passage) => {
+        loadPassage(passage.passage_id);
+    }, "Reading Lesson");
 };
 
 // ── Screen helpers ────────────────────────────────────────────
 function switchScreen(id) {
     document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.picker-screen').forEach(el => el.classList.remove('active'));
     document.getElementById(id).classList.add('active');
     if (currentAudio) currentAudio.pause();
 }
 
 function goHome() {
-    switchScreen('screen-menu');
+    document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+    Picker.showLevelPicker();
     currentPassage = null;
     vocabLoaded    = false;
 }
@@ -67,6 +32,7 @@ function goHome() {
 async function loadPassage(passage_id) {
     switchScreen('screen-loading');
     vocabLoaded = false;
+    currentVocabList = [];
     try {
         const res  = await fetch(`/api/lesson/passage/${passage_id}`);
         const data = await res.json();
@@ -231,9 +197,9 @@ function renderVocabTable(vocab) {
             : '<span style="color:#666">-</span>';
         tr.innerHTML = `
             <td>${audioCell}</td>
-            <td class="vocab-cn">${w.cn}</td>
-            <td class="vocab-pinyin">${w.pinyin}</td>
-            <td class="vocab-meaning-vn">${w.meaning_vn}</td>`;
+            <td class="vocab-cn clickable-cell" onclick="this.classList.toggle('hidden-cell')">${w.cn}</td>
+            <td class="vocab-pinyin clickable-cell" onclick="this.classList.toggle('hidden-cell')">${w.pinyin}</td>
+            <td class="vocab-meaning-vn clickable-cell" onclick="this.classList.toggle('hidden-cell')">${w.meaning_vn}</td>`;
         tbody.appendChild(tr);
     });
 
@@ -254,6 +220,9 @@ function toggleVocabColumn(col) {
 }
 
 function shuffleVocab() {
+    const popSound = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=");
+    popSound.play().catch(e => console.log('Sound error', e));
+
     currentVocabList.sort(() => Math.random() - 0.5);
     const oldTable = document.querySelector('.vocab-table');
     const hiddenClasses = Array.from(oldTable?.classList || []).filter(c => c.startsWith('hide-'));
@@ -306,8 +275,7 @@ async function playAllVocabAudio() {
 
 // ── Start Lesson Practice ─────────────────────────────────────
 function startLessonPractice() {
-    if (!currentPassage) return;
-    const hskLevel  = currentPassage.hsk_level || 'H1';
+    openReadingFlashcards();
 }
 
 // ── Audio ─────────────────────────────────────────────────────
@@ -426,9 +394,9 @@ function renderVocabTable(vocab) {
             : '<span style="color:#666">-</span>';
         tr.innerHTML = `
             <td>${audioCell}</td>
-            <td class="vocab-cn">${w.cn}</td>
-            <td class="vocab-pinyin">${w.pinyin}</td>
-            <td class="vocab-meaning-vn">${w.meaning_vn}</td>`;
+            <td class="vocab-cn clickable-cell" onclick="this.classList.toggle('hidden-cell')">${w.cn}</td>
+            <td class="vocab-pinyin clickable-cell" onclick="this.classList.toggle('hidden-cell')">${w.pinyin}</td>
+            <td class="vocab-meaning-vn clickable-cell" onclick="this.classList.toggle('hidden-cell')">${w.meaning_vn}</td>`;
         tbody.appendChild(tr);
     });
 
@@ -449,6 +417,9 @@ function toggleVocabColumn(col) {
 }
 
 function shuffleVocab() {
+    const popSound = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=");
+    popSound.play().catch(e => console.log('Sound error', e));
+
     currentVocabList.sort(() => Math.random() - 0.5);
     const oldTable = document.querySelector('.vocab-table');
     const hiddenClasses = Array.from(oldTable?.classList || []).filter(c => c.startsWith('hide-'));
@@ -501,11 +472,40 @@ async function playAllVocabAudio() {
 
 // ── Start Lesson Practice ─────────────────────────────────────
 function startLessonPractice() {
+    openReadingFlashcards();
+}
+
+async function openReadingFlashcards() {
     if (!currentPassage) return;
-    const hskLevel  = currentPassage.hsk_level || 'H1';
-    const passageId = encodeURIComponent(currentPassage.passage_id);
-    // Navigate to the lesson page for this HSK level, auto-starting this passage
-    window.location.href = `/lesson/${hskLevel}?passage_id=${passageId}`;
+
+    try {
+        let vocab = currentVocabList || [];
+        if (!vocab.length) {
+            const res = await fetch(`/api/lesson/vocab/${currentPassage.passage_id}`);
+            const data = await res.json();
+            vocab = data.vocab || [];
+        }
+
+        const selectedRows = vocab.map(w => ({
+            word: w.word || w.cn || '',
+            cn: w.word || w.cn || '',
+            pinyin: w.pinyin || '',
+            meaning_vn: w.meaning_vn || '',
+            meaning_en: w.meaning_en || '',
+            audio_key: w.audio_key || '',
+            level: w.level || w.hsk_level || currentPassage.hsk_level || ''
+        })).filter(w => w.word);
+
+        if (!selectedRows.length) {
+            alert('No vocabulary linked to this passage.');
+            return;
+        }
+
+        sessionStorage.setItem('selectedVocabFlashcards', JSON.stringify(selectedRows));
+        window.location.href = '/vocab-learning?source=reading';
+    } catch (e) {
+        alert('Failed to open flash cards.');
+    }
 }
 
 // ── Grammar Panel ──

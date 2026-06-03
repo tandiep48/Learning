@@ -8,7 +8,14 @@ const hskLevel = window.hskLevel; // injected by Flask template
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
-    loadLessons();
+    const selectedFlashcards = readSelectedFlashcards();
+    Picker.init((passage) => {
+        startLesson(passage);
+    }, "Vocab Learning", !selectedFlashcards);
+
+    if (selectedFlashcards) {
+        startSelectedFlashcards(selectedFlashcards);
+    }
     
     // Typing input logic
     const typingInput = document.getElementById('vl-typing-input');
@@ -26,67 +33,67 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// ─── Lesson Picker ────────────────────────────────────────────────────────────
-
-async function loadLessons() {
-    const listEl = document.getElementById('vl-lesson-list');
-    const subtitleEl = document.getElementById('vl-level-subtitle');
+function readSelectedFlashcards() {
+    const raw = sessionStorage.getItem('selectedVocabFlashcards');
+    if (!raw) return null;
 
     try {
-        const res = await fetch(`/api/vocab/lessons/${hskLevel}`);
-        const data = await res.json();
-
-        if (!res.ok || data.error) {
-            listEl.innerHTML = `<p style="color:var(--danger); text-align:center;">Error: ${data.error || 'Failed to load lessons.'}</p>`;
-            return;
-        }
-
-        const lessons = data.lessons || [];
-        if (subtitleEl) subtitleEl.textContent = `${lessons.length} lesson${lessons.length !== 1 ? 's' : ''} available`;
-
-        listEl.innerHTML = '';
-        lessons.forEach(lesson => {
-            const card = document.createElement('div');
-            card.className = 'vl-lesson-card';
-            const preview = lesson.preview && lesson.preview.length > 0
-                ? lesson.preview.join('  ·  ')
-                : '';
-            card.innerHTML = `
-                <div>
-                    <div class="vl-lesson-title">Lesson ${lesson.lesson}</div>
-                    <div class="vl-lesson-preview">${preview}</div>
-                </div>
-                <div class="vl-lesson-badge">${lesson.word_count} words</div>
-            `;
-            card.addEventListener('click', () => startLesson(lesson));
-            listEl.appendChild(card);
-        });
-
+        const parsed = JSON.parse(raw);
+        sessionStorage.removeItem('selectedVocabFlashcards');
+        if (!Array.isArray(parsed) || parsed.length === 0) return null;
+        return parsed.map(normalizeFlashcardWord).filter(w => w.word);
     } catch (e) {
-        listEl.innerHTML = `<p style="color:var(--danger); text-align:center;">Failed to connect to server.</p>`;
+        sessionStorage.removeItem('selectedVocabFlashcards');
+        return null;
     }
+}
+
+function normalizeFlashcardWord(row) {
+    const word = row.word || row.cn || '';
+    return {
+        word,
+        cn: word,
+        pinyin: row.pinyin || '',
+        meaning_vn: row.meaning_vn || '',
+        meaning_en: row.meaning_en || '',
+        audio_key: row.audio_key || '',
+        level: row.level || row.hsk_level || ''
+    };
+}
+
+function startSelectedFlashcards(selectedRows) {
+    lessonMeta = {
+        source: 'selection',
+        selected_words: selectedRows.map(row => row.word)
+    };
+    words = selectedRows;
+    currentIndex = 0;
+
+    document.querySelectorAll('.picker-screen').forEach(el => el.classList.remove('active'));
+    document.getElementById('screen-loading').style.display = 'none';
+    document.getElementById('screen-summary').style.display = 'none';
+    document.getElementById('screen-learning').style.display = 'block';
+    renderWord();
 }
 
 // ─── Word Fetching ────────────────────────────────────────────────────────────
 
-async function startLesson(lesson) {
-    lessonMeta = { ...lesson, hsk_level: hskLevel };
+async function startLesson(passage) {
+    lessonMeta = { ...passage, hsk_level: passage.hsk_level || "H1" };
 
     // Show loading
-    document.getElementById('screen-picker').style.display = 'none';
+    document.querySelectorAll('.picker-screen').forEach(el => el.classList.remove('active'));
     const loadingEl = document.getElementById('screen-loading');
     loadingEl.style.display = 'block';
 
     try {
-        // Use the vocab/start API to get the full word list for this lesson
+        // Use the vocab/start API with mode 6
         const res = await fetch('/api/vocab/start', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                mode: '1',
-                hsk_level: hskLevel,
-                start_idx: lesson.start_idx,
-                end_idx: lesson.end_idx
+                mode: '6',
+                passage_id: passage.passage_id
             })
         });
         const data = await res.json();
@@ -210,13 +217,17 @@ function nextWord() {
 }
 
 function backToLessons() {
+    document.getElementById('screen-learning').style.display = 'none';
+    document.getElementById('screen-summary').style.display = 'none';
+    document.getElementById('screen-loading').style.display = 'none';
+    if (lessonMeta && lessonMeta.source === 'selection') {
+        window.location.href = '/vocab';
+        return;
+    }
+    Picker.showLevelPicker();
     words = [];
     currentIndex = 0;
     lessonMeta = null;
-    document.getElementById('screen-loading').style.display = 'none';
-    document.getElementById('screen-learning').style.display = 'none';
-    document.getElementById('screen-summary').style.display = 'none';
-    document.getElementById('screen-picker').style.display = 'block';
 
     const audio = document.getElementById('vl-audio');
     audio.pause();
@@ -225,12 +236,15 @@ function backToLessons() {
 
 function goToTrainer() {
     if (!lessonMeta) return;
+    if (lessonMeta.source === 'selection') {
+        sessionStorage.setItem('selectedVocabTrainerWords', JSON.stringify(lessonMeta.selected_words || []));
+        window.location.href = '/vocab';
+        return;
+    }
     // Deep-link to vocab trainer with URL params so it auto-starts
     const params = new URLSearchParams({
-        mode: '1',
-        hsk_level: lessonMeta.hsk_level,
-        start_idx: lessonMeta.start_idx,
-        end_idx: lessonMeta.end_idx
+        mode: '6',
+        passage_id: lessonMeta.passage_id
     });
     window.location.href = `/vocab?${params.toString()}`;
 }
@@ -288,14 +302,13 @@ function renderVocabTable() {
     `;
 
     tableVocabList.forEach((v, index) => {
+        const audioCell = v.audio_key ? `<button class="vocab-audio-btn" onclick="playSingleVocabAudio('${v.audio_key}')">🔊</button>` : '<span style="color:#666">-</span>';
         html += `
             <tr id="vl-tr-${index}" data-audio="${v.audio_key || ''}">
-                <td>
-                    ${v.audio_key ? `<button class="vocab-audio-btn" onclick="playSingleVocabAudio('${v.audio_key}')">🔊</button>` : '<span style="color:#666">-</span>'}
-                </td>
-                <td class="vocab-cn">${v.word || ''}</td>
-                <td class="vocab-pinyin">${v.pinyin || ''}</td>
-                <td class="vocab-meaning-vn">${v.meaning_vn || v.meaning_en || ''}</td>
+                <td class="vocab-audio-cell">${audioCell}</td>
+                <td class="vocab-cn clickable-cell" onclick="this.classList.toggle('hidden-cell')">${v.word || ''}</td>
+                <td class="vocab-pinyin clickable-cell" onclick="this.classList.toggle('hidden-cell')">${v.pinyin || ''}</td>
+                <td class="vocab-meaning-vn clickable-cell" onclick="this.classList.toggle('hidden-cell')">${v.meaning_vn || v.meaning_en || ''}</td>
             </tr>
         `;
     });
@@ -311,6 +324,10 @@ function toggleVocabColumn(colType, tableId) {
 }
 
 function shuffleVocab() {
+    const popSound = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=");
+    popSound.play().catch(e => console.log('Sound error', e));
+
+    if (!tableVocabList || tableVocabList.length === 0) return;
     for (let i = tableVocabList.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [tableVocabList[i], tableVocabList[j]] = [tableVocabList[j], tableVocabList[i]];

@@ -44,3 +44,34 @@
     grid-template-columns: 1fr 1fr;
     gap: 15px;
 }
+
+/* -- Quit Modal Overlay -- */
+.quit-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.65);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+}
+.quit-modal-overlay.open {
+    display: flex;
+    animation: fadeIn 0.15s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.quit-modal {
+    background: #1a1b26;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 20px;
+    padding: 36px 32px;
+    max-width: 380px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    animation: slideUp 0.2s ease;
+}
+@keyframes slideUp { from { transform: translateY(16px); opacity:0; } to { transform: none; opacity:1; } }
+.quit-modal h3 { font-size: 1.3rem; color: var(--text-main); margin-bottom: 10px; }
+.quit-modal p  { font-size: 0.95rem; color: var(--text-muted); margin-bottom: 26px; line-height: 1.5; }
+.quit-modal-btns { display: flex; gap: 12px; justify-content: center; }

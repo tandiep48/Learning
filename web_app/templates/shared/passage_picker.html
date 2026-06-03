@@ -1,0 +1,58 @@
+<!-- ── SCREEN: Level Picker ── -->
+<div id="picker-screen-level" class="picker-screen">
+    <div style="margin-bottom: 20px;">
+        <a id="picker-back-link" href="/" style="color: var(--primary); text-decoration: none;">&larr; Back to Dashboard</a>
+    </div>
+    <h1 id="picker-main-title">Select HSK Level</h1>
+    <p class="subtitle">Choose a level to see its lessons</p>
+    <div class="level-picker-grid">
+        <div class="level-picker-card" onclick="Picker.showLessonPicker('HSK1')">
+            <div class="level-icon">🎯</div>
+            <div class="level-name">HSK 1</div>
+        </div>
+        <div class="level-picker-card" onclick="Picker.showLessonPicker('HSK2')">
+            <div class="level-icon">🚀</div>
+            <div class="level-name">HSK 2</div>
+        </div>
+        <div class="level-picker-card" onclick="Picker.showLessonPicker('HSK3')">
+            <div class="level-icon">🌟</div>
+            <div class="level-name">HSK 3</div>
+        </div>
+        <div class="level-picker-card" onclick="Picker.showLessonPicker('HSK4')">
+            <div class="level-icon">🔥</div>
+            <div class="level-name">HSK 4</div>
+        </div>
+        <div class="level-picker-card" onclick="Picker.showLessonPicker('HSK5')">
+            <div class="level-icon">💎</div>
+            <div class="level-name">HSK 5</div>
+        </div>
+        <div class="level-picker-card" onclick="Picker.showLessonPicker('HSK6')">
+            <div class="level-icon">👑</div>
+            <div class="level-name">HSK 6</div>
+        </div>
+    </div>
+</div>
+
+<!-- ── SCREEN: Lesson Picker ── -->
+<div id="picker-screen-lesson" class="picker-screen">
+    <h2 id="picker-lesson-title">Select Lesson</h2>
+    <p id="picker-lesson-sub" class="subtitle" style="text-align:center; color:var(--text-muted); margin-bottom:4px;"></p>
+    <div id="picker-lesson-list" class="lesson-list">
+        <p style="color:var(--text-muted); text-align:center;">Loading lessons…</p>
+    </div>
+    <div class="nav-buttons" style="margin-top:16px;">
+        <button class="btn secondary" onclick="Picker.showLevelPicker()">&larr; Back to Levels</button>
+    </div>
+</div>
+
+<!-- ── SCREEN: Part Picker ── -->
+<div id="picker-screen-part" class="picker-screen">
+    <h2 id="picker-part-title">Select Part</h2>
+    <p class="subtitle" style="text-align:center; color:var(--text-muted); margin-bottom:4px;">Choose a part to begin</p>
+    <div id="picker-part-list" class="lesson-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-top: 15px;">
+        <p style="color:var(--text-muted); text-align:center;">Loading parts…</p>
+    </div>
+    <div class="nav-buttons" style="margin-top:16px;">
+        <button class="btn secondary" onclick="Picker.showLessonPicker(Picker.currentHskLevel)">&larr; Back to Lessons</button>
+    </div>
+</div>
