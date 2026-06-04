@@ -175,6 +175,13 @@ body { align-items: flex-start; padding: 40px 20px; }
     letter-spacing: 0.02em;
 }
 
+.rec-new-focus {
+    margin-top: 8px;
+    color: #34d399;
+    font-size: 0.86rem;
+    line-height: 1.35;
+}
+
 
 /* ── Coverage Bar ── */
 .coverage-section { }
