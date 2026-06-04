@@ -8,9 +8,16 @@ let isPlayingAll = false;
 
 // ── Init ─────────────────────────────────────────────────────
 window.onload = async () => {
+    const params = new URLSearchParams(window.location.search);
+    const autoPassage = params.get('passage_id');
+
     Picker.init((passage) => {
         loadPassage(passage.passage_id);
-    }, "Reading Lesson");
+    }, "Reading Lesson", !autoPassage);
+
+    if (autoPassage) {
+        await loadPassage(autoPassage);
+    }
 };
 
 // ── Screen helpers ────────────────────────────────────────────
@@ -22,6 +29,10 @@ function switchScreen(id) {
 }
 
 function goHome() {
+    if (currentPassage?.passage_id) {
+        window.location.href = `/learning?passage_id=${encodeURIComponent(currentPassage.passage_id)}`;
+        return;
+    }
     document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
     Picker.showLevelPicker();
     currentPassage = null;
@@ -508,110 +519,3 @@ async function openReadingFlashcards() {
     }
 }
 
-// ── Grammar Panel ──
-
-function openGrammarPanel() {
-    document.getElementById('grammar-panel-overlay').classList.add('open');
-    if (currentPassage && currentPassage.passage_id) {
-        fetchGrammar(currentPassage.passage_id);
-    }
-}
-
-function closeGrammarPanel() {
-    document.getElementById('grammar-panel-overlay').classList.remove('open');
-}
-
-function closeGrammarIfBackground(e) {
-    if (e.target.id === 'grammar-panel-overlay') {
-        closeGrammarPanel();
-    }
-}
-
-async function fetchGrammar(passageId) {
-    const tbody = document.getElementById('grammar-panel-body');
-    tbody.innerHTML = '<div class="vocab-loading">Loading grammar...</div>';
-    try {
-        const res = await fetch(`/api/lesson/grammar/${passageId}`);
-        const data = await res.json();
-        if (data.grammar && data.grammar.length > 0) {
-            const sortedGrammar = groupAndSortGrammar(data.grammar);
-            renderGrammar(sortedGrammar, tbody);
-        } else {
-            tbody.innerHTML = '<div style="padding:20px;text-align:center;color:#666;">No grammar rules for this passage.</div>';
-        }
-    } catch(e) {
-        tbody.innerHTML = '<div style="color:red;padding:20px;">Error loading grammar.</div>';
-    }
-}
-
-function groupAndSortGrammar(grammarList) {
-    const groups = {};
-    grammarList.forEach(g => {
-        if (!groups[g.grammar_id]) groups[g.grammar_id] = [];
-        groups[g.grammar_id].push(g);
-    });
-
-    let sortedList = [];
-    
-    for (const id in groups) {
-        const items = groups[id];
-        const type1 = items.filter(g => g.type === 1);
-        
-        let type2 = items.filter(g => g.type === 2);
-        type2.sort((a, b) => {
-            const aHasExample = (a.vietnamese_content || '').includes('Ví dụ:');
-            const bHasExample = (b.vietnamese_content || '').includes('Ví dụ:');
-            if (aHasExample && !bHasExample) return 1;
-            if (!aHasExample && bHasExample) return -1;
-            return 0;
-        });
-
-        const type4 = items.filter(g => g.type === 4);
-        const type3 = items.filter(g => g.type === 3);
-        
-        sortedList = sortedList.concat(type1, type2, type4, type3);
-    }
-    
-    return sortedList;
-}
-
-function renderGrammar(grammarList, container) {
-    let html = '<div class="grammar-content">';
-    grammarList.forEach(g => {
-        if (g.type === 1) {
-            html += `<h3 class="grammar-title">${g.vietnamese_content}</h3>`;
-        } else if (g.type === 2) {
-            html += `<p class="grammar-desc">${g.vietnamese_content}</p>`;
-        } else if (g.type === 3) {
-            const parts = (g.vietnamese_content || '').split('~');
-            const cn = parts[0] ? parts[0].trim() : '';
-            const vn = parts[1] ? parts[1].trim() : '';
-            html += `<div class="grammar-example">
-                <div class="ex-cn">${cn}</div>
-                <div class="ex-vn">${vn}</div>
-            </div>`;
-        } else if (g.type === 4) {
-            if (g.vn_context && Array.isArray(g.vn_context) && g.vn_context.length > 0) {
-                let tableHtml = '<div class="grammar-table-container"><table class="grammar-table"><thead><tr>';
-                const headers = Object.keys(g.vn_context[0]);
-                headers.forEach(h => {
-                    tableHtml += `<th>${h}</th>`;
-                });
-                tableHtml += '</tr></thead><tbody>';
-                g.vn_context.forEach(row => {
-                    tableHtml += '<tr>';
-                    headers.forEach(h => {
-                        tableHtml += `<td>${row[h] || ''}</td>`;
-                    });
-                    tableHtml += '</tr>';
-                });
-                tableHtml += '</tbody></table></div>';
-                html += tableHtml;
-            } else {
-                html += `<div class="grammar-table-ref">${g.vietnamese_content}</div>`;
-            }
-        }
-    });
-    html += '</div>';
-    container.innerHTML = html;
-}

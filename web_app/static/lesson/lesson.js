@@ -3,6 +3,7 @@ let currentTaskIndex = 0;
 let missedTasks = [];
 let taskStartTime = 0;
 let currentReorderTokens = []; // Track target tokens
+let currentPassageId = null;
 
 // Fetch passages on load
 window.onload = async () => {
@@ -25,6 +26,10 @@ function switchScreen(screenId) {
 }
 
 function goHome() {
+    if (currentPassageId) {
+        window.location.href = `/learning?passage_id=${encodeURIComponent(currentPassageId)}`;
+        return;
+    }
     document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
     Picker.showLevelPicker();
     sessionData = null;
@@ -34,6 +39,7 @@ function goHome() {
 }
 
 async function startSession(passage_id) {
+    currentPassageId = passage_id;
     switchScreen('screen-loading');
 
     try {

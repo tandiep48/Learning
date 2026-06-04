@@ -9,12 +9,16 @@ const hskLevel = window.hskLevel; // injected by Flask template
 
 document.addEventListener('DOMContentLoaded', () => {
     const selectedFlashcards = readSelectedFlashcards();
+    const params = new URLSearchParams(window.location.search);
+    const autoPassageId = params.get('passage_id');
     Picker.init((passage) => {
         startLesson(passage);
-    }, "Vocab Learning", !selectedFlashcards);
+    }, "Vocab Learning", !selectedFlashcards && !autoPassageId);
 
     if (selectedFlashcards) {
         startSelectedFlashcards(selectedFlashcards);
+    } else if (autoPassageId) {
+        startLesson({ passage_id: autoPassageId });
     }
     
     // Typing input logic
@@ -217,6 +221,10 @@ function nextWord() {
 }
 
 function backToLessons() {
+    if (lessonMeta?.passage_id) {
+        window.location.href = `/learning?passage_id=${encodeURIComponent(lessonMeta.passage_id)}`;
+        return;
+    }
     document.getElementById('screen-learning').style.display = 'none';
     document.getElementById('screen-summary').style.display = 'none';
     document.getElementById('screen-loading').style.display = 'none';

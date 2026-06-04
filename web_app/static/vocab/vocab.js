@@ -11,6 +11,7 @@ let pageSize = 20;
 let totalPages = 1;
 let currentRows = [];
 let currentPassageId = null;
+let currentTrainingPassageId = null;
 let groupedPassages = {};
 let selectedWords = new Map();
 let tableAudio = null;
@@ -28,7 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('mode') === '6' && params.get('passage_id')) {
         const passageId = params.get('passage_id');
-        history.replaceState(null, '', '/vocab');
         startSession('6', { passage_id: passageId });
     }
 });
@@ -61,6 +61,10 @@ function switchScreen(screenId) {
 }
 
 function goHome() {
+    if (currentTrainingPassageId) {
+        window.location.href = `/learning?passage_id=${encodeURIComponent(currentTrainingPassageId)}`;
+        return;
+    }
     closeQuitModal();
     switchScreen('screen-menu');
     sessionData = null;
@@ -530,6 +534,7 @@ async function showSetup(mode) {
 }
 
 async function startSession(mode, extraParams = {}) {
+    currentTrainingPassageId = mode === "6" && extraParams.passage_id ? extraParams.passage_id : null;
     sessionData = null;
     currentTaskIndex = 0;
     missedTasks = [];
