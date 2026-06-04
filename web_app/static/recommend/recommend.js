@@ -142,6 +142,10 @@ function buildCard(rec) {
     const qCount = rec.questions ? rec.questions.length : 0;
     const categoryLabel = rec.category === 'exam' ? '📝 Exam' : '📋 Practice';
     const categoryClass = rec.category === 'exam' ? 'badge-exam' : 'badge-practice';
+    const recentWords = Array.isArray(rec.recent_matched_words) ? rec.recent_matched_words.slice(0, 6) : [];
+    const focusHtml = recentWords.length
+        ? `<div class="rec-new-focus">New focus: ${recentWords.map(escapeHtml).join(', ')}</div>`
+        : '';
 
     // Removed preview text
 
@@ -169,6 +173,7 @@ function buildCard(rec) {
         </div>
 
         <div class="rec-progress-label">${progressLabel(rec.progress)} &nbsp;·&nbsp; ${qCount} question${qCount !== 1 ? 's' : ''}</div>
+        ${focusHtml}
 
         <div class="rec-card-footer">
             <button class="btn-start-practice" onclick="startFromRecommend('${startUrl}')" style="width: 100%; margin-top: 10px;">

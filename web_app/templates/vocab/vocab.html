@@ -8,90 +8,83 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/shared/styles.css">
     <link rel="stylesheet" href="/static/vocab/vocab.css">
+    <link rel="stylesheet" href="/static/shared/vocab_table.css?v=3">
+    <link rel="stylesheet" href="/static/shared/passage_picker.css">
 </head>
 <body>
     <div class="app-container">
-        <!-- SCREEN: Main Menu -->
+        <!-- SCREEN: Table Setup -->
         <div id="screen-menu" class="screen active">
-            <div style="margin-bottom: 20px;">
+            <div class="vocab-top-link">
                 <a href="/" style="color: var(--primary); text-decoration: none;">&larr; Back to Dashboard</a>
             </div>
-            <h1>Vocabulary Trainer</h1>
-            <p class="subtitle">Select a training mode to begin</p>
-            <div class="menu-buttons">
-                <button class="btn primary" onclick="showLevelPicker()">
-                    <span class="btn-title">Standard Mode</span>
-                    <span class="btn-desc">Choose HSK level and lesson</span>
-                </button>
-                <button class="btn" onclick="showSetup('2')">
-                    <span class="btn-title">Unlearned Words</span>
-                    <span class="btn-desc">Practice words not yet learned</span>
-                </button>
-                <button class="btn" onclick="showSetup('3')">
-                    <span class="btn-title">Unsure Words</span>
-                    <span class="btn-desc">Practice slow-response learned words</span>
-                </button>
-                <button class="btn warning" onclick="showSetup('4')" style="display: none;">
-                    <span class="btn-title">Hard Semantic</span>
-                    <span class="btn-desc">Practice difficult semantic words</span>
-                </button>
-                <button class="btn danger" onclick="showSetup('5')" style="display: none;">
-                    <span class="btn-title">Hard Stroke</span>
-                    <span class="btn-desc">Practice complex stroke words</span>
-                </button>
-                <button class="btn info" onclick="window.location.href='/vocab-learning'">
-                    <span class="btn-title">Vocab Reading</span>
-                    <span class="btn-desc">Browse vocabulary by lesson and listen to audio</span>
-                </button>
+
+            <div class="vocab-table-header">
+                <div>
+                    <h1>Vocabulary Trainer</h1>
+                    <p class="subtitle">Select words from the table, then train or review them as flash cards.</p>
+                </div>
+                <div class="vocab-mode-toggle" aria-label="Learning mode">
+                    <button id="mode-standard-btn" class="mode-toggle-btn active" onclick="setTableMode('standard')">Standard</button>
+                    <button id="mode-free-btn" class="mode-toggle-btn" onclick="setTableMode('free')">Free</button>
+                </div>
+            </div>
+
+            <div class="vocab-filter-bar">
+                <div class="form-group">
+                    <label for="filter-hsk">HSK</label>
+                    <select id="filter-hsk" onchange="handleHskChange()">
+                        <option value="">Select HSK</option>
+                        <option value="HSK1">HSK 1</option>
+                        <option value="HSK2">HSK 2</option>
+                        <option value="HSK3">HSK 3</option>
+                        <option value="HSK4">HSK 4</option>
+                        <option value="HSK5">HSK 5</option>
+                        <option value="HSK6">HSK 6</option>
+                    </select>
+                </div>
+                <div class="form-group standard-filter">
+                    <label for="filter-lesson">Lesson</label>
+                    <select id="filter-lesson" onchange="handleLessonChange()" disabled>
+                        <option value="">Select lesson</option>
+                    </select>
+                </div>
+                <div class="form-group standard-filter">
+                    <label for="filter-part">Part</label>
+                    <select id="filter-part" onchange="handlePartChange()" disabled>
+                        <option value="">Select part</option>
+                    </select>
+                </div>
+                <div class="form-group page-size-filter">
+                    <label for="filter-page-size">Rows</label>
+                    <select id="filter-page-size" onchange="changePageSize()">
+                        <option value="10">10</option>
+                        <option value="20" selected>20</option>
+                        <option value="50">50</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="vocab-action-bar">
+                <div id="selection-count" class="selection-count">0 selected</div>
+                <div class="vocab-action-buttons">
+                    <button class="btn secondary" onclick="clearSelection()">Clear Selection</button>
+                    <button id="btn-flashcards" class="btn info" onclick="openSelectedFlashcards()" disabled>Flash Cards</button>
+                    <button id="btn-start-selected" class="btn primary" onclick="startSelectedTraining()" disabled>Start Training</button>
+                </div>
+            </div>
+
+            <div id="vocab-table-state" class="vocab-table-state">Choose filters to load vocabulary.</div>
+            <div id="vocab-table-wrap" class="vocab-table-wrap" style="display:none;"></div>
+
+            <div id="vocab-pagination" class="vocab-pagination" style="display:none;">
+                <button class="btn secondary" id="page-prev-btn" onclick="changePage(-1)">Prev</button>
+                <span id="page-status">Page 1 / 1</span>
+                <button class="btn secondary" id="page-next-btn" onclick="changePage(1)">Next</button>
             </div>
         </div>
 
-        <!-- SCREEN: Standard Mode – Level Picker -->
-        <div id="screen-level-picker" class="screen">
-            <h2>Select HSK Level</h2>
-            <p class="subtitle" style="text-align:center; color:var(--text-muted); margin-bottom:4px;">Choose a level to see its lessons</p>
-            <div class="level-picker-grid">
-                <div class="level-picker-card" onclick="showLessonPicker('HSK1')">
-                    <div class="level-icon">🎯</div>
-                    <div class="level-name">HSK 1</div>
-                </div>
-                <div class="level-picker-card" onclick="showLessonPicker('HSK2')">
-                    <div class="level-icon">🚀</div>
-                    <div class="level-name">HSK 2</div>
-                </div>
-                <div class="level-picker-card" onclick="showLessonPicker('HSK3')">
-                    <div class="level-icon">🌟</div>
-                    <div class="level-name">HSK 3</div>
-                </div>
-                <div class="level-picker-card" onclick="showLessonPicker('HSK4')">
-                    <div class="level-icon">🔥</div>
-                    <div class="level-name">HSK 4</div>
-                </div>
-                <div class="level-picker-card" onclick="showLessonPicker('HSK5')">
-                    <div class="level-icon">💎</div>
-                    <div class="level-name">HSK 5</div>
-                </div>
-                <div class="level-picker-card" onclick="showLessonPicker('HSK6')">
-                    <div class="level-icon">👑</div>
-                    <div class="level-name">HSK 6</div>
-                </div>
-            </div>
-            <div class="nav-buttons" style="margin-top:24px;">
-                <button class="btn secondary" onclick="goHome()">Back</button>
-            </div>
-        </div>
-
-        <!-- SCREEN: Standard Mode – Lesson Picker -->
-        <div id="screen-lesson-picker" class="screen">
-            <h2 id="lesson-picker-title">HSK 1 — Select Lesson</h2>
-            <p id="lesson-picker-sub" class="subtitle" style="text-align:center; color:var(--text-muted); margin-bottom:4px;"></p>
-            <div id="lesson-list" class="lesson-list">
-                <p style="color:var(--text-muted); text-align:center;">Loading lessons…</p>
-            </div>
-            <div class="nav-buttons" style="margin-top:16px;">
-                <button class="btn secondary" onclick="showLevelPicker()">← Back</button>
-            </div>
-        </div>
+        {% include 'shared/passage_picker.html' %}
 
         <!-- SCREEN: Setup Other Modes -->
         <div id="screen-setup-other" class="screen">
@@ -184,6 +177,7 @@
         </div>
     </div>
 
+    <script src="/static/shared/passage_picker.js"></script>
     <script src="/static/vocab/vocab.js"></script>
 </body>
 </html>

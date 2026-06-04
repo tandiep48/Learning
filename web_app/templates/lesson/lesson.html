@@ -4,32 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lesson Practice - {{ hsk_level }}</title>
-    <script>
-        window.hskLevel = "{{ hsk_level }}";
-    </script>
+    <!-- Removed window.hskLevel as it is handled dynamically -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/shared/styles.css">
-    <link rel="stylesheet" href="/static/lesson/lesson.css">
+    <link rel="stylesheet" href="/static/shared/passage_picker.css">
+    <link rel="stylesheet" href="/static/lesson/lesson.css?v=2">
 </head>
 <body>
     <div class="app-container" style="max-width: 800px;">
-        <!-- SCREEN: Main Menu -->
-        <div id="screen-menu" class="screen active">
-            <div style="margin-bottom: 20px;">
-                <a href="/" style="color: var(--primary); text-decoration: none;">&larr; Back to Dashboard</a>
-            </div>
-            <h1>Lesson Practice</h1>
-            <p class="subtitle">Select a passage to practice</p>
-            
-            <div class="form-group" style="margin-bottom: 20px;">
-                <input type="text" id="search-input" placeholder="Search passage ID..." onkeyup="filterPassages()">
-            </div>
-
-            <div id="passage-container" class="passage-list">
-                <p>Loading passages...</p>
-            </div>
-        </div>
-
+        {% include 'shared/passage_picker.html' %}
         <!-- SCREEN: Loading -->
         <div id="screen-loading" class="screen">
             <div class="loader"></div>
@@ -83,7 +66,7 @@
             </div>
 
             <div class="nav-buttons end-session">
-                <button class="btn secondary" onclick="goHome()">Quit Session</button>
+                <button class="btn secondary" onclick="confirmQuit()">Quit Session</button>
             </div>
         </div>
 
@@ -106,6 +89,19 @@
 
     </div>
 
+    <!-- Quit Confirmation Modal -->
+    <div id="quit-modal-overlay" class="quit-modal-overlay" onclick="closeQuitModalIfBackground(event)">
+        <div class="quit-modal">
+            <h3>⚠️ Quit Session?</h3>
+            <p>Your current progress won't be saved.<br>Are you sure you want to quit?</p>
+            <div class="quit-modal-btns">
+                <button class="btn secondary" onclick="closeQuitModal()">Cancel</button>
+                <button class="btn danger" onclick="goHome()">Yes, Quit</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/shared/passage_picker.js"></script>
     <script src="/static/lesson/lesson.js"></script>
 </body>
 </html>

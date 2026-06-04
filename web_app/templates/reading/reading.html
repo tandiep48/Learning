@@ -4,32 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reading Practice - {{ hsk_level }}</title>
-    <script>
-        window.hskLevel = "{{ hsk_level }}";
-    </script>
-    <!-- Google Fonts: Inter for UI, Noto Sans SC for Chinese -->
+    <!-- Removed window.hskLevel as it is handled dynamically -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/shared/styles.css">
+    <link rel="stylesheet" href="/static/shared/passage_picker.css">
     <link rel="stylesheet" href="/static/reading/reading.css">
-    <link rel="stylesheet" href="/static/shared/vocab_table.css">
+    <link rel="stylesheet" href="/static/shared/vocab_table.css?v=2">
 </head>
 <body>
     <div class="app-container" style="max-width: 800px;">
 
-        <!-- SCREEN: Main Menu -->
-        <div id="screen-menu" class="screen active">
-            <div style="margin-bottom: 20px;">
-                <a href="/" style="color: var(--primary); text-decoration: none;">&larr; Back to Dashboard</a>
-            </div>
-            <h1>Reading Lesson</h1>
-            <p class="subtitle">Select a passage to read</p>
-            <div class="form-group" style="margin-bottom: 20px;">
-                <input type="text" id="search-input" placeholder="Search passage ID..." onkeyup="filterPassages()">
-            </div>
-            <div id="passage-container" class="passage-list">
-                <p>Loading passages...</p>
-            </div>
-        </div>
+        {% include 'shared/passage_picker.html' %}
 
         <!-- SCREEN: Loading -->
         <div id="screen-loading" class="screen">
@@ -44,7 +29,6 @@
                 <div class="toolbar-right">
                     <button class="btn" id="toggle-pinyin-btn" onclick="togglePinyin()">Show Pinyin</button>
                     <button class="btn" id="toggle-meaning-btn" onclick="toggleMeaning()">Show Meaning</button>
-                    <button class="btn" id="show-grammar-btn" onclick="openGrammarPanel()">📐 Grammar</button>
                     <button class="btn" id="show-vocab-btn" onclick="openVocabPanel()">📚 Vocab</button>
                 </div>
             </div>
@@ -57,7 +41,7 @@
 
             <div class="finish-bar">
                 <button class="btn primary" style="flex:1;" onclick="startLessonPractice()">
-                    🎯 Start Lesson Practice
+                    Flash Cards
                 </button>
                 <button class="btn secondary" style="flex:1;" onclick="goHome()">
                     Finished Reading
@@ -79,19 +63,7 @@
         </div>
     </div>
 
-    <!-- ── Grammar Slide Panel ── -->
-    <div id="grammar-panel-overlay" class="vocab-panel-overlay" onclick="closeGrammarIfBackground(event)">
-        <div class="vocab-panel">
-            <div class="vocab-panel-header">
-                <h3 id="grammar-panel-title">Grammar Rules</h3>
-                <button class="vocab-close-btn" onclick="closeGrammarPanel()">✕</button>
-            </div>
-            <div class="vocab-panel-body" id="grammar-panel-body">
-                <div class="vocab-loading">Loading...</div>
-            </div>
-        </div>
-    </div>
-
+    <script src="/static/shared/passage_picker.js"></script>
     <script src="/static/reading/reading.js"></script>
 </body>
 </html>

@@ -125,6 +125,94 @@ def get_learned_words(conn, user_id):
         print(f"⚠️ Database query failed (get_learned_words): {e}")
         return []
 
+def get_mastered_words_with_recency(conn, user_id):
+    """
+    Returns mastered words with the timestamp of the latest mastered learning day.
+    Uses the same 3-mode round-1 mastery rule as get_learned_words().
+    """
+    if not conn:
+        return []
+
+    query = """
+    WITH daily_attempts AS (
+        SELECT
+            word,
+            DATE(updated_at) AS attempt_date,
+            MAX(updated_at) AS learned_at,
+            COUNT(DISTINCT CASE WHEN is_correct = true THEN mode END) AS successful_modes
+        FROM vocab_records
+        WHERE mode IN ('typing', 'listen', 'meaning')
+          AND round_num = 1
+          AND user_id = %s
+        GROUP BY word, DATE(updated_at)
+    ),
+    latest_status AS (
+        SELECT
+            word,
+            learned_at,
+            successful_modes,
+            ROW_NUMBER() OVER (PARTITION BY word ORDER BY attempt_date DESC) AS rn
+        FROM daily_attempts
+    )
+    SELECT word, learned_at
+    FROM latest_status
+    WHERE rn = 1 AND successful_modes = 3;
+    """
+    try:
+        with conn.cursor() as cur:
+            cur.execute(query, (user_id,))
+            rows = cur.fetchall()
+            return [{"word": row[0], "learned_at": row[1]} for row in rows]
+    except Exception as e:
+        print(f"⚠️ Database query failed (get_mastered_words_with_recency): {e}")
+        return []
+
+def greedy_rank_recommendations(results):
+    """
+    Rank groups by recent mastered words while spreading matched-word coverage.
+    """
+    ranked = []
+    remaining = list(results)
+    covered_words = set()
+
+    def stable_key(item):
+        progress = str(item.get('progress') or '')
+        return (
+            item.get('level') or 0,
+            item.get('lesson') or 0,
+            item.get('category') or '',
+            progress
+        )
+
+    remaining.sort(key=stable_key)
+
+    while remaining:
+        best_index = 0
+        best_score = None
+        for idx, item in enumerate(remaining):
+            matched_words = set(item.get('matched_words') or [])
+            new_words = matched_words - covered_words
+            recent_new = set(item.get('recent_matched_words') or []) - covered_words
+            newest_value = item.get('newest_learned_sort') or 0
+
+            score = (
+                len(recent_new),
+                len(new_words),
+                item.get('recent_score', 0),
+                newest_value,
+                item.get('coverage', 0),
+                -len(matched_words)
+            )
+            if best_score is None or score > best_score:
+                best_score = score
+                best_index = idx
+
+        selected = remaining.pop(best_index)
+        ranked.append(selected)
+        covered_words.update(selected.get('matched_words') or [])
+
+    return ranked
+
 def get_recommended_practices(conn, user_id, threshold=0.75):
     """
     Returns practice progress groups the user is ready for.
@@ -142,16 +230,26 @@ def get_recommended_practices(conn, user_id, threshold=0.75):
 
     try:
         # 1. Get mastered words (3-mode logic) — from vocab_records only
-        mastered = get_learned_words(conn, user_id)
-        if not mastered:
+        mastered_rows = get_mastered_words_with_recency(conn, user_id)
+        if not mastered_rows:
             return []
+        mastered_recency = {row["word"]: row["learned_at"] for row in mastered_rows}
+        mastered = list(mastered_recency.keys())
+        sorted_mastered = sorted(
+            mastered_rows,
+            key=lambda row: row["learned_at"].timestamp() if row["learned_at"] else 0,
+            reverse=True
+        )
+        recent_window_size = min(10, max(3, len(sorted_mastered) // 3 or 1))
+        recent_words = {row["word"] for row in sorted_mastered[:recent_window_size]}
 
         # 2. Compute coverage per progress group — includes both practice and exam
         coverage_sql = """
             SELECT
                 qb.category, qb.level, qb.lesson, qb.progress,
                 COUNT(DISTINCT lu.unique_word)                                              AS total_words,
-                COUNT(DISTINCT CASE WHEN lu.unique_word = ANY(%s) THEN lu.unique_word END)  AS known_words
+                COUNT(DISTINCT CASE WHEN lu.unique_word = ANY(%s) THEN lu.unique_word END)  AS known_words,
+                ARRAY_AGG(DISTINCT lu.unique_word)                                          AS group_words
             FROM learning_units lu
             JOIN question_bank qb ON lu.unit_id = qb.unit_id
             WHERE qb.category IN ('practice', 'exam')
@@ -164,7 +262,8 @@ def get_recommended_practices(conn, user_id, threshold=0.75):
                 (row[0], row[1], row[2], row[3]): {
                     'total_words': row[4],
                     'known_words': row[5],
-                    'coverage': row[5] / row[4]
+                    'coverage': row[5] / row[4],
+                    'group_words': row[6] or []
                 }
                 for row in cur.fetchall()
                 if row[4] > 0
@@ -236,6 +335,18 @@ def get_recommended_practices(conn, user_id, threshold=0.75):
             total = group_coverage[(category, level, lesson, progress)]['total_words']
             known = group_coverage[(category, level, lesson, progress)]['known_words']
             coverage = group_coverage[(category, level, lesson, progress)]['coverage']
+            group_words = group_coverage[(category, level, lesson, progress)]['group_words']
+            matched_words = sorted({word for word in group_words if word in mastered_recency})
+            recent_matched_words = sorted(
+                [word for word in matched_words if word in recent_words],
+                key=lambda word: mastered_recency.get(word) or 0,
+                reverse=True
+            )
+            newest_learned_at = max(
+                (mastered_recency.get(word) for word in matched_words if mastered_recency.get(word)),
+                default=None
+            )
+            recent_score = sum(1 for word in matched_words if word in recent_words)
             
             first = qs[0]
             # Derive skill via majority vote — avoids NULL first-row mislabelling
@@ -254,10 +365,17 @@ def get_recommended_practices(conn, user_id, threshold=0.75):
                 'known_words':  known,
                 'coverage':     round(coverage, 4),
                 'coverage_pct': round(coverage * 100, 1),
+                'matched_words': matched_words,
+                'recent_matched_words': recent_matched_words,
+                'newest_learned_at': newest_learned_at.isoformat() if newest_learned_at else None,
+                'newest_learned_sort': newest_learned_at.timestamp() if newest_learned_at else 0,
+                'recent_score': recent_score,
                 'questions':    qs,
             })
 
-        results.sort(key=lambda x: x['coverage'], reverse=True)
+        results = greedy_rank_recommendations(results)
+        for item in results:
+            item.pop('newest_learned_sort', None)
         return results
 
     except Exception as e:

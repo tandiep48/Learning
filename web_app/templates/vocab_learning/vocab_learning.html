@@ -4,30 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vocab Learning – {{ hsk_level }}</title>
-    <script>window.hskLevel = "{{ hsk_level }}";</script>
+    <!-- removed script for hskLevel -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/shared/styles.css">
     <link rel="stylesheet" href="/static/vocab_learning/vocab_learning.css">
     <link rel="stylesheet" href="/static/shared/vocab_table.css">
+    <link rel="stylesheet" href="/static/shared/passage_picker.css">
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
 </head>
 <body>
 <div class="vl-container">
 
-    <a href="/vocab-learning" class="vl-back">← Back to Level Select</a>
-
-    <h1 style="text-align:left; margin-bottom:4px;">📚 {{ hsk_level }} — Vocab Learning</h1>
-    <p id="vl-level-subtitle" style="color:var(--text-muted); margin-bottom:24px;"></p>
-
-    <!-- ── SCREEN: Lesson Picker ── -->
-    <div id="screen-picker">
-        <div id="vl-lesson-list" class="vl-lesson-list">
-            <div class="vl-loading">
-                <div class="loader"></div>
-                <p>Loading lessons…</p>
-            </div>
-        </div>
-    </div>
+    {% include 'shared/passage_picker.html' %}
 
     <!-- ── SCREEN: Loading ── -->
     <div id="screen-loading" style="display:none;">
@@ -105,6 +93,7 @@
 
 </div>
 
+<script src="/static/shared/passage_picker.js"></script>
 <script src="/static/vocab_learning/vocab_learning.js"></script>
 
 <!-- ── Stroke Order Modal ── -->

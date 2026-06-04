@@ -289,6 +289,10 @@ def get_recommendations():
             'total_words':  g['total_words'],
             'known_words':  g['known_words'],
             'coverage_pct': g['coverage_pct'],
+            'matched_words': g.get('matched_words', []),
+            'recent_matched_words': g.get('recent_matched_words', []),
+            'newest_learned_at': g.get('newest_learned_at'),
+            'recent_score': g.get('recent_score', 0),
             'status':       g.get('status', 'Not start'),
             'questions':    qs,
         })

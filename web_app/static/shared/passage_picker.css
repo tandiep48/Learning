@@ -1,0 +1,88 @@
+/* -- Level Picker Grid -- */
+.level-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 14px;
+    margin-top: 24px;
+}
+.level-picker-card {
+    background: rgba(255,255,255,0.05);
+    border: 2px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 24px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+.level-picker-card:hover {
+    background: rgba(67,97,238,0.15);
+    border-color: rgba(67,97,238,0.4);
+    transform: translateY(-2px);
+}
+.level-icon { font-size: 2rem; }
+.level-name {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--text-main);
+}
+
+/* -- Lesson List -- */
+.lesson-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 15px;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+.lesson-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.lesson-card:hover {
+    background: rgba(255,255,255,0.08);
+    transform: translateX(4px);
+}
+.lesson-card-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.lesson-card-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+.lesson-card-preview {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+.lesson-card-count {
+    background: rgba(67,97,238,0.15);
+    color: #a5b4fc;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* -- Picker Screens -- */
+.picker-screen {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+.picker-screen.active {
+    display: block;
+}

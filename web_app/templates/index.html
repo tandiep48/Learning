@@ -4,59 +4,52 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Learning Dashboard</title>
-    <!-- Google Fonts: Inter for UI -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/shared/styles.css">
 </head>
-<body>
-    <div class="app-container" style="max-width: 800px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h1>Learning Dashboard</h1>
-            <div>
+<body class="dashboard-page">
+    <div class="site-shell">
+        <header class="site-header">
+            <a class="site-brand" href="/">Learning Dashboard</a>
+            <nav class="site-nav" aria-label="Primary navigation">
+                <a href="/vocab">Vocabulary</a>
+                <a href="/learning">Learning</a>
+                <a href="/recommend">Practice</a>
+            </nav>
+            <div class="site-auth">
                 {% if current_user.is_authenticated %}
-                    <span>Welcome, {{ current_user.username }}!</span> |
-                    <a href="{{ url_for('auth.logout') }}" style="color: #f44336; text-decoration: none; font-weight: 600;">Logout</a>
+                    <span>{{ current_user.username }}</span>
+                    <a href="{{ url_for('auth.logout') }}">Logout</a>
                 {% else %}
-                    <a href="{{ url_for('auth.login') }}" style="color: #007bff; text-decoration: none; font-weight: 600;">Login</a> |
-                    <a href="{{ url_for('auth.register') }}" style="color: #28a745; text-decoration: none; font-weight: 600;">Register</a>
+                    <a href="{{ url_for('auth.login') }}">Login</a>
+                    <a href="{{ url_for('auth.register') }}">Register</a>
                 {% endif %}
             </div>
-        </div>
-        <p class="subtitle">Choose what you want to practice today</p>
-        
-        <div class="dashboard-container">
-            <a href="/vocab" class="dash-card">
-                <div class="dash-icon">🔤</div>
-                <div class="dash-title">Vocabulary Trainer</div>
-                <div class="dash-desc">Practice isolated words (HSK list), review difficult words, strokes, and more.</div>
-            </a>
+        </header>
 
+        <main class="dashboard-main">
+            <section class="dashboard-hero">
+                <h1>Learning Dashboard</h1>
+                <p class="subtitle">Choose a focused study area or jump directly from the header.</p>
+            </section>
 
-            
-            <a href="/reading" class="dash-card">
-                <div class="dash-icon">📖</div>
-                <div class="dash-title">Reading Lesson</div>
-                <div class="dash-desc">Read passages, toggle Pinyin, and listen to audio before practicing.</div>
-            </a>
+            <section class="dashboard-container">
+                <a href="/vocab" class="dash-card">
+                    <div class="dash-title">Vocabulary Trainer</div>
+                    <div class="dash-desc">Practice isolated words, review selected vocabulary, and launch flash cards.</div>
+                </a>
 
-            <a href="/lesson" class="dash-card">
-                <div class="dash-icon">🎧</div>
-                <div class="dash-title">Lesson Practice</div>
-                <div class="dash-desc">Practice listening, translating, reordering, and typing full sentences from lesson passages.</div>
-            </a>
+                <a href="/learning" class="dash-card">
+                    <div class="dash-title">Learning</div>
+                    <div class="dash-desc">Choose HSK, lesson, and part, then open vocab, reading, trainer, or grammar activities.</div>
+                </a>
 
-            <a href="/practice" class="dash-card" style="display: none;">
-                <div class="dash-icon">📝</div>
-                <div class="dash-title">Practice Tests</div>
-                <div class="dash-desc">Full HSK-style practice exercises with listening, reading, fill-in-the-blank, and reordering.</div>
-            </a>
-
-            <a href="/recommend" class="dash-card">
-                <div class="dash-icon">📡</div>
-                <div class="dash-title">Practice</div>
-                <div class="dash-desc">Practice lessons tailored to the vocabulary you've already mastered — your smartest next step.</div>
-            </a>
-        </div>
+                <a href="/recommend" class="dash-card">
+                    <div class="dash-title">Practice</div>
+                    <div class="dash-desc">Practice lessons matched to the vocabulary you have already mastered.</div>
+                </a>
+            </section>
+        </main>
     </div>
 </body>
 </html>

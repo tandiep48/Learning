@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learning</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/shared/styles.css">
+    <link rel="stylesheet" href="/static/shared/passage_picker.css">
+    <link rel="stylesheet" href="/static/learning/learning.css">
+</head>
+<body>
+    <div class="app-container learning-container">
+        {% include 'shared/passage_picker.html' %}
+
+        <section id="learning-action-screen" class="learning-action-screen" style="display:none;">
+            <div class="learning-topbar">
+                <button class="btn secondary learning-back-btn" onclick="backToPartPicker()">Back to Parts</button>
+                <a href="/" class="learning-home-link">Dashboard</a>
+            </div>
+
+            <div class="learning-heading">
+                <h1>Learning</h1>
+                <p id="learning-context" class="subtitle">Choose an activity.</p>
+            </div>
+
+            <div class="learning-action-grid">
+                <button class="learning-action-card" onclick="openLearningAction('vocab-reading')">
+                    <span class="learning-action-title">Vocab Reading</span>
+                    <span class="learning-action-desc">Review this part's vocabulary as flash cards.</span>
+                </button>
+                <button class="learning-action-card" onclick="openLearningAction('vocab-trainer')">
+                    <span class="learning-action-title">Vocab Trainer</span>
+                    <span class="learning-action-desc">Train listening, typing, and meaning for this part.</span>
+                </button>
+                <button class="learning-action-card" onclick="openLearningAction('lesson-reading')">
+                    <span class="learning-action-title">Lesson Reading</span>
+                    <span class="learning-action-desc">Read the passage with pinyin, meaning, audio, and vocab.</span>
+                </button>
+                <button class="learning-action-card" onclick="openLearningAction('lesson-trainer')">
+                    <span class="learning-action-title">Lesson Trainer</span>
+                    <span class="learning-action-desc">Practice sentence listening, meaning, reorder, and typing.</span>
+                </button>
+                <button class="learning-action-card" onclick="openLearningAction('grammar')">
+                    <span class="learning-action-title">Grammar</span>
+                    <span class="learning-action-desc">Open grammar notes for this selected passage.</span>
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <script src="/static/shared/passage_picker.js"></script>
+    <script src="/static/learning/learning.js"></script>
+</body>
+</html>

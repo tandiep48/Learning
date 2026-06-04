@@ -44,32 +44,27 @@ def vocab_page():
 @app.route('/vocab-learning')
 @login_required
 def vocab_learning_dashboard():
-    return render_template('shared/level_select.html', app_mode='vocab-learning')
+    return render_template('vocab_learning/vocab_learning.html')
 
-@app.route('/vocab-learning/<hsk_level>')
+@app.route('/learning')
 @login_required
-def vocab_learning_page(hsk_level):
-    return render_template('vocab_learning/vocab_learning.html', hsk_level=hsk_level)
+def learning_page():
+    return render_template('learning/learning.html')
+
+@app.route('/grammar')
+@login_required
+def grammar_page():
+    return render_template('grammar/grammar.html')
 
 @app.route('/lesson')
 @login_required
-def lesson_dashboard():
-    return render_template('shared/level_select.html', app_mode='lesson')
-
-@app.route('/lesson/<hsk_level>')
-@login_required
-def lesson_page(hsk_level):
-    return render_template('lesson/lesson.html', hsk_level=hsk_level)
+def lesson_page():
+    return render_template('lesson/lesson.html')
 
 @app.route('/reading')
 @login_required
-def reading_dashboard():
-    return render_template('shared/level_select.html', app_mode='reading')
-
-@app.route('/reading/<hsk_level>')
-@login_required
-def reading_page(hsk_level):
-    return render_template('reading/reading.html', hsk_level=hsk_level)
+def reading_page():
+    return render_template('reading/reading.html')
 
 @app.route('/practice')
 @login_required

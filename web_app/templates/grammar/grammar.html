@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grammar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/shared/styles.css">
+    <link rel="stylesheet" href="/static/shared/passage_picker.css">
+    <link rel="stylesheet" href="/static/grammar/grammar.css">
+</head>
+<body>
+    <div class="app-container grammar-container">
+        {% include 'shared/passage_picker.html' %}
+
+        <section id="screen-loading" class="screen">
+            <div class="loader"></div>
+            <p>Loading grammar...</p>
+        </section>
+
+        <section id="screen-grammar" class="screen">
+            <div class="grammar-toolbar">
+                <button class="btn secondary" onclick="goHome()">Back to Grammar Menu</button>
+                <a href="/learning" id="grammar-learning-link" class="grammar-learning-link">Learning</a>
+            </div>
+            <h1 id="grammar-title">Grammar</h1>
+            <div id="grammar-body" class="grammar-body"></div>
+        </section>
+    </div>
+
+    <script src="/static/shared/passage_picker.js"></script>
+    <script src="/static/grammar/grammar.js"></script>
+</body>
+</html>
