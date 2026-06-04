@@ -474,7 +474,7 @@ body.dashboard-page {
 }
 
 body.dashboard-page .dashboard-container {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 16px;
     margin-top: 0;
 }

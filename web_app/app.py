@@ -46,6 +46,16 @@ def vocab_page():
 def vocab_learning_dashboard():
     return render_template('vocab_learning/vocab_learning.html')
 
+@app.route('/learning')
+@login_required
+def learning_page():
+    return render_template('learning/learning.html')
+
+@app.route('/grammar')
+@login_required
+def grammar_page():
+    return render_template('grammar/grammar.html')
+
 @app.route('/lesson')
 @login_required
 def lesson_page():

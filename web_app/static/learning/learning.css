@@ -1,0 +1,88 @@
+body {
+    align-items: flex-start;
+    padding: 40px 20px;
+}
+
+.learning-container {
+    max-width: 900px;
+}
+
+.learning-action-screen {
+    animation: fadeIn 0.25s ease;
+}
+
+.learning-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.learning-back-btn {
+    width: auto;
+}
+
+.learning-home-link {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 700;
+}
+
+.learning-heading h1 {
+    margin-bottom: 8px;
+}
+
+.learning-action-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+}
+
+.learning-action-card {
+    min-height: 150px;
+    padding: 22px;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.05);
+    color: var(--text-main);
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 16px;
+    font-family: 'Inter', sans-serif;
+    transition: transform 0.2s, border-color 0.2s, background 0.2s;
+}
+
+.learning-action-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--primary);
+    background: rgba(67, 97, 238, 0.14);
+}
+
+.learning-action-title {
+    font-size: 1.15rem;
+    font-weight: 800;
+}
+
+.learning-action-desc {
+    color: var(--text-muted);
+    line-height: 1.45;
+}
+
+@media (max-width: 560px) {
+    body {
+        padding: 20px 12px;
+    }
+
+    .learning-topbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .learning-action-grid {
+        grid-template-columns: 1fr;
+    }
+}
