@@ -236,7 +236,9 @@ def submit_practice():
                 skill=ans.get("skill"),
                 question_type=ans.get("type"),
                 user_answer=ans.get("user_answer"),
-                is_correct=ans.get("is_correct")
+                is_correct=ans.get("is_correct"),
+                response_time_ms=ans.get("response_time_ms"),
+                category=ans.get("category", "practice")
             )
         db_conn.close()
         
