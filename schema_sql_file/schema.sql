@@ -200,3 +200,22 @@ CREATE TABLE IF NOT EXISTS grammar_context (
     grammar_id VARCHAR(50) NOT NULL,
     content_json JSONB
 );
+
+-- ==========================================
+-- Updates from profile_recent_learning
+-- ==========================================
+
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS avatar_path TEXT;
+
+CREATE TABLE IF NOT EXISTS user_learning_state (
+    user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    current_passage_id VARCHAR(255) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE practice_record
+ADD COLUMN IF NOT EXISTS response_time_ms INTEGER;
+
+ALTER TABLE practice_record
+ADD COLUMN IF NOT EXISTS category VARCHAR(20) DEFAULT 'practice';

@@ -6,11 +6,12 @@ from db import get_db_connection
 auth_bp = Blueprint('auth', __name__)
 
 class User(UserMixin):
-    def __init__(self, id, username, email, level):
+    def __init__(self, id, username, email, level, avatar_path=None):
         self.id = id
         self.username = username
         self.email = email
         self.level = level
+        self.avatar_path = avatar_path
 
 def get_user_by_username(username):
     conn = get_db_connection()
@@ -18,10 +19,14 @@ def get_user_by_username(username):
         return None
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT id, username, email, password, level FROM users WHERE username = %s", (username,))
+            try:
+                cur.execute("SELECT id, username, email, password, level, avatar_path FROM users WHERE username = %s", (username,))
+            except Exception:
+                conn.rollback()
+                cur.execute("SELECT id, username, email, password, level, NULL AS avatar_path FROM users WHERE username = %s", (username,))
             row = cur.fetchone()
             if row:
-                return {'id': row[0], 'username': row[1], 'email': row[2], 'password': row[3], 'level': row[4]}
+                return {'id': row[0], 'username': row[1], 'email': row[2], 'password': row[3], 'level': row[4], 'avatar_path': row[5]}
     finally:
         conn.close()
     return None
@@ -32,10 +37,14 @@ def get_user_by_id(user_id):
         return None
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT id, username, email, password, level FROM users WHERE id = %s", (user_id,))
+            try:
+                cur.execute("SELECT id, username, email, password, level, avatar_path FROM users WHERE id = %s", (user_id,))
+            except Exception:
+                conn.rollback()
+                cur.execute("SELECT id, username, email, password, level, NULL AS avatar_path FROM users WHERE id = %s", (user_id,))
             row = cur.fetchone()
             if row:
-                return User(row[0], row[1], row[2], row[4])
+                return User(row[0], row[1], row[2], row[4], row[5])
     finally:
         conn.close()
     return None
@@ -51,7 +60,7 @@ def login():
         
         user_data = get_user_by_username(username)
         if user_data and check_password_hash(user_data['password'], password):
-            user = User(user_data['id'], user_data['username'], user_data['email'], user_data['level'])
+            user = User(user_data['id'], user_data['username'], user_data['email'], user_data['level'], user_data.get('avatar_path'))
             login_user(user)
             return redirect(url_for('index'))
         else:

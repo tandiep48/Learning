@@ -66,24 +66,160 @@ def insert_lesson_progress(conn, user_id, session_id, passage_id, line_id, mode,
         print(f"⚠️ Database lesson insert failed: {e}")
         conn.rollback()
 
-def insert_practice_progress(conn, user_id, session_id, hsk_level, lesson, question_no, skill, question_type, user_answer, is_correct):
+def insert_practice_progress(conn, user_id, session_id, hsk_level, lesson, question_no, skill, question_type, user_answer, is_correct, response_time_ms=None, category='practice'):
     if not conn:
         return
         
     query = """
         INSERT INTO practice_record 
-        (user_id, session_id, hsk_level, lesson, question_no, skill, question_type, user_answer, is_correct)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        (user_id, session_id, hsk_level, lesson, question_no, skill, question_type, user_answer, is_correct, response_time_ms, category)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
     try:
         with conn.cursor() as cur:
             cur.execute(query, (
-                user_id, str(session_id), hsk_level, str(lesson), question_no, skill, question_type, user_answer, is_correct
+                user_id, str(session_id), hsk_level, str(lesson), question_no, skill, question_type, user_answer, is_correct, response_time_ms, category or 'practice'
             ))
         conn.commit()
     except Exception as e:
         print(f"⚠️ Database practice insert failed: {e}")
         conn.rollback()
+
+def set_recent_learning(conn, user_id, passage_id):
+    if not conn or not passage_id:
+        return False
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO user_learning_state (user_id, current_passage_id, updated_at)
+                VALUES (%s, %s, CURRENT_TIMESTAMP)
+                ON CONFLICT (user_id)
+                DO UPDATE SET current_passage_id = EXCLUDED.current_passage_id,
+                              updated_at = CURRENT_TIMESTAMP
+            """, (user_id, passage_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"⚠️ Database set_recent_learning failed: {e}")
+        conn.rollback()
+        return False
+
+def get_recent_learning(conn, user_id):
+    if not conn:
+        return None
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT current_passage_id, updated_at
+                FROM user_learning_state
+                WHERE user_id = %s
+            """, (user_id,))
+            row = cur.fetchone()
+            if not row:
+                return None
+            return {"passage_id": row[0], "updated_at": row[1].isoformat() if row[1] else None}
+    except Exception as e:
+        print(f"⚠️ Database get_recent_learning failed: {e}")
+        return None
+
+def update_user_avatar_path(conn, user_id, avatar_path):
+    if not conn:
+        return False
+    try:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE users SET avatar_path = %s WHERE id = %s", (avatar_path, user_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"⚠️ Database update_user_avatar_path failed: {e}")
+        conn.rollback()
+        return False
+
+def get_profile_summary(conn, user_id):
+    if not conn:
+        return {
+            "learned_words": [],
+            "time_totals_ms": {"vocab": 0, "lesson": 0, "practice": 0, "exam": 0},
+            "vocab_mode_time_ms": [],
+            "lesson_mode_time_ms": [],
+            "practice_skill_time_ms": []
+        }
+
+    summary = {
+        "learned_words": [],
+        "time_totals_ms": {"vocab": 0, "lesson": 0, "practice": 0, "exam": 0},
+        "vocab_mode_time_ms": [],
+        "lesson_mode_time_ms": [],
+        "practice_skill_time_ms": []
+    }
+
+    try:
+        summary["learned_words"] = get_mastered_words_with_recency(conn, user_id)
+    except Exception as e:
+        print(f"⚠️ Database learned words summary failed: {e}")
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT mode, COALESCE(SUM(response_time_ms), 0)::bigint
+                FROM vocab_records
+                WHERE user_id = %s AND response_time_ms IS NOT NULL
+                GROUP BY mode
+                ORDER BY mode
+            """, (user_id,))
+            rows = cur.fetchall()
+            summary["vocab_mode_time_ms"] = [{"mode": row[0], "time_ms": int(row[1] or 0)} for row in rows]
+            summary["time_totals_ms"]["vocab"] = sum(item["time_ms"] for item in summary["vocab_mode_time_ms"])
+    except Exception as e:
+        print(f"⚠️ Database vocab time summary failed: {e}")
+
+    lesson_mode_names = {1: "meaning", 2: "typing", 3: "reorder", 4: "listening"}
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT mode, COALESCE(SUM(response_time_ms), 0)::bigint
+                FROM lesson_records
+                WHERE user_id = %s AND response_time_ms IS NOT NULL
+                GROUP BY mode
+                ORDER BY mode
+            """, (user_id,))
+            rows = cur.fetchall()
+            summary["lesson_mode_time_ms"] = [
+                {"mode": lesson_mode_names.get(row[0], str(row[0])), "time_ms": int(row[1] or 0)}
+                for row in rows
+            ]
+            summary["time_totals_ms"]["lesson"] = sum(item["time_ms"] for item in summary["lesson_mode_time_ms"])
+    except Exception as e:
+        print(f"⚠️ Database lesson time summary failed: {e}")
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT COALESCE(pr.category, 'practice') AS category,
+                       COALESCE(pr.skill, 'unknown') AS skill,
+                       COALESCE(SUM(pr.response_time_ms), 0)::bigint
+                FROM practice_record pr
+                WHERE pr.user_id = %s AND pr.response_time_ms IS NOT NULL
+                GROUP BY COALESCE(pr.category, 'practice'), COALESCE(pr.skill, 'unknown')
+                ORDER BY category, skill
+            """, (user_id,))
+            rows = cur.fetchall()
+            summary["practice_skill_time_ms"] = [
+                {"category": row[0], "skill": row[1], "time_ms": int(row[2] or 0)}
+                for row in rows
+            ]
+            for item in summary["practice_skill_time_ms"]:
+                category = item["category"] if item["category"] in ("practice", "exam") else "practice"
+                summary["time_totals_ms"][category] += item["time_ms"]
+    except Exception as e:
+        print(f"⚠️ Database practice time summary failed: {e}")
+
+    for word in summary["learned_words"]:
+        learned_at = word.get("learned_at")
+        if hasattr(learned_at, "isoformat"):
+            word["learned_at"] = learned_at.isoformat()
+
+    return summary
 
 def get_learned_words(conn, user_id):
     """

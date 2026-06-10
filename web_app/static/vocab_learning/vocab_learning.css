@@ -1,9 +1,9 @@
 /* ── Vocab Learning Page Layout ── */
-body { align-items: flex-start; padding: 40px 20px; }
+body { align-items: flex-start; padding: 32px 20px; }
 
 .vl-container {
     width: 100%;
-    max-width: 680px;
+    max-width: 1280px;
     margin: 0 auto;
 }
 
@@ -74,6 +74,8 @@ body { align-items: flex-start; padding: 40px 20px; }
     padding: 40px 32px;
     text-align: center;
     animation: fadeSlide 0.3s ease;
+    max-width: 760px;
+    margin: 0 auto;
 }
 @keyframes fadeSlide {
     from { opacity: 0; transform: translateY(12px); }
@@ -203,7 +205,7 @@ body { align-items: flex-start; padding: 40px 20px; }
     cursor: not-allowed;
 }
 
-/* ── Train This Lesson Button ── */
+/* ── Summary/Trainer Button ── */
 .vl-train-btn {
     display: inline-flex;
     align-items: center;
@@ -416,4 +418,50 @@ body { align-items: flex-start; padding: 40px 20px; }
 .vl-input:focus {
     outline: none;
     border-color: var(--primary);
+}
+
+#screen-summary {
+    width: 100%;
+}
+
+#vl-summary-body {
+    overflow-x: auto;
+}
+
+.vl-summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.vl-summary-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.vl-summary-header .vl-back {
+    margin-bottom: 0;
+}
+
+@media (max-width: 640px) {
+    body {
+        padding: 20px 12px;
+    }
+
+    .vl-summary-header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .vl-summary-actions {
+        justify-content: stretch;
+    }
+
+    .vl-summary-actions .vl-train-btn {
+        width: 100%;
+    }
 }

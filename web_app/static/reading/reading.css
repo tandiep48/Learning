@@ -1,4 +1,8 @@
 /* ── Toolbar ── */
+.reading-container {
+    width: min(1280px, calc(100% - 40px));
+}
+
 .toolbar {
     display: flex;
     justify-content: space-between;
@@ -72,4 +76,10 @@
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+    .reading-container {
+        width: 100%;
+    }
 }

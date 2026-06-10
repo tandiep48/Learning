@@ -65,8 +65,8 @@
         <div class="vl-nav-row" style="margin-top:20px;">
             <button id="btn-prev" class="vl-nav-btn" onclick="prevWord()" title="Previous (←)">← Prev</button>
 
-            <button class="vl-train-btn" onclick="goToTrainer()">
-                🎯 Train This Lesson
+            <button class="vl-train-btn" onclick="showVocabSummary()">
+                Summary
             </button>
 
             <button id="btn-next" class="vl-nav-btn" onclick="nextWord()" title="Next (→)">Next →</button>
@@ -80,11 +80,14 @@
 
     <!-- ── SCREEN: Summary ── -->
     <div id="screen-summary" style="display:none; margin-top:20px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+        <div class="vl-summary-header">
             <button class="vl-back" style="background:none; border:none; cursor:pointer; padding:0;" onclick="backToLessons()">
                 ← Back to Lessons
             </button>
             <h2 style="color:var(--text-main); margin:0;">Lesson Summary</h2>
+            <div class="vl-summary-actions">
+                <button class="vl-train-btn" onclick="goToTrainer()">Train This Vocab</button>
+            </div>
         </div>
         <div id="vl-summary-body" style="background: #1a1b26; border-radius: 12px; padding: 20px;">
             <!-- Table injected via JS -->

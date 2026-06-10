@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/shared/styles.css">
+    <link rel="stylesheet" href="/static/profile/profile.css">
+</head>
+<body>
+    <main class="app-container profile-container">
+        <div class="profile-topbar">
+            <a href="/" class="profile-link">&larr; Dashboard</a>
+            <a href="/learning" class="profile-link">Learning</a>
+        </div>
+
+        <section class="profile-header">
+            <div class="profile-avatar-wrap">
+                <img id="profile-avatar-img" class="profile-avatar-img" alt="" style="display:none;">
+                <div id="profile-avatar-fallback" class="profile-avatar-fallback">{{ current_user.username[:1]|upper }}</div>
+            </div>
+            <div class="profile-heading">
+                <h1>{{ current_user.username }}</h1>
+                <p>{{ current_user.email }}</p>
+                <form id="avatar-form" class="avatar-form" enctype="multipart/form-data">
+                    <input id="avatar-input" name="avatar" type="file" accept="image/png,image/jpeg,image/webp,image/gif">
+                    <button class="btn primary avatar-submit" type="submit">Upload Avatar</button>
+                </form>
+                <div id="avatar-message" class="profile-message"></div>
+            </div>
+        </section>
+
+        <section class="profile-stats-grid">
+            <div class="profile-stat">
+                <span class="profile-stat-label">Vocab Time</span>
+                <strong id="stat-vocab-time">0m</strong>
+            </div>
+            <div class="profile-stat">
+                <span class="profile-stat-label">Lesson Time</span>
+                <strong id="stat-lesson-time">0m</strong>
+            </div>
+            <div class="profile-stat">
+                <span class="profile-stat-label">Practice Time</span>
+                <strong id="stat-practice-time">0m</strong>
+            </div>
+            <div class="profile-stat">
+                <span class="profile-stat-label">Exam Time</span>
+                <strong id="stat-exam-time">0m</strong>
+            </div>
+        </section>
+
+        <section class="profile-section">
+            <h2>Time Breakdown</h2>
+            <div class="profile-breakdown-grid">
+                <div>
+                    <h3>Vocabulary</h3>
+                    <div id="vocab-breakdown" class="profile-list compact"></div>
+                </div>
+                <div>
+                    <h3>Lesson</h3>
+                    <div id="lesson-breakdown" class="profile-list compact"></div>
+                </div>
+                <div>
+                    <h3>Practice / Exam</h3>
+                    <div id="practice-breakdown" class="profile-list compact"></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="profile-section">
+            <div class="profile-section-heading">
+                <h2>Learned Vocabulary</h2>
+                <span id="learned-count" class="profile-count">0 words</span>
+            </div>
+            <div id="learned-vocab-list" class="profile-vocab-list"></div>
+        </section>
+    </main>
+
+    <script src="/static/profile/profile.js"></script>
+</body>
+</html>

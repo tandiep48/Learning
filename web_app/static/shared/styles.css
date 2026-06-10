@@ -24,16 +24,17 @@ body {
     color: var(--text-main);
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
     min-height: 100vh;
+    padding: 32px 20px;
 }
 
 .app-container {
     width: 100%;
-    max-width: 600px;
+    max-width: 1280px;
     background: var(--card-bg);
     border-radius: 16px;
-    padding: 40px;
+    padding: clamp(24px, 4vw, 40px);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -388,6 +389,7 @@ body.dashboard-page {
     min-height: 100vh;
     align-items: initial;
     justify-content: initial;
+    padding: 0;
 }
 
 .site-shell {
@@ -448,6 +450,34 @@ body.dashboard-page {
     gap: 8px;
     color: var(--text-muted);
     white-space: nowrap;
+}
+
+.site-user-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.site-avatar,
+.site-avatar-fallback {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.site-avatar {
+    object-fit: cover;
+}
+
+.site-avatar-fallback {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(67,97,238,0.24);
+    color: #fff;
+    font-size: 0.82rem;
+    font-weight: 800;
 }
 
 .dashboard-main {

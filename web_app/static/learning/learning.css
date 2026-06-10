@@ -11,6 +11,32 @@ body {
     animation: fadeIn 0.25s ease;
 }
 
+.learning-recent-panel {
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 18px;
+    margin-bottom: 22px;
+    background: rgba(67, 97, 238, 0.12);
+    border: 1px solid rgba(67, 97, 238, 0.28);
+    border-radius: 8px;
+}
+
+.learning-recent-panel h2 {
+    text-align: left;
+    margin-bottom: 6px;
+}
+
+.learning-recent-panel .subtitle {
+    margin-bottom: 0;
+    text-align: left;
+}
+
+.learning-continue-btn {
+    width: auto;
+    min-width: 150px;
+}
+
 .learning-topbar {
     display: flex;
     align-items: center;
@@ -31,6 +57,26 @@ body {
 
 .learning-heading h1 {
     margin-bottom: 8px;
+}
+
+.learning-part-nav {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin: 0 0 22px;
+}
+
+.learning-part-nav-btn {
+    width: auto;
+    min-width: 150px;
+    text-align: center;
+    align-items: center;
+}
+
+.learning-part-nav-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
 }
 
 .learning-action-grid {
@@ -80,6 +126,19 @@ body {
     .learning-topbar {
         align-items: stretch;
         flex-direction: column;
+    }
+
+    .learning-recent-panel {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .learning-part-nav {
+        flex-direction: column;
+    }
+
+    .learning-part-nav-btn {
+        width: 100%;
     }
 
     .learning-action-grid {

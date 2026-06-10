@@ -8,6 +8,7 @@ from routes.vocab_routes import vocab_bp
 from routes.lesson_routes import lesson_bp
 from routes.practice_routes import practice_bp
 from routes.auth_routes import auth_bp, get_user_by_id
+from routes.user_routes import user_bp
 
 load_dotenv()
 
@@ -29,8 +30,17 @@ app.register_blueprint(vocab_bp)
 app.register_blueprint(lesson_bp)
 app.register_blueprint(practice_bp)
 app.register_blueprint(auth_bp)
+app.register_blueprint(user_bp)
 
 GCS_BUCKET_URL = os.getenv('GCS_BUCKET_URL', '')
+
+@app.context_processor
+def inject_avatar_helpers():
+    def avatar_url(avatar_path):
+        if not avatar_path or not GCS_BUCKET_URL:
+            return None
+        return f"{GCS_BUCKET_URL.rstrip('/')}/{str(avatar_path).lstrip('/')}"
+    return {"avatar_url": avatar_url}
 
 @app.route('/')
 def index():

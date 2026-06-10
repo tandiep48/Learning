@@ -12,6 +12,7 @@ let totalQuestions = 0;
 let sessionAnswers = [];
 let sessionCounter = 1;
 let practiceSessionId = null;
+let groupStartTime = 0;
 
 // Per-group state (reset each renderGroup)
 let userAnswers = {};      // { blockId: selectedKey }
@@ -167,6 +168,7 @@ async function init() {
 function renderGroup() {
     stopAudio();
     const group = groups[currentGroupIndex];
+    groupStartTime = Date.now();
     userAnswers = {};
     chipOrder   = {};
     blankState  = {};
@@ -930,6 +932,8 @@ function checkAnswers() {
     }
 
     // Save to sessionAnswers
+    const responseTimeMs = Math.max(0, Date.now() - groupStartTime);
+    const perQuestionTimeMs = Math.round(responseTimeMs / Math.max(1, group.questions.length));
     group.questions.forEach((q, idx) => {
         const blockId = `q-${idx}`;
         const chosen  = (userAnswers[blockId] || '').toString().trim().toUpperCase();
@@ -942,8 +946,10 @@ function checkAnswers() {
             question_no: q.no,
             skill: q.skill || 'listening',
             type: q.type,
+            category: q.category || window.practiceCategory || 'practice',
             user_answer: chosen,
-            is_correct: isCorrect
+            is_correct: isCorrect,
+            response_time_ms: perQuestionTimeMs
         });
     });
 
