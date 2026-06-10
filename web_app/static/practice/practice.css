@@ -5,7 +5,7 @@
 /* Shell */
 .practice-shell {
     width: 100%;
-    max-width: 720px;
+    max-width: 1120px;
     margin: 0 auto;
     min-height: 100vh;
     display: flex;
@@ -117,6 +117,9 @@
     flex-direction: column;
     gap: 18px;
     overflow-y: auto;
+    max-width: 900px;
+    width: 100%;
+    margin: 0 auto;
 }
 
 /* Group header for multi-question groups */

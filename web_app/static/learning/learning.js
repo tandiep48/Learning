@@ -1,5 +1,7 @@
 let selectedPassage = null;
 let selectedLessonNum = null;
+let recentPassageId = null;
+let grammarCheckToken = 0;
 
 document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
@@ -20,6 +22,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (autoPassageId) {
         openSelectedPassage(autoPassageId);
+    } else {
+        loadRecentLearning();
     }
 });
 
@@ -35,6 +39,7 @@ async function openSelectedPassage(passageId) {
     if (hskLevel) {
         await Picker.showLessonPicker(hskLevel);
     }
+    hydrateSelectedPassageFromPicker();
     showLearningActions();
 }
 
@@ -47,6 +52,7 @@ function normalizeHskLevel(value) {
 
 function showLearningActions() {
     document.querySelectorAll('.picker-screen').forEach(el => el.classList.remove('active'));
+    document.getElementById('learning-recent-panel').style.display = 'none';
     document.getElementById('learning-action-screen').style.display = 'block';
 
     const parts = String(selectedPassage.passage_id || '').split('_');
@@ -54,10 +60,15 @@ function showLearningActions() {
     const lesson = parts.length >= 2 ? `Lesson ${parts[1]}` : 'Lesson';
     const part = parts.length >= 3 ? `Part ${parts[2]}` : selectedPassage.passage_id;
     document.getElementById('learning-context').textContent = `${hsk} - ${lesson} - ${part}`;
+    updatePartNavButtons();
+    syncLearningUrl();
+    saveRecentLearning();
+    updateGrammarVisibility();
 }
 
 async function backToPartPicker() {
     document.getElementById('learning-action-screen').style.display = 'none';
+    document.getElementById('learning-recent-panel').style.display = 'none';
     if (selectedLessonNum && Object.keys(Picker.groupedPassages || {}).length === 0 && selectedPassage?.hsk_level) {
         await Picker.showLessonPicker(selectedPassage.hsk_level);
     }
@@ -72,6 +83,7 @@ async function backToPartPicker() {
 
 function openLearningAction(action) {
     if (!selectedPassage || !selectedPassage.passage_id) return;
+    saveRecentLearning();
 
     const passageId = encodeURIComponent(selectedPassage.passage_id);
     const routes = {
@@ -84,5 +96,134 @@ function openLearningAction(action) {
 
     if (routes[action]) {
         window.location.href = routes[action];
+    }
+}
+
+async function loadRecentLearning() {
+    try {
+        const res = await fetch('/api/user/recent-learning');
+        const data = await res.json();
+        if (!res.ok || !data.recent?.passage_id) return;
+        recentPassageId = data.recent.passage_id;
+        showRecentPanel(recentPassageId);
+    } catch (e) {
+        console.warn('Could not load recent learning', e);
+    }
+}
+
+function showRecentPanel(passageId) {
+    const panel = document.getElementById('learning-recent-panel');
+    const context = document.getElementById('learning-recent-context');
+    if (!panel || !context) return;
+    context.textContent = formatPassageContext(passageId);
+    panel.style.display = 'flex';
+}
+
+function continueRecentLesson() {
+    if (!recentPassageId) return;
+    window.location.href = `/learning?passage_id=${encodeURIComponent(recentPassageId)}`;
+}
+
+function formatPassageContext(passageId) {
+    const parts = String(passageId || '').split('_');
+    const hsk = normalizeHskLevel(parts[0]) || parts[0] || 'HSK';
+    const lesson = parts.length >= 2 ? `Lesson ${parts[1]}` : 'Lesson';
+    const part = parts.length >= 3 ? `Part ${parts[2]}` : passageId;
+    return `${hsk} - ${lesson} - ${part}`;
+}
+
+async function saveRecentLearning() {
+    if (!selectedPassage?.passage_id) return;
+    try {
+        await fetch('/api/user/recent-learning', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ passage_id: selectedPassage.passage_id })
+        });
+    } catch (e) {
+        console.warn('Could not save recent learning', e);
+    }
+}
+
+async function updateGrammarVisibility() {
+    const card = document.getElementById('learning-grammar-card');
+    if (!card || !selectedPassage?.passage_id) return;
+    const token = ++grammarCheckToken;
+    card.style.display = '';
+
+    try {
+        const res = await fetch(`/api/lesson/grammar/${encodeURIComponent(selectedPassage.passage_id)}`);
+        const data = await res.json();
+        if (token !== grammarCheckToken) return;
+        card.style.display = data.grammar && data.grammar.length > 0 ? '' : 'none';
+    } catch (e) {
+        if (token === grammarCheckToken) card.style.display = 'none';
+    }
+}
+
+function hydrateSelectedPassageFromPicker() {
+    const passageId = selectedPassage?.passage_id;
+    if (!passageId || !selectedLessonNum) return;
+
+    const matched = getCurrentLessonParts().find(p => p.passage_id === passageId);
+    if (matched) {
+        selectedPassage = {
+            ...matched,
+            hsk_level: matched.hsk_level || selectedPassage.hsk_level
+        };
+    }
+}
+
+function getCurrentLessonParts() {
+    if (!selectedLessonNum || !Picker.groupedPassages) return [];
+    return [...(Picker.groupedPassages[selectedLessonNum] || [])].sort(comparePassagePart);
+}
+
+function comparePassagePart(a, b) {
+    return getPartNumber(a.passage_id) - getPartNumber(b.passage_id);
+}
+
+function getPartNumber(passageId) {
+    const parts = String(passageId || '').split('_');
+    const part = parts.length >= 3 ? Number(parts[2]) : Number.MAX_SAFE_INTEGER;
+    return Number.isFinite(part) ? part : Number.MAX_SAFE_INTEGER;
+}
+
+function getCurrentPartIndex(parts) {
+    return parts.findIndex(p => p.passage_id === selectedPassage?.passage_id);
+}
+
+function updatePartNavButtons() {
+    const prevBtn = document.getElementById('btn-prev-part');
+    const nextBtn = document.getElementById('btn-next-part');
+    if (!prevBtn || !nextBtn) return;
+
+    const parts = getCurrentLessonParts();
+    const currentIndex = getCurrentPartIndex(parts);
+    const canNavigate = currentIndex !== -1;
+
+    prevBtn.disabled = !canNavigate || currentIndex <= 0;
+    nextBtn.disabled = !canNavigate || currentIndex >= parts.length - 1;
+}
+
+function goToAdjacentPart(delta) {
+    const parts = getCurrentLessonParts();
+    const currentIndex = getCurrentPartIndex(parts);
+    if (currentIndex === -1) return;
+
+    const nextIndex = currentIndex + delta;
+    if (nextIndex < 0 || nextIndex >= parts.length) return;
+
+    selectedPassage = parts[nextIndex];
+    const idParts = String(selectedPassage.passage_id || '').split('_');
+    selectedLessonNum = idParts.length >= 2 ? idParts[1] : selectedLessonNum;
+    showLearningActions();
+}
+
+function syncLearningUrl() {
+    if (!selectedPassage?.passage_id) return;
+    const nextUrl = `/learning?passage_id=${encodeURIComponent(selectedPassage.passage_id)}`;
+    if (window.location.pathname + window.location.search !== nextUrl) {
+        window.history.replaceState(null, '', nextUrl);
     }
 }

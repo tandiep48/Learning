@@ -16,7 +16,7 @@
     background: #1a1b26;
     border-radius: 20px 20px 0 0;
     width: 100%;
-    max-width: 800px;
+    max-width: 1280px;
     max-height: 80vh;
     display: flex;
     flex-direction: column;
@@ -55,13 +55,14 @@
 /* ── Vocab Table ── */
 .vocab-table {
     width: 100%;
+    min-width: 980px;
     border-collapse: collapse;
-    font-size: 0.95rem;
+    font-size: 1.05rem;
 }
 .vocab-table thead th {
     text-align: left;
-    padding: 14px 12px;
-    font-size: 0.75rem;
+    padding: 16px 18px;
+    font-size: 0.82rem;
     font-weight: 800;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -81,15 +82,16 @@
     transition: background 0.15s;
 }
 .vocab-table tbody tr:hover { background: rgba(255,255,255,0.03); }
-.vocab-table td { padding: 16px 12px; vertical-align: middle; }
+.vocab-table td { padding: 20px 18px; vertical-align: middle; }
 .vocab-cn {
     font-family: 'Noto Sans SC', sans-serif;
-    font-size: 1.45rem;
+    font-size: 2rem;
     font-weight: 700;
     color: var(--text-main);
+    line-height: 1.35;
 }
-.vocab-pinyin { color: var(--primary); font-size: 0.9rem; }
-.vocab-meaning-vn, .vocab-meaning { color: var(--text-muted); font-size: 0.9rem; }
+.vocab-pinyin { color: var(--primary); font-size: 1.08rem; }
+.vocab-meaning-vn, .vocab-meaning { color: var(--text-muted); font-size: 1.05rem; line-height: 1.45; }
 
 /* Audio / Header Buttons */
 .vocab-header-icon-btn {

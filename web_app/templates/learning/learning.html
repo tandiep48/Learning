@@ -11,6 +11,14 @@
 </head>
 <body>
     <div class="app-container learning-container">
+        <section id="learning-recent-panel" class="learning-recent-panel" style="display:none;">
+            <div>
+                <h2>Recent Lesson</h2>
+                <p id="learning-recent-context" class="subtitle">Continue where you left off.</p>
+            </div>
+            <button class="btn primary learning-continue-btn" onclick="continueRecentLesson()">Continue</button>
+        </section>
+
         {% include 'shared/passage_picker.html' %}
 
         <section id="learning-action-screen" class="learning-action-screen" style="display:none;">
@@ -22,6 +30,11 @@
             <div class="learning-heading">
                 <h1>Learning</h1>
                 <p id="learning-context" class="subtitle">Choose an activity.</p>
+            </div>
+
+            <div class="learning-part-nav" aria-label="Part navigation">
+                <button id="btn-prev-part" class="btn secondary learning-part-nav-btn" onclick="goToAdjacentPart(-1)">Previous Part</button>
+                <button id="btn-next-part" class="btn secondary learning-part-nav-btn" onclick="goToAdjacentPart(1)">Next Part</button>
             </div>
 
             <div class="learning-action-grid">
@@ -41,7 +54,7 @@
                     <span class="learning-action-title">Lesson Trainer</span>
                     <span class="learning-action-desc">Practice sentence listening, meaning, reorder, and typing.</span>
                 </button>
-                <button class="learning-action-card" onclick="openLearningAction('grammar')">
+                <button id="learning-grammar-card" class="learning-action-card" onclick="openLearningAction('grammar')">
                     <span class="learning-action-title">Grammar</span>
                     <span class="learning-action-desc">Open grammar notes for this selected passage.</span>
                 </button>
