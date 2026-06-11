@@ -32,8 +32,8 @@ body { align-items: flex-start; padding: 40px 20px; }
     gap: 18px;
 }
 .practice-card {
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(87, 104, 86,0.05);
+    border: 1px solid rgba(87, 104, 86,0.1);
     border-radius: 16px;
     padding: 28px 20px;
     text-decoration: none;
