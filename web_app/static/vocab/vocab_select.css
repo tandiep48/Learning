@@ -1,0 +1,92 @@
+@import url("/static/vocab/vocab.css");
+
+/* Selection page entry point. Page-specific selection styles can now live here. */
+
+body.vocab-select-page > .app-container {
+    margin: 0 auto;
+    min-height: calc(100vh - 68px);
+}
+
+.vocab-select-page .vocab-filter-bar select,
+.vocab-select-page .vocab-filter-bar select option {
+    background: #d8efe7;
+    color: #111111;
+}
+
+.vocab-select-page .vocab-filter-bar select option:checked,
+.vocab-select-page .vocab-filter-bar select option:hover {
+    background: #cde8de;
+    color: #111111;
+}
+
+.vocab-table {
+    border-collapse: collapse;
+}
+
+.vocab-table th,
+.vocab-table td {
+    border: 1px solid #d9ded9;
+}
+
+.vocab-tools-col {
+    width: 132px;
+}
+
+.vocab-tools-col,
+.vocab-tools-cell {
+    text-align: center;
+}
+
+.vocab-tools-cell {
+    white-space: nowrap;
+}
+
+.vocab-tools-cell .vocab-audio-btn {
+    margin-right: 8px;
+}
+
+.vocab-row-toggle-btn {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 1px solid var(--primary);
+    background: var(--primary);
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 0;
+}
+
+.vocab-row-toggle-btn:hover {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+}
+
+.vocab-row-toggle-btn .fa-solid {
+    color: #ffffff;
+    font-size: 1rem;
+}
+
+.vocab-table.all-vocab-hidden .vocab-cn,
+.vocab-table.all-vocab-hidden .vocab-pinyin,
+.vocab-table.all-vocab-hidden .vocab-meaning-vn,
+.vocab-table tr.row-vocab-hidden .vocab-cn,
+.vocab-table tr.row-vocab-hidden .vocab-pinyin,
+.vocab-table tr.row-vocab-hidden .vocab-meaning-vn {
+    color: transparent !important;
+    text-shadow: none;
+    user-select: none;
+}
+
+.vocab-table.all-vocab-hidden .vocab-cn *,
+.vocab-table.all-vocab-hidden .vocab-pinyin *,
+.vocab-table.all-vocab-hidden .vocab-meaning-vn *,
+.vocab-table tr.row-vocab-hidden .vocab-cn *,
+.vocab-table tr.row-vocab-hidden .vocab-pinyin *,
+.vocab-table tr.row-vocab-hidden .vocab-meaning-vn * {
+    visibility: hidden;
+}

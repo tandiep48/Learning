@@ -3,30 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vocabulary Trainer</title>
-    <!-- Google Fonts: Inter for UI, Noto Sans SC for Chinese -->
+    <title>Vocabulary Selection</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/shared/styles.css">
     <link rel="stylesheet" href="/static/shared/vocab_table.css?v=3">
-    <link rel="stylesheet" href="/static/shared/passage_picker.css">
-    <link rel="stylesheet" href="/static/vocab/vocab.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="/static/vocab/vocab_select.css">
 </head>
-<body>
+<body class="with-site-nav vocab-select-page">
+    {% include 'shared/site_nav.html' %}
     <div class="app-container">
-        <!-- SCREEN: Table Setup -->
         <div id="screen-menu" class="screen active">
             <div class="vocab-top-link">
-                <a href="/" style="color: var(--primary); text-decoration: none;">&larr; Back to Dashboard</a>
+                <a href="/">&larr; Back to Dashboard</a>
             </div>
 
             <div class="vocab-table-header">
-                <div>
-                    <h1>Vocabulary Trainer</h1>
-                    <p class="subtitle">Select words from the table, then train or review them as flash cards.</p>
-                </div>
                 <div class="vocab-mode-toggle" aria-label="Learning mode">
-                    <button id="mode-standard-btn" class="mode-toggle-btn active" onclick="setTableMode('standard')">Standard</button>
                     <button id="mode-free-btn" class="mode-toggle-btn" onclick="setTableMode('free')">Free</button>
+                    <button id="mode-standard-btn" class="mode-toggle-btn active" onclick="setTableMode('standard')">Standard</button>
                 </div>
             </div>
 
@@ -68,9 +63,9 @@
             <div class="vocab-action-bar">
                 <div id="selection-count" class="selection-count">0 selected</div>
                 <div class="vocab-action-buttons">
-                    <button class="btn secondary" onclick="clearSelection()">Clear Selection</button>
-                    <button id="btn-flashcards" class="btn info" onclick="openSelectedFlashcards()" disabled>Flash Cards</button>
-                    <button id="btn-start-selected" class="btn primary" onclick="startSelectedTraining()" disabled>Start Training</button>
+                    <button class="btn action-outline" onclick="clearSelection()">Clear Selection</button>
+                    <button id="btn-flashcards" class="btn action-secondary" onclick="openSelectedFlashcards()" disabled>Flash Cards</button>
+                    <button id="btn-start-selected" class="btn action-primary" onclick="startSelectedTraining()" disabled>Start Training</button>
                 </div>
             </div>
 
@@ -83,101 +78,8 @@
                 <button class="btn secondary" id="page-next-btn" onclick="changePage(1)">Next</button>
             </div>
         </div>
-
-        {% include 'shared/passage_picker.html' %}
-
-        <!-- SCREEN: Setup Other Modes -->
-        <div id="screen-setup-other" class="screen">
-            <h2 id="other-setup-title">Setup Mode</h2>
-            <p id="preview-count" style="text-align: center; color: var(--text-muted); margin-bottom: 10px;"></p>
-            <div class="recap-area" style="margin-bottom: 20px;">
-                <ul id="preview-list"></ul>
-            </div>
-            <div class="form-group">
-                <label>Limit words (leave blank for all):</label>
-                <input type="number" id="input-limit" placeholder="e.g. 20">
-            </div>
-            <div class="nav-buttons">
-                <button class="btn secondary" onclick="goHome()">Back</button>
-                <button id="btn-start-other" class="btn primary" onclick="startSession(currentMode)">Start Training</button>
-            </div>
-        </div>
-
-        <!-- SCREEN: Loading -->
-        <div id="screen-loading" class="screen">
-            <div class="loader"></div>
-            <p>Fetching words...</p>
-        </div>
-
-        <!-- SCREEN: Training -->
-        <div id="screen-training" class="screen">
-            <div class="progress-bar">
-                <div class="progress-fill" id="progress-fill"></div>
-            </div>
-            <div class="task-counter" id="task-counter">Task 1/10</div>
-
-            <div class="task-card">
-                <div id="task-instruction" class="instruction"></div>
-                
-                <div id="word-display" class="chinese-word" style="display:none;"></div>
-                
-                <div id="audio-controls" style="display:none;" class="audio-controls">
-                    <button class="btn-audio" onclick="playCurrentAudio()">🔊 Play Audio</button>
-                    <audio id="audio-player"></audio>
-                </div>
-
-                <!-- Multiple Choice Area (for listen and meaning) -->
-                <div id="mc-area" class="mc-grid" style="display:none;">
-                    <!-- buttons injected via JS -->
-                </div>
-                <div id="mc-feedback" style="display:none; margin-top: 15px; text-align: center; font-size: 20px; padding: 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.2); width: 100%; box-sizing: border-box;"></div>
-
-                <!-- Typing Area -->
-                <div id="typing-area" class="typing-container" style="display:none;">
-                    <input type="text" id="typing-input" lang="zh-CN" placeholder="Type the word here..." autocomplete="off">
-                    <div id="typing-feedback" style="display:none; margin-top: 10px; margin-bottom: 15px; text-align: center; font-size: 20px; padding: 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.2); width: 100%; box-sizing: border-box;"></div>
-                    <button id="typing-submit-btn" class="btn primary" onclick="submitTyping()">Submit</button>
-                </div>
-
-            </div>
-
-            <div class="nav-buttons end-session">
-                <button class="btn secondary" onclick="confirmQuit()">Quit Session</button>
-            </div>
-        </div>
-
-        <!-- SCREEN: Session Complete -->
-        <div id="screen-complete" class="screen">
-            <h1>🎉 Training Complete!</h1>
-            <p>You have successfully finished this round.</p>
-            <div id="recap-area" class="recap-area">
-                <h3>Missed Words Recap</h3>
-                <ul id="recap-list"></ul>
-                <div class="nav-buttons">
-                    <button class="btn secondary" onclick="goHome()">Back to Menu</button>
-                    <button class="btn primary" id="btn-retry" onclick="retryMissed()">Retry Missed</button>
-                </div>
-            </div>
-            <div id="perfect-area" class="nav-buttons">
-                <button class="btn primary" onclick="goHome()">Back to Menu</button>
-            </div>
-        </div>
-
     </div>
 
-    <!-- Quit Confirmation Modal -->
-    <div id="quit-modal-overlay" class="quit-modal-overlay" onclick="closeQuitModalIfBackground(event)">
-        <div class="quit-modal">
-            <h3>⚠️ Quit Session?</h3>
-            <p>Your current progress won't be saved.<br>Are you sure you want to quit?</p>
-            <div class="quit-modal-btns">
-                <button class="btn secondary" onclick="closeQuitModal()">Cancel</button>
-                <button class="btn danger" onclick="goHome()">Yes, Quit</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="/static/shared/passage_picker.js"></script>
-    <script src="/static/vocab/vocab.js"></script>
+    <script src="/static/vocab/vocab_select.js"></script>
 </body>
 </html>
