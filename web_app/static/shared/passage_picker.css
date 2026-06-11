@@ -6,8 +6,8 @@
     margin-top: 24px;
 }
 .level-picker-card {
-    background: rgba(255,255,255,0.05);
-    border: 2px solid rgba(255,255,255,0.08);
+    background: rgba(87, 104, 86,0.05);
+    border: 2px solid rgba(87, 104, 86,0.08);
     border-radius: 16px;
     padding: 24px 16px;
     text-align: center;
@@ -41,8 +41,8 @@
     padding-right: 8px;
 }
 .lesson-card {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(87, 104, 86,0.04);
+    border: 1px solid rgba(87, 104, 86,0.06);
     border-radius: 12px;
     padding: 16px;
     display: flex;
@@ -52,7 +52,7 @@
     transition: all 0.2s;
 }
 .lesson-card:hover {
-    background: rgba(255,255,255,0.08);
+    background: rgba(87, 104, 86,0.08);
     transform: translateX(4px);
 }
 .lesson-card-left {

@@ -28,7 +28,7 @@
     border-radius: 50%;
     overflow: hidden;
     background: rgba(67, 97, 238, 0.18);
-    border: 1px solid rgba(255,255,255,0.14);
+    border: 1px solid rgba(87, 104, 86,0.14);
     flex-shrink: 0;
 }
 
@@ -99,8 +99,8 @@
 
 .profile-stat,
 .profile-section {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(87, 104, 86,0.04);
+    border: 1px solid rgba(87, 104, 86,0.08);
     border-radius: 8px;
 }
 
@@ -155,7 +155,7 @@
 .profile-list-row,
 .profile-vocab-chip {
     background: rgba(0,0,0,0.22);
-    border: 1px solid rgba(255,255,255,0.06);
+    border: 1px solid rgba(87, 104, 86,0.06);
     border-radius: 8px;
 }
 

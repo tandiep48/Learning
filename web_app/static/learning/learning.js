@@ -88,7 +88,7 @@ function openLearningAction(action) {
     const passageId = encodeURIComponent(selectedPassage.passage_id);
     const routes = {
         'vocab-reading': `/vocab-learning?passage_id=${passageId}`,
-        'vocab-trainer': `/vocab?mode=6&passage_id=${passageId}`,
+        'vocab-trainer': `/vocab-training?mode=6&passage_id=${passageId}`,
         'lesson-reading': `/reading?passage_id=${passageId}`,
         'lesson-trainer': `/lesson?passage_id=${passageId}`,
         'grammar': `/grammar?passage_id=${passageId}`

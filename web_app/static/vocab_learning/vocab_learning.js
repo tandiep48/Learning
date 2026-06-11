@@ -254,7 +254,7 @@ function goToTrainer() {
         mode: '6',
         passage_id: lessonMeta.passage_id
     });
-    window.location.href = `/vocab?${params.toString()}`;
+    window.location.href = `/vocab-training?${params.toString()}`;
 }
 
 // ─── Keyboard Shortcuts ───────────────────────────────────────────────────────

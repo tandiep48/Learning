@@ -1,0 +1,25 @@
+<header class="site-header">
+    <a class="site-brand" href="/">Learning Dashboard</a>
+    <nav class="site-nav" aria-label="Primary navigation">
+        <a href="/vocab">Vocabulary</a>
+        <a href="/learning">Learning</a>
+        <a href="/recommend">Practice</a>
+    </nav>
+    <div class="site-auth">
+        {% if current_user.is_authenticated %}
+            <a class="site-user-link" href="/profile">
+                {% set current_avatar = avatar_url(current_user.avatar_path) %}
+                {% if current_avatar %}
+                    <img class="site-avatar" src="{{ current_avatar }}" alt="">
+                {% else %}
+                    <span class="site-avatar-fallback">{{ current_user.username[:1]|upper }}</span>
+                {% endif %}
+                <span>{{ current_user.username }}</span>
+            </a>
+            <a href="{{ url_for('auth.logout') }}">Logout</a>
+        {% else %}
+            <a href="{{ url_for('auth.login') }}">Login</a>
+            <a href="{{ url_for('auth.register') }}">Register</a>
+        {% endif %}
+    </div>
+</header>

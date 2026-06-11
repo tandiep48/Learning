@@ -29,12 +29,12 @@
     justify-content: space-between;
     align-items: center;
     padding: 18px 22px 14px;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
+    border-bottom: 1px solid rgba(87, 104, 86,0.08);
     flex-shrink: 0;
 }
 .vocab-panel-header h3 { margin: 0; font-size: 1.1rem; color: var(--text-main); }
 .vocab-close-btn {
-    background: rgba(255,255,255,0.08);
+    background: rgba(87, 104, 86,0.08);
     border: none;
     color: var(--text-muted);
     border-radius: 50%;
@@ -44,7 +44,7 @@
     display: flex; align-items: center; justify-content: center;
     transition: background 0.2s;
 }
-.vocab-close-btn:hover { background: rgba(255,255,255,0.15); color: var(--text-main); }
+.vocab-close-btn:hover { background: rgba(87, 104, 86,0.15); color: var(--text-main); }
 .vocab-panel-body {
     overflow-y: auto;
     padding: 16px 22px 22px;
@@ -67,7 +67,7 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--text-muted);
-    border-bottom: 1px solid rgba(255,255,255,0.06);
+    border-bottom: 1px solid rgba(87, 104, 86,0.06);
     cursor: pointer;
     user-select: none;
 }
@@ -78,10 +78,10 @@
 .vocab-table.hide-py .vocab-pinyin { opacity: 0; }
 .vocab-table.hide-vn .vocab-meaning-vn { opacity: 0; }
 .vocab-table tbody tr {
-    border-bottom: 1px solid rgba(255,255,255,0.04);
+    border-bottom: 1px solid rgba(87, 104, 86,0.04);
     transition: background 0.15s;
 }
-.vocab-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+.vocab-table tbody tr:hover { background: rgba(87, 104, 86,0.03); }
 .vocab-table td { padding: 20px 18px; vertical-align: middle; }
 .vocab-cn {
     font-family: 'Noto Sans SC', sans-serif;
@@ -137,7 +137,7 @@
     transition: background-color 0.2s, color 0.2s;
 }
 .clickable-cell:hover {
-    background-color: rgba(255,255,255,0.05);
+    background-color: rgba(87, 104, 86,0.05);
 }
 .hidden-cell {
     color: transparent !important;
