@@ -287,8 +287,12 @@ function renderVocabTable(rows) {
                     <input type="checkbox" id="select-page-checkbox" onchange="togglePageSelection(this.checked)" title="Select visible rows">
                 </th>
                 <th style="width: 86px;">
-                    <button class="vocab-header-icon-btn" onclick="event.stopPropagation(); playAllTableAudio()" title="Play all visible">Play</button>
-                    <button class="vocab-header-icon-btn" onclick="event.stopPropagation(); shuffleVisibleRows()" title="Shuffle visible">Mix</button>
+                    <button class="vocab-header-icon-btn" onclick="event.stopPropagation(); playAllTableAudio()" title="Play all visible" aria-label="Play all visible">
+                        <span class="font-icon" aria-hidden="true">▶</span>
+                    </button>
+                    <button class="vocab-header-icon-btn" onclick="event.stopPropagation(); shuffleVisibleRows()" title="Shuffle visible" aria-label="Shuffle visible">
+                        <span class="font-icon" aria-hidden="true">⇄</span>
+                    </button>
                 </th>
                 <th onclick="toggleVocabColumn('cn', 'trainer-vocab-table')">Character</th>
                 <th onclick="toggleVocabColumn('py', 'trainer-vocab-table')">Pinyin</th>
@@ -305,7 +309,7 @@ function renderVocabTable(rows) {
         tr.id = `trainer-vocab-tr-${index}`;
         const checked = selectedWords.has(word) ? 'checked' : '';
         const audioCell = row.audio_key
-            ? `<button class="vocab-audio-btn" onclick="playTableAudio('${escapeAttr(row.audio_key)}')" title="Play audio">Audio</button>`
+            ? `<button class="vocab-audio-btn" onclick="playTableAudio('${escapeAttr(row.audio_key)}')" title="Play audio" aria-label="Play audio"><span class="font-icon play-icon" aria-hidden="true">▶</span></button>`
             : '<span class="vocab-no-audio">-</span>';
         tr.innerHTML = `
             <td class="vocab-select-col">
