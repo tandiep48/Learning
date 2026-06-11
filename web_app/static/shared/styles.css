@@ -1,12 +1,12 @@
 :root {
-    --bg-color: #121212;
-    --card-bg: rgba(255, 255, 255, 0.05);
-    --text-main: #f0f0f0;
-    --text-muted: #a0a0a0;
-    --primary: #4361ee;
-    --primary-hover: #3a56d4;
-    --secondary: #2b2b2b;
-    --secondary-hover: #3b3b3b;
+    --bg-color: #CBE2D4;
+    --card-bg: #ffffff;
+    --text-main: #576856;
+    --text-muted: #738a72;
+    --primary: #576856;
+    --primary-hover: #455544;
+    --secondary: #f0f4f1;
+    --secondary-hover: #e0e8e1;
     --success: #10b981;
     --danger: #ef4444;
     --warning: #f59e0b;
@@ -35,9 +35,9 @@ body {
     background: var(--card-bg);
     border-radius: 16px;
     padding: clamp(24px, 4vw, 40px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(87, 104, 86, 0.1);
     position: relative;
     overflow: hidden;
     min-height: 500px;
@@ -137,9 +137,9 @@ input[type="text"], input[type="number"] {
     width: 100%;
     padding: 12px;
     border-radius: 8px;
-    border: 1px solid rgba(255,255,255,0.2);
-    background: rgba(0,0,0,0.2);
-    color: white;
+    border: 1px solid rgba(87, 104, 86, 0.2);
+    background: #ffffff;
+    color: var(--text-main);
     font-size: 16px;
 }
 
@@ -164,7 +164,7 @@ input:focus {
 .progress-bar {
     width: 100%;
     height: 6px;
-    background: rgba(255,255,255,0.1);
+    background: rgba(87, 104, 86, 0.15);
     border-radius: 3px;
     margin-bottom: 10px;
 }
@@ -213,7 +213,7 @@ input:focus {
 }
 
 .btn-audio:hover {
-    background: rgba(67, 97, 238, 0.1);
+    background: rgba(87, 104, 86, 0.1);
 }
 
 .mc-grid {
@@ -242,7 +242,7 @@ input:focus {
 .feedback-overlay {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.85);
+    background: rgba(87, 104, 86,0.9);
     backdrop-filter: blur(5px);
     display: flex;
     justify-content: center;
@@ -263,7 +263,7 @@ input:focus {
     padding: 40px;
     border-radius: 16px;
     text-align: center;
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid rgba(87, 104, 86, 0.1);
     transform: scale(0.9);
     transition: transform 0.3s;
 }
@@ -298,7 +298,7 @@ input:focus {
 
 /* Loader */
 .loader {
-    border: 4px solid rgba(255,255,255,0.1);
+    border: 4px solid rgba(87, 104, 86, 0.15);
     border-top: 4px solid var(--primary);
     border-radius: 50%;
     width: 40px;
@@ -314,7 +314,7 @@ input:focus {
 
 .recap-area {
     margin-top: 20px;
-    background: rgba(0,0,0,0.3);
+    background: rgba(87, 104, 86, 0.05);
     padding: 20px;
     border-radius: 8px;
     max-height: 300px;
@@ -328,7 +328,7 @@ input:focus {
 
 .recap-area li {
     padding: 10px;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
+    border-bottom: 1px solid rgba(87, 104, 86, 0.1);
 }
 
 /* Dashboard Cards */
@@ -339,11 +339,11 @@ input:focus {
     margin-top: 30px;
 }
 .dash-card {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(87, 104, 86, 0.04);
     border-radius: 12px;
     padding: 30px;
     text-align: center;
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid rgba(87, 104, 86, 0.1);
     transition: all 0.3s;
     cursor: pointer;
     text-decoration: none;
@@ -355,7 +355,7 @@ input:focus {
 }
 .dash-card:hover {
     transform: translateY(-5px);
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(87, 104, 86, 0.08);
     border-color: var(--primary);
 }
 .dash-icon {
@@ -374,7 +374,7 @@ input:focus {
 
 /* Table Row Highlight */
 .playing-highlight {
-    background-color: rgba(59, 130, 246, 0.1) !important;
+    background-color: rgba(87, 104, 86, 0.1) !important;
 }
 
 /* Typing Input Success */
@@ -392,6 +392,37 @@ body.dashboard-page {
     padding: 0;
 }
 
+body.with-site-nav {
+    display: block;
+    min-height: 100vh;
+    align-items: initial;
+    justify-content: initial;
+    padding: 0;
+}
+
+body.with-site-nav > .app-container,
+body.with-site-nav > .recommend-container,
+body.with-site-nav > .profile-container,
+body.with-site-nav > .practice-select-container,
+body.with-site-nav > .practice-lesson-container,
+body.with-site-nav > .practice-shell,
+body.with-site-nav > .vl-container {
+    margin: 32px auto;
+}
+
+.site-header .site-brand,
+.site-header .site-nav a,
+.site-header .site-auth,
+.site-header .site-auth a {
+    color: #ffffff;
+}
+
+.site-header .site-nav a:hover,
+.site-header .site-auth a:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.12);
+}
+
 .site-shell {
     min-height: 100vh;
     width: 100%;
@@ -407,8 +438,8 @@ body.dashboard-page {
     display: flex;
     align-items: center;
     gap: 24px;
-    background: rgba(18, 18, 18, 0.92);
-    border-bottom: 1px solid rgba(255,255,255,0.08);
+    background: rgba(0, 122, 97, 0.96);
+    border-bottom: 1px solid rgba(0, 122, 97, 0.18);
     backdrop-filter: blur(12px);
 }
 
@@ -441,7 +472,7 @@ body.dashboard-page {
 .site-nav a:hover,
 .site-auth a:hover {
     color: var(--text-main);
-    background: rgba(255,255,255,0.07);
+    background: rgba(87, 104, 86, 0.08);
 }
 
 .site-auth {
@@ -474,8 +505,8 @@ body.dashboard-page {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: rgba(67,97,238,0.24);
-    color: #fff;
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
     font-size: 0.82rem;
     font-weight: 800;
 }
