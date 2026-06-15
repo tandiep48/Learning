@@ -68,11 +68,39 @@
     flex-wrap: wrap;
 }
 
+.password-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(180px, 1fr)) auto;
+    gap: 12px;
+    align-items: end;
+}
+
+.password-form .form-group {
+    margin: 0;
+}
+
+.password-form label {
+    display: block;
+    color: var(--text-muted);
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.password-form input {
+    width: 100%;
+    border: 1px solid rgba(87, 104, 86,0.16);
+    border-radius: 8px;
+    padding: 10px 12px;
+    background: #ffffff;
+    color: var(--text-main);
+}
+
 .avatar-form input {
     color: var(--text-muted);
 }
 
-.avatar-submit {
+.avatar-submit,
+.password-submit {
     width: auto;
 }
 
@@ -177,13 +205,26 @@
     gap: 10px;
 }
 
+.profile-pagination {
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 16px;
+}
+
+.profile-pagination span {
+    color: var(--text-muted);
+    font-weight: 700;
+    min-width: 100px;
+    text-align: center;
+}
+
 .profile-vocab-chip {
     padding: 12px;
 }
 
 .profile-vocab-word {
-    font-family: 'Noto Sans SC', sans-serif;
-    font-size: 1.35rem;
+        font-size: 1.35rem;
     font-weight: 700;
 }
 
@@ -197,5 +238,13 @@
     .profile-header {
         align-items: flex-start;
         flex-direction: column;
+    }
+
+    .password-form {
+        grid-template-columns: 1fr;
+    }
+
+    .password-submit {
+        width: 100%;
     }
 }

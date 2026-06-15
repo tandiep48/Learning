@@ -4,36 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Learning Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/shared/styles.css">
+    <link rel="stylesheet" href="/static/dashboard/dashboard.css">
 </head>
 <body class="dashboard-page">
     <div class="site-shell">
         {% include 'shared/site_nav.html' %}
 
-        <main class="dashboard-main">
-            <section class="dashboard-hero">
-                <h1>Learning Dashboard</h1>
-                <p class="subtitle">Choose a focused study area or jump directly from the header.</p>
-            </section>
-
-            <section class="dashboard-container">
-                <a href="/vocab" class="dash-card">
-                    <div class="dash-title">Vocabulary Trainer</div>
-                    <div class="dash-desc">Practice isolated words, review selected vocabulary, and launch flash cards.</div>
-                </a>
-
-                <a href="/learning" class="dash-card">
-                    <div class="dash-title">Learning</div>
-                    <div class="dash-desc">Choose HSK, lesson, and part, then open vocab, reading, trainer, or grammar activities.</div>
-                </a>
-
-                <a href="/recommend" class="dash-card">
-                    <div class="dash-title">Practice</div>
-                    <div class="dash-desc">Practice lessons matched to the vocabulary you have already mastered.</div>
-                </a>
-            </section>
-        </main>
+        {% include 'dashboard/dashboard.html' %}
     </div>
+
+    <script src="/static/dashboard/dashboard.js"></script>
 </body>
 </html>
