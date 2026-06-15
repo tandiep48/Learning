@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vocab Learning – {{ hsk_level }}</title>
     <!-- removed script for hskLevel -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/shared/styles.css">
     <link rel="stylesheet" href="/static/vocab_learning/vocab_learning.css">
     <link rel="stylesheet" href="/static/shared/vocab_table.css">
@@ -52,18 +51,24 @@
                 <input type="text" id="vl-typing-input" placeholder="Type character here..." autocomplete="off" class="vl-input">
             </div>
 
-
             <button id="btn-audio" class="vl-audio-btn" onclick="playAudio()">
                 🔊 Play Audio
+            </button>
+            <button id="btn-speak" class="vl-speak-btn" onclick="toggleSpeakingPractice()">
+                Speak
             </button>
             <button id="btn-stroke" class="vl-stroke-btn" onclick="openStrokeModal()">
                 ✏️ Stroke Order
             </button>
+            <div id="vl-speaking-panel" class="vl-speaking-panel" style="display:none;">
+                <div id="vl-speaking-status" class="vl-speaking-status">Press Speak and say the word clearly.</div>
+                <div id="vl-speaking-result" class="vl-speaking-result" style="display:none;"></div>
+            </div>
             <audio id="vl-audio"></audio>
         </div>
 
-        <!-- Navigation -->
-        <div class="vl-nav-row" style="margin-top:20px;">
+        <!-- Navigation (below card) -->
+        <div class="vl-nav-row" style="margin-top:28px;">
             <button id="btn-prev" class="vl-nav-btn" onclick="prevWord()" title="Previous (←)">← Prev</button>
 
             <button class="vl-train-btn" onclick="showVocabSummary()">
@@ -87,7 +92,8 @@
             </button>
             <h2 style="color:var(--text-main); margin:0;">Lesson Summary</h2>
             <div class="vl-summary-actions">
-                <button class="vl-train-btn" onclick="goToTrainer()">Train This Vocab</button>
+                <button class="vl-train-btn vl-learn-btn" onclick="startLearningCards()">📖 Learn These Vocabs</button>
+                <button class="vl-train-btn" onclick="goToTrainer()">🏋️ Train These Vocabs</button>
             </div>
         </div>
         <div id="vl-summary-body" style="background: #1a1b26; border-radius: 12px; padding: 20px;">

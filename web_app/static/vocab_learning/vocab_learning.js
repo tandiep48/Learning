@@ -3,7 +3,13 @@
 let words = [];          // full vocab list for this lesson
 let currentIndex = 0;
 let lessonMeta = null;   // { lesson, start_idx, end_idx, hsk_level }
-const hskLevel = window.hskLevel; // injected by Flask template
+let speakingRecorder = null;
+let speakingStream = null;
+let speakingChunks = [];
+let speakingTimer = null;
+let speakingAttemptId = 0;
+let speakingWord = "";
+const SPEAKING_MAX_MS = 10000;
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
@@ -20,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (autoPassageId) {
         startLesson({ passage_id: autoPassageId });
     }
-    
+
     // Typing input logic
     const typingInput = document.getElementById('vl-typing-input');
     if (typingInput) {
@@ -75,9 +81,11 @@ function startSelectedFlashcards(selectedRows) {
 
     document.querySelectorAll('.picker-screen').forEach(el => el.classList.remove('active'));
     document.getElementById('screen-loading').style.display = 'none';
-    document.getElementById('screen-summary').style.display = 'none';
-    document.getElementById('screen-learning').style.display = 'block';
-    renderWord();
+    document.getElementById('screen-learning').style.display = 'none';
+    // Show summary first
+    tableVocabList = [...words];
+    renderVocabTable();
+    document.getElementById('screen-summary').style.display = 'block';
 }
 
 // ─── Word Fetching ────────────────────────────────────────────────────────────
@@ -89,6 +97,8 @@ async function startLesson(passage) {
     document.querySelectorAll('.picker-screen').forEach(el => el.classList.remove('active'));
     const loadingEl = document.getElementById('screen-loading');
     loadingEl.style.display = 'block';
+    document.getElementById('screen-summary').style.display = 'none';
+    document.getElementById('screen-learning').style.display = 'none';
 
     try {
         // Use the vocab/start API with mode 6
@@ -126,8 +136,10 @@ async function startLesson(passage) {
 
         currentIndex = 0;
         loadingEl.style.display = 'none';
-        document.getElementById('screen-learning').style.display = 'block';
-        renderWord();
+        // Show summary first instead of going straight to flash cards
+        tableVocabList = [...words];
+        renderVocabTable();
+        document.getElementById('screen-summary').style.display = 'block';
 
     } catch (e) {
         alert('Error connecting to server.');
@@ -138,6 +150,8 @@ async function startLesson(passage) {
 // ─── Word Rendering ───────────────────────────────────────────────────────────
 
 function renderWord() {
+    resetSpeakingPractice(true);
+
     const word = words[currentIndex];
     const total = words.length;
 
@@ -204,6 +218,209 @@ function playAudio() {
     }
 }
 
+async function toggleSpeakingPractice() {
+    if (speakingRecorder && speakingRecorder.state === 'recording') {
+        stopSpeakingRecording();
+        return;
+    }
+    await startSpeakingRecording();
+}
+
+async function startSpeakingRecording() {
+    const word = words[currentIndex];
+    if (!word || !word.word) return;
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
+        showSpeakingMessage('Your browser does not support audio recording.', true);
+        return;
+    }
+
+    resetSpeakingPractice(false);
+    speakingAttemptId += 1;
+    speakingWord = word.word;
+    speakingChunks = [];
+
+    try {
+        speakingStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mimeType = getSupportedSpeakingMimeType();
+        speakingRecorder = mimeType
+            ? new MediaRecorder(speakingStream, { mimeType })
+            : new MediaRecorder(speakingStream);
+
+        speakingRecorder.ondataavailable = (event) => {
+            if (event.data && event.data.size > 0) speakingChunks.push(event.data);
+        };
+        speakingRecorder.onstop = () => submitSpeakingRecording(speakingAttemptId, speakingWord, mimeType);
+
+        speakingRecorder.start();
+        setSpeakingButtonState('recording');
+        showSpeakingMessage('Recording... say the word clearly.');
+        speakingTimer = setTimeout(stopSpeakingRecording, SPEAKING_MAX_MS);
+    } catch (e) {
+        console.error(e);
+        resetSpeakingPractice(false);
+        showSpeakingMessage('Microphone access was blocked. Please allow microphone permission and try again.', true);
+    }
+}
+
+function getSupportedSpeakingMimeType() {
+    const types = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/ogg;codecs=opus',
+        'audio/ogg'
+    ];
+    return types.find(type => MediaRecorder.isTypeSupported(type)) || '';
+}
+
+function stopSpeakingRecording() {
+    if (speakingTimer) {
+        clearTimeout(speakingTimer);
+        speakingTimer = null;
+    }
+    if (speakingRecorder && speakingRecorder.state === 'recording') {
+        setSpeakingButtonState('scoring');
+        showSpeakingMessage('Scoring your pronunciation...');
+        speakingRecorder.stop();
+    }
+    stopSpeakingStream();
+}
+
+function stopSpeakingStream() {
+    if (speakingStream) {
+        speakingStream.getTracks().forEach(track => track.stop());
+        speakingStream = null;
+    }
+}
+
+async function submitSpeakingRecording(attemptId, targetWord, mimeType) {
+    stopSpeakingStream();
+    if (attemptId !== speakingAttemptId) return;
+
+    if (!speakingChunks.length) {
+        setSpeakingButtonState('idle');
+        showSpeakingMessage('No audio was recorded. Please try again.', true);
+        return;
+    }
+
+    const blobType = mimeType || speakingChunks[0]?.type || 'audio/webm';
+    const extension = blobType.includes('ogg') ? 'ogg' : 'webm';
+    const blob = new Blob(speakingChunks, { type: blobType });
+    const formData = new FormData();
+    formData.append('word', targetWord);
+    formData.append('audio', blob, `speaking-${Date.now()}.${extension}`);
+
+    try {
+        const response = await fetch('/api/vocab/speaking/score', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+
+        if (attemptId !== speakingAttemptId) return;
+        setSpeakingButtonState('idle');
+
+        if (!response.ok || data.error) {
+            showSpeakingMessage(data.error || 'Could not score this recording. Please try again.', true);
+            return;
+        }
+
+        renderSpeakingResult(data);
+    } catch (e) {
+        console.error(e);
+        if (attemptId !== speakingAttemptId) return;
+        setSpeakingButtonState('idle');
+        showSpeakingMessage('Could not connect to the speaking scorer. Please try again.', true);
+    }
+}
+
+function resetSpeakingPractice(stopActiveRecording) {
+    speakingAttemptId += 1;
+    if (speakingTimer) {
+        clearTimeout(speakingTimer);
+        speakingTimer = null;
+    }
+    if (stopActiveRecording && speakingRecorder && speakingRecorder.state === 'recording') {
+        speakingRecorder.onstop = null;
+        speakingRecorder.stop();
+    }
+    stopSpeakingStream();
+    speakingRecorder = null;
+    speakingChunks = [];
+    speakingWord = "";
+    setSpeakingButtonState('idle');
+
+    const panel = document.getElementById('vl-speaking-panel');
+    const result = document.getElementById('vl-speaking-result');
+    if (panel) panel.style.display = 'none';
+    if (result) {
+        result.style.display = 'none';
+        result.innerHTML = '';
+        result.className = 'vl-speaking-result';
+    }
+}
+
+function setSpeakingButtonState(state) {
+    const button = document.getElementById('btn-speak');
+    if (!button) return;
+
+    button.classList.toggle('recording', state === 'recording');
+    button.disabled = state === 'scoring';
+    if (state === 'recording') {
+        button.textContent = 'Stop';
+    } else if (state === 'scoring') {
+        button.textContent = 'Scoring...';
+    } else {
+        button.textContent = 'Speak';
+    }
+}
+
+function showSpeakingMessage(message, isError = false) {
+    const panel = document.getElementById('vl-speaking-panel');
+    const status = document.getElementById('vl-speaking-status');
+    const result = document.getElementById('vl-speaking-result');
+    if (panel) panel.style.display = 'block';
+    if (status) {
+        status.textContent = message;
+        status.style.color = isError ? 'var(--danger)' : 'var(--text-muted)';
+    }
+    if (result) {
+        result.style.display = 'none';
+        result.innerHTML = '';
+        result.className = 'vl-speaking-result';
+    }
+}
+
+function renderSpeakingResult(data) {
+    const panel = document.getElementById('vl-speaking-panel');
+    const status = document.getElementById('vl-speaking-status');
+    const result = document.getElementById('vl-speaking-result');
+    if (panel) panel.style.display = 'block';
+    if (status) {
+        status.textContent = data.message || (data.is_correct ? 'Nice pronunciation.' : 'Try again.');
+        status.style.color = data.is_correct ? 'var(--success)' : 'var(--danger)';
+    }
+    if (!result) return;
+
+    result.className = `vl-speaking-result ${data.is_correct ? 'success' : 'retry'}`;
+    result.innerHTML = `
+        <div class="speaking-row"><span class="speaking-label">Score</span><strong>${escapeHtml(data.score)} / 100</strong></div>
+        <div class="speaking-row"><span class="speaking-label">Heard</span><span>${escapeHtml(data.recognized_text || '-')}</span></div>
+        <div class="speaking-row"><span class="speaking-label">Expected pinyin</span><span>${escapeHtml(data.expected_pinyin || '-')}</span></div>
+        <div class="speaking-row"><span class="speaking-label">Heard pinyin</span><span>${escapeHtml(data.recognized_pinyin || '-')}</span></div>
+    `;
+    result.style.display = 'block';
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 function prevWord() {
     if (currentIndex > 0) {
         currentIndex--;
@@ -221,6 +438,8 @@ function nextWord() {
 }
 
 function backToLessons() {
+    resetSpeakingPractice(true);
+
     if (lessonMeta?.passage_id) {
         window.location.href = `/learning?passage_id=${encodeURIComponent(lessonMeta.passage_id)}`;
         return;
@@ -240,6 +459,14 @@ function backToLessons() {
     const audio = document.getElementById('vl-audio');
     audio.pause();
     audio.removeAttribute('src');
+}
+
+function startLearningCards() {
+    // Called from Summary screen – switch to flash card learning view
+    currentIndex = 0;
+    document.getElementById('screen-summary').style.display = 'none';
+    document.getElementById('screen-learning').style.display = 'block';
+    renderWord();
 }
 
 function goToTrainer() {
@@ -273,9 +500,10 @@ let audioQueue = [];
 let tableVocabList = [];
 
 function showVocabSummary() {
+    resetSpeakingPractice(true);
     document.getElementById('screen-learning').style.display = 'none';
     document.getElementById('screen-summary').style.display = 'block';
-    
+
     // Stop any learning audio
     const audio = document.getElementById('vl-audio');
     audio.pause();
@@ -286,7 +514,7 @@ function showVocabSummary() {
 
 function renderVocabTable() {
     const container = document.getElementById('vl-summary-body');
-    
+
     if (!tableVocabList || tableVocabList.length === 0) {
         container.innerHTML = `<div class="vocab-empty">No vocabulary available for this lesson.</div>`;
         return;
@@ -332,9 +560,6 @@ function toggleVocabColumn(colType, tableId) {
 }
 
 function shuffleVocab() {
-    const popSound = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=");
-    popSound.play().catch(e => console.log('Sound error', e));
-
     if (!tableVocabList || tableVocabList.length === 0) return;
     for (let i = tableVocabList.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -349,7 +574,7 @@ function playSingleVocabAudio(audioKey) {
 }
 
 function playAllVocabAudio() {
-    if (isAudioPlaying) return; 
+    if (isAudioPlaying) return;
 
     // Create a queue of words that have audio, store their index
     audioQueue = tableVocabList.map((v, i) => ({...v, originalIndex: i})).filter(v => v.audio_key);
@@ -369,7 +594,7 @@ function playNextInQueue() {
     }
 
     const nextWord = audioQueue.shift();
-    
+
     // Highlight the row
     const tr = document.getElementById(`vl-tr-${nextWord.originalIndex}`);
     if (tr) {
@@ -378,9 +603,9 @@ function playNextInQueue() {
     }
 
     const audio = new Audio(`/audio/${nextWord.audio_key}.mp3`);
-    
+
     audio.onended = () => {
-        setTimeout(playNextInQueue, 800); 
+        setTimeout(playNextInQueue, 800);
     };
 
     audio.onerror = () => {
@@ -517,4 +742,3 @@ function closeStrokeModal() {
 function closeStrokeModalIfBackground(e) {
     if (e.target.id === 'stroke-modal-overlay') closeStrokeModal();
 }
-
