@@ -27,8 +27,7 @@
     padding: 8px 16px;
     border-radius: 20px;
     cursor: pointer;
-    font-family: 'Noto Sans SC', sans-serif;
-    font-size: 20px;
+        font-size: 20px;
     user-select: none;
     transition: transform 0.1s;
 }

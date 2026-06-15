@@ -26,8 +26,7 @@
 .reading-text { flex: 1; }
 .hanzi-text {
     font-size: 28px;
-    font-family: 'Noto Sans SC', sans-serif;
-    color: var(--text-main);
+        color: var(--text-main);
     margin-bottom: 4px;
     line-height: 1.5;
 }

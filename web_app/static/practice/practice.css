@@ -147,8 +147,7 @@
 
 /* Paragraph / Content Area */
 .p-paragraph {
-    font-family: 'Noto Sans SC', sans-serif;
-    font-size: 1rem;
+        font-size: 1rem;
     line-height: 1.9;
     color: var(--text-main);
     white-space: pre-wrap;
@@ -161,8 +160,7 @@
     font-size: 0.95rem;
     font-weight: 600;
     color: var(--text-main);
-    font-family: 'Noto Sans SC', sans-serif;
-}
+    }
 
 /* blank-gap and interactive blanks are defined later in the file */
 
@@ -216,8 +214,7 @@
     font-weight: 700;
     cursor: pointer;
     transition: all 0.2s;
-    font-family: 'Inter', sans-serif;
-}
+    }
 .tf-btn:hover:not(:disabled) {
     border-color: var(--primary);
     background: rgba(67,97,238,0.15);
@@ -244,8 +241,7 @@
     background: rgba(87, 104, 86,0.03);
     cursor: pointer;
     transition: all 0.2s;
-    font-family: 'Noto Sans SC', sans-serif;
-    font-size: 0.92rem;
+        font-size: 0.92rem;
     color: var(--text-main);
     text-align: left;
     width: 100%;
@@ -261,8 +257,7 @@
     background: rgba(87, 104, 86,0.1);
     display: flex; align-items: center; justify-content: center;
     font-weight: 700; font-size: 0.78rem;
-    font-family: 'Inter', sans-serif;
-}
+    }
 .mc-option.selected { border-color: var(--primary); background: rgba(67,97,238,0.18); }
 .mc-option.selected .opt-key { background: var(--primary); color: white; }
 .mc-option.correct-ans { border-color: var(--success) !important; background: rgba(16,185,129,0.15) !important; }
@@ -319,8 +314,7 @@
     border: 1px solid rgba(87, 104, 86,0.15);
     border-radius: 8px;
     padding: 8px 14px;
-    font-family: 'Noto Sans SC', sans-serif;
-    font-size: 0.92rem;
+        font-size: 0.92rem;
     color: var(--text-main);
     cursor: pointer;
     transition: all 0.18s;
@@ -406,8 +400,7 @@
     font-size: 0.82rem;
     cursor: pointer;
     transition: all 0.18s;
-    font-family: 'Inter', sans-serif;
-}
+    }
 .t5l-key-btn:hover:not(:disabled) { border-color: var(--primary); background: rgba(67,97,238,0.2); }
 .t5l-key-btn.selected { background: var(--primary); border-color: var(--primary); color: white; }
 .t5l-key-btn.used-elsewhere { opacity: 0.3; cursor: not-allowed; }
@@ -439,16 +432,14 @@
     display: flex;
     gap: 10px;
     align-items: flex-start;
-    font-family: 'Noto Sans SC', sans-serif;
-    font-size: 0.95rem;
+        font-size: 0.95rem;
     line-height: 1.6;
     color: var(--text-main);
 }
 .t5r-opt-key {
     font-weight: 800;
     color: var(--primary);
-    font-family: 'Inter', sans-serif;
-    flex-shrink: 0;
+        flex-shrink: 0;
     min-width: 22px;
 }
 .t5r-opt-text { flex: 1; }
@@ -458,8 +449,7 @@
     align-items: center;
 }
 .t5r-sentence {
-    font-family: 'Noto Sans SC', sans-serif;
-    font-size: 1rem;
+        font-size: 1rem;
     color: var(--text-main);
     line-height: 1.6;
 }
@@ -499,8 +489,7 @@
     padding: 1px 6px;
     border-radius: 4px;
     margin-right: 5px;
-    font-family: 'Inter', sans-serif;
-    vertical-align: middle;
+        vertical-align: middle;
 }
 
 .p-feedback {
@@ -525,8 +514,7 @@
     font-weight: 700;
     cursor: pointer;
     transition: all 0.2s;
-    font-family: 'Inter', sans-serif;
-}
+    }
 .p-btn-check {
     background: var(--primary);
     color: white;

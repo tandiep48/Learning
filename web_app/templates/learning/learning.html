@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Learning</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/shared/styles.css">
     <link rel="stylesheet" href="/static/shared/passage_picker.css">
     <link rel="stylesheet" href="/static/learning/learning.css">
@@ -33,11 +32,6 @@
                 <p id="learning-context" class="subtitle">Choose an activity.</p>
             </div>
 
-            <div class="learning-part-nav" aria-label="Part navigation">
-                <button id="btn-prev-part" class="btn secondary learning-part-nav-btn" onclick="goToAdjacentPart(-1)">Previous Part</button>
-                <button id="btn-next-part" class="btn secondary learning-part-nav-btn" onclick="goToAdjacentPart(1)">Next Part</button>
-            </div>
-
             <div class="learning-action-grid">
                 <button class="learning-action-card" onclick="openLearningAction('vocab-reading')">
                     <span class="learning-action-title">Vocab Reading</span>
@@ -60,7 +54,13 @@
                     <span class="learning-action-desc">Open grammar notes for this selected passage.</span>
                 </button>
             </div>
+
+            <div class="learning-part-nav" aria-label="Part navigation">
+                <button id="btn-prev-part" class="btn secondary learning-part-nav-btn" onclick="goToAdjacentPart(-1)">Previous Part</button>
+                <button id="btn-next-part" class="btn secondary learning-part-nav-btn" onclick="goToAdjacentPart(1)">Next Part</button>
+            </div>
         </section>
+
     </div>
 
     <script src="/static/shared/passage_picker.js"></script>
