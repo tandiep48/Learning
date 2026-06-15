@@ -48,6 +48,9 @@ def parse_audio_key(raw):
 @login_required
 def get_practice_lessons(number):
     """Return unique available lessons for practice level <number> from question_bank."""
+    category = request.args.get('category', 'practice')
+    if category not in ('practice', 'exam'):
+        category = 'practice'
     db_conn = get_db_connection()
     if not db_conn:
         return jsonify({'error': 'Database unavailable'}), 503
@@ -57,22 +60,25 @@ def get_practice_lessons(number):
             cur.execute("""
                 SELECT DISTINCT lesson
                 FROM question_bank
-                WHERE category = 'practice' AND level = %s
+                WHERE category = %s AND level = %s
                 ORDER BY lesson
-            """, (number,))
+            """, (category, number))
             lessons = [str(row[0]) for row in cur.fetchall()]
     finally:
         db_conn.close()
 
     if not lessons:
-        return jsonify({'error': f'No lessons found for Practice {number}'}), 404
+        return jsonify({'error': f'No lessons found for {category} {number}'}), 404
 
-    return jsonify({'number': number, 'lessons': lessons})
+    return jsonify({'number': number, 'category': category, 'lessons': lessons})
 
 @practice_bp.route('/<int:number>/<lesson_id>', methods=['GET'])
 @login_required
 def get_practice_details(number, lesson_id):
     """Return all questions for level <number> lesson <lesson_id>, grouped by progress."""
+    category = request.args.get('category', 'practice')
+    if category not in ('practice', 'exam'):
+        category = 'practice'
     db_conn = get_db_connection()
     if not db_conn:
         return jsonify({'error': 'Database unavailable'}), 503
@@ -83,9 +89,9 @@ def get_practice_details(number, lesson_id):
                 SELECT level, lesson, no, skill, type, content, question,
                        answer, audio_key, image, options, progress, unit_id, category
                 FROM question_bank
-                WHERE category = 'practice' AND level = %s AND lesson = %s
+                WHERE category = %s AND level = %s AND lesson = %s
                 ORDER BY no
-            """, (number, lesson_id))
+            """, (category, number, lesson_id))
             cols = ['level', 'lesson', 'no', 'skill', 'type', 'content', 'question',
                     'answer', 'audio_key', 'image', 'options', 'progress', 'unit_id', 'category']
             rows = [dict(zip(cols, r)) for r in cur.fetchall()]
@@ -93,7 +99,7 @@ def get_practice_details(number, lesson_id):
         db_conn.close()
 
     if not rows:
-        return jsonify({'error': f'No questions found for lesson {lesson_id}'}), 404
+        return jsonify({'error': f'No {category} questions found for lesson {lesson_id}'}), 404
 
     # Normalise and group by progress
     groups_order = []

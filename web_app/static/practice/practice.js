@@ -145,7 +145,8 @@ async function init() {
             };
         } else {
             // Normal mode: fetch the full lesson
-            const res = await fetch(`/api/practice/${NUM}/${window.lessonId}`);
+            const catParam = window.practiceCategory ? `?category=${encodeURIComponent(window.practiceCategory)}` : '';
+            const res = await fetch(`/api/practice/${NUM}/${window.lessonId}${catParam}`);
             if (!res.ok) throw new Error();
             data = await res.json();
         }

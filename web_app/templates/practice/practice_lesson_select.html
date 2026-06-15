@@ -4,17 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Select Lesson - Practice {{ number }}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/shared/styles.css">
     <link rel="stylesheet" href="/static/practice/practice_lesson_select.css">
 </head>
 <body class="with-site-nav">
     {% include 'shared/site_nav.html' %}
+    {% set current_category = category if category is defined else 'practice' %}
+    {% set category_label = 'Exam' if current_category == 'exam' else 'Exercise' %}
     <div class="practice-select-container">
-        <a href="/practice" class="page-back">← Back to Practice Books</a>
-        <h1 class="page-title">HSK {{ number }} - Lessons</h1>
-        <p class="page-subtitle">Choose a lesson to begin your practice.</p>
-        
+        <a href="/practice?category={{ current_category }}" class="page-back">&larr; Back to {{ category_label }}</a>
+        <h1 class="page-title">HSK {{ number }} - {{ category_label }} Lessons</h1>
+        <p class="page-subtitle">Choose a lesson to begin your {{ category_label|lower }}.</p>
+
         <div id="lesson-grid" class="lesson-grid">
             <div class="loader-container">Loading lessons...</div>
         </div>
@@ -22,6 +23,7 @@
 
     <script>
         window.practiceNumber = "{{ number }}";
+        window.practiceCategory = "{{ current_category }}";
     </script>
     <script src="/static/practice/practice_lesson_select.js"></script>
 </body>
