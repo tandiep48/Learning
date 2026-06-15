@@ -1,0 +1,11 @@
+Flask
+flask-cors
+flask-login
+gunicorn
+pandas
+psycopg2-binary
+pypinyin
+pytest
+python-dotenv
+rapidfuzz
+vosk
