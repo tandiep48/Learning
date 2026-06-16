@@ -4,53 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Practice - Select Book</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/shared/styles.css">
     <link rel="stylesheet" href="/static/practice/practice_select.css">
 </head>
 <body class="with-site-nav">
     {% include 'shared/site_nav.html' %}
+    {% set current_category = category if category is defined else 'practice' %}
+    {% set category_label = 'Exam' if current_category == 'exam' else 'Exercise' %}
     <div class="practice-select-container">
-        <a href="/" class="page-back">← Back to Dashboard</a>
-        <h1 class="page-title">📝 Practice</h1>
-        <p class="page-subtitle">Choose a practice set to begin your exercise session.</p>
+        <a href="/" class="page-back">&larr; Back to Dashboard</a>
+        <h1 class="page-title">{{ category_label }}</h1>
+        <p class="page-subtitle">Choose an HSK set to begin your {{ category_label|lower }} session.</p>
         <div class="practice-grid">
-            <a href="/practice/1" class="practice-card">
-                <div class="card-icon">📗</div>
-                <div class="card-label">Practice 1</div>
-                <div class="hsk-badge">HSK 1</div>
+            {% for number in range(1, 7) %}
+            <a href="/practice/{{ number }}?category={{ current_category }}" class="practice-card">
+                <div class="card-icon">{{ number }}</div>
+                <div class="card-label">{{ category_label }} {{ number }}</div>
+                <div class="hsk-badge">HSK {{ number }}</div>
                 <div class="card-sub">Listening &amp; Reading</div>
             </a>
-            <a href="/practice/2" class="practice-card">
-                <div class="card-icon">📘</div>
-                <div class="card-label">Practice 2</div>
-                <div class="hsk-badge">HSK 2</div>
-                <div class="card-sub">Listening &amp; Reading</div>
-            </a>
-            <a href="/practice/3" class="practice-card">
-                <div class="card-icon">📙</div>
-                <div class="card-label">Practice 3</div>
-                <div class="hsk-badge">HSK 3</div>
-                <div class="card-sub">Listening &amp; Reading</div>
-            </a>
-            <a href="/practice/4" class="practice-card">
-                <div class="card-icon">📕</div>
-                <div class="card-label">Practice 4</div>
-                <div class="hsk-badge">HSK 4</div>
-                <div class="card-sub">Listening &amp; Reading</div>
-            </a>
-            <a href="/practice/5" class="practice-card">
-                <div class="card-icon">📓</div>
-                <div class="card-label">Practice 5</div>
-                <div class="hsk-badge">HSK 5</div>
-                <div class="card-sub">Listening &amp; Reading</div>
-            </a>
-            <a href="/practice/6" class="practice-card">
-                <div class="card-icon">📔</div>
-                <div class="card-label">Practice 6</div>
-                <div class="hsk-badge">HSK 6</div>
-                <div class="card-sub">Listening &amp; Reading</div>
-            </a>
+            {% endfor %}
         </div>
     </div>
 </body>

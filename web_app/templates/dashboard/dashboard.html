@@ -1,0 +1,69 @@
+<main class="dashboard-main">
+    <section id="dashboard-state" class="dashboard-state">
+        <div class="loader"></div>
+        <p>Loading your lesson dashboard...</p>
+    </section>
+
+    <section id="dashboard-content" class="home-dashboard" style="display:none;">
+        <section class="current-lesson-row">
+            <div>
+                <span class="dashboard-kicker">Current Lesson</span>
+                <h1 id="home-lesson-title">Learning Dashboard</h1>
+                <p id="home-lesson-subtitle" class="subtitle">Continue where you left off.</p>
+            </div>
+            <div class="current-lesson-actions">
+                <a id="home-continue-link" class="btn primary dashboard-action-link" href="/learning">Continue Lesson</a>
+                <a class="btn secondary dashboard-action-link" href="/learning">Change Lesson</a>
+            </div>
+        </section>
+
+        <section class="dashboard-two-column">
+            <div class="dashboard-panel vocab-panel-card">
+                <div class="dashboard-panel-heading">
+                    <div>
+                        <span class="dashboard-kicker">Vocabulary</span>
+                        <h2>Recent Lesson Words</h2>
+                    </div>
+                    <span id="home-vocab-count" class="dashboard-count">0 words</span>
+                </div>
+                <div id="home-vocab-state" class="dashboard-empty">Loading vocabulary...</div>
+                <div id="home-vocab-table-wrap" class="home-vocab-table-wrap" style="display:none;"></div>
+                <div id="home-vocab-pagination" class="home-pagination" style="display:none;">
+                    <button id="home-vocab-prev" class="btn secondary" type="button">Prev</button>
+                    <span id="home-vocab-page-status">Page 1 / 1</span>
+                    <button id="home-vocab-next" class="btn secondary" type="button">Next</button>
+                </div>
+            </div>
+
+            <div class="dashboard-panel">
+                <div class="dashboard-panel-heading">
+                    <div>
+                        <span class="dashboard-kicker">Exercise & Exam</span>
+                        <h2>Lesson Activities</h2>
+                    </div>
+                </div>
+                <div class="activity-columns">
+                    <a class="activity-nav-card exercise" href="/practice?category=practice">
+                        <span>Exercise</span>
+                        <strong>Open exercise practice</strong>
+                    </a>
+                    <a class="activity-nav-card exam" href="/practice?category=exam">
+                        <span>Exam</span>
+                        <strong>Open exam practice</strong>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <section class="dashboard-panel lesson-progress-row">
+            <div class="dashboard-panel-heading">
+                <div>
+                    <span class="dashboard-kicker">Progress</span>
+                    <h2>Recent Lesson Activity</h2>
+                </div>
+                <div id="home-progress-total" class="progress-total">0 attempts</div>
+            </div>
+            <div id="home-progress-list" class="progress-grid"></div>
+        </section>
+    </section>
+</main>

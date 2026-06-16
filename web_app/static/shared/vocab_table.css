@@ -84,8 +84,7 @@
 .vocab-table tbody tr:hover { background: rgba(87, 104, 86,0.03); }
 .vocab-table td { padding: 20px 18px; vertical-align: middle; }
 .vocab-cn {
-    font-family: 'Noto Sans SC', sans-serif;
-    font-size: 2rem;
+        font-size: 2rem;
     font-weight: 700;
     color: var(--text-main);
     line-height: 1.35;

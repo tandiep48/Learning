@@ -87,7 +87,10 @@ def reading_page():
 @app.route('/practice')
 @login_required
 def practice_dashboard():
-    return render_template('practice/practice_select.html')
+    category = request.args.get('category', 'practice')
+    if category not in ('practice', 'exam'):
+        category = 'practice'
+    return render_template('practice/practice_select.html', category=category)
 
 @app.route('/recommend')
 @login_required
@@ -97,12 +100,18 @@ def recommend_page():
 @app.route('/practice/<int:number>')
 @login_required
 def practice_lesson_select(number):
-    return render_template('practice/practice_lesson_select.html', number=number)
+    category = request.args.get('category', 'practice')
+    if category not in ('practice', 'exam'):
+        category = 'practice'
+    return render_template('practice/practice_lesson_select.html', number=number, category=category)
 
 @app.route('/practice/<int:number>/<lesson_id>')
 @login_required
 def practice_page(number, lesson_id):
-    return render_template('practice/practice.html', number=number, lesson_id=lesson_id)
+    category = request.args.get('category', 'practice')
+    if category not in ('practice', 'exam'):
+        category = 'practice'
+    return render_template('practice/practice.html', number=number, lesson_id=lesson_id, category=category)
 
 @app.route('/practice/<int:number>/<lesson_id>/<path:progress>')
 @login_required

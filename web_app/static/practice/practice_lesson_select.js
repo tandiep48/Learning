@@ -1,8 +1,9 @@
 async function fetchLessons() {
     // Expects 'window.practiceNumber' to be defined globally by the HTML template
     const num = window.practiceNumber;
+    const category = window.practiceCategory || 'practice';
     try {
-        const res = await fetch(`/api/practice/${num}`);
+        const res = await fetch(`/api/practice/${num}?category=${encodeURIComponent(category)}`);
         const data = await res.json();
         
         if (!res.ok) {
@@ -20,14 +21,14 @@ async function fetchLessons() {
         
         data.lessons.forEach(lesson => {
             const card = document.createElement('a');
-            card.href = `/practice/${num}/${lesson}`;
+            card.href = `/practice/${num}/${lesson}?category=${encodeURIComponent(category)}`;
             card.className = 'lesson-card';
             card.innerHTML = `
                 <div class="lesson-label">Lesson ${lesson}</div>
             `;
             // Set referrer so practice.js can build the correct Back button
             card.addEventListener('click', () => {
-                sessionStorage.setItem('practice_referrer', `practice-${num}`);
+                sessionStorage.setItem('practice_referrer', `${category}-${num}`);
             });
             grid.appendChild(card);
         });

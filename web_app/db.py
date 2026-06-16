@@ -135,10 +135,22 @@ def update_user_avatar_path(conn, user_id, avatar_path):
         conn.rollback()
         return False
 
+def update_user_password(conn, user_id, password_hash):
+    if not conn:
+        return False
+    try:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE users SET password = %s WHERE id = %s", (password_hash, user_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"⚠️ Database update_user_password failed: {e}")
+        conn.rollback()
+        return False
+
 def get_profile_summary(conn, user_id):
     if not conn:
         return {
-            "learned_words": [],
             "time_totals_ms": {"vocab": 0, "lesson": 0, "practice": 0, "exam": 0},
             "vocab_mode_time_ms": [],
             "lesson_mode_time_ms": [],
@@ -146,17 +158,11 @@ def get_profile_summary(conn, user_id):
         }
 
     summary = {
-        "learned_words": [],
         "time_totals_ms": {"vocab": 0, "lesson": 0, "practice": 0, "exam": 0},
         "vocab_mode_time_ms": [],
         "lesson_mode_time_ms": [],
         "practice_skill_time_ms": []
     }
-
-    try:
-        summary["learned_words"] = get_mastered_words_with_recency(conn, user_id)
-    except Exception as e:
-        print(f"⚠️ Database learned words summary failed: {e}")
 
     try:
         with conn.cursor() as cur:
@@ -213,11 +219,6 @@ def get_profile_summary(conn, user_id):
                 summary["time_totals_ms"][category] += item["time_ms"]
     except Exception as e:
         print(f"⚠️ Database practice time summary failed: {e}")
-
-    for word in summary["learned_words"]:
-        learned_at = word.get("learned_at")
-        if hasattr(learned_at, "isoformat"):
-            word["learned_at"] = learned_at.isoformat()
 
     return summary
 
@@ -302,6 +303,79 @@ def get_mastered_words_with_recency(conn, user_id):
     except Exception as e:
         print(f"⚠️ Database query failed (get_mastered_words_with_recency): {e}")
         return []
+
+def get_mastered_words_page(conn, user_id, page=1, page_size=24):
+    """
+    Returns one page of mastered words with the timestamp of the latest mastered learning day.
+    Uses the same 3-mode round-1 mastery rule as get_learned_words().
+    """
+    page_size = min(100, max(1, int(page_size or 24)))
+    page = max(1, int(page or 1))
+    if not conn:
+        return {"rows": [], "page": 1, "page_size": page_size, "total": 0, "total_pages": 1}
+
+    base_cte = """
+    WITH daily_attempts AS (
+        SELECT
+            word,
+            DATE(updated_at) AS attempt_date,
+            MAX(updated_at) AS learned_at,
+            COUNT(DISTINCT CASE WHEN is_correct = true THEN mode END) AS successful_modes
+        FROM vocab_records
+        WHERE mode IN ('typing', 'listen', 'meaning')
+          AND round_num = 1
+          AND user_id = %s
+        GROUP BY word, DATE(updated_at)
+    ),
+    latest_status AS (
+        SELECT
+            word,
+            learned_at,
+            successful_modes,
+            ROW_NUMBER() OVER (PARTITION BY word ORDER BY attempt_date DESC) AS rn
+        FROM daily_attempts
+    ),
+    mastered AS (
+        SELECT word, learned_at
+        FROM latest_status
+        WHERE rn = 1 AND successful_modes = 3
+    )
+    """
+    count_query = base_cte + """
+    SELECT COUNT(*) FROM mastered;
+    """
+    rows_query = base_cte + """
+    SELECT word, learned_at, COUNT(*) OVER() AS total
+    FROM mastered
+    ORDER BY learned_at DESC NULLS LAST, word
+    LIMIT %s OFFSET %s;
+    """
+    try:
+        with conn.cursor() as cur:
+            cur.execute(count_query, (user_id,))
+            total = int(cur.fetchone()[0] or 0)
+            total_pages = max(1, (total + page_size - 1) // page_size)
+            page = min(page, total_pages)
+            offset = (page - 1) * page_size
+            cur.execute(rows_query, (user_id, page_size, offset))
+            rows = cur.fetchall()
+
+        return {
+            "rows": [
+                {
+                    "word": row[0],
+                    "learned_at": row[1].isoformat() if hasattr(row[1], "isoformat") else row[1]
+                }
+                for row in rows
+            ],
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": total_pages
+        }
+    except Exception as e:
+        print(f"⚠️ Database query failed (get_mastered_words_page): {e}")
+        return {"rows": [], "page": 1, "page_size": page_size, "total": 0, "total_pages": 1}
 
 def greedy_rank_recommendations(results):
     """
@@ -670,7 +744,6 @@ def get_hard_stroke_learned_words(conn, user_id):
         print(f"⚠️ Database query failed (get_hard_stroke_learned_words): {e}")
         return []
 
-
 def get_passages_summary(conn, hsk_level=None):
     if not conn: return []
     query = """
@@ -808,8 +881,6 @@ def get_passage_vocab(conn, passage_id):
             }
             for r in rows
         ]
-
-
 
 def get_grammar_for_passage(conn, hsk_level, lesson, passage_number):
     try:

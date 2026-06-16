@@ -16,10 +16,11 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+    font-family: SimSun, '宋体', serif;
 }
 
 body {
-    font-family: 'Inter', sans-serif;
+    font-family: SimSun, '宋体', serif;
     background-color: var(--bg-color);
     color: var(--text-main);
     display: flex;
@@ -81,8 +82,7 @@ h1, h2 {
     border-radius: 8px;
     cursor: pointer;
     font-size: 16px;
-    font-family: 'Inter', sans-serif;
-    transition: all 0.2s;
+        transition: all 0.2s;
     background: var(--secondary);
     color: var(--text-main);
     text-align: left;
@@ -195,8 +195,7 @@ input:focus {
 }
 
 .chinese-word {
-    font-family: 'Noto Sans SC', sans-serif;
-    font-size: 64px;
+        font-size: 64px;
     margin-bottom: 30px;
 }
 
@@ -282,8 +281,7 @@ input:focus {
 }
 
 .cn-text {
-    font-family: 'Noto Sans SC', sans-serif;
-    font-size: 32px;
+        font-size: 32px;
     margin-bottom: 5px;
 }
 .pinyin-text {

@@ -31,6 +31,11 @@ function setTableMode(mode) {
 
     document.getElementById('mode-standard-btn')?.classList.toggle('active', mode === 'standard');
     document.getElementById('mode-free-btn')?.classList.toggle('active', mode === 'free');
+    document.getElementById('mode-unsure-btn')?.classList.toggle('active', mode === 'unsure');
+    document.getElementById('mode-unlearn-btn')?.classList.toggle('active', mode === 'unlearn');
+    document.querySelectorAll('.hsk-filter').forEach(el => {
+        el.style.display = isHistoryMode() ? 'none' : '';
+    });
     document.querySelectorAll('.standard-filter').forEach(el => {
         el.style.display = mode === 'standard' ? '' : 'none';
     });
@@ -38,7 +43,15 @@ function setTableMode(mode) {
     resetSelect('filter-hsk', 'Select HSK');
     resetSelect('filter-lesson', 'Select lesson', true);
     resetSelect('filter-part', 'Select part', true);
-    clearTable('Choose filters to load vocabulary.');
+    if (isHistoryMode()) {
+        loadVocabTable();
+    } else {
+        clearTable('Choose filters to load vocabulary.');
+    }
+}
+
+function isHistoryMode() {
+    return tableMode === 'unsure' || tableMode === 'unlearn';
 }
 
 function resetSelect(id, label, disabled = false) {
@@ -161,7 +174,7 @@ async function loadVocabTable() {
     const lesson = document.getElementById('filter-lesson').value;
     const part = document.getElementById('filter-part').value;
 
-    if (!hskLevel || (tableMode === 'standard' && (!lesson || !part))) {
+    if (!isHistoryMode() && (!hskLevel || (tableMode === 'standard' && (!lesson || !part)))) {
         clearTable(tableMode === 'standard' ? 'Choose HSK, lesson, and part.' : 'Choose HSK to load vocabulary.');
         return;
     }
@@ -265,13 +278,13 @@ function renderVocabTable(rows) {
         const audioCell = row.audio_key
             ? `<button class="vocab-audio-btn" onclick="playTableAudio('${escapeAttr(row.audio_key)}')" title="Play audio" aria-label="Play audio"><i class="fa-solid fa-play play-icon" aria-hidden="true"></i></button>`
             : '<span class="vocab-no-audio">-</span>';
-        const rowToggleIcon = hiddenRows.has(word) ? 'fa-eye' : 'fa-eye-slash';
-        const rowToggle = `<button class="vocab-row-toggle-btn" onclick="toggleRowVocabVisibility(${escapeJsArg(word)})" title="Hide or show this row" aria-label="Hide or show this row"><i class="fa-solid ${rowToggleIcon}" aria-hidden="true"></i></button>`;
+        const pinyin = escapeAttr(row.pinyin || '');
+        const writeBtn = `<button class="vocab-stroke-row-btn" onclick="openVocabStrokeModal(${escapeJsArg(word)}, '${pinyin}')" title="Write character" aria-label="Write character">&#9999;</button>`;
         tr.innerHTML = `
             <td class="vocab-select-col">
                 <input type="checkbox" class="vocab-row-checkbox" ${checked} onchange="toggleWordSelection(${index}, this.checked)">
             </td>
-            <td class="vocab-tools-cell">${audioCell}${rowToggle}</td>
+            <td class="vocab-tools-cell">${audioCell}${writeBtn}</td>
             <td class="vocab-cn clickable-cell" onclick="this.classList.toggle('hidden-cell')">${escapeHtml(word)}</td>
             <td class="vocab-pinyin clickable-cell" onclick="this.classList.toggle('hidden-cell')">${escapeHtml(row.pinyin || '')}</td>
             <td class="vocab-meaning-vn clickable-cell" onclick="this.classList.toggle('hidden-cell')">${escapeHtml(row.meaning_vn || row.meaning_en || '')}</td>
@@ -387,13 +400,6 @@ function toggleAllVocabVisibility() {
     refreshVisibilityControls();
 }
 
-function toggleRowVocabVisibility(word) {
-    if (hiddenRows.has(word)) hiddenRows.delete(word);
-    else hiddenRows.add(word);
-    allRowsHidden = currentRows.length > 0 && currentRows.every(row => hiddenRows.has(row.word || row.cn || ''));
-    refreshVisibilityControls();
-}
-
 function refreshVisibilityControls() {
     const table = document.getElementById('trainer-vocab-table');
     table?.classList.toggle('all-vocab-hidden', allRowsHidden);
@@ -404,16 +410,10 @@ function refreshVisibilityControls() {
         headerIcon.classList.toggle('fa-eye-slash', !allRowsHidden);
     }
 
+    // Apply/remove hidden class on all rows based on global toggle
     currentRows.forEach((item, index) => {
-        const word = item.word || item.cn || '';
-        const isHidden = hiddenRows.has(word);
         const row = document.getElementById(`trainer-vocab-tr-${index}`);
-        row?.classList.toggle('row-vocab-hidden', isHidden);
-        const icon = row?.querySelector('.vocab-row-toggle-btn .fa-solid');
-        if (icon) {
-            icon.classList.toggle('fa-eye', isHidden);
-            icon.classList.toggle('fa-eye-slash', !isHidden);
-        }
+        row?.classList.toggle('row-vocab-hidden', allRowsHidden);
     });
 }
 
@@ -473,3 +473,120 @@ function escapeAttr(value) {
 function escapeJsArg(value) {
     return JSON.stringify(String(value ?? '')).replace(/"/g, '&quot;');
 }
+
+// ─── Vocab Table Stroke Order Modal ──────────────────────────────────────────
+
+let vocabStrokeWriter = null;
+let vocabStrokeChars = [];
+let vocabStrokeCharIndex = 0;
+let vocabStrokeQuizMode = false;
+
+function openVocabStrokeModal(word, pinyin) {
+    if (!word) return;
+
+    // Split word into individual Chinese characters
+    vocabStrokeChars = [...word].filter(c => /[\u4e00-\u9fff]/.test(c));
+    if (vocabStrokeChars.length === 0) {
+        alert('No Chinese characters found for this word.');
+        return;
+    }
+
+    vocabStrokeCharIndex = 0;
+    vocabStrokeQuizMode = false;
+
+    // Populate header
+    document.getElementById('vocab-stroke-modal-word').textContent = word;
+    document.getElementById('vocab-stroke-modal-pinyin').textContent = pinyin || '';
+
+    // Build character tabs
+    const tabsEl = document.getElementById('vocab-stroke-char-tabs');
+    if (vocabStrokeChars.length <= 1) {
+        tabsEl.style.display = 'none';
+    } else {
+        tabsEl.style.display = 'flex';
+        tabsEl.innerHTML = vocabStrokeChars.map((ch, i) =>
+            `<button class="stroke-tab ${i === 0 ? 'active' : ''}" onclick="switchVocabStrokeChar(${i})">${ch}</button>`
+        ).join('');
+    }
+
+    // Show modal
+    document.getElementById('vocab-stroke-modal-overlay').classList.add('open');
+
+    // Render first character
+    renderVocabStrokeChar(vocabStrokeCharIndex);
+}
+
+function switchVocabStrokeChar(index) {
+    vocabStrokeCharIndex = index;
+    vocabStrokeQuizMode = false;
+
+    document.querySelectorAll('#vocab-stroke-char-tabs .stroke-tab').forEach((t, i) => {
+        t.classList.toggle('active', i === index);
+    });
+
+    renderVocabStrokeChar(index);
+}
+
+function renderVocabStrokeChar(index) {
+    const container = document.getElementById('vocab-stroke-canvas-container');
+    container.innerHTML = '';
+    vocabStrokeWriter = null;
+
+    const char = vocabStrokeChars[index];
+    const size = Math.min(280, window.innerWidth - 80);
+
+    const target = document.createElement('div');
+    target.id = 'vocab-stroke-svg-target';
+    container.appendChild(target);
+
+    vocabStrokeWriter = HanziWriter.create('vocab-stroke-svg-target', char, {
+        width: size,
+        height: size,
+        padding: 16,
+        strokeColor: '#1a1a1a',
+        radicalColor: '#007a61',
+        outlineColor: 'rgba(0,0,0,0.08)',
+        drawingColor: '#007a61',
+        drawingWidth: 4,
+        showOutline: true,
+        showCharacter: false,
+        delayBetweenStrokes: 300,
+    });
+
+    // Auto-animate on open
+    vocabStrokeWriter.animateCharacter();
+}
+
+function vocabStrokeAnimate() {
+    if (!vocabStrokeWriter) return;
+    vocabStrokeQuizMode = false;
+    vocabStrokeWriter.animateCharacter();
+}
+
+function vocabStrokeQuiz() {
+    if (!vocabStrokeWriter) return;
+    vocabStrokeQuizMode = true;
+    vocabStrokeWriter.quiz({
+        onMistake(strokeData) { console.log('Mistake on stroke', strokeData.strokeNum); },
+        onCorrectStroke(strokeData) { console.log('Correct stroke', strokeData.strokeNum); },
+        onComplete(summaryData) { console.log('Quiz complete! Mistakes:', summaryData.totalMistakes); }
+    });
+}
+
+function vocabStrokeReset() {
+    if (vocabStrokeCharIndex !== undefined) {
+        renderVocabStrokeChar(vocabStrokeCharIndex);
+    }
+}
+
+function closeVocabStrokeModal() {
+    document.getElementById('vocab-stroke-modal-overlay').classList.remove('open');
+    vocabStrokeWriter = null;
+    const container = document.getElementById('vocab-stroke-canvas-container');
+    container.innerHTML = '';
+}
+
+function closeVocabStrokeModalIfBackground(e) {
+    if (e.target.id === 'vocab-stroke-modal-overlay') closeVocabStrokeModal();
+}
+

@@ -3,6 +3,10 @@ import sys
 import time
 import random
 import json
+import re
+import subprocess
+import tempfile
+import wave
 import pandas as pd
 from datetime import datetime
 from flask import Blueprint, request, jsonify
@@ -26,6 +30,133 @@ from db import (
 
 
 vocab_bp = Blueprint('vocab', __name__, url_prefix='/api/vocab')
+
+SPEAKING_SCORE_THRESHOLD = int(os.getenv("SPEAKING_SCORE_THRESHOLD", "80"))
+SPEAKING_MAX_AUDIO_BYTES = int(os.getenv("SPEAKING_MAX_AUDIO_BYTES", str(5 * 1024 * 1024)))
+SPEAKING_SAMPLE_RATE = int(os.getenv("SPEAKING_SAMPLE_RATE", "16000"))
+DEFAULT_VOSK_MODEL_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "models",
+    "vosk-model-small-cn-0.22"
+)
+_SPEAKING_ASR_MODEL = None
+
+
+def get_speaking_asr_model():
+    global _SPEAKING_ASR_MODEL
+    if _SPEAKING_ASR_MODEL is not None:
+        return _SPEAKING_ASR_MODEL
+
+    from vosk import Model
+
+    model_path = os.getenv("VOSK_MODEL_PATH", DEFAULT_VOSK_MODEL_PATH)
+    if not os.path.isdir(model_path):
+        raise FileNotFoundError(
+            f"Vosk model folder not found at {model_path}. "
+            "Download a Chinese Vosk model and set VOSK_MODEL_PATH."
+        )
+
+    _SPEAKING_ASR_MODEL = Model(model_path)
+    return _SPEAKING_ASR_MODEL
+
+
+def convert_audio_to_vosk_wav(input_path):
+    output_path = tempfile.NamedTemporaryFile(delete=False, suffix=".wav").name
+    command = [
+        "ffmpeg",
+        "-y",
+        "-i",
+        input_path,
+        "-ac",
+        "1",
+        "-ar",
+        str(SPEAKING_SAMPLE_RATE),
+        "-f",
+        "wav",
+        output_path,
+    ]
+    try:
+        subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        return output_path
+    except FileNotFoundError as e:
+        if os.path.exists(output_path):
+            os.remove(output_path)
+        raise RuntimeError("ffmpeg is required to decode browser audio for Vosk.") from e
+    except subprocess.CalledProcessError as e:
+        if os.path.exists(output_path):
+            os.remove(output_path)
+        raise RuntimeError("ffmpeg could not convert this recording.") from e
+
+
+def transcribe_with_vosk(model, wav_path):
+    from vosk import KaldiRecognizer
+
+    parts = []
+    with wave.open(wav_path, "rb") as wav_file:
+        if wav_file.getnchannels() != 1 or wav_file.getsampwidth() != 2:
+            raise ValueError("Vosk requires mono 16-bit PCM WAV audio.")
+
+        recognizer = KaldiRecognizer(model, wav_file.getframerate())
+        recognizer.SetWords(False)
+
+        while True:
+            data = wav_file.readframes(4000)
+            if not data:
+                break
+            if recognizer.AcceptWaveform(data):
+                partial = json.loads(recognizer.Result()).get("text", "")
+                if partial:
+                    parts.append(partial)
+
+        final = json.loads(recognizer.FinalResult()).get("text", "")
+        if final:
+            parts.append(final)
+
+    return "".join(parts)
+
+
+def normalize_spoken_text(value):
+    value = str(value or "").strip()
+    return re.sub(r"[^\u3400-\u9fffA-Za-z0-9]+", "", value)
+
+
+def text_to_tone_pinyin(value):
+    from pypinyin import Style, lazy_pinyin
+
+    cleaned = normalize_spoken_text(value)
+    return " ".join(lazy_pinyin(cleaned, style=Style.TONE3, errors="ignore")).lower().strip()
+
+
+def score_spoken_word(expected_word, audio_path):
+    from rapidfuzz import fuzz
+
+    model = get_speaking_asr_model()
+    wav_path = None
+    try:
+        wav_path = convert_audio_to_vosk_wav(audio_path)
+        recognized_text = normalize_spoken_text(transcribe_with_vosk(model, wav_path))
+    finally:
+        if wav_path and os.path.exists(wav_path):
+            try:
+                os.remove(wav_path)
+            except OSError:
+                pass
+
+    expected_pinyin = text_to_tone_pinyin(expected_word)
+    recognized_pinyin = text_to_tone_pinyin(recognized_text)
+
+    score = 0
+    if expected_pinyin and recognized_pinyin:
+        score = round(float(fuzz.ratio(expected_pinyin, recognized_pinyin)), 1)
+
+    return {
+        "recognized_text": recognized_text,
+        "expected_pinyin": expected_pinyin,
+        "recognized_pinyin": recognized_pinyin,
+        "score": score,
+        "threshold": SPEAKING_SCORE_THRESHOLD,
+        "is_correct": score >= SPEAKING_SCORE_THRESHOLD
+    }
 
 def normalize_hsk_level(hsk_level):
     if not hsk_level:
@@ -174,6 +305,22 @@ def get_vocab_table():
         if not full_lesson_records.empty:
             level_df = full_lesson_records[full_lesson_records["level"] == hsk_level].reset_index(drop=True)
             rows = [normalize_vocab_row(row) for row in level_df.to_dict("records")]
+
+    elif table_mode in ("unlearn", "unsure"):
+        db_conn = get_db_connection()
+        if not db_conn:
+            return jsonify({"error": "Database connection failed."}), 500
+        try:
+            if table_mode == "unlearn":
+                words = get_unlearned_words_from_db(db_conn, current_user.id)
+            else:
+                words = get_unsure_words_from_db(db_conn, current_user.id)
+        finally:
+            db_conn.close()
+
+        subset_df = get_records_for_words(words)
+        if not subset_df.empty:
+            rows = [normalize_vocab_row(row) for row in subset_df.to_dict("records")]
     else:
         return jsonify({"error": "Invalid table mode."}), 400
 
@@ -375,3 +522,56 @@ def submit_progress():
         db_conn.close()
         
     return jsonify({"status": "success"})
+
+
+@vocab_bp.route('/speaking/score', methods=['POST'])
+@login_required
+def score_speaking_attempt():
+    word = (request.form.get("word") or "").strip()
+    audio = request.files.get("audio")
+
+    if not word:
+        return jsonify({"error": "Missing target word."}), 400
+    if not audio or not audio.filename:
+        return jsonify({"error": "Missing audio recording."}), 400
+
+    content_length = request.content_length or 0
+    if content_length > SPEAKING_MAX_AUDIO_BYTES:
+        return jsonify({"error": "Audio recording is too large. Please try a shorter attempt."}), 413
+
+    suffix = os.path.splitext(audio.filename)[1] or ".webm"
+    temp_path = None
+
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
+            temp_path = temp_file.name
+            audio.save(temp_file)
+
+        result = score_spoken_word(word, temp_path)
+        if not result["recognized_text"]:
+            result["message"] = "I could not detect clear speech. Please try again."
+        elif result["is_correct"]:
+            result["message"] = "Nice pronunciation."
+        else:
+            result["message"] = "Try again and listen closely to the pinyin."
+
+        return jsonify(result)
+    except ImportError as e:
+        return jsonify({
+            "error": f"Speaking dependencies are not installed: {e.name or str(e)}."
+        }), 503
+    except FileNotFoundError as e:
+        return jsonify({"error": str(e)}), 503
+    except RuntimeError as e:
+        return jsonify({"error": str(e)}), 503
+    except Exception as e:
+        print(f"[WARN] speaking score failed: {e}")
+        return jsonify({
+            "error": "Could not score this recording. Please try again."
+        }), 500
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass

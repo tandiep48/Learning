@@ -63,7 +63,7 @@ body {
     display: flex;
     justify-content: center;
     gap: 12px;
-    margin: 0 0 22px;
+    margin: 22px 0 0;
 }
 
 .learning-part-nav-btn {
@@ -98,8 +98,7 @@ body {
     flex-direction: column;
     justify-content: space-between;
     gap: 16px;
-    font-family: 'Inter', sans-serif;
-    transition: transform 0.2s, border-color 0.2s, background 0.2s;
+        transition: transform 0.2s, border-color 0.2s, background 0.2s;
 }
 
 .learning-action-card:hover {
