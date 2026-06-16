@@ -24,10 +24,7 @@ if [[ ! -x "$VENV_PYTHON" ]]; then
 fi
 
 VENV_VERSION="$("$VENV_PYTHON" -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")"
-if [[ "$VENV_VERSION" != "3.12" ]]; then
-  echo "Existing venv uses Python $VENV_VERSION, not 3.12. Recreate $VENV_DIR with Python 3.12." >&2
-  exit 1
-fi
+echo "Using Python $VENV_VERSION"
 
 if ! command -v ffmpeg >/dev/null 2>&1; then
   echo "Warning: ffmpeg was not found on PATH. Speaking audio may fail to decode." >&2
