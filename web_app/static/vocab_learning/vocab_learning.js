@@ -199,10 +199,10 @@ function setAudioPlaying(playing) {
     const btn = document.getElementById('btn-audio');
     if (playing) {
         btn.classList.add('playing');
-        btn.innerHTML = '🔊 Playing…';
+        btn.innerHTML = '<i class="fa-solid fa-volume-high" aria-hidden="true"></i><span>Playing...</span>';
     } else {
         btn.classList.remove('playing');
-        btn.innerHTML = '🔊 Play Audio';
+        btn.innerHTML = '<i class="fa-solid fa-volume-high" aria-hidden="true"></i><span>Play Audio</span>';
     }
 }
 
@@ -521,24 +521,46 @@ function renderVocabTable() {
     }
 
     const tableId = 'vl-summary-table';
+    const audioCount = tableVocabList.filter(v => v.audio_key).length;
     let html = `
-        <table class="vocab-table" id="${tableId}">
-            <thead>
-                <tr>
-                    <th style="width: 80px;">
-                        <button onclick="event.stopPropagation(); playAllVocabAudio()" class="vocab-header-icon-btn" title="Play All">▶</button>
-                        <button onclick="event.stopPropagation(); shuffleVocab()" class="vocab-header-icon-btn" title="Shuffle">🔀</button>
-                    </th>
-                    <th onclick="toggleVocabColumn('cn', '${tableId}')" title="Click to hide/show Character">CHARACTER</th>
-                    <th onclick="toggleVocabColumn('py', '${tableId}')" title="Click to hide/show Pinyin">PINYIN</th>
-                    <th onclick="toggleVocabColumn('vn', '${tableId}')" title="Click to hide/show Meaning">MEANING (VN)</th>
-                </tr>
-            </thead>
-            <tbody>
+        <div class="vl-summary-card">
+            <div class="vl-summary-table-meta">
+                <div>
+                    <div class="vl-summary-eyebrow">Vocabulary set</div>
+                    <div class="vl-summary-count">${tableVocabList.length} words</div>
+                </div>
+                <div class="vl-summary-pills" aria-label="Summary actions and stats">
+                    <span class="vl-summary-pill">
+                        <i class="fa-solid fa-volume-high" aria-hidden="true"></i>
+                        ${audioCount} audio
+                    </span>
+                    <button onclick="playAllVocabAudio()" class="vl-summary-tool-btn" type="button">
+                        <i class="fa-solid fa-play play-icon" aria-hidden="true"></i>
+                        <span>Play all</span>
+                    </button>
+                    <button onclick="shuffleVocab()" class="vl-summary-tool-btn secondary" type="button">
+                        <i class="fa-solid fa-shuffle" aria-hidden="true"></i>
+                        <span>Shuffle</span>
+                    </button>
+                </div>
+            </div>
+            <div class="vl-summary-table-wrap">
+                <table class="vocab-table vl-summary-table" id="${tableId}">
+                    <thead>
+                        <tr>
+                            <th class="vl-summary-audio-heading">Audio</th>
+                            <th onclick="toggleVocabColumn('cn', '${tableId}')" title="Click to hide/show Character">Character</th>
+                            <th onclick="toggleVocabColumn('py', '${tableId}')" title="Click to hide/show Pinyin">Pinyin</th>
+                            <th onclick="toggleVocabColumn('vn', '${tableId}')" title="Click to hide/show Meaning">Meaning (VN)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
     `;
 
     tableVocabList.forEach((v, index) => {
-        const audioCell = v.audio_key ? `<button class="vocab-audio-btn" onclick="playSingleVocabAudio('${v.audio_key}')">🔊</button>` : '<span style="color:#666">-</span>';
+        const audioCell = v.audio_key
+            ? `<button class="vocab-audio-btn" onclick="playSingleVocabAudio('${v.audio_key}')" title="Play audio" aria-label="Play audio"><i class="fa-solid fa-play play-icon" aria-hidden="true"></i></button>`
+            : '<span class="vocab-no-audio">-</span>';
         html += `
             <tr id="vl-tr-${index}" data-audio="${v.audio_key || ''}">
                 <td class="vocab-audio-cell">${audioCell}</td>
@@ -549,7 +571,11 @@ function renderVocabTable() {
         `;
     });
 
-    html += `</tbody></table>`;
+    html += `
+                    </tbody>
+                </table>
+            </div>
+        </div>`;
     container.innerHTML = html;
 }
 
@@ -690,9 +716,9 @@ function renderStrokeChar(index) {
         height: size,
         padding: 16,
         strokeColor: '#e2e8f0',
-        radicalColor: '#818cf8',
+        radicalColor: '#738a72',
         outlineColor: 'rgba(255,255,255,0.08)',
-        drawingColor: '#4361ee',
+        drawingColor: '#576856',
         drawingWidth: 4,
         showOutline: true,
         showCharacter: false,    // start hidden; animate reveals it
