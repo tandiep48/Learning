@@ -18,8 +18,25 @@ def import_grammar():
     if not excel_files:
         print("No Grammar Excel files found in sharing_file/")
         return
+    from dotenv import load_dotenv
 
-    conn = psycopg2.connect(host="localhost", database="chinese", user="postgres", password="admin")
+    # Load database credentials from .env file
+    load_dotenv(os.path.join(base_dir, 'web_app', '.env'))
+    load_dotenv()
+
+    DB_HOST = os.getenv('DB_HOST', 'localhost')
+    DB_PORT = os.getenv('DB_PORT', '5432')
+    DB_NAME = os.getenv('DB_NAME', 'chinese')
+    DB_USER = os.getenv('DB_USER', 'postgres')
+    DB_PASS = os.getenv('DB_PASSWORD', 'admin')
+
+    conn = psycopg2.connect(
+        host=DB_HOST,
+        port=DB_PORT,
+        database=DB_NAME,
+        user=DB_USER,
+        password=DB_PASS
+    )
     conn.autocommit = False
     cur = conn.cursor()
 

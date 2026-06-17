@@ -3,6 +3,7 @@
 __pycache__
 .vscode
 .venv
+venv
 
 # folder sharing_file
 sharing_file

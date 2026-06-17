@@ -14,20 +14,38 @@ def clean_nan(obj):
         return [clean_nan(v) for v in obj]
     return obj
 
+from dotenv import load_dotenv
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, "web_app", "data")
 VOCAB_DIR = os.path.join(DATA_DIR, "vocab_data")
 LESSON_DIR = os.path.join(DATA_DIR, "lesson_practice")
 SHARING_DIR = os.path.join(BASE_DIR, "sharing_file")
 
+# Load database credentials from .env file
+load_dotenv(os.path.join(BASE_DIR, 'web_app', '.env'))
+load_dotenv()
+
+DB_HOST = os.getenv('DB_HOST', 'localhost')
+DB_PORT = os.getenv('DB_PORT', '5432')
+DB_NAME = os.getenv('DB_NAME', 'chinese')
+DB_USER = os.getenv('DB_USER', 'postgres')
+DB_PASS = os.getenv('DB_PASSWORD', 'admin')
+
 def import_data():
-    conn = psycopg2.connect(host="localhost", database="chinese", user="postgres", password="admin")
+    conn = psycopg2.connect(
+        host=DB_HOST,
+        port=DB_PORT,
+        database=DB_NAME,
+        user=DB_USER,
+        password=DB_PASS
+    )
     conn.autocommit = False
     cur = conn.cursor()
 
     try:
         # Clear existing data
-        cur.execute("TRUNCATE vocabulary, lesson_passages, passage_vocabulary RESTART IDENTITY;")
+        cur.execute("TRUNCATE vocabulary, lesson_passages, passage_vocabulary RESTART IDENTITY CASCADE;")
         print("Cleared existing content tables.")
 
         # 1. Import final_chinese_dict.json (Dictionary)

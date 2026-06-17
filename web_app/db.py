@@ -291,15 +291,26 @@ def get_mastered_words_with_recency(conn, user_id):
             ROW_NUMBER() OVER (PARTITION BY word ORDER BY attempt_date DESC) AS rn
         FROM daily_attempts
     )
-    SELECT word, learned_at
-    FROM latest_status
-    WHERE rn = 1 AND successful_modes = 3;
+    SELECT ls.word, ls.learned_at, v.pinyin, v.meaning_vn, v.meaning_en, v.hsk_level
+    FROM latest_status ls
+    LEFT JOIN vocabulary v ON ls.word = v.cn
+    WHERE ls.rn = 1 AND ls.successful_modes = 3;
     """
     try:
         with conn.cursor() as cur:
             cur.execute(query, (user_id,))
             rows = cur.fetchall()
-            return [{"word": row[0], "learned_at": row[1]} for row in rows]
+            return [
+                {
+                    "word": row[0],
+                    "learned_at": row[1],
+                    "pinyin": row[2] or "",
+                    "meaning_vn": row[3] or "",
+                    "meaning_en": row[4] or "",
+                    "hsk_level": row[5] or ""
+                }
+                for row in rows
+            ]
     except Exception as e:
         print(f"⚠️ Database query failed (get_mastered_words_with_recency): {e}")
         return []
