@@ -137,10 +137,14 @@ function buildCard(rec) {
 
     const pct = rec.coverage_pct;
     const barClass = pct >= 90 ? 'high' : pct >= 75 ? 'medium' : '';
-    const skillIcon = rec.skill === 'listening' ? '🎧' : '📖';
+    const skillIcon = rec.skill === 'listening'
+        ? '<i class="fa-solid fa-headphones-simple" aria-hidden="true"></i>'
+        : '<i class="fa-solid fa-book-open" aria-hidden="true"></i>';
     const skillLabel = rec.skill ? rec.skill.charAt(0).toUpperCase() + rec.skill.slice(1) : '';
     const qCount = rec.questions ? rec.questions.length : 0;
-    const categoryLabel = rec.category === 'exam' ? '📝 Exam' : '📋 Practice';
+    const categoryLabel = rec.category === 'exam'
+        ? '<i class="fa-solid fa-file-lines" aria-hidden="true"></i><span>Exam</span>'
+        : '<i class="fa-solid fa-list-check" aria-hidden="true"></i><span>Practice</span>';
     const categoryClass = rec.category === 'exam' ? 'badge-exam' : 'badge-practice';
     const recentWords = Array.isArray(rec.recent_matched_words) ? rec.recent_matched_words.slice(0, 6) : [];
     const focusHtml = recentWords.length
@@ -177,7 +181,7 @@ function buildCard(rec) {
 
         <div class="rec-card-footer">
             <button class="btn-start-practice" onclick="startFromRecommend('${startUrl}')" style="width: 100%; margin-top: 10px;">
-                &#9654; Start
+                <i class="fa-solid fa-play" aria-hidden="true"></i><span>Start</span>
             </button>
         </div>
     `;
@@ -188,14 +192,14 @@ function buildCard(rec) {
 function showNewUser(container) {
     container.innerHTML = `
         <div class="state-box new-user-box">
-            <div class="state-icon">🌱</div>
+            <div class="state-icon"><i class="fa-solid fa-seedling" aria-hidden="true"></i></div>
             <div class="state-title">Welcome! You're just getting started.</div>
             <div class="state-sub">
                 You haven't practiced any vocabulary yet.<br>
                 Recommended lessons unlock automatically as you learn words — start with the <strong>Vocabulary Trainer</strong>!
             </div>
             <a href="/vocab" class="btn-start-practice" style="margin-top:20px; display:inline-block; padding: 12px 28px; font-size:1rem;">
-                📖 Go to Vocabulary Trainer
+                <i class="fa-solid fa-book-open" aria-hidden="true"></i><span>Go to Vocabulary Trainer</span>
             </a>
         </div>
     `;
@@ -204,7 +208,7 @@ function showNewUser(container) {
 function showEmpty(container) {
     container.innerHTML = `
         <div class="state-box">
-            <div class="state-icon">&#127891;</div>
+            <div class="state-icon"><i class="fa-solid fa-graduation-cap" aria-hidden="true"></i></div>
             <div class="state-title">No recommendations yet</div>
             <div class="state-sub">Keep learning vocabulary to unlock recommended practice groups!</div>
         </div>
@@ -214,7 +218,7 @@ function showEmpty(container) {
 function showError(container, msg) {
     container.innerHTML = `
         <div class="state-box">
-            <div class="state-icon">&#9888;&#65039;</div>
+            <div class="state-icon"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i></div>
             <div class="state-title">Something went wrong</div>
             <div class="state-sub">${escapeHtml(msg)}</div>
         </div>

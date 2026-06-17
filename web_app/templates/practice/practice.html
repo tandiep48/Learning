@@ -13,6 +13,7 @@
     </script>
     <link rel="stylesheet" href="/static/shared/styles.css">
     <link rel="stylesheet" href="/static/practice/practice.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 <body class="with-site-nav">
     {% include 'shared/site_nav.html' %}
@@ -35,7 +36,10 @@
                     </div>
                     <span class="p-counter" id="group-counter">1 / 1</span>
                 </div>
-                <div class="p-score-badge" id="score-badge">✓ <span id="score-val">0</span></div>
+                <div class="p-score-badge" id="score-badge">
+                    <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                    <span id="score-val">0</span>
+                </div>
             </div>
 
             <!-- Skill Tag -->
@@ -60,7 +64,9 @@
         <!-- RESULT -->
         <div class="p-screen" id="screen-result">
             <div class="result-container">
-                <div class="result-emoji" id="result-emoji">🎉</div>
+                <div class="result-emoji" id="result-emoji">
+                    <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                </div>
                 <h1 class="result-title">Practice Complete!</h1>
                 <p class="result-sub">Practice Set <span id="result-number"></span></p>
                 <div class="result-score-box">

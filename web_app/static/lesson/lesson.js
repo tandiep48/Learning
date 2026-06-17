@@ -120,7 +120,7 @@ function loadTask() {
         taskStartTime = Date.now();
 
         if (task.type === "listening") {
-            instructionEl.innerText = "🎧 Listen and select the correct translation:";
+            instructionEl.innerHTML = '<i class="fa-solid fa-headphones-simple" aria-hidden="true"></i><span>Listen and select the correct translation:</span>';
             document.getElementById('audio-controls').style.display = 'block';
             if (task.audio_key) {
                 audioEl.play().catch(e => console.warn("Audio playback failed:", e));
@@ -128,20 +128,20 @@ function loadTask() {
             setupMultipleChoice(task);
         }
         else if (task.type === "meaning") {
-            instructionEl.innerText = "📖 What is the meaning of this sentence?";
+            instructionEl.innerHTML = '<i class="fa-solid fa-book-open" aria-hidden="true"></i><span>What is the meaning of this sentence?</span>';
             document.getElementById('word-display').innerText = task.content;
             document.getElementById('word-display').style.display = 'block';
             setupMultipleChoice(task);
         }
         else if (task.type === "typing") {
-            instructionEl.innerText = "⌨️ Type the following sentence in Chinese:";
+            instructionEl.innerHTML = '<i class="fa-solid fa-keyboard" aria-hidden="true"></i><span>Type the following sentence in Chinese:</span>';
             document.getElementById('word-display').innerText = task.content;
             document.getElementById('word-display').style.display = 'block';
             document.getElementById('typing-area').style.display = 'flex';
             document.getElementById('typing-input').focus();
         }
         else if (task.type === "reorder") {
-            instructionEl.innerText = "🧩 Reorder the words to form the correct sentence:";
+            instructionEl.innerHTML = '<i class="fa-solid fa-arrows-up-down-left-right" aria-hidden="true"></i><span>Reorder the words to form the correct sentence:</span>';
             setupReorder(task);
         }
     }

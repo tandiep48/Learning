@@ -71,7 +71,7 @@ function renderPassage() {
         if (line.audio_key) {
             const hskLevel = currentPassage.hsk_level || 'H1';
             const src = `/lesson_audio/${hskLevel}/${line.audio_key}.mp3`;
-            audioHTML = `<button class="audio-btn" onclick="playAudio('${src}')" title="Play Audio">🔊</button>`;
+            audioHTML = `<button class="audio-btn" onclick="playAudio('${src}')" title="Play Audio" aria-label="Play Audio"><i class="fa-solid fa-volume-high" aria-hidden="true"></i></button>`;
         }
 
         const pinyinClass  = pinyinVisible  ? 'pinyin-text show'  : 'pinyin-text';
@@ -188,8 +188,12 @@ function renderVocabTable(vocab) {
         <thead>
             <tr>
                 <th style="width: 80px;">
-                    <button class="vocab-header-icon-btn" onclick="playAllVocabAudio()" title="Play All">▶</button>
-                    <button class="vocab-header-icon-btn" onclick="shuffleVocab()" title="Shuffle">🔀</button>
+                    <button class="vocab-header-icon-btn" onclick="playAllVocabAudio()" title="Play all" aria-label="Play all">
+                        <i class="fa-solid fa-play play-icon" aria-hidden="true"></i>
+                    </button>
+                    <button class="vocab-header-icon-btn" onclick="shuffleVocab()" title="Shuffle" aria-label="Shuffle">
+                        <i class="fa-solid fa-shuffle" aria-hidden="true"></i>
+                    </button>
                 </th>
                 <th onclick="toggleVocabColumn('cn')">CHARACTER</th>
                 <th onclick="toggleVocabColumn('py')">PINYIN</th>
@@ -204,8 +208,8 @@ function renderVocabTable(vocab) {
         const tr = document.createElement('tr');
         tr.id = `reading-vocab-tr-${index}`;
         const audioCell = w.audio_key
-            ? `<button class="vocab-audio-btn" onclick="playVocabAudio('${w.audio_key}')" title="Play">🔊</button>`
-            : '<span style="color:#666">-</span>';
+            ? `<button class="vocab-audio-btn" onclick="playVocabAudio('${w.audio_key}')" title="Play audio" aria-label="Play audio"><i class="fa-solid fa-play play-icon" aria-hidden="true"></i></button>`
+            : '<span class="vocab-no-audio">-</span>';
         tr.innerHTML = `
             <td>${audioCell}</td>
             <td class="vocab-cn clickable-cell" onclick="this.classList.toggle('hidden-cell')">${w.cn}</td>
@@ -385,8 +389,12 @@ function renderVocabTable(vocab) {
         <thead>
             <tr>
                 <th style="width: 80px;">
-                    <button class="vocab-header-icon-btn" onclick="playAllVocabAudio()" title="Play All">▶</button>
-                    <button class="vocab-header-icon-btn" onclick="shuffleVocab()" title="Shuffle">🔀</button>
+                    <button class="vocab-header-icon-btn" onclick="playAllVocabAudio()" title="Play all" aria-label="Play all">
+                        <i class="fa-solid fa-play play-icon" aria-hidden="true"></i>
+                    </button>
+                    <button class="vocab-header-icon-btn" onclick="shuffleVocab()" title="Shuffle" aria-label="Shuffle">
+                        <i class="fa-solid fa-shuffle" aria-hidden="true"></i>
+                    </button>
                 </th>
                 <th onclick="toggleVocabColumn('cn')">CHARACTER</th>
                 <th onclick="toggleVocabColumn('py')">PINYIN</th>
@@ -401,8 +409,8 @@ function renderVocabTable(vocab) {
         const tr = document.createElement('tr');
         tr.id = `reading-vocab-tr-${index}`;
         const audioCell = w.audio_key
-            ? `<button class="vocab-audio-btn" onclick="playVocabAudio('${w.audio_key}')" title="Play">🔊</button>`
-            : '<span style="color:#666">-</span>';
+            ? `<button class="vocab-audio-btn" onclick="playVocabAudio('${w.audio_key}')" title="Play audio" aria-label="Play audio"><i class="fa-solid fa-play play-icon" aria-hidden="true"></i></button>`
+            : '<span class="vocab-no-audio">-</span>';
         tr.innerHTML = `
             <td>${audioCell}</td>
             <td class="vocab-cn clickable-cell" onclick="this.classList.toggle('hidden-cell')">${w.cn}</td>
