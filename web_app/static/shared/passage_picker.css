@@ -19,11 +19,24 @@
     gap: 8px;
 }
 .level-picker-card:hover {
-    background: rgba(67,97,238,0.15);
-    border-color: rgba(67,97,238,0.4);
+    background: rgba(87, 104, 86,0.09);
+    border-color: rgba(87, 104, 86,0.24);
     transform: translateY(-2px);
 }
-.level-icon { font-size: 2rem; }
+.level-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    border: 1px solid rgba(87, 104, 86, 0.16);
+    color: var(--primary);
+    font-size: 1.35rem;
+    font-weight: 800;
+    box-shadow: 0 8px 20px rgba(87, 104, 86, 0.08);
+}
 .level-name {
     font-weight: 600;
     font-size: 1.1rem;
@@ -70,8 +83,8 @@
     color: var(--text-muted);
 }
 .lesson-card-count {
-    background: rgba(67,97,238,0.15);
-    color: #a5b4fc;
+    background: rgba(87, 104, 86,0.1);
+    color: var(--primary);
     padding: 4px 10px;
     border-radius: 20px;
     font-size: 0.85rem;
