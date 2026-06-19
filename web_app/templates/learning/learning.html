@@ -32,26 +32,9 @@
                 <p id="learning-context" class="subtitle">Choose an activity.</p>
             </div>
 
-            <div class="learning-action-grid">
-                <button class="learning-action-card" onclick="openLearningAction('vocab-reading')">
-                    <span class="learning-action-title">Vocab Reading</span>
-                    <span class="learning-action-desc">Review this part's vocabulary as flash cards.</span>
-                </button>
-                <button class="learning-action-card" onclick="openLearningAction('vocab-trainer')">
-                    <span class="learning-action-title">Vocab Trainer</span>
-                    <span class="learning-action-desc">Train listening, typing, and meaning for this part.</span>
-                </button>
-                <button class="learning-action-card" onclick="openLearningAction('lesson-reading')">
-                    <span class="learning-action-title">Lesson Reading</span>
-                    <span class="learning-action-desc">Read the passage with pinyin, meaning, audio, and vocab.</span>
-                </button>
-                <button class="learning-action-card" onclick="openLearningAction('lesson-trainer')">
-                    <span class="learning-action-title">Lesson Trainer</span>
-                    <span class="learning-action-desc">Practice sentence listening, meaning, reorder, and typing.</span>
-                </button>
-                <button id="learning-grammar-card" class="learning-action-card" onclick="openLearningAction('grammar')">
-                    <span class="learning-action-title">Grammar</span>
-                    <span class="learning-action-desc">Open grammar notes for this selected passage.</span>
+            <div class="learning-guided-panel">
+                <button class="btn primary learning-start-btn" onclick="startGuidedLessonPart()">
+                    Start Lesson Part
                 </button>
             </div>
 
@@ -63,7 +46,7 @@
 
     </div>
 
-    <script src="/static/shared/passage_picker.js"></script>
+    <script src="/static/shared/passage_picker.js?v=2"></script>
     <script src="/static/learning/learning.js"></script>
 </body>
 </html>
