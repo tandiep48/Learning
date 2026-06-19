@@ -4,17 +4,21 @@ from dotenv import load_dotenv
 from flask import Flask, render_template, redirect, url_for, request
 from flask_cors import CORS
 from flask_login import LoginManager, login_required
+from flask_socketio import SocketIO
 from routes.vocab_routes import vocab_bp
 from routes.lesson_routes import lesson_bp
 from routes.practice_routes import practice_bp
+from routes.competition_routes import competition_bp
 from routes.auth_routes import auth_bp, get_user_by_id
 from routes.user_routes import user_bp
+from competition_socket import init_competition_socket
 
 load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', secrets.token_hex(32))
 CORS(app)
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode=os.getenv("SOCKETIO_ASYNC_MODE", "threading"))
 
 # Setup Flask-Login
 login_manager = LoginManager()
@@ -29,8 +33,10 @@ def load_user(user_id):
 app.register_blueprint(vocab_bp)
 app.register_blueprint(lesson_bp)
 app.register_blueprint(practice_bp)
+app.register_blueprint(competition_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(user_bp)
+init_competition_socket(socketio)
 
 GCS_BUCKET_URL = os.getenv('GCS_BUCKET_URL', '')
 
@@ -97,6 +103,11 @@ def practice_dashboard():
 def recommend_page():
     return render_template('recommend/recommend.html')
 
+@app.route('/learn-together')
+@login_required
+def learn_together_page():
+    return render_template('competition/learn_together.html')
+
 @app.route('/practice/<int:number>')
 @login_required
 def practice_lesson_select(number):
@@ -146,4 +157,5 @@ def serve_lesson_audio(filename):
     return redirect(f"{GCS_BUCKET_URL}/lesson_audio/{filename}")
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    debug_mode = os.getenv('FLASK_DEBUG', '').lower() in ('1', 'true', 'yes', 'on')
+    socketio.run(app, debug=debug_mode, port=5000, use_reloader=False, allow_unsafe_werkzeug=True)
