@@ -4,66 +4,145 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reading Practice - {{ hsk_level }}</title>
-    <!-- Removed window.hskLevel as it is handled dynamically -->
     <link rel="stylesheet" href="/static/shared/styles.css">
     <link rel="stylesheet" href="/static/shared/passage_picker.css">
-    <link rel="stylesheet" href="/static/reading/reading.css">
-    <link rel="stylesheet" href="/static/shared/vocab_table.css?v=2">
+    <link rel="stylesheet" href="/static/shared/vocab_table.css?v=7">
+    <link rel="stylesheet" href="/static/vocab_learning/vocab_learning.css?v=7">
+    <link rel="stylesheet" href="/static/reading/reading.css?v=8">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 <body class="with-site-nav">
     {% include 'shared/site_nav.html' %}
     <div class="app-container reading-container">
-
         {% include 'shared/passage_picker.html' %}
 
-        <!-- SCREEN: Loading -->
         <div id="screen-loading" class="screen">
             <div class="loader"></div>
             <p>Loading passage...</p>
         </div>
 
-        <!-- SCREEN: Reading -->
         <div id="screen-reading" class="screen">
             <div class="toolbar">
                 <button class="btn secondary" onclick="goHome()">&larr; Back to Menu</button>
                 <div class="toolbar-right">
                     <button class="btn" id="toggle-pinyin-btn" onclick="togglePinyin()">Show Pinyin</button>
                     <button class="btn" id="toggle-meaning-btn" onclick="toggleMeaning()">Show Meaning</button>
-                    <button class="btn" id="show-vocab-btn" onclick="openVocabPanel()">📚 Vocab</button>
+                    <button class="btn" id="show-vocab-btn" onclick="openVocabPanel()">
+                        <i class="fa-solid fa-table-list" aria-hidden="true"></i>
+                        <span>Vocab</span>
+                    </button>
                 </div>
             </div>
 
-            <h2 id="reading-title" style="margin-bottom: 20px; color: var(--primary);">Passage Title</h2>
-
-            <div id="reading-content" style="max-height: 60vh; overflow-y: auto; padding-right: 10px;">
-                <!-- Content injected via JS -->
-            </div>
+            <h2 id="reading-title" class="reading-title">Passage Title</h2>
+            <div id="reading-content" class="reading-content"><!-- Content injected via JS --></div>
 
             <div class="finish-bar">
-                <button class="btn primary" style="flex:1;" onclick="startLessonPractice()">
-                    Flash Cards
+                <button class="btn primary" onclick="startLessonPractice()">Flash Cards</button>
+                <button class="btn secondary" onclick="goHome()">Finished Reading</button>
+            </div>
+        </div>
+
+        <div id="screen-lesson-summary" class="screen">
+            <div class="vl-summary-topbar lesson-summary-topbar">
+                <button class="vl-back vl-plain-btn" onclick="goHome()">&larr; Back to Learning</button>
+                <h2 id="lesson-learner-title">Lesson Summary</h2>
+                <button class="vl-lesson-summary-btn" onclick="goToWordSummary()"
+                    title="Go to Word Summary">
+                    <i class="fa-solid fa-list" aria-hidden="true"></i>
+                    <span>Word Summary</span>
                 </button>
-                <button class="btn secondary" style="flex:1;" onclick="goHome()">
-                    Finished Reading
+            </div>
+
+            <div class="vocab-content-card lesson-summary-content-card">
+                <div class="lesson-summary-toolbar">
+                    <button class="btn" id="lesson-toggle-pinyin-btn"
+                        onclick="toggleLessonSummaryPinyin()">Show Pinyin</button>
+                    <button class="btn" id="lesson-toggle-meaning-btn"
+                        onclick="toggleLessonSummaryMeaning()">Show Meaning</button>
+                    <button class="btn" id="lesson-show-vocab-btn" onclick="openVocabPanel()">
+                        <i class="fa-solid fa-table-list" aria-hidden="true"></i>
+                        <span>Show Vocab</span>
+                    </button>
+                </div>
+
+                <div id="lesson-learner-preview" class="lesson-learner-preview"></div>
+            </div>
+
+            <div class="vl-summary-footer lesson-summary-actions">
+                <button class="vl-train-btn vl-learn-btn" onclick="startLessonCards()">
+                    <i class="fa-solid fa-graduation-cap" aria-hidden="true"></i>
+                    <span>Learn This Lesson</span>
+                </button>
+                <button class="vl-train-btn" onclick="goToLessonTrainer()">
+                    <i class="fa-solid fa-dumbbell" aria-hidden="true"></i>
+                    <span>Train This Lesson</span>
                 </button>
             </div>
         </div>
 
-    </div><!-- /app-container -->
-
-    <div id="vocab-panel-overlay" class="vocab-panel-overlay" onclick="closeVocabIfBackground(event)">
-        <div class="vocab-panel">
-            <div class="vocab-panel-header">
-                <h3 id="vocab-panel-title">Lesson Vocabulary</h3>
-                <button class="vocab-close-btn" onclick="closeVocabPanel()">✕</button>
+        <div id="screen-lesson-card" class="screen">
+            <div class="toolbar lesson-card-toolbar">
+                <button class="btn secondary" onclick="showLessonSummary()">&larr; Summary</button>
+                <span id="lesson-card-counter" class="vl-counter"></span>
             </div>
-            <div class="vocab-panel-body" id="vocab-panel-body">
-                <div class="vocab-loading">Loading...</div>
+            <div class="vl-progress-bar lesson-card-progress">
+                <div id="lesson-card-progress-fill" class="vl-progress-fill" style="width:0%"></div>
+            </div>
+
+            <div class="vl-card lesson-line-card">
+                <div id="lesson-card-hanzi" class="vl-hanzi lesson-line-hanzi"></div>
+                <div id="lesson-card-pinyin" class="vl-pinyin"></div>
+                <div id="lesson-card-meaning" class="vl-meaning"></div>
+
+                <div class="vl-typing-container">
+                    <input type="text" id="lesson-card-typing-input" lang="zh-CN"
+                        placeholder="Type the sentence here..." autocomplete="off" class="vl-input">
+                </div>
+
+                <div class="lesson-card-controls">
+                    <button id="lesson-card-audio-btn" class="vl-audio-btn" onclick="playLessonCardAudio()">
+                        <i class="fa-solid fa-volume-high" aria-hidden="true"></i>
+                        <span>Play Audio</span>
+                    </button>
+                    <button id="lesson-card-speak-btn" class="vl-speak-btn" onclick="toggleLessonSpeakingPractice()">
+                        <i class="fa-solid fa-microphone" aria-hidden="true"></i>
+                        <span>Speak</span>
+                    </button>
+                </div>
+
+                <div id="lesson-speaking-panel" class="vl-speaking-panel" style="display:none;">
+                    <div id="lesson-speaking-status" class="vl-speaking-status">
+                        Press Speak and say the sentence clearly.
+                    </div>
+                    <div id="lesson-speaking-result" class="vl-speaking-result" style="display:none;"></div>
+                </div>
+                <audio id="lesson-card-audio"></audio>
+            </div>
+
+            <div class="vl-nav-row lesson-card-nav">
+                <button id="lesson-card-prev" class="vl-nav-btn" onclick="prevLessonCard()">Prev</button>
+                <button class="vl-train-btn" onclick="showLessonSummary()">Summary</button>
+                <button id="lesson-card-next" class="vl-nav-btn" onclick="nextLessonCard()">Next</button>
             </div>
         </div>
     </div>
 
-    <script src="/static/shared/passage_picker.js"></script>
-    <script src="/static/reading/reading.js"></script>
+    <div id="vocab-panel-overlay" class="vocab-panel-overlay" onclick="closeVocabIfBackground(event)">
+        <div class="vocab-panel vocab-table-theme" role="dialog" aria-modal="true" aria-label="Lesson vocabulary">
+            <button class="vocab-close-btn vocab-panel-floating-close" onclick="closeVocabPanel()"
+                aria-label="Close vocabulary">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+            <div class="vocab-panel-body">
+                <div id="vocab-panel-body" class="vocab-table-wrap">
+                    <div class="vocab-loading">Loading...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/shared/passage_picker.js?v=2"></script>
+    <script src="/static/reading/reading.js?v=8"></script>
 </body>
 </html>

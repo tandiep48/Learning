@@ -6,6 +6,7 @@
     <title>Recommended Lessons</title>
     <link rel="stylesheet" href="/static/shared/styles.css">
     <link rel="stylesheet" href="/static/recommend/recommend.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 <body class="with-site-nav">
     {% include 'shared/site_nav.html' %}
@@ -13,7 +14,10 @@
         <a href="/" class="page-back">← Back to Dashboard</a>
 
         <div class="page-header">
-            <h1 class="page-title">📡 Recommended Lessons</h1>
+            <h1 class="page-title">
+                <i class="fa-solid fa-compass" aria-hidden="true"></i>
+                <span>Recommended Lessons</span>
+            </h1>
             <p class="page-subtitle">Practice lessons matched to the vocabulary you've already mastered.</p>
         </div>
 
@@ -39,8 +43,14 @@
             <div class="tabs-container">
                 <span class="tab-label">Category:</span>
                 <button class="tab-btn category-btn active" data-category="all">All</button>
-                <button class="tab-btn category-btn" data-category="practice">📋 Practice</button>
-                <button class="tab-btn category-btn" data-category="exam">📝 Exam</button>
+                <button class="tab-btn category-btn" data-category="practice">
+                    <i class="fa-solid fa-list-check" aria-hidden="true"></i>
+                    <span>Practice</span>
+                </button>
+                <button class="tab-btn category-btn" data-category="exam">
+                    <i class="fa-solid fa-file-lines" aria-hidden="true"></i>
+                    <span>Exam</span>
+                </button>
             </div>
 
             <div class="tabs-container">
@@ -68,7 +78,8 @@
     <div id="multi-select-bar" class="multi-select-bar hidden">
         <span id="multi-select-count">0 items selected</span>
         <button id="btn-start-multi" class="btn-start-practice" onclick="startMultiRecommend()">
-            ▶ Start Selected
+            <i class="fa-solid fa-play" aria-hidden="true"></i>
+            <span>Start Selected</span>
         </button>
     </div>
 

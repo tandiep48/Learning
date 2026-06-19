@@ -1,13 +1,19 @@
 import sys
 import psycopg2
 from werkzeug.security import generate_password_hash
+import os
+from dotenv import load_dotenv
 
-# Database configuration (adjust if needed for your Linux server)
-DB_HOST = 'localhost'
-DB_PORT = '5432'
-DB_NAME = 'chinese'
-DB_USER = 'postgres'
-DB_PASS = 'admin'
+# Load database credentials from .env file
+script_dir = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(os.path.dirname(script_dir), 'web_app', '.env'))
+load_dotenv()
+
+DB_HOST = os.getenv('DB_HOST', 'localhost')
+DB_PORT = os.getenv('DB_PORT', '5432')
+DB_NAME = os.getenv('DB_NAME', 'chinese')
+DB_USER = os.getenv('DB_USER', 'postgres')
+DB_PASS = os.getenv('DB_PASSWORD', 'admin')
 
 def update_user_password(target_username, new_password):
     # Generate the hash just like your register route does

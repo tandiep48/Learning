@@ -82,7 +82,7 @@ function isImageFilename(val) {
 function makeAudioBtn(key, label) {
     const btn = document.createElement('button');
     btn.className = 'p-audio-btn';
-    btn.innerHTML = `▶ ${label || 'Play Audio'}`;
+    btn.innerHTML = `<i class="fa-solid fa-play" aria-hidden="true"></i><span>${label || 'Play Audio'}</span>`;
     btn.onclick = () => playAudio(key, btn);
     return btn;
 }
@@ -184,7 +184,9 @@ function renderGroup() {
     // Skill tag
     const skill = group.questions[0]?.skill || 'listening';
     const skillTag = document.getElementById('skill-tag');
-    skillTag.textContent = skill === 'listening' ? '🎧 Listening' : '📖 Reading';
+    skillTag.innerHTML = skill === 'listening'
+        ? '<i class="fa-solid fa-headphones-simple" aria-hidden="true"></i><span>Listening</span>'
+        : '<i class="fa-solid fa-book-open" aria-hidden="true"></i><span>Reading</span>';
     skillTag.className = `p-skill-tag ${skill}`;
 
     // Card
@@ -679,7 +681,7 @@ function renderType1(block, q, blockId, skill) {
         btn.className = 'tf-btn';
         btn.dataset.key = key;
         btn.dataset.block = blockId;
-        const label = (val === true || val === 'True') ? '✓ True' : (val === false || val === 'False') ? '✗ False' : `${key}: ${val}`;
+        const label = (val === true || val === 'True') ? 'True' : (val === false || val === 'False') ? 'False' : `${key}: ${val}`;
         btn.textContent = label;
         btn.onclick = () => {
             tfWrap.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('selected'));
@@ -727,7 +729,7 @@ function renderType4(block, q, blockId) {
 
     const ansLabel = document.createElement('div');
     ansLabel.className = 'reorder-label';
-    ansLabel.textContent = '📝 Your order (click to place):';
+    ansLabel.textContent = 'Your order (click to place):';
     area.appendChild(ansLabel);
 
     const ansZone = document.createElement('div');
@@ -737,7 +739,7 @@ function renderType4(block, q, blockId) {
 
     const poolLabel = document.createElement('div');
     poolLabel.className = 'reorder-label';
-    poolLabel.textContent = '🔀 Sentences (click to add):';
+    poolLabel.textContent = 'Sentences (click to add):';
     area.appendChild(poolLabel);
 
     const poolZone = document.createElement('div');
@@ -903,10 +905,10 @@ function checkAnswers() {
         if (isCorrect) {
             groupCorrect++;
             if (block) block.classList.add('correct');
-            if (fb) { fb.className = 'p-feedback correct'; fb.textContent = '✓ Correct!'; }
+            if (fb) { fb.className = 'p-feedback correct'; fb.textContent = 'Correct!'; }
         } else {
             if (block) block.classList.add('wrong');
-            if (fb)    { fb.className = 'p-feedback wrong'; fb.textContent = `✗ Correct answer: ${correct}`; }
+            if (fb)    { fb.className = 'p-feedback wrong'; fb.textContent = `Correct answer: ${correct}`; }
         }
 
         highlightAnswer(block, q, blockId, chosen, correct, isCorrect);
@@ -978,7 +980,7 @@ function highlightAnswer(block, q, blockId, chosen, correct, isCorrect) {
         const fb = document.getElementById(`feedback-${blockId}`);
         if (!isCorrect && fb) {
             const correctNames = correct.split('').map(k => `${k}: ${q.options[k] || k}`).join(' → ');
-            fb.textContent = `✗ Correct order: ${correct}`;
+            fb.textContent = `Correct order: ${correct}`;
         }
         block.querySelectorAll('.chip').forEach(chip => {
             chip.classList.add(isCorrect ? 'correct-chip' : 'wrong-chip');
@@ -1030,8 +1032,9 @@ async function nextGroup() {
         document.getElementById('result-number').textContent = NUM;
         document.getElementById('result-score').textContent  = `${score} / ${totalQuestions}`;
         const pct = totalQuestions > 0 ? score / totalQuestions : 0;
-        document.getElementById('result-emoji').textContent  =
-            pct >= 0.9 ? '🏆' : pct >= 0.7 ? '🎉' : pct >= 0.5 ? '😊' : '💪';
+        const resultIcon = document.getElementById('result-emoji');
+        const resultIconName = pct >= 0.9 ? 'fa-trophy' : pct >= 0.7 ? 'fa-circle-check' : pct >= 0.5 ? 'fa-chart-line' : 'fa-rotate-right';
+        resultIcon.innerHTML = `<i class="fa-solid ${resultIconName}" aria-hidden="true"></i>`;
         showScreen('screen-result');
     } else {
         renderGroup();

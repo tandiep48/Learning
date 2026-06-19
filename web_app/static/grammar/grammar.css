@@ -100,14 +100,13 @@ body {
 }
 
 .grammar-table th {
-    background: rgba(67, 97, 238, 0.15);
-    color: #818cf8;
+    background: rgba(87, 104, 86, 0.1);
+    color: var(--primary);
     font-weight: 600;
 }
 
 .grammar-table td {
     color: var(--text-main);
-    font-family: 'Noto Sans SC', 'Inter', sans-serif;
 }
 
 .grammar-table tr:last-child td {

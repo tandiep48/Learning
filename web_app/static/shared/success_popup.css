@@ -1,0 +1,211 @@
+/* ── Success Popup Overlay ── */
+
+.success-popup-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9000;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+.success-popup-overlay.open {
+    display: flex;
+    animation: spFadeIn 0.3s ease;
+}
+@keyframes spFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* Popup card */
+.success-popup {
+    background: linear-gradient(145deg, #1a1b26 0%, #16213e 100%);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 24px;
+    padding: 40px 36px 32px;
+    width: min(480px, calc(100vw - 40px));
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
+    animation: spSlideUp 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes spSlideUp {
+    from { opacity: 0; transform: translateY(40px) scale(0.92); }
+    to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+
+/* Shimmer glow strip at top */
+.success-popup::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 24px 24px 0 0;
+    background: linear-gradient(90deg, #4ade80, #818cf8, #f472b6, #4ade80);
+    background-size: 300% 100%;
+    animation: shimmer 2.5s linear infinite;
+}
+@keyframes shimmer {
+    0%   { background-position: 0% 0%; }
+    100% { background-position: 300% 0%; }
+}
+
+/* Icon area */
+.sp-icon-wrap {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 2.4rem;
+    animation: spBounce 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.2s both;
+}
+@keyframes spBounce {
+    from { opacity: 0; transform: scale(0.4); }
+    to   { opacity: 1; transform: scale(1); }
+}
+.sp-icon-wrap.perfect {
+    background: radial-gradient(circle, rgba(74,222,128,0.2), rgba(74,222,128,0.04));
+    box-shadow: 0 0 32px rgba(74,222,128,0.25);
+}
+.sp-icon-wrap.has-missed {
+    background: radial-gradient(circle, rgba(250,204,21,0.2), rgba(250,204,21,0.04));
+    box-shadow: 0 0 32px rgba(250,204,21,0.2);
+}
+
+/* Title */
+.sp-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #fff;
+    margin: 0 0 6px;
+    letter-spacing: -0.02em;
+}
+
+/* Subtitle */
+.sp-subtitle {
+    font-size: 0.95rem;
+    color: rgba(255,255,255,0.5);
+    margin: 0 0 28px;
+}
+
+/* Stats row */
+.sp-stats {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+}
+.sp-stat {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 14px 20px;
+    min-width: 90px;
+    flex: 1;
+    animation: spFadeIn 0.4s ease both;
+}
+.sp-stat:nth-child(1) { animation-delay: 0.15s; }
+.sp-stat:nth-child(2) { animation-delay: 0.25s; }
+.sp-stat:nth-child(3) { animation-delay: 0.35s; }
+.sp-stat-value {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+.sp-stat-value.correct  { color: #4ade80; }
+.sp-stat-value.missed   { color: #f87171; }
+.sp-stat-value.accuracy { color: #818cf8; }
+.sp-stat-label {
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+}
+
+/* Accuracy bar */
+.sp-accuracy-bar-wrap {
+    background: rgba(255,255,255,0.07);
+    border-radius: 99px;
+    height: 6px;
+    margin: 0 0 28px;
+    overflow: hidden;
+}
+.sp-accuracy-bar {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.9s cubic-bezier(0.25, 1, 0.5, 1);
+    width: 0%;
+}
+
+/* Button row */
+.sp-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.sp-btn {
+    flex: 1;
+    min-width: 120px;
+    padding: 13px 20px;
+    border-radius: 12px;
+    font-size: 0.92rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+}
+.sp-btn.primary {
+    background: linear-gradient(135deg, #4ade80, #22c55e);
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(74,222,128,0.25);
+}
+.sp-btn.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(74,222,128,0.35);
+}
+.sp-btn.secondary {
+    background: rgba(255,255,255,0.07);
+    color: rgba(255,255,255,0.7);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.sp-btn.secondary:hover {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    transform: translateY(-1px);
+}
+.sp-btn.warning {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(245,158,11,0.25);
+}
+.sp-btn.warning:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(245,158,11,0.35);
+}
+
+/* Confetti canvas */
+#sp-confetti-canvas {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+}
+.success-popup > *:not(canvas) {
+    position: relative;
+    z-index: 2;
+}

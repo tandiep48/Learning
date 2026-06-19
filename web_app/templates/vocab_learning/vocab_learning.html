@@ -3,136 +3,146 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vocab Learning – {{ hsk_level }}</title>
-    <!-- removed script for hskLevel -->
+    <title>Vocab Learning - {{ hsk_level }}</title>
     <link rel="stylesheet" href="/static/shared/styles.css">
-    <link rel="stylesheet" href="/static/vocab_learning/vocab_learning.css">
-    <link rel="stylesheet" href="/static/shared/vocab_table.css">
+    <link rel="stylesheet" href="/static/shared/vocab_table.css?v=7">
     <link rel="stylesheet" href="/static/shared/passage_picker.css">
+    <link rel="stylesheet" href="/static/vocab_learning/vocab_learning.css?v=8">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
 </head>
 <body class="with-site-nav">
     {% include 'shared/site_nav.html' %}
-<div class="vl-container">
+    <div class="vl-container">
+        {% include 'shared/passage_picker.html' %}
 
-    {% include 'shared/passage_picker.html' %}
+        <div id="screen-loading" style="display:none;">
+            <div class="vl-loading">
+                <div class="loader"></div>
+                <p>Loading words...</p>
+            </div>
+        </div>
 
-    <!-- ── SCREEN: Loading ── -->
-    <div id="screen-loading" style="display:none;">
-        <div class="vl-loading">
-            <div class="loader"></div>
-            <p>Loading words…</p>
+        <div id="screen-learning" style="display:none;">
+            <div class="vl-learning-topbar">
+                <button class="vl-back vl-plain-btn" onclick="backToLessons()">&larr; Back to Lessons</button>
+                <span id="vl-counter" class="vl-counter"></span>
+            </div>
+
+            <div class="vl-progress-bar">
+                <div id="vl-progress-fill" class="vl-progress-fill" style="width:0%"></div>
+            </div>
+
+            <div class="vl-card" id="vl-card">
+                <div id="vl-hanzi" class="vl-hanzi">-</div>
+                <div id="vl-pinyin" class="vl-pinyin"></div>
+                <div id="vl-meaning" class="vl-meaning"></div>
+
+                <div class="vl-typing-container">
+                    <input type="text" id="vl-typing-input" lang="zh-CN" placeholder="Type character here..."
+                        autocomplete="off" class="vl-input">
+                </div>
+
+                <div class="vl-card-controls">
+                    <button id="btn-audio" class="vl-audio-btn" onclick="playAudio()">
+                        <i class="fa-solid fa-volume-high" aria-hidden="true"></i>
+                        <span>Play Audio</span>
+                    </button>
+                    <button id="btn-speak" class="vl-speak-btn" onclick="toggleSpeakingPractice()">
+                        <i class="fa-solid fa-microphone" aria-hidden="true"></i>
+                        <span>Speak</span>
+                    </button>
+                    <button id="btn-stroke" class="vl-stroke-btn" onclick="openStrokeModal()">
+                        <i class="fa-solid fa-pen-nib" aria-hidden="true"></i>
+                        <span>Stroke Order</span>
+                    </button>
+                </div>
+
+                <div id="vl-speaking-panel" class="vl-speaking-panel" style="display:none;">
+                    <div id="vl-speaking-status" class="vl-speaking-status">Press Speak and say the word clearly.</div>
+                    <div id="vl-speaking-result" class="vl-speaking-result" style="display:none;"></div>
+                </div>
+                <audio id="vl-audio"></audio>
+            </div>
+
+            <div class="vl-nav-row">
+                <button id="btn-prev" class="vl-nav-btn" onclick="prevWord()" title="Previous">&larr; Prev</button>
+                <button class="vl-train-btn" onclick="showVocabSummary()">
+                    <i class="fa-solid fa-table-list" aria-hidden="true"></i>
+                    <span>Summary</span>
+                </button>
+                <button id="btn-next" class="vl-nav-btn" onclick="nextWord()" title="Next">Next &rarr;</button>
+            </div>
+
+            <p class="vl-keyboard-tip">Tip: Use arrow keys to navigate. Press Space to replay audio.</p>
+        </div>
+
+        <div id="screen-summary" style="display:none;">
+            <div class="vl-summary-topbar word-summary-topbar">
+                <button class="vl-back vl-plain-btn" onclick="backToLessons()">&larr; Back to Lessons</button>
+                <h2>Word Summary</h2>
+                <button id="lesson-summary-nav-btn" class="vl-lesson-summary-btn"
+                    onclick="goToLessonSummary()" title="Go to Lesson Summary">
+                    <i class="fa-solid fa-book-open" aria-hidden="true"></i>
+                    <span>Lesson Summary</span>
+                </button>
+            </div>
+
+            <div class="vocab-content-card summary-content-card vocab-table-theme">
+                <div id="vl-summary-body" class="vocab-table-wrap">
+                    <!-- Table injected via JS -->
+                </div>
+            </div>
+
+            <div class="vl-summary-footer">
+                <button class="vl-train-btn vl-learn-btn" onclick="startLearningCards()">
+                    <i class="fa-solid fa-graduation-cap" aria-hidden="true"></i>
+                    <span>Learn These Words</span>
+                </button>
+                <button class="vl-train-btn" onclick="goToTrainer()">
+                    <i class="fa-solid fa-dumbbell" aria-hidden="true"></i>
+                    <span>Train These Vocab</span>
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- ── SCREEN: Learning Card ── -->
-    <div id="screen-learning" style="display:none;">
-
-        <!-- Top bar -->
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
-            <button class="vl-back" style="background:none; border:none; cursor:pointer; padding:0;" onclick="backToLessons()">
-                ← Back to Lessons
-            </button>
-            <span id="vl-counter" class="vl-counter" style="margin:0;"></span>
-        </div>
-
-        <!-- Progress bar -->
-        <div class="vl-progress-bar">
-            <div id="vl-progress-fill" class="vl-progress-fill" style="width:0%"></div>
-        </div>
-
-        <!-- Word Card -->
-        <div class="vl-card" id="vl-card">
-            <div id="vl-hanzi" class="vl-hanzi">—</div>
-            <div id="vl-pinyin" class="vl-pinyin"></div>
-            <div id="vl-meaning" class="vl-meaning"></div>
-
-            <div class="vl-typing-container" style="margin: 15px 0;">
-                <input type="text" id="vl-typing-input" placeholder="Type character here..." autocomplete="off" class="vl-input">
+    <div id="stroke-modal-overlay" class="stroke-modal-overlay" onclick="closeStrokeModalIfBackground(event)">
+        <div class="stroke-modal" role="dialog" aria-modal="true" aria-labelledby="stroke-modal-word">
+            <div class="stroke-modal-header">
+                <div>
+                    <div id="stroke-modal-word" class="stroke-modal-word"></div>
+                    <div id="stroke-modal-pinyin" class="stroke-modal-pinyin"></div>
+                </div>
+                <button class="stroke-modal-close" onclick="closeStrokeModal()" aria-label="Close stroke order">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
             </div>
 
-            <button id="btn-audio" class="vl-audio-btn" onclick="playAudio()">
-                🔊 Play Audio
-            </button>
-            <button id="btn-speak" class="vl-speak-btn" onclick="toggleSpeakingPractice()">
-                Speak
-            </button>
-            <button id="btn-stroke" class="vl-stroke-btn" onclick="openStrokeModal()">
-                ✏️ Stroke Order
-            </button>
-            <div id="vl-speaking-panel" class="vl-speaking-panel" style="display:none;">
-                <div id="vl-speaking-status" class="vl-speaking-status">Press Speak and say the word clearly.</div>
-                <div id="vl-speaking-result" class="vl-speaking-result" style="display:none;"></div>
+            <div id="stroke-char-tabs" class="stroke-char-tabs"></div>
+            <div class="stroke-canvas-wrap">
+                <div id="stroke-canvas-container"></div>
             </div>
-            <audio id="vl-audio"></audio>
-        </div>
 
-        <!-- Navigation (below card) -->
-        <div class="vl-nav-row" style="margin-top:28px;">
-            <button id="btn-prev" class="vl-nav-btn" onclick="prevWord()" title="Previous (←)">← Prev</button>
-
-            <button class="vl-train-btn" onclick="showVocabSummary()">
-                Summary
-            </button>
-
-            <button id="btn-next" class="vl-nav-btn" onclick="nextWord()" title="Next (→)">Next →</button>
-        </div>
-
-        <p style="text-align:center; color:var(--text-muted); font-size:0.78rem; margin-top:14px;">
-            Tip: Use ← → arrow keys to navigate · Space to replay audio
-        </p>
-
-    </div>
-
-    <!-- ── SCREEN: Summary ── -->
-    <div id="screen-summary" style="display:none; margin-top:20px;">
-        <div class="vl-summary-header">
-            <button class="vl-back" style="background:none; border:none; cursor:pointer; padding:0;" onclick="backToLessons()">
-                ← Back to Lessons
-            </button>
-            <h2 style="color:var(--text-main); margin:0;">Lesson Summary</h2>
-            <div class="vl-summary-actions">
-                <button class="vl-train-btn vl-learn-btn" onclick="startLearningCards()">📖 Learn These Vocabs</button>
-                <button class="vl-train-btn" onclick="goToTrainer()">🏋️ Train These Vocabs</button>
+            <div class="stroke-controls">
+                <button class="stroke-btn" onclick="strokeAnimate()">
+                    <i class="fa-solid fa-play" aria-hidden="true"></i>
+                    <span>Animate</span>
+                </button>
+                <button class="stroke-btn" onclick="strokeQuiz()">
+                    <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                    <span>Practice</span>
+                </button>
+                <button class="stroke-btn secondary" onclick="strokeReset()">
+                    <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+                    <span>Reset</span>
+                </button>
             </div>
-        </div>
-        <div id="vl-summary-body" style="background: #1a1b26; border-radius: 12px; padding: 20px;">
-            <!-- Table injected via JS -->
+            <p class="stroke-hint">Choose a character tab to switch. Animate shows each stroke in order.</p>
         </div>
     </div>
 
-</div>
-
-<script src="/static/shared/passage_picker.js"></script>
-<script src="/static/vocab_learning/vocab_learning.js"></script>
-
-<!-- ── Stroke Order Modal ── -->
-<div id="stroke-modal-overlay" class="stroke-modal-overlay" onclick="closeStrokeModalIfBackground(event)">
-    <div class="stroke-modal">
-        <div class="stroke-modal-header">
-            <div>
-                <div id="stroke-modal-word" class="stroke-modal-word"></div>
-                <div id="stroke-modal-pinyin" class="stroke-modal-pinyin"></div>
-            </div>
-            <button class="stroke-modal-close" onclick="closeStrokeModal()">✕</button>
-        </div>
-
-        <!-- Character tabs (for multi-char words) -->
-        <div id="stroke-char-tabs" class="stroke-char-tabs"></div>
-
-        <!-- Canvas area -->
-        <div class="stroke-canvas-wrap">
-            <div id="stroke-canvas-container"></div>
-        </div>
-
-        <!-- Controls -->
-        <div class="stroke-controls">
-            <button class="stroke-btn" onclick="strokeAnimate()">▶ Animate</button>
-            <button class="stroke-btn" onclick="strokeQuiz()" id="btn-stroke-quiz">✏️ Practice</button>
-            <button class="stroke-btn secondary" onclick="strokeReset()">↺ Reset</button>
-        </div>
-        <p class="stroke-hint">Click on a character tab above to switch · Animate shows stroke order step by step</p>
-    </div>
-</div>
+    <script src="/static/shared/passage_picker.js?v=2"></script>
+    <script src="/static/vocab_learning/vocab_learning.js?v=7"></script>
 </body>
 </html>

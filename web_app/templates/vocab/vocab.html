@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vocabulary Selection</title>
     <link rel="stylesheet" href="/static/shared/styles.css">
-
-    <link rel="stylesheet" href="/static/shared/vocab_table.css?v=3">
+    <link rel="stylesheet" href="/static/shared/vocab_table.css?v=4">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="/static/vocab/vocab_select.css">
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
@@ -19,66 +18,68 @@
                 <a href="/">&larr; Back to Dashboard</a>
             </div>
 
-            <div class="vocab-table-header">
-                <div class="vocab-mode-toggle" aria-label="Learning mode">
-                    <button id="mode-free-btn" class="mode-toggle-btn" onclick="setTableMode('free')">Free</button>
-                    <button id="mode-standard-btn" class="mode-toggle-btn active" onclick="setTableMode('standard')">Standard</button>
-                    <button id="mode-unsure-btn" class="mode-toggle-btn" onclick="setTableMode('unsure')">Unsure</button>
-                    <button id="mode-unlearn-btn" class="mode-toggle-btn" onclick="setTableMode('unlearn')">Unlearn</button>
+            <div class="vocab-content-card">
+                <div class="vocab-table-header">
+                    <div class="vocab-mode-toggle" aria-label="Learning mode">
+                        <button id="mode-free-btn" class="mode-toggle-btn" onclick="setTableMode('free')">Free</button>
+                        <button id="mode-standard-btn" class="mode-toggle-btn active" onclick="setTableMode('standard')">Standard</button>
+                        <button id="mode-unsure-btn" class="mode-toggle-btn" onclick="setTableMode('unsure')">Unsure</button>
+                        <button id="mode-unlearn-btn" class="mode-toggle-btn" onclick="setTableMode('unlearn')">Unlearn</button>
+                    </div>
                 </div>
-            </div>
 
-            <div class="vocab-filter-bar">
-                <div class="form-group hsk-filter">
-                    <label for="filter-hsk">HSK</label>
-                    <select id="filter-hsk" onchange="handleHskChange()">
-                        <option value="">Select HSK</option>
-                        <option value="HSK1">HSK 1</option>
-                        <option value="HSK2">HSK 2</option>
-                        <option value="HSK3">HSK 3</option>
-                        <option value="HSK4">HSK 4</option>
-                        <option value="HSK5">HSK 5</option>
-                        <option value="HSK6">HSK 6</option>
-                    </select>
+                <div class="vocab-filter-bar">
+                    <div class="form-group hsk-filter">
+                        <label for="filter-hsk">HSK</label>
+                        <select id="filter-hsk" onchange="handleHskChange()">
+                            <option value="">Select HSK</option>
+                            <option value="HSK1">HSK 1</option>
+                            <option value="HSK2">HSK 2</option>
+                            <option value="HSK3">HSK 3</option>
+                            <option value="HSK4">HSK 4</option>
+                            <option value="HSK5">HSK 5</option>
+                            <option value="HSK6">HSK 6</option>
+                        </select>
+                    </div>
+                    <div class="form-group standard-filter">
+                        <label for="filter-lesson">Lesson</label>
+                        <select id="filter-lesson" onchange="handleLessonChange()" disabled>
+                            <option value="">Select lesson</option>
+                        </select>
+                    </div>
+                    <div class="form-group standard-filter">
+                        <label for="filter-part">Part</label>
+                        <select id="filter-part" onchange="handlePartChange()" disabled>
+                            <option value="">Select part</option>
+                        </select>
+                    </div>
+                    <div class="form-group page-size-filter">
+                        <label for="filter-page-size">Rows</label>
+                        <select id="filter-page-size" onchange="changePageSize()">
+                            <option value="10">10</option>
+                            <option value="20" selected>20</option>
+                            <option value="50">50</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="form-group standard-filter">
-                    <label for="filter-lesson">Lesson</label>
-                    <select id="filter-lesson" onchange="handleLessonChange()" disabled>
-                        <option value="">Select lesson</option>
-                    </select>
-                </div>
-                <div class="form-group standard-filter">
-                    <label for="filter-part">Part</label>
-                    <select id="filter-part" onchange="handlePartChange()" disabled>
-                        <option value="">Select part</option>
-                    </select>
-                </div>
-                <div class="form-group page-size-filter">
-                    <label for="filter-page-size">Rows</label>
-                    <select id="filter-page-size" onchange="changePageSize()">
-                        <option value="10">10</option>
-                        <option value="20" selected>20</option>
-                        <option value="50">50</option>
-                    </select>
-                </div>
-            </div>
 
-            <div class="vocab-action-bar">
-                <div id="selection-count" class="selection-count">0 selected</div>
-                <div class="vocab-action-buttons">
-                    <button class="btn action-outline" onclick="clearSelection()">Clear Selection</button>
-                    <button id="btn-flashcards" class="btn action-secondary" onclick="openSelectedFlashcards()" disabled>Flash Cards</button>
-                    <button id="btn-start-selected" class="btn action-primary" onclick="startSelectedTraining()" disabled>Start Training</button>
+                <div class="vocab-action-bar">
+                    <div id="selection-count" class="selection-count">0 selected</div>
+                    <div class="vocab-action-buttons">
+                        <button class="btn action-outline" onclick="clearSelection()">Clear Selection</button>
+                        <button id="btn-flashcards" class="btn action-secondary" onclick="openSelectedFlashcards()" disabled>Flash Cards</button>
+                        <button id="btn-start-selected" class="btn action-primary" onclick="startSelectedTraining()" disabled>Start Training</button>
+                    </div>
                 </div>
-            </div>
 
-            <div id="vocab-table-state" class="vocab-table-state">Choose filters to load vocabulary.</div>
-            <div id="vocab-table-wrap" class="vocab-table-wrap" style="display:none;"></div>
+                <div id="vocab-table-state" class="vocab-table-state">Choose filters to load vocabulary.</div>
+                <div id="vocab-table-wrap" class="vocab-table-wrap" style="display:none;"></div>
 
-            <div id="vocab-pagination" class="vocab-pagination" style="display:none;">
-                <button class="btn secondary" id="page-prev-btn" onclick="changePage(-1)">Prev</button>
-                <span id="page-status">Page 1 / 1</span>
-                <button class="btn secondary" id="page-next-btn" onclick="changePage(1)">Next</button>
+                <div id="vocab-pagination" class="vocab-pagination" style="display:none;">
+                    <button class="btn secondary" id="page-prev-btn" onclick="changePage(-1)">Prev</button>
+                    <span id="page-status">Page 1 / 1</span>
+                    <button class="btn secondary" id="page-next-btn" onclick="changePage(1)">Next</button>
+                </div>
             </div>
         </div>
     </div>

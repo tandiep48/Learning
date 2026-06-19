@@ -9,7 +9,17 @@ from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from db import get_db_connection, insert_lesson_progress, get_passages_summary, get_passage_content, get_all_vn_meanings, get_passage_vocab, get_grammar_for_passage
+from db import (
+    get_db_connection,
+    get_lesson_picker_progress,
+    get_passages_summary,
+    get_passage_content,
+    get_all_vn_meanings,
+    get_passage_vocab,
+    get_grammar_for_passage,
+    insert_lesson_progress,
+    mark_lesson_part_completed,
+)
 
 lesson_bp = Blueprint('lesson', __name__, url_prefix='/api/lesson')
 
@@ -20,6 +30,43 @@ def get_passages():
     passages = get_passages_summary(conn, hsk_level)
     conn.close()
     return jsonify({"passages": passages})
+
+
+@lesson_bp.route('/picker-progress', methods=['GET'])
+@login_required
+def get_picker_progress():
+    hsk_level = request.args.get('hsk_level')
+    if not hsk_level:
+        return jsonify({"error": "hsk_level is required"}), 400
+
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database connection failed"}), 500
+
+    try:
+        return jsonify(get_lesson_picker_progress(conn, current_user.id, hsk_level))
+    finally:
+        conn.close()
+
+
+@lesson_bp.route('/part-complete', methods=['POST'])
+@login_required
+def complete_lesson_part():
+    data = request.get_json(silent=True) or {}
+    passage_id = data.get('passage_id')
+    if not passage_id:
+        return jsonify({"error": "passage_id is required"}), 400
+
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database connection failed"}), 500
+
+    try:
+        if not mark_lesson_part_completed(conn, current_user.id, passage_id):
+            return jsonify({"error": "Could not save lesson progress"}), 500
+        return jsonify({"status": "success", "passage_id": passage_id})
+    finally:
+        conn.close()
 
 @lesson_bp.route('/passage/<passage_id>', methods=['GET'])
 def get_passage_detail(passage_id):
@@ -97,7 +144,8 @@ def start_session():
             "content": line["content"],
             "options": m_options,
             "correct_answer": correct_meaning,
-            "audio_key": line.get("audio_key")
+            "audio_key": line.get("audio_key"),
+            "hsk_level": passage.get("hsk_level")
         })
         
         # 2. Listening Task
@@ -108,7 +156,8 @@ def start_session():
             "options": m_options, # Same options logic as meaning
             "correct_answer": correct_meaning,
             "audio_key": line.get("audio_key"),
-            "content": line["content"] # provided for reveal
+            "content": line["content"], # provided for reveal
+            "hsk_level": passage.get("hsk_level")
         })
         
         # 3. Reorder Task
@@ -124,7 +173,8 @@ def start_session():
                 "tokens": tokens,
                 "shuffled_tokens": shuffled_tokens,
                 "correct_answer": "".join(tokens),
-                "audio_key": line.get("audio_key")
+                "audio_key": line.get("audio_key"),
+                "hsk_level": passage.get("hsk_level")
             })
             
         # 4. Typing Task
@@ -135,7 +185,8 @@ def start_session():
             "content": line["content"],
             "correct_answer": line["content"],
             "audio_key": line.get("audio_key"),
-            "pinyin": line.get("pinyin", "")
+            "pinyin": line.get("pinyin", ""),
+            "hsk_level": passage.get("hsk_level")
         })
         
     random.shuffle(tasks)

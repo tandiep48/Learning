@@ -27,6 +27,9 @@ body { align-items: flex-start; padding: 40px 20px; }
     font-weight: 800;
     color: var(--text-main);
     margin-bottom: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
 }
 .page-subtitle {
     color: var(--text-muted);
@@ -62,6 +65,9 @@ body { align-items: flex-start; padding: 40px 20px; }
     font-size: 0.9rem;
     font-weight: 600;
     transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 .tab-btn:hover {
     background: rgba(87, 104, 86, 0.1);
@@ -79,7 +85,7 @@ body { align-items: flex-start; padding: 40px 20px; }
     padding: 60px 20px;
     color: var(--text-muted);
 }
-.state-box .state-icon { font-size: 3rem; margin-bottom: 12px; }
+.state-box .state-icon { font-size: 3rem; margin-bottom: 12px; color: var(--primary); }
 .state-box .state-title { font-size: 1.2rem; font-weight: 700; color: var(--text-main); margin-bottom: 6px; }
 .state-box .state-sub   { font-size: 0.9rem; }
 .loading-dots span {
@@ -115,10 +121,10 @@ body { align-items: flex-start; padding: 40px 20px; }
     transition: all 0.25s ease;
 }
 .rec-card:hover {
-    background: rgba(67,97,238,0.1);
-    border-color: rgba(67,97,238,0.4);
+    background: rgba(87, 104, 86,0.08);
+    border-color: rgba(87, 104, 86,0.28);
     transform: translateY(-3px);
-    box-shadow: 0 12px 36px rgba(67,97,238,0.15);
+    box-shadow: 0 12px 36px rgba(87, 104, 86,0.14);
 }
 
 /* ── Card Header ── */
@@ -151,6 +157,9 @@ body { align-items: flex-start; padding: 40px 20px; }
     font-size: 0.8rem;
     color: var(--text-muted);
     flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
 }
 .category-badge {
     font-size: 0.72rem;
@@ -160,9 +169,12 @@ body { align-items: flex-start; padding: 40px 20px; }
     letter-spacing: 0.03em;
     flex-shrink: 0;
     margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
 }
-.badge-practice { background: rgba(67,97,238,0.18); color: #7b9ff7; }
-.badge-exam     { background: rgba(139,92,246,0.18); color: #c4b5fd; }
+.badge-practice { background: rgba(87, 104, 86,0.12); color: var(--primary); }
+.badge-exam     { background: rgba(16,185,129,0.12); color: var(--success); }
 
 /* ── Progress Group Label ── */
 .rec-progress-label {
@@ -206,20 +218,20 @@ body { align-items: flex-start; padding: 40px 20px; }
     height: 100%;
     border-radius: 99px;
     transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-    background: linear-gradient(90deg, #4361ee, #7b2ff7);
+    background: linear-gradient(90deg, var(--primary), #7fa07c);
 }
 .coverage-bar-fill.high   { background: linear-gradient(90deg, #10b981, #34d399); }
 .coverage-bar-fill.medium { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
 
 /* ── Preview ── */
 .rec-preview {
-    background: rgba(0,0,0,0.2);
+    background: rgba(87, 104, 86,0.05);
     border-radius: 10px;
     padding: 10px 14px;
     font-size: 0.85rem;
     color: var(--text-muted);
     line-height: 1.5;
-    border-left: 3px solid rgba(67,97,238,0.4);
+    border-left: 3px solid rgba(87, 104, 86,0.35);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -263,8 +275,8 @@ body { align-items: flex-start; padding: 40px 20px; }
     transition: all 0.2s ease;
 }
 .btn-start-practice:hover {
-    background: #5a74f0;
-    box-shadow: 0 4px 16px rgba(67,97,238,0.4);
+    background: var(--primary-hover);
+    box-shadow: 0 4px 16px rgba(87, 104, 86,0.22);
     transform: translateY(-1px);
 }
 

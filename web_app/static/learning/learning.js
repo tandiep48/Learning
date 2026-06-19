@@ -1,7 +1,6 @@
 let selectedPassage = null;
 let selectedLessonNum = null;
 let recentPassageId = null;
-let grammarCheckToken = 0;
 
 document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
@@ -63,7 +62,6 @@ function showLearningActions() {
     updatePartNavButtons();
     syncLearningUrl();
     saveRecentLearning();
-    updateGrammarVisibility();
 }
 
 async function backToPartPicker() {
@@ -81,22 +79,11 @@ async function backToPartPicker() {
     }
 }
 
-function openLearningAction(action) {
+function startGuidedLessonPart() {
     if (!selectedPassage || !selectedPassage.passage_id) return;
     saveRecentLearning();
-
     const passageId = encodeURIComponent(selectedPassage.passage_id);
-    const routes = {
-        'vocab-reading': `/vocab-learning?passage_id=${passageId}`,
-        'vocab-trainer': `/vocab-training?mode=6&passage_id=${passageId}`,
-        'lesson-reading': `/reading?passage_id=${passageId}`,
-        'lesson-trainer': `/lesson?passage_id=${passageId}`,
-        'grammar': `/grammar?passage_id=${passageId}`
-    };
-
-    if (routes[action]) {
-        window.location.href = routes[action];
-    }
+    window.location.href = `/vocab-learning?passage_id=${passageId}&flow=lesson-part`;
 }
 
 async function loadRecentLearning() {
@@ -142,22 +129,6 @@ async function saveRecentLearning() {
         });
     } catch (e) {
         console.warn('Could not save recent learning', e);
-    }
-}
-
-async function updateGrammarVisibility() {
-    const card = document.getElementById('learning-grammar-card');
-    if (!card || !selectedPassage?.passage_id) return;
-    const token = ++grammarCheckToken;
-    card.style.display = '';
-
-    try {
-        const res = await fetch(`/api/lesson/grammar/${encodeURIComponent(selectedPassage.passage_id)}`);
-        const data = await res.json();
-        if (token !== grammarCheckToken) return;
-        card.style.display = data.grammar && data.grammar.length > 0 ? '' : 'none';
-    } catch (e) {
-        if (token === grammarCheckToken) card.style.display = 'none';
     }
 }
 

@@ -17,7 +17,7 @@
     margin-bottom: 20px;
     min-height: 50px;
     padding: 10px;
-    background: rgba(0,0,0,0.2);
+    background: rgba(87, 104, 86, 0.05);
     border-radius: 8px;
     border: 1px dashed rgba(87, 104, 86,0.2);
 }
@@ -60,7 +60,7 @@
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.65);
+    background: rgba(30, 49, 36, 0.38);
     z-index: 2000;
     align-items: center;
     justify-content: center;
@@ -71,20 +71,45 @@
 }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 .quit-modal {
-    background: #1a1b26;
+    background: #ffffff;
     border: 1px solid rgba(87, 104, 86,0.12);
     border-radius: 20px;
     padding: 36px 32px;
     max-width: 380px;
     width: 90%;
     text-align: center;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    box-shadow: 0 20px 60px rgba(87, 104, 86, 0.18);
     animation: slideUp 0.2s ease;
 }
 @keyframes slideUp { from { transform: translateY(16px); opacity:0; } to { transform: none; opacity:1; } }
 .quit-modal h3 { font-size: 1.3rem; color: var(--text-main); margin-bottom: 10px; }
 .quit-modal p  { font-size: 0.95rem; color: var(--text-muted); margin-bottom: 26px; line-height: 1.5; }
 .quit-modal-btns { display: flex; gap: 12px; justify-content: center; }
+
+.instruction {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.instruction .fa-solid,
+.lesson-complete-icon,
+.quit-modal-icon {
+    color: var(--primary);
+}
+
+.lesson-complete-icon {
+    display: flex;
+    justify-content: center;
+    font-size: 3rem;
+    margin-bottom: 14px;
+}
+
+.quit-modal-icon {
+    font-size: 2rem;
+    margin-bottom: 12px;
+}
 
 @media (max-width: 640px) {
     .lesson-container {

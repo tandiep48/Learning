@@ -45,10 +45,10 @@ body { align-items: flex-start; padding: 40px 20px; }
     cursor: pointer;
 }
 .practice-card:hover {
-    background: rgba(67,97,238,0.18);
+    background: rgba(87, 104, 86,0.1);
     border-color: var(--primary);
     transform: translateY(-4px);
-    box-shadow: 0 12px 30px rgba(67,97,238,0.25);
+    box-shadow: 0 12px 30px rgba(87, 104, 86,0.16);
 }
 .card-icon { font-size: 2.5rem; }
 .card-label {

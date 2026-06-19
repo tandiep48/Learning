@@ -91,6 +91,20 @@ body.vocab-select-page > .app-container {
     visibility: hidden;
 }
 
+.vocab-content-card {
+    background: #ffffff;
+    border: 1px solid rgba(87, 104, 86, 0.08);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+    padding: 24px;
+}
+
+@media (max-width: 760px) {
+    .vocab-content-card {
+        padding: 18px;
+    }
+}
+
 /* ── Stroke Order Modal (reused from vocab_learning) ── */
 .stroke-modal-overlay {
     display: none;

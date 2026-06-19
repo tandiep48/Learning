@@ -3,6 +3,7 @@
 __pycache__
 .vscode
 .venv
+venv
 
 # folder sharing_file
 sharing_file
@@ -23,3 +24,6 @@ console_app
 
 # excel folder
 excel_file
+
+# docs folder
+docs

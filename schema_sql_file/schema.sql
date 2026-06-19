@@ -214,6 +214,150 @@ CREATE TABLE IF NOT EXISTS user_learning_state (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS user_lesson_part_progress (
+    user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+    passage_id VARCHAR(255) NOT NULL,
+    lesson_trainer_completed_at TIMESTAMP WITH TIME ZONE,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, passage_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_lesson_part_progress_user
+ON user_lesson_part_progress(user_id);
+
+-- ==========================================
+-- Learn Together / Competitive Mode
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS competition_rooms (
+    id BIGSERIAL PRIMARY KEY,
+    room_code VARCHAR(12) NOT NULL UNIQUE,
+    host_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    category VARCHAR(20) NOT NULL DEFAULT 'practice',
+    level SMALLINT NOT NULL,
+    lesson INTEGER NOT NULL,
+    progress VARCHAR(30) NOT NULL,
+    max_users SMALLINT NOT NULL DEFAULT 8,
+    section_timeout_minutes SMALLINT NOT NULL DEFAULT 15,
+    status VARCHAR(30) NOT NULL DEFAULT 'waiting',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_competition_rooms_code
+ON competition_rooms(room_code);
+CREATE INDEX IF NOT EXISTS idx_competition_rooms_host_created
+ON competition_rooms(host_user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_competition_rooms_status_created
+ON competition_rooms(status, created_at);
+
+CREATE TABLE IF NOT EXISTS competition_room_members (
+    id BIGSERIAL PRIMARY KEY,
+    room_id BIGINT NOT NULL REFERENCES competition_rooms(id) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role VARCHAR(20) NOT NULL DEFAULT 'participant',
+    status VARCHAR(30) NOT NULL DEFAULT 'online',
+    joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    left_at TIMESTAMP WITH TIME ZONE,
+    last_seen_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (room_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_competition_members_room_status
+ON competition_room_members(room_id, status);
+CREATE INDEX IF NOT EXISTS idx_competition_members_user_joined
+ON competition_room_members(user_id, joined_at);
+
+CREATE TABLE IF NOT EXISTS competition_chat_messages (
+    id BIGSERIAL PRIMARY KEY,
+    room_id BIGINT NOT NULL REFERENCES competition_rooms(id) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    message TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_competition_chat_room_created
+ON competition_chat_messages(room_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_competition_chat_user_created
+ON competition_chat_messages(user_id, created_at);
+
+CREATE TABLE IF NOT EXISTS competition_sessions (
+    id BIGSERIAL PRIMARY KEY,
+    room_id BIGINT NOT NULL REFERENCES competition_rooms(id) ON DELETE CASCADE,
+    status VARCHAR(30) NOT NULL DEFAULT 'listening',
+    current_section VARCHAR(20) NOT NULL DEFAULT 'listening',
+    section_started_at TIMESTAMP WITH TIME ZONE,
+    section_ends_at TIMESTAMP WITH TIME ZONE,
+    started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    finished_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_competition_sessions_room_created
+ON competition_sessions(room_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_competition_sessions_status_started
+ON competition_sessions(status, started_at);
+CREATE INDEX IF NOT EXISTS idx_competition_sessions_finished
+ON competition_sessions(finished_at);
+
+CREATE TABLE IF NOT EXISTS competition_session_questions (
+    id BIGSERIAL PRIMARY KEY,
+    session_id BIGINT NOT NULL REFERENCES competition_sessions(id) ON DELETE CASCADE,
+    source_question_id INTEGER,
+    section VARCHAR(20) NOT NULL,
+    section_order INTEGER NOT NULL,
+    question_payload JSONB NOT NULL,
+    correct_answer TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (session_id, section, section_order)
+);
+
+CREATE INDEX IF NOT EXISTS idx_competition_questions_session_section
+ON competition_session_questions(session_id, section);
+CREATE INDEX IF NOT EXISTS idx_competition_questions_source
+ON competition_session_questions(source_question_id);
+
+CREATE TABLE IF NOT EXISTS competition_answers (
+    id BIGSERIAL PRIMARY KEY,
+    session_id BIGINT NOT NULL REFERENCES competition_sessions(id) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    session_question_id BIGINT NOT NULL REFERENCES competition_session_questions(id) ON DELETE CASCADE,
+    section VARCHAR(20) NOT NULL,
+    user_answer TEXT,
+    is_correct BOOLEAN NOT NULL,
+    response_time_ms INTEGER NOT NULL DEFAULT 0,
+    points INTEGER NOT NULL DEFAULT 0,
+    submitted_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (session_id, user_id, session_question_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_competition_answers_session_user
+ON competition_answers(session_id, user_id);
+CREATE INDEX IF NOT EXISTS idx_competition_answers_session_question
+ON competition_answers(session_id, session_question_id);
+CREATE INDEX IF NOT EXISTS idx_competition_answers_user_submitted
+ON competition_answers(user_id, submitted_at);
+
+CREATE TABLE IF NOT EXISTS competition_scores (
+    id BIGSERIAL PRIMARY KEY,
+    session_id BIGINT NOT NULL REFERENCES competition_sessions(id) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    listening_points INTEGER NOT NULL DEFAULT 0,
+    reading_points INTEGER NOT NULL DEFAULT 0,
+    total_points INTEGER NOT NULL DEFAULT 0,
+    total_response_time_ms INTEGER NOT NULL DEFAULT 0,
+    finished_at TIMESTAMP WITH TIME ZONE,
+    rank INTEGER,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (session_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_competition_scores_session_rank
+ON competition_scores(session_id, total_points DESC, total_response_time_ms ASC);
+CREATE INDEX IF NOT EXISTS idx_competition_scores_user_created
+ON competition_scores(user_id, created_at);
+
 ALTER TABLE practice_record
 ADD COLUMN IF NOT EXISTS response_time_ms INTEGER;
 

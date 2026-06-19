@@ -16,11 +16,11 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    font-family: SimSun, '宋体', serif;
+    font-family: 'Noto Sans', Arial, Helvetica, sans-serif;
 }
 
 body {
-    font-family: SimSun, '宋体', serif;
+    font-family: 'Noto Sans', Arial, Helvetica, sans-serif;
     background-color: var(--bg-color);
     color: var(--text-main);
     display: flex;
@@ -28,6 +28,19 @@ body {
     align-items: flex-start;
     min-height: 100vh;
     padding: 32px 20px;
+}
+
+[lang="zh-CN"],
+.chinese-word,
+.vl-hanzi,
+.hanzi-text,
+.lesson-line-hanzi,
+.vocab-cn,
+.complete-word,
+.ex-cn,
+.stroke-modal-word,
+.stroke-tab {
+    font-family: SimSun, 'Songti SC', 'Noto Serif CJK SC', serif;
 }
 
 .app-container {
@@ -383,11 +396,24 @@ input:focus {
 
 /* Full-width dashboard shell */
 body.dashboard-page {
+    --bg-color: #eef6df;
+    --text-main: #111111;
+    --text-muted: #2b2b2b;
+    --primary: #007a61;
+    --primary-hover: #00634f;
+    --secondary: #eef6df;
+    --secondary-hover: #e3efcf;
+    --border-soft: #d7e3c6;
+    --shadow-soft: 0 22px 60px rgba(0, 122, 97, 0.14);
     display: block;
     min-height: 100vh;
     align-items: initial;
     justify-content: initial;
     padding: 0;
+    background:
+        linear-gradient(135deg, rgba(0, 122, 97, 0.08), transparent 30%),
+        linear-gradient(180deg, #f8fced 0%, var(--bg-color) 100%);
+    color: var(--text-main);
 }
 
 body.with-site-nav {
@@ -539,12 +565,21 @@ body.dashboard-page .dashboard-container {
 }
 
 body.dashboard-page .dash-card {
+    background: #ffffff;
+    border: 1px solid var(--border-soft);
+    box-shadow: 0 18px 44px rgba(87, 104, 86, 0.05);
     min-height: 210px;
     align-items: flex-start;
     justify-content: flex-start;
     text-align: left;
     padding: 24px;
-    border-radius: 8px;
+    border-radius: 16px;
+}
+
+body.dashboard-page .dash-card:hover {
+    background: #eef6df;
+    border-color: var(--border-strong, #b9cba7);
+    box-shadow: var(--shadow-soft);
 }
 
 body.dashboard-page .dash-title {

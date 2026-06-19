@@ -1,6 +1,8 @@
 Flask
+Flask-SocketIO
 flask-cors
 flask-login
+eventlet
 gunicorn
 pandas
 psycopg2-binary

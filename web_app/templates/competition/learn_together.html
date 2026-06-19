@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learn Together</title>
+    <script>
+        window.currentUser = {
+            id: {{ current_user.id }},
+            username: "{{ current_user.username|e }}"
+        };
+    </script>
+    <link rel="stylesheet" href="/static/shared/styles.css">
+    <link rel="stylesheet" href="/static/competition/competition.css">
+</head>
+<body class="with-site-nav">
+    {% include 'shared/site_nav.html' %}
+
+    <main class="competition-shell">
+        <section id="screen-setup" class="competition-screen active">
+            <div class="competition-header">
+                <h1>Learn Together</h1>
+                <p class="subtitle">Create a room or join with a room code.</p>
+            </div>
+
+            <div class="competition-setup-grid">
+                <section class="competition-panel">
+                    <h2>Create Room</h2>
+                    <div class="competition-form">
+                        <label>
+                            Category
+                            <select id="create-category">
+                                <option value="practice">Exercise</option>
+                                <option value="exam">Exam</option>
+                            </select>
+                        </label>
+                        <label>
+                            HSK
+                            <select id="create-level">
+                                <option value="">Select HSK</option>
+                            </select>
+                        </label>
+                        <label>
+                            Lesson
+                            <select id="create-lesson" disabled>
+                                <option value="">Select Lesson</option>
+                            </select>
+                        </label>
+                        <label>
+                            Max Users
+                            <input id="create-max-users" type="number" min="2" max="30" value="8">
+                        </label>
+                        <label>
+                            Section Timer
+                            <select id="create-timeout">
+                                <option value="5">5 minutes</option>
+                                <option value="10">10 minutes</option>
+                                <option value="15" selected>15 minutes</option>
+                                <option value="20">20 minutes</option>
+                            </select>
+                        </label>
+                        <p id="setup-error" class="competition-error" hidden></p>
+                        <button class="btn primary" onclick="createRoom()">Create Room</button>
+                    </div>
+                </section>
+
+                <section class="competition-panel">
+                    <h2>Join Room</h2>
+                    <div class="competition-form">
+                        <label>
+                            Room Code
+                            <input id="join-room-code" type="text" maxlength="12" placeholder="ABC123" autocomplete="off">
+                        </label>
+                        <button class="btn primary" onclick="joinRoomFromInput()">Join Room</button>
+                    </div>
+                </section>
+            </div>
+        </section>
+
+        <section id="screen-lobby" class="competition-screen">
+            <div class="competition-room-bar">
+                <div>
+                    <span class="competition-label">Room</span>
+                    <strong id="room-code-display">------</strong>
+                </div>
+                <button class="btn secondary" onclick="leaveRoom()">Leave</button>
+            </div>
+
+            <div class="competition-lobby-grid">
+                <section class="competition-panel">
+                    <h2>Room Setup</h2>
+                    <div id="room-summary" class="competition-summary"></div>
+                    <div id="member-list" class="member-list"></div>
+                    <button id="host-start-btn" class="btn primary competition-start-btn" onclick="startSession()" style="display:none;">Start Session</button>
+                </section>
+
+                <section class="competition-panel chat-panel">
+                    <h2>Chat</h2>
+                    <div id="chat-list" class="chat-list"></div>
+                    <div class="chat-input-row">
+                        <input id="chat-input" type="text" maxlength="1000" placeholder="Message">
+                        <button class="btn primary" onclick="sendChat()">Send</button>
+                    </div>
+                </section>
+            </div>
+        </section>
+
+        <section id="screen-section" class="competition-screen">
+            <div class="competition-room-bar">
+                <div>
+                    <span id="section-label" class="competition-label">Listening</span>
+                    <strong id="question-counter">1 / 1</strong>
+                </div>
+                <div id="live-score" class="score-pill">0 pts</div>
+            </div>
+
+            <div id="competition-question-card" class="competition-question-card"></div>
+            <div class="competition-actions">
+                <button id="submit-answer-btn" class="btn primary" onclick="submitAnswer()">Submit Answer</button>
+                <button id="next-question-btn" class="btn primary" onclick="nextQuestion()" style="display:none;">Next</button>
+            </div>
+        </section>
+
+        <section id="screen-waiting" class="competition-screen">
+            <div class="competition-panel waiting-panel">
+                <h1 id="waiting-title">Waiting</h1>
+                <p id="waiting-subtitle" class="subtitle">Waiting for the next section.</p>
+                <div id="waiting-scores" class="ranking-list"></div>
+            </div>
+        </section>
+
+        <section id="screen-ranking" class="competition-screen">
+            <div class="competition-panel">
+                <h1>Ranking</h1>
+                <div id="ranking-list" class="ranking-list"></div>
+                <button class="btn primary competition-start-btn" onclick="returnToLobby()">Back to Lobby</button>
+            </div>
+        </section>
+    </main>
+
+    <audio id="competition-audio" preload="auto"></audio>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
+    <script src="/static/competition/competition.js"></script>
+</body>
+</html>

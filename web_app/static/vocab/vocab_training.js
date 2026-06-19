@@ -3,15 +3,18 @@ let currentTaskIndex = 0;
 let missedTasks = [];
 let taskStartTime = 0;
 let currentTrainingPassageId = null;
+let isLessonPartFlow = false;
 
 document.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    isLessonPartFlow = params.get('flow') === 'lesson-part';
+
     const trainerWords = readSelectedTrainerWords();
     if (trainerWords.length) {
         startSession('7', { words: trainerWords });
         return;
     }
 
-    const params = new URLSearchParams(window.location.search);
     if (params.get('mode') === '6' && params.get('passage_id')) {
         const passageId = params.get('passage_id');
         startSession('6', { passage_id: passageId });
@@ -101,15 +104,9 @@ function loadTask() {
     document.getElementById('typing-input').value = '';
 
     const mcFeedback = document.getElementById('mc-feedback');
-    if (mcFeedback) {
-        mcFeedback.style.display = 'none';
-        mcFeedback.innerHTML = '';
-    }
+    if (mcFeedback) { mcFeedback.style.display = 'none'; mcFeedback.innerHTML = ''; }
     const typingFeedback = document.getElementById('typing-feedback');
-    if (typingFeedback) {
-        typingFeedback.style.display = 'none';
-        typingFeedback.innerHTML = '';
-    }
+    if (typingFeedback) { typingFeedback.style.display = 'none'; typingFeedback.innerHTML = ''; }
 
     const instructionEl = document.getElementById('task-instruction');
     const audioEl = document.getElementById('audio-player');
@@ -256,12 +253,33 @@ function nextTask() {
     loadTask();
 }
 
+// ── Finish & Success Popup ─────────────────────────────────────
 function finishRound() {
+    const total   = sessionData.tasks.length;
+    const missed  = missedTasks.length;
+    const correct = total - missed;
+
+    SuccessPopup.show({
+        total,
+        correct,
+        continueLabel: 'View Results',
+        onContinue: () => _showCompleteScreen(),
+        onRetry: missed > 0 ? () => retryMissed() : null,
+        onHome:  () => goHome(),
+    });
+}
+
+function _showCompleteScreen() {
     switchScreen('screen-complete');
-    const tableBody = document.getElementById('recap-table-body');
-    const retryBtn = document.getElementById('btn-retry');
-    const emptyState = document.getElementById('perfect-area');
+    const tableBody    = document.getElementById('recap-table-body');
+    const retryBtn     = document.getElementById('btn-retry');
+    const startLessonBtn = document.getElementById('btn-start-lesson');
+    const emptyState   = document.getElementById('perfect-area');
     tableBody.innerHTML = '';
+
+    if (startLessonBtn) {
+        startLessonBtn.style.display = isLessonPartFlow && currentTrainingPassageId ? 'inline-flex' : 'none';
+    }
 
     if (missedTasks.length > 0) {
         emptyState.style.display = 'none';
@@ -281,6 +299,16 @@ function finishRound() {
         emptyState.style.display = 'block';
         retryBtn.style.display = 'none';
     }
+}
+
+function startLearnLesson() {
+    if (!currentTrainingPassageId) return;
+    const params = new URLSearchParams({
+        passage_id: currentTrainingPassageId,
+        flow: 'lesson-part',
+        mode: 'lesson-learner'
+    });
+    window.location.href = `/reading?${params.toString()}`;
 }
 
 function retryMissed() {
