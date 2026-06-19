@@ -1,0 +1,290 @@
+body {
+    align-items: flex-start;
+    padding: 32px 20px;
+}
+
+.competition-shell {
+    width: min(1120px, 100%);
+    margin: 0 auto;
+}
+
+.competition-screen {
+    display: none;
+}
+
+.competition-screen.active {
+    display: block;
+    animation: fadeIn 0.25s ease;
+}
+
+.competition-header {
+    margin-bottom: 24px;
+}
+
+.competition-setup-grid,
+.competition-lobby-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+}
+
+.competition-panel {
+    background: var(--card-bg);
+    border: 1px solid rgba(87, 104, 86, 0.1);
+    border-radius: 8px;
+    padding: 22px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+}
+
+.competition-panel h2 {
+    text-align: left;
+    margin-bottom: 16px;
+}
+
+.competition-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.competition-form label {
+    color: var(--text-muted);
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.competition-form select,
+.competition-form input,
+.chat-input-row input {
+    width: 100%;
+    border: 1px solid rgba(87, 104, 86, 0.18);
+    border-radius: 8px;
+    padding: 12px;
+    color: var(--text-main);
+    background: #fff;
+    font-size: 1rem;
+}
+
+.competition-form select:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+.competition-error {
+    color: #a12626;
+    background: #fff1f1;
+    border: 1px solid #e9bcbc;
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin: 0;
+}
+
+.competition-room-bar {
+    background: var(--card-bg);
+    border: 1px solid rgba(87, 104, 86, 0.1);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.competition-label {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    margin-bottom: 4px;
+}
+
+.competition-summary {
+    color: var(--text-main);
+    line-height: 1.6;
+    margin-bottom: 18px;
+}
+
+.member-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 18px;
+}
+
+.member-row,
+.chat-message,
+.ranking-row {
+    border: 1px solid rgba(87, 104, 86, 0.1);
+    border-radius: 8px;
+    background: rgba(87, 104, 86, 0.04);
+    padding: 10px 12px;
+}
+
+.member-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.member-role {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.competition-start-btn {
+    justify-content: center;
+    text-align: center;
+    width: 100%;
+}
+
+.chat-panel {
+    min-height: 480px;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-list {
+    flex: 1;
+    min-height: 280px;
+    max-height: 420px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.chat-message strong {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.chat-input-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+}
+
+.competition-question-card {
+    background: var(--card-bg);
+    border: 1px solid rgba(87, 104, 86, 0.1);
+    border-radius: 8px;
+    padding: clamp(18px, 4vw, 30px);
+    min-height: 360px;
+}
+
+.competition-question-text,
+.competition-content {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    margin-bottom: 16px;
+    white-space: pre-wrap;
+}
+
+.competition-option-list {
+    display: grid;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.competition-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid rgba(87, 104, 86, 0.12);
+    border-radius: 8px;
+    padding: 12px;
+    cursor: pointer;
+    background: rgba(87, 104, 86, 0.04);
+}
+
+.competition-option input {
+    flex: 0 0 auto;
+}
+
+.competition-text-answer {
+    width: 100%;
+    margin-top: 16px;
+    border: 1px solid rgba(87, 104, 86, 0.18);
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 1rem;
+}
+
+.competition-image {
+    max-width: min(100%, 460px);
+    border-radius: 8px;
+    display: block;
+    margin: 12px auto;
+}
+
+.competition-actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.score-pill {
+    background: rgba(16, 185, 129, 0.13);
+    color: var(--success);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-weight: 800;
+}
+
+.waiting-panel {
+    text-align: center;
+}
+
+.ranking-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 18px 0;
+}
+
+.ranking-row {
+    display: grid;
+    grid-template-columns: 56px 1fr auto;
+    align-items: center;
+    gap: 12px;
+}
+
+.ranking-rank {
+    font-weight: 900;
+    color: var(--primary);
+}
+
+.answer-feedback {
+    margin-top: 16px;
+    font-weight: 800;
+}
+
+.answer-feedback.correct {
+    color: var(--success);
+}
+
+.answer-feedback.wrong {
+    color: var(--danger);
+}
+
+@media (max-width: 640px) {
+    body {
+        padding: 20px 12px;
+    }
+
+    .competition-room-bar,
+    .chat-input-row,
+    .ranking-row {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+    }
+
+    .competition-room-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
