@@ -164,3 +164,127 @@
     background-color: rgba(87, 104, 86, 0.16) !important;
     border-radius: 4px;
 }
+
+/* Shared Vocabulary page presentation */
+.vocab-content-card {
+    background: #ffffff;
+    border: 1px solid rgba(87, 104, 86, 0.08);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+    padding: 24px;
+}
+
+.vocab-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: 12px;
+}
+
+.vocab-table th,
+.vocab-table td {
+    border: 1px solid #d9ded9;
+}
+
+.vocab-tools-col {
+    width: 96px;
+    text-align: center !important;
+    white-space: nowrap;
+}
+
+.vocab-tools-cell {
+    text-align: center;
+    white-space: nowrap;
+}
+
+.vocab-tools-cell .vocab-audio-btn {
+    margin-right: 4px;
+}
+
+.vocab-stroke-row-btn {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 1px solid var(--primary);
+    background: var(--primary);
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.vocab-stroke-row-btn:hover {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+    transform: scale(1.1);
+}
+
+@media (max-width: 760px) {
+    .vocab-content-card {
+        padding: 18px;
+    }
+}
+
+/* Canonical Vocabulary page table theme, scoped for reuse */
+.vocab-table-theme {
+    --vocab-theme-primary: #007a61;
+    --vocab-theme-primary-hover: #00634f;
+    --vocab-theme-border: #d7e3c6;
+}
+
+.vocab-table-theme .vocab-table-wrap {
+    border: 1px solid var(--vocab-theme-border);
+    border-radius: 10px;
+    background: #ffffff;
+}
+
+.vocab-table-theme .vocab-canonical-table {
+    color: #111111;
+}
+
+.vocab-table-theme .vocab-canonical-table thead th {
+    background: var(--vocab-theme-primary);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.28);
+    padding: 14px 16px;
+}
+
+.vocab-table-theme .vocab-canonical-table thead th:hover {
+    color: #ffffff;
+}
+
+.vocab-table-theme .vocab-canonical-table td {
+    color: #111111;
+    padding: 14px 16px;
+    border-color: #d9ded9;
+}
+
+.vocab-table-theme .vocab-canonical-table .vocab-cn,
+.vocab-table-theme .vocab-canonical-table .vocab-pinyin,
+.vocab-table-theme .vocab-canonical-table .vocab-meaning-vn {
+    color: #111111;
+}
+
+.vocab-table-theme .vocab-canonical-table tbody tr:hover,
+.vocab-table-theme .vocab-canonical-table .playing-highlight {
+    background: #eef6df !important;
+}
+
+.vocab-table-theme .vocab-header-icon-btn,
+.vocab-table-theme .vocab-audio-btn,
+.vocab-table-theme .vocab-stroke-row-btn {
+    background: var(--vocab-theme-primary);
+    border-color: var(--vocab-theme-primary);
+    color: #ffffff;
+}
+
+.vocab-table-theme .vocab-header-icon-btn:hover,
+.vocab-table-theme .vocab-audio-btn:hover,
+.vocab-table-theme .vocab-stroke-row-btn:hover {
+    background: var(--vocab-theme-primary-hover);
+    border-color: var(--vocab-theme-primary-hover);
+}

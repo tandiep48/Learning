@@ -10,6 +10,7 @@ let speakingTimer = null;
 let speakingAttemptId = 0;
 let speakingWord = "";
 const SPEAKING_MAX_MS = 10000;
+let isLessonPartFlow = false;
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
@@ -17,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectedFlashcards = readSelectedFlashcards();
     const params = new URLSearchParams(window.location.search);
     const autoPassageId = params.get('passage_id');
+    isLessonPartFlow = params.get('flow') === 'lesson-part';
     Picker.init((passage) => {
         startLesson(passage);
     }, "Vocab Learning", !selectedFlashcards && !autoPassageId);
@@ -85,6 +87,7 @@ function startSelectedFlashcards(selectedRows) {
     // Show summary first
     tableVocabList = [...words];
     renderVocabTable();
+    updateLessonSummaryNavigation();
     document.getElementById('screen-summary').style.display = 'block';
 }
 
@@ -102,14 +105,8 @@ async function startLesson(passage) {
 
     try {
         // Use the vocab/start API with mode 6
-        const res = await fetch('/api/vocab/start', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                mode: '6',
-                passage_id: passage.passage_id
-            })
-        });
+        const passageId = encodeURIComponent(passage.passage_id);
+        const res = await fetch(`/api/lesson/vocab/${passageId}`);
         const data = await res.json();
 
         if (!res.ok || data.error) {
@@ -121,10 +118,11 @@ async function startLesson(passage) {
         // Deduplicate tasks → one entry per unique word
         const seen = new Set();
         words = [];
-        for (const task of (data.tasks || [])) {
-            if (!seen.has(task.word)) {
-                seen.add(task.word);
-                words.push(task);
+        for (const row of (data.vocab || [])) {
+            const word = normalizeFlashcardWord(row);
+            if (word.word && !seen.has(word.word)) {
+                seen.add(word.word);
+                words.push(word);
             }
         }
 
@@ -139,12 +137,21 @@ async function startLesson(passage) {
         // Show summary first instead of going straight to flash cards
         tableVocabList = [...words];
         renderVocabTable();
-        document.getElementById('screen-summary').style.display = 'block';
+        updateLessonSummaryNavigation();
+        showWordSummaryScreen();
 
     } catch (e) {
+        console.error('Failed to load Word Summary:', e);
         alert('Error connecting to server.');
         backToLessons();
     }
+}
+
+function showWordSummaryScreen() {
+    document.querySelectorAll('.picker-screen').forEach(el => el.classList.remove('active'));
+    document.getElementById('screen-loading').style.display = 'none';
+    document.getElementById('screen-learning').style.display = 'none';
+    document.getElementById('screen-summary').style.display = 'block';
 }
 
 // ─── Word Rendering ───────────────────────────────────────────────────────────
@@ -186,7 +193,7 @@ function renderWord() {
     const audio = document.getElementById('vl-audio');
     if (word.audio_key) {
         audio.src = `/audio/${word.audio_key}.mp3`;
-        audio.play().catch(() => {});
+        audio.play().catch(() => { });
         setAudioPlaying(true);
         audio.onended = () => setAudioPlaying(false);
     } else {
@@ -212,7 +219,7 @@ function playAudio() {
     const audio = document.getElementById('vl-audio');
     if (audio.src) {
         audio.currentTime = 0;
-        audio.play().catch(() => {});
+        audio.play().catch(() => { });
         setAudioPlaying(true);
         audio.onended = () => setAudioPlaying(false);
     }
@@ -439,6 +446,7 @@ function nextWord() {
 
 function backToLessons() {
     resetSpeakingPractice(true);
+    stopSummaryAudio();
 
     if (lessonMeta?.passage_id) {
         window.location.href = `/learning?passage_id=${encodeURIComponent(lessonMeta.passage_id)}`;
@@ -462,6 +470,7 @@ function backToLessons() {
 }
 
 function startLearningCards() {
+    stopSummaryAudio();
     // Called from Summary screen – switch to flash card learning view
     currentIndex = 0;
     document.getElementById('screen-summary').style.display = 'none';
@@ -481,16 +490,28 @@ function goToTrainer() {
         mode: '6',
         passage_id: lessonMeta.passage_id
     });
+    if (isLessonPartFlow) params.set('flow', 'lesson-part');
     window.location.href = `/vocab-training?${params.toString()}`;
+}
+
+function goToLessonSummary() {
+    if (!lessonMeta?.passage_id) return;
+    window.location.href = `/reading?passage_id=${encodeURIComponent(lessonMeta.passage_id)}&mode=lesson-learner&flow=lesson-part`;
 }
 
 // ─── Keyboard Shortcuts ───────────────────────────────────────────────────────
 
+function updateLessonSummaryNavigation() {
+    const button = document.getElementById('lesson-summary-nav-btn');
+    if (!button) return;
+    button.hidden = !lessonMeta?.passage_id;
+}
+
 document.addEventListener('keydown', (e) => {
     if (document.getElementById('screen-learning').style.display === 'none') return;
-    if (e.key === 'ArrowLeft')  prevWord();
+    if (e.key === 'ArrowLeft') prevWord();
     if (e.key === 'ArrowRight') nextWord();
-    if (e.key === ' ')          { e.preventDefault(); playAudio(); }
+    if (e.key === ' ') { e.preventDefault(); playAudio(); }
 });
 
 // ─── Summary Table ────────────────────────────────────────────────────────────
@@ -498,6 +519,7 @@ document.addEventListener('keydown', (e) => {
 let isAudioPlaying = false;
 let audioQueue = [];
 let tableVocabList = [];
+let summaryAudio = null;
 
 function showVocabSummary() {
     resetSpeakingPractice(true);
@@ -510,6 +532,7 @@ function showVocabSummary() {
 
     tableVocabList = [...words];
     renderVocabTable();
+    updateLessonSummaryNavigation();
 }
 
 function renderVocabTable() {
@@ -521,62 +544,58 @@ function renderVocabTable() {
     }
 
     const tableId = 'vl-summary-table';
-    const audioCount = tableVocabList.filter(v => v.audio_key).length;
     let html = `
-        <div class="vl-summary-card">
-            <div class="vl-summary-table-meta">
-                <div>
-                    <div class="vl-summary-eyebrow">Vocabulary set</div>
-                    <div class="vl-summary-count">${tableVocabList.length} words</div>
-                </div>
-                <div class="vl-summary-pills" aria-label="Summary actions and stats">
-                    <span class="vl-summary-pill">
-                        <i class="fa-solid fa-volume-high" aria-hidden="true"></i>
-                        ${audioCount} audio
-                    </span>
-                    <button onclick="playAllVocabAudio()" class="vl-summary-tool-btn" type="button">
-                        <i class="fa-solid fa-play play-icon" aria-hidden="true"></i>
-                        <span>Play all</span>
-                    </button>
-                    <button onclick="shuffleVocab()" class="vl-summary-tool-btn secondary" type="button">
-                        <i class="fa-solid fa-shuffle" aria-hidden="true"></i>
-                        <span>Shuffle</span>
-                    </button>
-                </div>
-            </div>
-            <div class="vl-summary-table-wrap">
-                <table class="vocab-table vl-summary-table" id="${tableId}">
-                    <thead>
-                        <tr>
-                            <th class="vl-summary-audio-heading">Audio</th>
-                            <th onclick="toggleVocabColumn('cn', '${tableId}')" title="Click to hide/show Character">Character</th>
-                            <th onclick="toggleVocabColumn('py', '${tableId}')" title="Click to hide/show Pinyin">Pinyin</th>
-                            <th onclick="toggleVocabColumn('vn', '${tableId}')" title="Click to hide/show Meaning">Meaning (VN)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+        <table class="vocab-table vocab-canonical-table" id="${tableId}">
+            <thead>
+                <tr>
+                    <th class="vocab-tools-col">
+                        <button type="button" onclick="event.stopPropagation(); playAllVocabAudio()"
+                            class="vocab-header-icon-btn" title="Play all vocabulary audio"
+                            aria-label="Play all vocabulary audio"><i class="fa-solid fa-play" aria-hidden="true"></i></button>
+                        <button type="button" onclick="event.stopPropagation(); shuffleVocab()"
+                            class="vocab-header-icon-btn" title="Shuffle vocabulary"
+                            aria-label="Shuffle vocabulary"><i class="fa-solid fa-shuffle" aria-hidden="true"></i></button>
+                    </th>
+                    <th onclick="toggleVocabColumn('cn', '${tableId}')" title="Click to hide/show Character">CHARACTER</th>
+                    <th onclick="toggleVocabColumn('py', '${tableId}')" title="Click to hide/show Pinyin">PINYIN</th>
+                    <th onclick="toggleVocabColumn('vn', '${tableId}')" title="Click to hide/show Meaning">MEANING (VN)</th>
+                </tr>
+            </thead>
+            <tbody>
     `;
 
     tableVocabList.forEach((v, index) => {
-        const audioCell = v.audio_key
-            ? `<button class="vocab-audio-btn" onclick="playSingleVocabAudio('${v.audio_key}')" title="Play audio" aria-label="Play audio"><i class="fa-solid fa-play play-icon" aria-hidden="true"></i></button>`
-            : '<span class="vocab-no-audio">-</span>';
+        const audioBtn = v.audio_key
+            ? `<button type="button" class="vocab-audio-btn" onclick="playSingleVocabAudio('${escapeAttr(v.audio_key)}')" title="Play word audio" aria-label="Play audio for ${escapeAttr(v.word || 'word')}"><i class="fa-solid fa-volume-high" aria-hidden="true"></i></button>`
+            : '<span class="vocab-no-audio" title="No audio available">-</span>';
+        const hasChineseChars = /[\u4e00-\u9fff]/.test(v.word || '');
+        const strokeBtn = hasChineseChars
+            ? `<button type="button" class="vocab-stroke-row-btn" onclick="openStrokeModalForWord('${escapeAttr(v.word)}', '${escapeAttr(v.pinyin || '')}')" title="Show stroke order" aria-label="Show stroke order for ${escapeAttr(v.word)}"><i class="fa-solid fa-pen-nib" aria-hidden="true"></i></button>`
+            : '';
         html += `
-            <tr id="vl-tr-${index}" data-audio="${v.audio_key || ''}">
-                <td class="vocab-audio-cell">${audioCell}</td>
-                <td class="vocab-cn clickable-cell" onclick="this.classList.toggle('hidden-cell')">${v.word || ''}</td>
-                <td class="vocab-pinyin clickable-cell" onclick="this.classList.toggle('hidden-cell')">${v.pinyin || ''}</td>
-                <td class="vocab-meaning-vn clickable-cell" onclick="this.classList.toggle('hidden-cell')">${v.meaning_vn || v.meaning_en || ''}</td>
+            <tr id="vl-tr-${index}" data-audio="${escapeAttr(v.audio_key || '')}">
+                <td class="vocab-tools-cell">${audioBtn}${strokeBtn}</td>
+                <td class="vocab-cn clickable-cell" onclick="this.classList.toggle('hidden-cell')">${escapeHtml(v.word || '')}</td>
+                <td class="vocab-pinyin clickable-cell" onclick="this.classList.toggle('hidden-cell')">${escapeHtml(v.pinyin || '')}</td>
+                <td class="vocab-meaning-vn clickable-cell" onclick="this.classList.toggle('hidden-cell')">${escapeHtml(v.meaning_vn || v.meaning_en || '')}</td>
             </tr>
         `;
     });
 
     html += `
-                    </tbody>
-                </table>
-            </div>
-        </div>`;
+            </tbody>
+        </table>`;
     container.innerHTML = html;
+}
+
+function escapeAttr(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;')
+        .replace(/`/g, '&#096;');
 }
 
 function toggleVocabColumn(colType, tableId) {
@@ -587,6 +606,7 @@ function toggleVocabColumn(colType, tableId) {
 
 function shuffleVocab() {
     if (!tableVocabList || tableVocabList.length === 0) return;
+    stopSummaryAudio();
     for (let i = tableVocabList.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [tableVocabList[i], tableVocabList[j]] = [tableVocabList[j], tableVocabList[i]];
@@ -595,15 +615,19 @@ function shuffleVocab() {
 }
 
 function playSingleVocabAudio(audioKey) {
-    const audio = new Audio(`/audio/${audioKey}.mp3`);
-    audio.play().catch(e => console.log('Audio play failed:', e));
+    stopSummaryAudio();
+    summaryAudio = new Audio(`/audio/${audioKey}.mp3`);
+    summaryAudio.play().catch(e => console.log('Audio play failed:', e));
 }
 
 function playAllVocabAudio() {
-    if (isAudioPlaying) return;
+    if (isAudioPlaying) {
+        stopSummaryAudio();
+        return;
+    }
 
     // Create a queue of words that have audio, store their index
-    audioQueue = tableVocabList.map((v, i) => ({...v, originalIndex: i})).filter(v => v.audio_key);
+    audioQueue = tableVocabList.map((v, i) => ({ ...v, originalIndex: i })).filter(v => v.audio_key);
     if (audioQueue.length === 0) return;
 
     isAudioPlaying = true;
@@ -628,20 +652,30 @@ function playNextInQueue() {
         tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
-    const audio = new Audio(`/audio/${nextWord.audio_key}.mp3`);
+    summaryAudio = new Audio(`/audio/${nextWord.audio_key}.mp3`);
 
-    audio.onended = () => {
+    summaryAudio.onended = () => {
         setTimeout(playNextInQueue, 800);
     };
 
-    audio.onerror = () => {
+    summaryAudio.onerror = () => {
         setTimeout(playNextInQueue, 300);
     };
 
-    audio.play().catch(e => {
+    summaryAudio.play().catch(e => {
         console.log('Audio play failed:', e);
         setTimeout(playNextInQueue, 300);
     });
+}
+
+function stopSummaryAudio() {
+    isAudioPlaying = false;
+    audioQueue = [];
+    if (summaryAudio) {
+        summaryAudio.pause();
+        summaryAudio = null;
+    }
+    document.querySelectorAll('#vl-summary-table tr').forEach(tr => tr.classList.remove('playing-highlight'));
 }
 
 // ─── Stroke Order Modal ───────────────────────────────────────────────────────
@@ -650,6 +684,32 @@ let strokeWriter = null;         // current HanziWriter instance
 let strokeChars = [];            // array of individual characters
 let strokeCharIndex = 0;         // which character tab is active
 let strokeQuizMode = false;
+
+// Open stroke modal for a specific word/pinyin (used from summary table rows)
+function openStrokeModalForWord(word, pinyin) {
+    if (!word) return;
+    strokeChars = [...word].filter(c => /[\u4e00-\u9fff]/.test(c));
+    if (strokeChars.length === 0) return;
+
+    strokeCharIndex = 0;
+    strokeQuizMode = false;
+
+    document.getElementById('stroke-modal-word').textContent = word;
+    document.getElementById('stroke-modal-pinyin').textContent = pinyin || '';
+
+    const tabsEl = document.getElementById('stroke-char-tabs');
+    if (strokeChars.length <= 1) {
+        tabsEl.style.display = 'none';
+    } else {
+        tabsEl.style.display = 'flex';
+        tabsEl.innerHTML = strokeChars.map((ch, i) =>
+            `<button class="stroke-tab ${i === 0 ? 'active' : ''}" onclick="switchStrokeChar(${i})">${ch}</button>`
+        ).join('');
+    }
+
+    document.getElementById('stroke-modal-overlay').classList.add('open');
+    renderStrokeChar(strokeCharIndex);
+}
 
 function openStrokeModal() {
     const word = words[currentIndex];
@@ -705,6 +765,11 @@ function renderStrokeChar(index) {
 
     const char = strokeChars[index];
     const size = Math.min(280, window.innerWidth - 80);
+
+    if (!window.HanziWriter) {
+        container.innerHTML = '<div class="vocab-empty">Stroke order is temporarily unavailable.</div>';
+        return;
+    }
 
     // Create a fresh target div
     const target = document.createElement('div');

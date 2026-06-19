@@ -16,11 +16,11 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    font-family: SimSun, '宋体', serif;
+    font-family: 'Noto Sans', Arial, Helvetica, sans-serif;
 }
 
 body {
-    font-family: SimSun, '宋体', serif;
+    font-family: 'Noto Sans', Arial, Helvetica, sans-serif;
     background-color: var(--bg-color);
     color: var(--text-main);
     display: flex;
@@ -28,6 +28,19 @@ body {
     align-items: flex-start;
     min-height: 100vh;
     padding: 32px 20px;
+}
+
+[lang="zh-CN"],
+.chinese-word,
+.vl-hanzi,
+.hanzi-text,
+.lesson-line-hanzi,
+.vocab-cn,
+.complete-word,
+.ex-cn,
+.stroke-modal-word,
+.stroke-tab {
+    font-family: SimSun, 'Songti SC', 'Noto Serif CJK SC', serif;
 }
 
 .app-container {
