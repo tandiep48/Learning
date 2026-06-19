@@ -107,7 +107,6 @@ body {
 
 .grammar-table td {
     color: var(--text-main);
-    font-family: 'Noto Sans SC', 'Inter', sans-serif;
 }
 
 .grammar-table tr:last-child td {

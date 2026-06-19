@@ -1,8 +1,10 @@
 let currentPassageId = null;
+let isLessonPartFlow = false;
 
 document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
     const autoPassage = params.get('passage_id');
+    isLessonPartFlow = params.get('flow') === 'lesson-part';
 
     Picker.init((passage) => {
         loadGrammar(passage.passage_id);
@@ -40,6 +42,7 @@ async function loadGrammar(passageId) {
     const learningLink = document.getElementById('grammar-learning-link');
     if (learningLink) {
         learningLink.href = `/learning?passage_id=${encodeURIComponent(passageId)}`;
+        learningLink.textContent = isLessonPartFlow ? 'Finish' : 'Learning';
     }
     switchScreen('screen-loading');
 

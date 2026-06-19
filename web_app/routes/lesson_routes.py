@@ -144,7 +144,8 @@ def start_session():
             "content": line["content"],
             "options": m_options,
             "correct_answer": correct_meaning,
-            "audio_key": line.get("audio_key")
+            "audio_key": line.get("audio_key"),
+            "hsk_level": passage.get("hsk_level")
         })
         
         # 2. Listening Task
@@ -155,7 +156,8 @@ def start_session():
             "options": m_options, # Same options logic as meaning
             "correct_answer": correct_meaning,
             "audio_key": line.get("audio_key"),
-            "content": line["content"] # provided for reveal
+            "content": line["content"], # provided for reveal
+            "hsk_level": passage.get("hsk_level")
         })
         
         # 3. Reorder Task
@@ -171,7 +173,8 @@ def start_session():
                 "tokens": tokens,
                 "shuffled_tokens": shuffled_tokens,
                 "correct_answer": "".join(tokens),
-                "audio_key": line.get("audio_key")
+                "audio_key": line.get("audio_key"),
+                "hsk_level": passage.get("hsk_level")
             })
             
         # 4. Typing Task
@@ -182,7 +185,8 @@ def start_session():
             "content": line["content"],
             "correct_answer": line["content"],
             "audio_key": line.get("audio_key"),
-            "pinyin": line.get("pinyin", "")
+            "pinyin": line.get("pinyin", ""),
+            "hsk_level": passage.get("hsk_level")
         })
         
     random.shuffle(tasks)
