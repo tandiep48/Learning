@@ -122,6 +122,105 @@ def get_recent_learning(conn, user_id):
         print(f"⚠️ Database get_recent_learning failed: {e}")
         return None
 
+def mark_lesson_part_completed(conn, user_id, passage_id):
+    if not conn or not passage_id:
+        return False
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO user_lesson_part_progress
+                    (user_id, passage_id, lesson_trainer_completed_at, updated_at)
+                VALUES (%s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                ON CONFLICT (user_id, passage_id)
+                DO UPDATE SET lesson_trainer_completed_at = CURRENT_TIMESTAMP,
+                              updated_at = CURRENT_TIMESTAMP
+            """, (user_id, passage_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Database mark_lesson_part_completed failed: {e}")
+        conn.rollback()
+        return False
+
+def get_lesson_picker_progress(conn, user_id, hsk_level):
+    if not conn:
+        return {"lessons": {}, "parts": {}}
+
+    try:
+        mastered_words = set(get_learned_words(conn, user_id))
+
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT p.passage_id, pv.cn
+                FROM lesson_passages p
+                LEFT JOIN passage_vocabulary pv ON pv.passage_id = p.passage_id
+                WHERE p.hsk_level = %s
+                ORDER BY p.passage_id, pv.cn
+            """, (hsk_level,))
+            vocab_rows = cur.fetchall()
+
+            cur.execute("""
+                SELECT passage_id
+                FROM user_lesson_part_progress
+                WHERE user_id = %s
+                  AND lesson_trainer_completed_at IS NOT NULL
+            """, (user_id,))
+            completed_passages = {row[0] for row in cur.fetchall()}
+
+        parts = {}
+        lesson_words = {}
+        lesson_passages = {}
+        lesson_completed = {}
+
+        for passage_id, word in vocab_rows:
+            id_parts = str(passage_id or "").split("_")
+            lesson_num = id_parts[1] if len(id_parts) >= 2 else "Other"
+
+            part_progress = parts.setdefault(passage_id, {
+                "passage_id": passage_id,
+                "lesson": lesson_num,
+                "total_words": 0,
+                "learned_words": 0,
+                "lesson_learned": 1 if passage_id in completed_passages else 0,
+                "lesson_total": 1,
+                "_words": set(),
+                "_learned_word_set": set(),
+            })
+            words_for_lesson = lesson_words.setdefault(lesson_num, set())
+            passages_for_lesson = lesson_passages.setdefault(lesson_num, set())
+            completed_for_lesson = lesson_completed.setdefault(lesson_num, set())
+
+            passages_for_lesson.add(passage_id)
+            if passage_id in completed_passages:
+                completed_for_lesson.add(passage_id)
+
+            if word:
+                part_progress["_words"].add(word)
+                words_for_lesson.add(word)
+                if word in mastered_words:
+                    part_progress["_learned_word_set"].add(word)
+
+        for item in parts.values():
+            item["total_words"] = len(item.pop("_words", set()))
+            item["learned_words"] = len(item.pop("_learned_word_set", set()))
+
+        lessons = {}
+        for lesson_num, words in lesson_words.items():
+            passages = lesson_passages.get(lesson_num, set())
+            completed = lesson_completed.get(lesson_num, set())
+            lessons[lesson_num] = {
+                "lesson": lesson_num,
+                "total_words": len(words),
+                "learned_words": len(words.intersection(mastered_words)),
+                "lesson_learned": len(completed),
+                "lesson_total": len(passages),
+            }
+
+        return {"lessons": lessons, "parts": parts}
+    except Exception as e:
+        print(f"Database get_lesson_picker_progress failed: {e}")
+        return {"lessons": {}, "parts": {}}
+
 def update_user_avatar_path(conn, user_id, avatar_path):
     if not conn:
         return False

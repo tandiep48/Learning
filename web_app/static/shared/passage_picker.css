@@ -82,6 +82,18 @@
     font-size: 0.9rem;
     color: var(--text-muted);
 }
+.picker-progress-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    line-height: 1.35;
+}
+.picker-progress-lines-centered {
+    align-items: center;
+    font-size: 0.84rem;
+}
 .lesson-card-count {
     background: rgba(87, 104, 86,0.1);
     color: var(--primary);

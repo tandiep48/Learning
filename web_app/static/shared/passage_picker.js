@@ -2,6 +2,7 @@ const Picker = {
     currentHskLevel: null,
     groupedPassages: {},
     onPassageSelected: null,
+    progressSummary: null,
     
     init(onPassageSelectedCallback, titlePrefix = "Select HSK Level", autoShow = true) {
         this.onPassageSelected = onPassageSelectedCallback;
@@ -24,6 +25,7 @@ const Picker = {
 
     showLevelPicker() {
         this.currentHskLevel = null;
+        this.progressSummary = null;
         this.switchScreen('picker-screen-level');
     },
 
@@ -37,6 +39,7 @@ const Picker = {
             const url = `/api/lesson/passages?hsk_level=${hskLevel}`;
             const res = await fetch(url);
             const data = await res.json();
+            this.progressSummary = await this.loadPickerProgress(hskLevel);
             
             // Group passages by lesson
             this.groupedPassages = {};
@@ -54,6 +57,17 @@ const Picker = {
         } catch (e) {
             console.error(e);
             document.getElementById('picker-lesson-list').innerHTML = `<p style="color:var(--danger); text-align:center;">Failed to load lessons.</p>`;
+        }
+    },
+
+    async loadPickerProgress(hskLevel) {
+        try {
+            const res = await fetch(`/api/lesson/picker-progress?hsk_level=${encodeURIComponent(hskLevel)}`);
+            if (!res.ok) return null;
+            return await res.json();
+        } catch (e) {
+            console.warn('Could not load picker progress', e);
+            return null;
         }
     },
 
@@ -81,10 +95,18 @@ const Picker = {
             
             const count = this.groupedPassages[lessonNum].length;
             const prefix = lessonNum === 'Other' ? '' : 'Lesson ';
+            const progress = this.progressSummary?.lessons?.[lessonNum];
+            const progressHtml = progress ? `
+                <div class="picker-progress-lines">
+                    <div>Word Learned: ${progress.learned_words}/${progress.total_words}</div>
+                    <div>Lesson Learned: ${progress.lesson_learned}/${progress.lesson_total}</div>
+                </div>
+            ` : '';
             
             card.innerHTML = `
                 <div class="lesson-card-left">
-                    <div class="lesson-card-title">${prefix}${lessonNum}</div>
+                    <div class="lesson-card-title">${this.escapeHtml(prefix + lessonNum)}</div>
+                    ${progressHtml}
                 </div>
                 <div class="lesson-card-count">${count} part${count !== 1 ? 's' : ''}</div>
             `;
@@ -119,8 +141,20 @@ const Picker = {
             btn.style.display = 'flex';
             btn.style.alignItems = 'center';
             btn.style.justifyContent = 'center';
+            btn.style.flexDirection = 'column';
+            btn.style.gap = '8px';
+            const progress = this.progressSummary?.parts?.[p.passage_id];
+            const progressHtml = progress ? `
+                <div class="picker-progress-lines picker-progress-lines-centered">
+                    <div>Word Learned: ${progress.learned_words}/${progress.total_words}</div>
+                    <div>Lesson Learned: ${progress.lesson_learned}/${progress.lesson_total}</div>
+                </div>
+            ` : '';
             
-            btn.innerHTML = `<div class="dash-title" style="margin:0;">${partName}</div>`;
+            btn.innerHTML = `
+                <div class="dash-title" style="margin:0;">${this.escapeHtml(partName)}</div>
+                ${progressHtml}
+            `;
             
             btn.addEventListener('click', () => {
                 this.hide();
@@ -130,5 +164,14 @@ const Picker = {
             });
             container.appendChild(btn);
         });
+    },
+
+    escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
 };

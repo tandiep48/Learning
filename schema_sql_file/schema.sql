@@ -214,6 +214,17 @@ CREATE TABLE IF NOT EXISTS user_learning_state (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS user_lesson_part_progress (
+    user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+    passage_id VARCHAR(255) NOT NULL,
+    lesson_trainer_completed_at TIMESTAMP WITH TIME ZONE,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, passage_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_lesson_part_progress_user
+ON user_lesson_part_progress(user_id);
+
 ALTER TABLE practice_record
 ADD COLUMN IF NOT EXISTS response_time_ms INTEGER;
 
