@@ -258,6 +258,33 @@ def paginate_rows(rows, page, page_size):
     end = start + page_size
     return rows[start:end], total, total_pages, page
 
+@vocab_bp.route('/search', methods=['GET'])
+@login_required
+def search_vocab():
+    query = request.args.get("q", "").strip()
+    page = max(1, int(request.args.get("page", 1)))
+    page_size = min(100, max(5, int(request.args.get("page_size", 20))))
+
+    if not query or len(query) < 1:
+        return jsonify({"rows": [], "page": 1, "page_size": page_size, "total": 0, "total_pages": 1})
+
+    full_records = get_full_lesson_records()
+    if full_records.empty:
+        return jsonify({"rows": [], "page": 1, "page_size": page_size, "total": 0, "total_pages": 1})
+
+    q_lower = query.lower()
+    mask = (
+        full_records["word"].str.contains(query, na=False, regex=False) |
+        full_records["pinyin"].str.lower().str.contains(q_lower, na=False, regex=False) |
+        full_records["meaning_vn"].str.lower().str.contains(q_lower, na=False, regex=False) |
+        full_records["meaning_en"].str.lower().str.contains(q_lower, na=False, regex=False)
+    )
+    matched = full_records[mask].reset_index(drop=True)
+    rows = [normalize_vocab_row(row) for row in matched.to_dict("records")]
+    page_rows, total, total_pages, page = paginate_rows(rows, page, page_size)
+    return jsonify({"rows": page_rows, "page": page, "page_size": page_size, "total": total, "total_pages": total_pages})
+
+
 @vocab_bp.route('/table', methods=['GET'])
 @login_required
 def get_vocab_table():

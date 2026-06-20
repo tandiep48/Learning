@@ -2,6 +2,72 @@
 
 /* Selection page entry point. Page-specific selection styles can now live here. */
 
+/* ── Vocabulary Search Row ── */
+.vocab-search-row {
+    margin-bottom: 14px;
+}
+
+.vocab-search-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    background: #ffffff;
+    border: 1px solid rgba(87, 104, 86, 0.18);
+    border-radius: 10px;
+    padding: 0 12px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.vocab-search-wrap:focus-within {
+    border-color: rgba(87, 104, 86, 0.45);
+    box-shadow: 0 0 0 3px rgba(87, 104, 86, 0.1);
+}
+
+.vocab-search-icon {
+    font-size: 0.9rem;
+    color: var(--primary);
+    flex-shrink: 0;
+    opacity: 0.6;
+}
+
+.vocab-search-wrap input[type="text"].vocab-search-input {
+    flex: 1;
+    border: none !important;
+    background: transparent !important;
+    outline: none;
+    box-shadow: none !important;
+    font-size: 0.95rem;
+    color: var(--text-main) !important;
+    padding: 11px 0;
+    min-width: 0;
+    width: auto;
+}
+
+.vocab-search-wrap input[type="text"].vocab-search-input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.65;
+}
+
+.vocab-search-clear {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: color 0.15s;
+}
+
+.vocab-search-clear:hover {
+    color: var(--text-main);
+}
+
 body.vocab-select-page > .app-container {
     margin: 0 auto;
     min-height: calc(100vh - 68px);

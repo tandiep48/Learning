@@ -11,6 +11,9 @@ let isPlayingTableAudio = false;
 let allRowsHidden = false;
 let hiddenRows = new Set();
 
+let searchMode = false;
+let searchDebounceTimer = null;
+
 document.addEventListener('DOMContentLoaded', () => {
     initTableTrainer();
 });
@@ -160,13 +163,6 @@ function changePageSize() {
     pageSize = Number(document.getElementById('filter-page-size').value) || 20;
     currentPage = 1;
     loadVocabTable();
-}
-
-async function changePage(delta) {
-    const nextPage = currentPage + delta;
-    if (nextPage < 1 || nextPage > totalPages) return;
-    currentPage = nextPage;
-    await loadVocabTable();
 }
 
 async function loadVocabTable() {
@@ -588,5 +584,76 @@ function closeVocabStrokeModal() {
 
 function closeVocabStrokeModalIfBackground(e) {
     if (e.target.id === 'vocab-stroke-modal-overlay') closeVocabStrokeModal();
+}
+
+// ─── Vocabulary Search ────────────────────────────────────────────────────────
+
+function handleSearchInput() {
+    const input = document.getElementById('vocab-search-input');
+    const clearBtn = document.getElementById('vocab-search-clear');
+    const query = input.value.trim();
+
+    clearBtn.style.display = query ? 'flex' : 'none';
+
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => {
+        if (query.length > 0) {
+            searchMode = true;
+            currentPage = 1;
+            runVocabSearch(query);
+        } else {
+            exitSearchMode();
+        }
+    }, 300);
+}
+
+async function runVocabSearch(query) {
+    setTableState('Searching…');
+    const params = new URLSearchParams({
+        q: query,
+        page: String(currentPage),
+        page_size: String(pageSize)
+    });
+    try {
+        const res = await fetch(`/api/vocab/search?${params.toString()}`);
+        const data = await res.json();
+        if (!res.ok || data.error) {
+            clearTable(data.error || 'Search failed.');
+            return;
+        }
+        currentRows = data.rows || [];
+        currentPage = data.page || 1;
+        totalPages = data.total_pages || 1;
+        renderVocabTable(currentRows);
+        renderPagination(data.total || 0);
+        if (!currentRows.length) clearTable(`No results for "${query}".`);
+    } catch (e) {
+        console.error(e);
+        clearTable('Search failed.');
+    }
+}
+
+async function changePage(delta) {
+    const nextPage = currentPage + delta;
+    if (nextPage < 1 || nextPage > totalPages) return;
+    currentPage = nextPage;
+    if (searchMode) {
+        const query = document.getElementById('vocab-search-input')?.value.trim() || '';
+        if (query) { await runVocabSearch(query); return; }
+    }
+    await loadVocabTable();
+}
+
+function clearSearch() {
+    const input = document.getElementById('vocab-search-input');
+    if (input) input.value = '';
+    document.getElementById('vocab-search-clear').style.display = 'none';
+    exitSearchMode();
+}
+
+function exitSearchMode() {
+    searchMode = false;
+    currentPage = 1;
+    clearTable('Choose filters to load vocabulary.');
 }
 

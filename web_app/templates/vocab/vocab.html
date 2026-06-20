@@ -28,6 +28,22 @@
                     </div>
                 </div>
 
+                <div class="vocab-search-row">
+                    <div class="vocab-search-wrap">
+                        <i class="fa-regular fa-magnifying-glass vocab-search-icon" aria-hidden="true"></i>
+                        <input
+                            type="text"
+                            id="vocab-search-input"
+                            class="vocab-search-input"
+                            placeholder="Search by character, pinyin or meaning…"
+                            oninput="handleSearchInput()"
+                            autocomplete="off"
+                            spellcheck="false"
+                        >
+                        <button class="vocab-search-clear" id="vocab-search-clear" onclick="clearSearch()" style="display:none;" aria-label="Clear search">&#x2715;</button>
+                    </div>
+                </div>
+
                 <div class="vocab-filter-bar">
                     <div class="form-group hsk-filter">
                         <label for="filter-hsk">HSK</label>
