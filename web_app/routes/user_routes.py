@@ -187,10 +187,10 @@ def dashboard_current_lesson():
     except (TypeError, ValueError):
         page = 1
     try:
-        page_size = int(request.args.get('page_size', 12))
+        page_size = int(request.args.get('page_size', 5))
     except (TypeError, ValueError):
-        page_size = 12
-    page_size = min(50, max(5, page_size))
+        page_size = 5
+    page_size = min(5, max(5, page_size))
 
     conn = get_db_connection()
     if not conn:
@@ -288,6 +288,110 @@ def dashboard_current_lesson():
                 "time_ms": total_time_ms,
                 "time_label": format_dashboard_duration(total_time_ms),
             },
+        })
+    finally:
+        conn.close()
+
+
+@user_bp.route('/api/user/global-stats', methods=['GET'])
+@login_required
+def global_stats():
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database unavailable"}), 503
+
+    try:
+        buckets = {
+            "exercise":       {"questions": 0, "time_ms": 0},
+            "exam":           {"questions": 0, "time_ms": 0},
+            "lesson_trainer": {"questions": 0, "time_ms": 0},
+            "vocab_trainer":  {"questions": 0, "time_ms": 0},
+        }
+
+        # ── vocab_records (vocab trainer) ────────────────────────────────────
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT COUNT(*), COALESCE(SUM(response_time_ms), 0)::bigint
+                    FROM vocab_records
+                    WHERE user_id = %s
+                """, (current_user.id,))
+                row = cur.fetchone()
+                buckets["vocab_trainer"]["questions"] = int(row[0] or 0)
+                buckets["vocab_trainer"]["time_ms"]   = int(row[1] or 0)
+        except Exception as e:
+            print(f"⚠️ global_stats vocab_records failed: {e}")
+
+        # ── lesson_records (lesson trainer) ──────────────────────────────────
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT COUNT(*), COALESCE(SUM(response_time_ms), 0)::bigint
+                    FROM lesson_records
+                    WHERE user_id = %s
+                """, (current_user.id,))
+                row = cur.fetchone()
+                buckets["lesson_trainer"]["questions"] = int(row[0] or 0)
+                buckets["lesson_trainer"]["time_ms"]   = int(row[1] or 0)
+        except Exception as e:
+            print(f"⚠️ global_stats lesson_records failed: {e}")
+
+        # ── practice_record (exercise + exam) ────────────────────────────────
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT COALESCE(category, 'practice') AS cat,
+                           COUNT(*),
+                           COALESCE(SUM(response_time_ms), 0)::bigint
+                    FROM practice_record
+                    WHERE user_id = %s
+                    GROUP BY COALESCE(category, 'practice')
+                """, (current_user.id,))
+                for row in cur.fetchall():
+                    cat = str(row[0]).lower()
+                    key = "exam" if cat == "exam" else "exercise"
+                    buckets[key]["questions"] += int(row[1] or 0)
+                    buckets[key]["time_ms"]   += int(row[2] or 0)
+        except Exception as e:
+            print(f"⚠️ global_stats practice_record failed: {e}")
+
+        # ── mastered words (3-mode success, round 1) ─────────────────────────
+        total_words = 0
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    WITH daily AS (
+                        SELECT word,
+                               DATE(updated_at) AS day,
+                               COUNT(DISTINCT CASE WHEN is_correct = true THEN mode END) AS ok_modes
+                        FROM vocab_records
+                        WHERE user_id = %s
+                          AND mode IN ('typing', 'listen', 'meaning')
+                          AND round_num = 1
+                        GROUP BY word, DATE(updated_at)
+                    ),
+                    latest AS (
+                        SELECT word, ok_modes,
+                               ROW_NUMBER() OVER (PARTITION BY word ORDER BY day DESC) AS rn
+                        FROM daily
+                    )
+                    SELECT COUNT(*) FROM latest WHERE rn = 1 AND ok_modes = 3
+                """, (current_user.id,))
+                total_words = int(cur.fetchone()[0] or 0)
+        except Exception as e:
+            print(f"⚠️ global_stats mastered words failed: {e}")
+
+        # ── totals ────────────────────────────────────────────────────────────
+        total_time_ms = sum(b["time_ms"] for b in buckets.values())
+
+        for key, b in buckets.items():
+            b["time_label"] = format_dashboard_duration(b["time_ms"])
+
+        return jsonify({
+            "total_time_ms":    total_time_ms,
+            "total_time_label": format_dashboard_duration(total_time_ms),
+            "total_words":      total_words,
+            "buckets":          buckets,
         })
     finally:
         conn.close()

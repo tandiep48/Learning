@@ -199,7 +199,7 @@ def get_full_lesson_records():
 
 def build_vocab_tasks(subset_df):
     subset_df = subset_df.fillna("")
-    task_types = ["listen", "typing", "meaning"]
+    task_types = ["listen", "typing", "meaning", "speaking"]
     tasks = []
 
     for _, row in subset_df.iterrows():
