@@ -111,3 +111,57 @@
 .picker-screen.active {
     display: block;
 }
+
+/* -- Lesson and part progress bars -- */
+.picker-progress-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    font-size: 0.82rem;
+}
+
+.picker-progress-label {
+    color: var(--text-muted);
+    font-weight: 600;
+    min-width: 46px;
+}
+
+.picker-progress-track {
+    width: 180px;
+    height: 8px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(87, 104, 86, 0.12);
+}
+
+.picker-progress-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    transition: width 0.25s ease;
+}
+
+.picker-progress-track.pct-red .picker-progress-fill {
+    background: #dc2626;
+}
+
+.picker-progress-track.pct-yellow .picker-progress-fill {
+    background: #d97706;
+}
+
+.picker-progress-track.pct-green .picker-progress-fill {
+    background: #16a34a;
+}
+
+.picker-progress-lines-centered .picker-progress-track {
+    width: min(180px, 35vw);
+}
+
+.picker-progress-pct {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-weight: 600;
+    min-width: 30px;
+    text-align: right;
+}
