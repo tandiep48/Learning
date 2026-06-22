@@ -123,3 +123,142 @@
 #typing-submit-btn:hover {
     color: #ffffff;
 }
+
+/* ── Speaking task ─────────────────────────────────────────────────────────── */
+
+#speaking-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    width: 100%;
+    padding: 10px 0 4px;
+}
+
+.speaking-prompt {
+    font-size: clamp(2.4rem, 8vw, 4rem);
+    font-weight: 800;
+    color: var(--text-main);
+    text-align: center;
+    padding: 20px 24px;
+    background: rgba(0, 122, 97, 0.07);
+    border: 1px solid rgba(0, 122, 97, 0.18);
+    border-radius: 12px;
+    width: 100%;
+    box-sizing: border-box;
+    letter-spacing: 0.04em;
+    line-height: 1.15;
+}
+
+.btn-speak-task {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 32px;
+    background: var(--primary);
+    color: #ffffff;
+    border: none;
+    border-radius: 999px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    box-shadow: 0 4px 14px rgba(0, 122, 97, 0.3);
+}
+
+.btn-speak-task:hover:not(:disabled) {
+    background: var(--primary-hover, #005f4a);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 122, 97, 0.4);
+}
+
+.btn-speak-task.recording {
+    background: #c0392b;
+    box-shadow: 0 0 0 0 rgba(192, 57, 43, 0.5);
+    animation: speak-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes speak-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(192, 57, 43, 0.55); }
+    70%  { box-shadow: 0 0 0 12px rgba(192, 57, 43, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(192, 57, 43, 0); }
+}
+
+.btn-speak-task:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.speaking-task-status {
+    font-size: 0.92rem;
+    color: var(--text-muted);
+    min-height: 1.2em;
+    text-align: center;
+}
+
+.speaking-word-reveal {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 20px 28px;
+    background: rgba(0, 122, 97, 0.08);
+    border: 1px solid rgba(0, 122, 97, 0.22);
+    border-radius: 14px;
+    animation: reveal-fade-in 0.4s ease;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+@keyframes reveal-fade-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.speaking-reveal-hanzi {
+    font-size: clamp(2rem, 8vw, 3.5rem);
+    font-weight: 800;
+    color: var(--text-main);
+    line-height: 1;
+}
+
+.speaking-reveal-pinyin {
+    font-size: 1rem;
+    color: var(--primary);
+    font-weight: 600;
+}
+
+/* ── Floating Skip button ──────────────────────────────────────────────────── */
+
+.skip-float-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+    padding-bottom: 8px;
+}
+
+.skip-float-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 26px;
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid rgba(87, 104, 86, 0.25);
+    border-radius: 999px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s, background 0.2s, transform 0.15s;
+}
+
+.skip-float-btn:hover {
+    color: var(--text-main);
+    border-color: rgba(87, 104, 86, 0.5);
+    background: rgba(87, 104, 86, 0.07);
+    transform: translateY(-1px);
+}
+
+.skip-float-btn i {
+    font-size: 0.8rem;
+}
