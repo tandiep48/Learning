@@ -28,17 +28,15 @@
                 </div>
                 <div id="home-vocab-state" class="dashboard-empty">Loading vocabulary...</div>
                 <div id="home-vocab-table-wrap" class="home-vocab-table-wrap" style="display:none;"></div>
-                <div id="home-vocab-pagination" class="home-pagination" style="display:none;">
-                    <button id="home-vocab-prev" class="btn secondary" type="button">Prev</button>
-                    <span id="home-vocab-page-status">Page 1 / 1</span>
-                    <button id="home-vocab-next" class="btn secondary" type="button">Next</button>
+                <div class="vocab-view-all-row" id="home-vocab-view-all" style="display:none;">
+                    <a href="/vocab" class="vocab-view-all-link">View all vocabulary &rarr;</a>
                 </div>
             </div>
 
             <div class="dashboard-panel">
                 <div class="dashboard-panel-heading">
                     <div>
-                        <span class="dashboard-kicker">Exercise & Exam</span>
+                        <span class="dashboard-kicker">Exercise &amp; Exam</span>
                         <h2>Lesson Activities</h2>
                     </div>
                 </div>
@@ -59,11 +57,46 @@
             <div class="dashboard-panel-heading">
                 <div>
                     <span class="dashboard-kicker">Progress</span>
-                    <h2>Recent Lesson Activity</h2>
+                    <h2>Learning Statistics</h2>
                 </div>
-                <div id="home-progress-total" class="progress-total">0 attempts</div>
             </div>
-            <div id="home-progress-list" class="progress-grid"></div>
+
+            <!-- Hero totals row -->
+            <div class="stats-hero" id="stats-hero">
+                <div class="stat-hero-item">
+                    <span class="stat-hero-label">Total Time</span>
+                    <strong class="stat-hero-value" id="stat-total-time">—</strong>
+                </div>
+                <div class="stat-hero-divider"></div>
+                <div class="stat-hero-item">
+                    <span class="stat-hero-label">Words Mastered</span>
+                    <strong class="stat-hero-value" id="stat-total-words">—</strong>
+                </div>
+            </div>
+
+            <!-- 4 bucket cards -->
+            <div class="stats-grid" id="stats-grid">
+                <div class="stats-bucket-card" id="stat-exercise">
+                    <span class="stats-bucket-label">Exercise</span>
+                    <strong class="stats-bucket-count" id="stat-exercise-q">—</strong>
+                    <small class="stats-bucket-time" id="stat-exercise-t">—</small>
+                </div>
+                <div class="stats-bucket-card" id="stat-exam">
+                    <span class="stats-bucket-label">Exam</span>
+                    <strong class="stats-bucket-count" id="stat-exam-q">—</strong>
+                    <small class="stats-bucket-time" id="stat-exam-t">—</small>
+                </div>
+                <div class="stats-bucket-card" id="stat-lesson">
+                    <span class="stats-bucket-label">Lesson Trainer</span>
+                    <strong class="stats-bucket-count" id="stat-lesson-q">—</strong>
+                    <small class="stats-bucket-time" id="stat-lesson-t">—</small>
+                </div>
+                <div class="stats-bucket-card" id="stat-vocab">
+                    <span class="stats-bucket-label">Vocab Trainer</span>
+                    <strong class="stats-bucket-count" id="stat-vocab-q">—</strong>
+                    <small class="stats-bucket-time" id="stat-vocab-t">—</small>
+                </div>
+            </div>
         </section>
     </section>
 </main>

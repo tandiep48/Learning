@@ -110,9 +110,20 @@
 }
 
 .home-vocab-table {
-    min-width: 620px;
+    width: 100%;
     border-collapse: collapse;
     background: #ffffff;
+    table-layout: fixed;
+}
+
+.home-vocab-table th:nth-child(1),
+.home-vocab-table td:nth-child(1) {
+    width: 110px;
+}
+
+.home-vocab-table th:nth-child(2),
+.home-vocab-table td:nth-child(2) {
+    width: 130px;
 }
 
 .home-vocab-table th,
@@ -155,6 +166,25 @@
     padding: 10px 14px;
     text-align: center;
     align-items: center;
+}
+
+/* View all vocabulary link */
+.vocab-view-all-row {
+    margin-top: 12px;
+    text-align: right;
+}
+
+.vocab-view-all-link {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--primary, #007a61);
+    text-decoration: none;
+    transition: opacity 0.2s;
+}
+
+.vocab-view-all-link:hover {
+    opacity: 0.75;
+    text-decoration: underline;
 }
 
 .activity-columns {
@@ -267,7 +297,58 @@
     gap: 12px;
 }
 
-.progress-card {
+/* ── Stats hero (total time + total words) ─────────────────────────────────── */
+
+.stats-hero {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 18px 0 20px;
+    border-bottom: 1px solid rgba(87, 104, 86, 0.1);
+    margin-bottom: 16px;
+}
+
+.stat-hero-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    text-align: center;
+}
+
+.stat-hero-divider {
+    width: 1px;
+    height: 52px;
+    background: rgba(87, 104, 86, 0.15);
+    flex-shrink: 0;
+    margin: 0 16px;
+}
+
+.stat-hero-label {
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-muted);
+}
+
+.stat-hero-value {
+    font-size: clamp(1.6rem, 3.5vw, 2.4rem);
+    font-weight: 800;
+    color: var(--text-main);
+    line-height: 1;
+}
+
+/* ── Stats bucket grid ─────────────────────────────────────────────────────── */
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.stats-bucket-card {
     min-height: 102px;
     padding: 14px;
     border: 1px solid rgba(87, 104, 86, 0.1);
@@ -276,23 +357,34 @@
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    gap: 8px;
+    gap: 6px;
+    transition: border-color 0.2s, background 0.2s;
 }
 
-.progress-card span {
+.stats-bucket-card:hover {
+    background: rgba(87, 104, 86, 0.075);
+    border-color: rgba(87, 104, 86, 0.22);
+}
+
+.stats-bucket-label {
     color: var(--text-muted);
-    font-size: 0.88rem;
+    font-size: 0.82rem;
     font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
-.progress-card strong {
-    font-size: 1.7rem;
+.stats-bucket-count {
+    font-size: 1.65rem;
     line-height: 1;
+    font-weight: 800;
+    color: var(--text-main);
 }
 
-.progress-card small {
+.stats-bucket-time {
     color: var(--text-muted);
-    line-height: 1.35;
+    font-size: 0.84rem;
+    line-height: 1.3;
 }
 
 .dashboard-empty,
@@ -342,7 +434,7 @@
         grid-template-columns: 1fr;
     }
 
-    .progress-grid {
+    .stats-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }

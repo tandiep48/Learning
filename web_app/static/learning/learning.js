@@ -10,7 +10,10 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedPassage = passage;
         const parts = String(passage.passage_id || '').split('_');
         selectedLessonNum = parts.length >= 2 ? parts[1] : null;
-        showLearningActions();
+        // Start immediately — skip the intermediate action screen
+        saveRecentLearning();
+        const passageId = encodeURIComponent(passage.passage_id);
+        window.location.href = `/vocab-learning?passage_id=${passageId}&flow=lesson-part`;
     }, 'Learning', !autoPassageId);
 
     const backLink = document.getElementById('picker-back-link');

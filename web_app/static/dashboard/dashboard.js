@@ -1,38 +1,38 @@
-let homeVocabPage = 1;
-const homeVocabPageSize = 12;
-
 document.addEventListener('DOMContentLoaded', () => {
     loadHomeDashboard();
-    document.getElementById('home-vocab-prev')?.addEventListener('click', () => {
-        if (homeVocabPage > 1) loadHomeDashboard(homeVocabPage - 1);
-    });
-    document.getElementById('home-vocab-next')?.addEventListener('click', () => {
-        loadHomeDashboard(homeVocabPage + 1);
-    });
 });
 
-async function loadHomeDashboard(page = 1) {
+async function loadHomeDashboard() {
     setDashboardState('Loading your lesson dashboard...', true);
     try {
-        const params = new URLSearchParams({
-            page: String(page),
-            page_size: String(homeVocabPageSize)
-        });
-        const res = await fetch(`/api/user/dashboard-current-lesson?${params.toString()}`);
-        const contentType = res.headers.get('content-type') || '';
-        if (!contentType.includes('application/json')) {
+        // Fetch lesson data and global stats in parallel
+        const [lessonRes, statsRes] = await Promise.all([
+            fetch(`/api/user/dashboard-current-lesson?page=1&page_size=5`),
+            fetch(`/api/user/global-stats`)
+        ]);
+
+        const lessonContentType = lessonRes.headers.get('content-type') || '';
+        if (!lessonContentType.includes('application/json')) {
             showSignedOutState();
             return;
         }
 
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to load dashboard.');
-        if (!data.has_recent) {
+        const lessonData = await lessonRes.json();
+        if (!lessonRes.ok) throw new Error(lessonData.error || 'Failed to load dashboard.');
+        if (!lessonData.has_recent) {
             showNoRecentState();
             return;
         }
 
-        renderHomeDashboard(data);
+        // Render lesson content
+        renderHomeDashboard(lessonData);
+
+        // Render global stats (non-blocking — silently ignore errors)
+        if (statsRes.ok) {
+            const statsData = await statsRes.json();
+            renderGlobalStats(statsData);
+        }
+
     } catch (err) {
         setDashboardState(err.message || 'Failed to load dashboard.', false);
     }
@@ -48,7 +48,6 @@ function renderHomeDashboard(data) {
     document.getElementById('home-continue-link').href = `/learning?passage_id=${encodeURIComponent(lesson.passage_id || '')}`;
 
     renderVocab(data.vocab || {});
-    renderProgress(data.progress || {});
 }
 
 function renderVocab(vocab) {
@@ -56,19 +55,15 @@ function renderVocab(vocab) {
     const count = document.getElementById('home-vocab-count');
     const state = document.getElementById('home-vocab-state');
     const wrap = document.getElementById('home-vocab-table-wrap');
-    const pagination = document.getElementById('home-vocab-pagination');
-    const status = document.getElementById('home-vocab-page-status');
-    const prev = document.getElementById('home-vocab-prev');
-    const next = document.getElementById('home-vocab-next');
+    const viewAllRow = document.getElementById('home-vocab-view-all');
 
-    homeVocabPage = vocab.page || 1;
     count.textContent = `${vocab.total || 0} word${vocab.total === 1 ? '' : 's'}`;
 
     if (!rows.length) {
         state.textContent = 'No vocabulary found for this lesson.';
         state.style.display = 'block';
         wrap.style.display = 'none';
-        pagination.style.display = 'none';
+        if (viewAllRow) viewAllRow.style.display = 'none';
         return;
     }
 
@@ -97,63 +92,31 @@ function renderVocab(vocab) {
     wrap.appendChild(table);
     wrap.style.display = 'block';
     state.style.display = 'none';
-
-    const totalPages = vocab.total_pages || 1;
-    pagination.style.display = totalPages > 1 ? 'flex' : 'none';
-    status.textContent = `Page ${homeVocabPage} / ${totalPages}`;
-    prev.disabled = homeVocabPage <= 1;
-    next.disabled = homeVocabPage >= totalPages;
+    if (viewAllRow) viewAllRow.style.display = 'block';
 }
 
-function renderActivities(activities) {
-    const practice = activities.filter(item => item.category === 'practice');
-    const exam = activities.filter(item => item.category === 'exam');
-    renderActivityList('home-practice-list', practice, 'No exercise groups for this lesson.');
-    renderActivityList('home-exam-list', exam, 'No exam groups for this lesson.');
+function renderGlobalStats(data) {
+    const buckets = data.buckets || {};
+
+    // Hero totals
+    const totalTimeEl = document.getElementById('stat-total-time');
+    const totalWordsEl = document.getElementById('stat-total-words');
+    if (totalTimeEl) totalTimeEl.textContent = data.total_time_label || '0s';
+    if (totalWordsEl) totalWordsEl.textContent = (data.total_words || 0).toLocaleString();
+
+    // Bucket cards
+    setBucketCard('exercise', buckets.exercise);
+    setBucketCard('exam', buckets.exam);
+    setBucketCard('lesson', buckets.lesson_trainer);
+    setBucketCard('vocab', buckets.vocab_trainer);
 }
 
-function renderActivityList(id, items, emptyText) {
-    const list = document.getElementById(id);
-    if (!list) return;
-    if (!items.length) {
-        list.innerHTML = `<div class="dashboard-empty compact">${escapeHtml(emptyText)}</div>`;
-        return;
-    }
-
-    list.innerHTML = items.map(item => `
-        <a class="activity-card" href="${escapeAttr(item.start_url || '#')}">
-            <div>
-                <span class="activity-badge ${item.category === 'exam' ? 'exam' : 'practice'}">${escapeHtml(item.category === 'exam' ? 'Exam' : 'Exercise')}</span>
-                <strong>${escapeHtml(progressLabel(item.progress))}</strong>
-            </div>
-            <span>${escapeHtml(capitalize(item.skill || 'Practice'))} - ${item.question_count || 0} question${item.question_count === 1 ? '' : 's'}</span>
-        </a>
-    `).join('');
-}
-
-function renderProgress(progress) {
-    const total = document.getElementById('home-progress-total');
-    const list = document.getElementById('home-progress-list');
-    const modes = progress.modes || [];
-    total.textContent = `${progress.attempts || 0} attempt${progress.attempts === 1 ? '' : 's'} - ${progress.accuracy_pct || 0}% - ${progress.time_label || '0s'}`;
-
-    if (!modes.length) {
-        list.innerHTML = `
-            <div class="dashboard-empty progress-empty">
-                <span>No lesson trainer activity yet.</span>
-                <a class="btn primary dashboard-action-link" href="${escapeAttr(document.getElementById('home-continue-link').href)}">Continue Lesson</a>
-            </div>
-        `;
-        return;
-    }
-
-    list.innerHTML = modes.map(item => `
-        <div class="progress-card">
-            <span>${escapeHtml(capitalize(item.mode))}</span>
-            <strong>${item.accuracy_pct || 0}%</strong>
-            <small>${item.correct || 0}/${item.attempts || 0} correct - ${escapeHtml(item.time_label || '0s')}</small>
-        </div>
-    `).join('');
+function setBucketCard(key, bucket) {
+    const q = document.getElementById(`stat-${key}-q`);
+    const t = document.getElementById(`stat-${key}-t`);
+    if (!bucket) return;
+    if (q) q.textContent = (bucket.questions || 0).toLocaleString();
+    if (t) t.textContent = bucket.time_label || '0s';
 }
 
 function setDashboardState(message, loading) {
@@ -190,18 +153,6 @@ function showSignedOutState() {
     `;
 }
 
-function progressLabel(progress) {
-    if (!progress) return 'Questions';
-    const text = String(progress);
-    if (text.includes('-')) return `Questions ${text}`;
-    return `Question ${text}`;
-}
-
-function capitalize(value) {
-    const text = String(value || '');
-    return text ? text.charAt(0).toUpperCase() + text.slice(1) : '';
-}
-
 function escapeHtml(value) {
     return String(value ?? '')
         .replace(/&/g, '&amp;')
@@ -209,8 +160,4 @@ function escapeHtml(value) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
-}
-
-function escapeAttr(value) {
-    return escapeHtml(value);
 }
