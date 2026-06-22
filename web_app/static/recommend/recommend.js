@@ -1,15 +1,19 @@
 let allRecommendations = [];
-let currentLevelTab = 'all';
-let currentSkillTab = 'all';
+let currentLevelTab    = 'all';
+let currentSkillTab    = 'all';
 let currentCategoryTab = 'all';
-let currentStatusTab = 'all';
+let currentStatusTab   = 'all';
 let selectedMultiItems = [];
 
+const PAGE_SIZE = 10;
+let currentPage = 1;
+
+// ── Fetch ──────────────────────────────────────────────────────────────────
 async function fetchRecommendations() {
     const container = document.getElementById('rec-container');
 
     try {
-        const res = await fetch('/api/practice/recommend');
+        const res  = await fetch('/api/practice/recommend');
         const data = await res.json();
 
         if (!res.ok) {
@@ -19,16 +23,15 @@ async function fetchRecommendations() {
 
         allRecommendations = data.recommendations || [];
 
-        // If no recommendations, check whether the user is brand-new
         if (allRecommendations.length === 0) {
             try {
-                const histRes = await fetch('/api/vocab/has_history');
+                const histRes  = await fetch('/api/vocab/has_history');
                 const histData = await histRes.json();
                 if (!histData.has_history) {
                     showNewUser(container);
                     return;
                 }
-            } catch (_) { /* fallthrough to normal empty state */ }
+            } catch (_) { /* fallthrough */ }
         }
 
         renderRecommendations();
@@ -38,11 +41,13 @@ async function fetchRecommendations() {
     }
 }
 
+// ── Render ─────────────────────────────────────────────────────────────────
 function renderRecommendations() {
-    const container = document.getElementById('rec-container');
-    
-    // Filter by tab
-    const recs = allRecommendations.filter(r => {
+    const container   = document.getElementById('rec-container');
+    const pagBar      = document.getElementById('pagination-bar');
+
+    // Apply filters
+    const filtered = allRecommendations.filter(r => {
         const matchLevel    = currentLevelTab    === 'all' || r.level == currentLevelTab;
         const matchSkill    = currentSkillTab    === 'all' || r.skill === currentSkillTab;
         const matchCategory = currentCategoryTab === 'all' || r.category === currentCategoryTab;
@@ -50,33 +55,103 @@ function renderRecommendations() {
         return matchLevel && matchSkill && matchCategory && matchStatus;
     });
 
-    if (recs.length === 0) {
+    if (filtered.length === 0) {
         showEmpty(container);
+        pagBar.style.display = 'none';
         return;
     }
 
+    // Clamp page
+    const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1)          currentPage = 1;
+
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const pageRecs = filtered.slice(start, start + PAGE_SIZE);
+
+    // Build DOM
     container.innerHTML = '';
 
     const countEl = document.createElement('p');
     countEl.className = 'results-count';
-    countEl.innerHTML = `Found <strong>${recs.length}</strong> question group${recs.length > 1 ? 's' : ''} ready to practice.`;
+    countEl.innerHTML = `Found <strong>${filtered.length}</strong> question group${filtered.length > 1 ? 's' : ''} ready to practice.`;
     container.appendChild(countEl);
 
     const grid = document.createElement('div');
     grid.className = 'rec-grid';
-    recs.forEach(rec => grid.appendChild(buildCard(rec)));
+    pageRecs.forEach(rec => grid.appendChild(buildCard(rec)));
     container.appendChild(grid);
 
-    // Removed coverage bar animation
-    
-    // Clear selections if they are no longer in the filtered list (optional, but good practice)
+    // Pagination bar
+    renderPagination(totalPages, filtered.length);
     updateMultiSelectUI();
 }
 
+// ── Pagination ─────────────────────────────────────────────────────────────
+function renderPagination(totalPages, totalItems) {
+    const bar = document.getElementById('pagination-bar');
+
+    if (totalPages <= 1) {
+        bar.style.display = 'none';
+        return;
+    }
+
+    bar.style.display = 'flex';
+    bar.innerHTML = '';
+
+    // Prev
+    const prev = document.createElement('button');
+    prev.className = 'page-btn' + (currentPage === 1 ? ' disabled' : '');
+    prev.disabled  = currentPage === 1;
+    prev.innerHTML = '<i class="fa-solid fa-chevron-left"></i>';
+    prev.addEventListener('click', () => { currentPage--; renderRecommendations(); window.scrollTo(0, 0); });
+    bar.appendChild(prev);
+
+    // Page number buttons (show max 7 with ellipsis)
+    const pages = getPageNumbers(currentPage, totalPages);
+    pages.forEach(p => {
+        if (p === '…') {
+            const dot = document.createElement('span');
+            dot.className = 'page-ellipsis';
+            dot.textContent = '…';
+            bar.appendChild(dot);
+        } else {
+            const btn = document.createElement('button');
+            btn.className = 'page-btn' + (p === currentPage ? ' active' : '');
+            btn.textContent = p;
+            btn.addEventListener('click', () => { currentPage = p; renderRecommendations(); window.scrollTo(0, 0); });
+            bar.appendChild(btn);
+        }
+    });
+
+    // Next
+    const next = document.createElement('button');
+    next.className = 'page-btn' + (currentPage === totalPages ? ' disabled' : '');
+    next.disabled  = currentPage === totalPages;
+    next.innerHTML = '<i class="fa-solid fa-chevron-right"></i>';
+    next.addEventListener('click', () => { currentPage++; renderRecommendations(); window.scrollTo(0, 0); });
+    bar.appendChild(next);
+
+    // Page info text
+    const info = document.createElement('span');
+    info.className = 'page-info';
+    const start = (currentPage - 1) * PAGE_SIZE + 1;
+    const end   = Math.min(currentPage * PAGE_SIZE, totalItems);
+    info.textContent = `${start}–${end} of ${totalItems}`;
+    bar.appendChild(info);
+}
+
+function getPageNumbers(current, total) {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    if (current <= 4) return [1, 2, 3, 4, 5, '…', total];
+    if (current >= total - 3) return [1, '…', total-4, total-3, total-2, total-1, total];
+    return [1, '…', current-1, current, current+1, '…', total];
+}
+
+// ── Multi-select ───────────────────────────────────────────────────────────
 function updateMultiSelectUI() {
-    const bar = document.getElementById('multi-select-bar');
+    const bar     = document.getElementById('multi-select-bar');
     const countEl = document.getElementById('multi-select-count');
-    
     if (selectedMultiItems.length > 0) {
         bar.classList.remove('hidden');
         countEl.textContent = `${selectedMultiItems.length} item${selectedMultiItems.length > 1 ? 's' : ''} selected`;
@@ -86,27 +161,22 @@ function updateMultiSelectUI() {
 }
 
 function toggleMultiSelect(checkbox, recJson) {
-    const rec = JSON.parse(decodeURIComponent(recJson));
+    const rec       = JSON.parse(decodeURIComponent(recJson));
     const isChecked = checkbox.checked;
-    
     if (isChecked) {
-        // Add if not already present
-        const exists = selectedMultiItems.some(i => 
-            i.level === rec.level && i.lesson === rec.lesson && 
+        const exists = selectedMultiItems.some(i =>
+            i.level === rec.level && i.lesson === rec.lesson &&
             i.progress === rec.progress && i.category === rec.category
         );
         if (!exists) {
             selectedMultiItems.push({
-                level: rec.level,
-                lesson: rec.lesson,
-                progress: rec.progress,
-                category: rec.category || 'practice'
+                level: rec.level, lesson: rec.lesson,
+                progress: rec.progress, category: rec.category || 'practice'
             });
         }
     } else {
-        // Remove
-        selectedMultiItems = selectedMultiItems.filter(i => 
-            !(i.level === rec.level && i.lesson === rec.lesson && 
+        selectedMultiItems = selectedMultiItems.filter(i =>
+            !(i.level === rec.level && i.lesson === rec.lesson &&
               i.progress === rec.progress && i.category === (rec.category || 'practice'))
         );
     }
@@ -120,8 +190,7 @@ function startMultiRecommend() {
     window.location.href = '/practice/multi';
 }
 
-
-
+// ── Card builder ───────────────────────────────────────────────────────────
 function progressLabel(progress) {
     if (!progress) return '—';
     if (progress.includes('-')) {
@@ -135,32 +204,28 @@ function buildCard(rec) {
     const card = document.createElement('div');
     card.className = 'rec-card';
 
-    const pct = rec.coverage_pct;
-    const barClass = pct >= 90 ? 'high' : pct >= 75 ? 'medium' : '';
-    const skillIcon = rec.skill === 'listening'
+    const pct           = rec.coverage_pct;
+    const barClass      = pct >= 90 ? 'high' : pct >= 75 ? 'medium' : '';
+    const skillIcon     = rec.skill === 'listening'
         ? '<i class="fa-solid fa-headphones-simple" aria-hidden="true"></i>'
         : '<i class="fa-solid fa-book-open" aria-hidden="true"></i>';
-    const skillLabel = rec.skill ? rec.skill.charAt(0).toUpperCase() + rec.skill.slice(1) : '';
-    const qCount = rec.questions ? rec.questions.length : 0;
+    const skillLabel    = rec.skill ? rec.skill.charAt(0).toUpperCase() + rec.skill.slice(1) : '';
+    const qCount        = rec.questions ? rec.questions.length : 0;
     const categoryLabel = rec.category === 'exam'
         ? '<i class="fa-solid fa-file-lines" aria-hidden="true"></i><span>Exam</span>'
         : '<i class="fa-solid fa-list-check" aria-hidden="true"></i><span>Practice</span>';
     const categoryClass = rec.category === 'exam' ? 'badge-exam' : 'badge-practice';
-    const recentWords = Array.isArray(rec.recent_matched_words) ? rec.recent_matched_words.slice(0, 6) : [];
-    const focusHtml = recentWords.length
+    const recentWords   = Array.isArray(rec.recent_matched_words) ? rec.recent_matched_words.slice(0, 6) : [];
+    const focusHtml     = recentWords.length
         ? `<div class="rec-new-focus">New focus: ${recentWords.map(escapeHtml).join(', ')}</div>`
         : '';
 
-    // Removed preview text
-
-    // Deep-link URL
     const startUrl = `/practice/${rec.level}/${rec.lesson}/${encodeURIComponent(rec.progress)}?category=${rec.category || 'practice'}`;
-    const recJson = encodeURIComponent(JSON.stringify({
+    const recJson  = encodeURIComponent(JSON.stringify({
         level: rec.level, lesson: rec.lesson, progress: rec.progress, category: rec.category
     }));
-    
-    const isSelected = selectedMultiItems.some(i => 
-        i.level === rec.level && i.lesson === rec.lesson && 
+    const isSelected = selectedMultiItems.some(i =>
+        i.level === rec.level && i.lesson === rec.lesson &&
         i.progress === rec.progress && i.category === (rec.category || 'practice')
     );
 
@@ -189,7 +254,9 @@ function buildCard(rec) {
     return card;
 }
 
+// ── State views ────────────────────────────────────────────────────────────
 function showNewUser(container) {
+    document.getElementById('pagination-bar').style.display = 'none';
     container.innerHTML = `
         <div class="state-box new-user-box">
             <div class="state-icon"><i class="fa-solid fa-seedling" aria-hidden="true"></i></div>
@@ -216,6 +283,7 @@ function showEmpty(container) {
 }
 
 function showError(container, msg) {
+    document.getElementById('pagination-bar').style.display = 'none';
     container.innerHTML = `
         <div class="state-box">
             <div class="state-icon"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i></div>
@@ -231,50 +299,24 @@ function escapeHtml(str) {
     return div.innerHTML;
 }
 
-// Navigate from recommend — sets referrer for context-aware Back button
 function startFromRecommend(url) {
     sessionStorage.setItem('practice_referrer', 'recommend');
     window.location.href = url;
 }
 
-// Setup Tabs — Level
-document.querySelectorAll('.tab-btn:not(.skill-btn):not(.category-btn):not(.status-btn)').forEach(btn => {
-    btn.addEventListener('click', () => {
-        document.querySelectorAll('.tab-btn:not(.skill-btn):not(.category-btn):not(.status-btn)').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentLevelTab = btn.dataset.level;
-        if (allRecommendations.length > 0) renderRecommendations();
-    });
-});
+// ── Dropdown filter wiring ─────────────────────────────────────────────────
+function onFilterChange() {
+    currentLevelTab    = document.getElementById('filter-level').value;
+    currentSkillTab    = document.getElementById('filter-skill').value;
+    currentCategoryTab = document.getElementById('filter-category').value;
+    currentStatusTab   = document.getElementById('filter-status').value;
+    currentPage = 1; // reset to first page on any filter change
+    if (allRecommendations.length > 0) renderRecommendations();
+}
 
-// Setup Tabs — Skill
-document.querySelectorAll('.skill-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        document.querySelectorAll('.skill-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentSkillTab = btn.dataset.skill;
-        if (allRecommendations.length > 0) renderRecommendations();
-    });
-});
-
-// Setup Tabs — Category
-document.querySelectorAll('.category-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentCategoryTab = btn.dataset.category;
-        if (allRecommendations.length > 0) renderRecommendations();
-    });
-});
-
-// Setup Tabs — Status
-document.querySelectorAll('.status-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentStatusTab = btn.dataset.status;
-        if (allRecommendations.length > 0) renderRecommendations();
-    });
-});
+document.getElementById('filter-level').addEventListener('change', onFilterChange);
+document.getElementById('filter-skill').addEventListener('change', onFilterChange);
+document.getElementById('filter-category').addEventListener('change', onFilterChange);
+document.getElementById('filter-status').addEventListener('change', onFilterChange);
 
 fetchRecommendations();
