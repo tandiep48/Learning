@@ -32,10 +32,10 @@ function setTableMode(mode) {
     currentPassageId = null;
     groupedPassages = {};
 
-    document.getElementById('mode-standard-btn')?.classList.toggle('active', mode === 'standard');
-    document.getElementById('mode-free-btn')?.classList.toggle('active', mode === 'free');
-    document.getElementById('mode-unsure-btn')?.classList.toggle('active', mode === 'unsure');
-    document.getElementById('mode-unlearn-btn')?.classList.toggle('active', mode === 'unlearn');
+    // Sync dropdown
+    const modeSelect = document.getElementById('mode-select');
+    if (modeSelect && modeSelect.value !== mode) modeSelect.value = mode;
+
     document.querySelectorAll('.hsk-filter').forEach(el => {
         el.style.display = isHistoryMode() ? 'none' : '';
     });
@@ -347,9 +347,10 @@ function updatePageCheckbox() {
 
 function updateSelectionUI() {
     const count = selectedWords.size;
-    document.getElementById('selection-count').textContent = `${count} selected`;
-    document.getElementById('btn-start-selected').disabled = count === 0;
-    document.getElementById('btn-flashcards').disabled = count === 0;
+    const startBtn = document.getElementById('btn-start-selected');
+    const flashBtn = document.getElementById('btn-flashcards');
+    if (startBtn) startBtn.disabled = count === 0;
+    if (flashBtn) flashBtn.disabled = count === 0;
 }
 
 function clearSelection() {
