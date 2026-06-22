@@ -18,47 +18,60 @@
                 <i class="fa-solid fa-compass" aria-hidden="true"></i>
                 <span>Recommended Lessons</span>
             </h1>
-            <p class="page-subtitle">Practice lessons matched to the vocabulary you've already mastered.</p>
         </div>
 
-        <div class="tabs-group">
-            <div class="tabs-container">
-                <span class="tab-label">Level:</span>
-                <button class="tab-btn active" data-level="all">All</button>
-                <button class="tab-btn" data-level="1">HSK 1</button>
-                <button class="tab-btn" data-level="2">HSK 2</button>
-                <button class="tab-btn" data-level="3">HSK 3</button>
-                <button class="tab-btn" data-level="4">HSK 4</button>
-                <button class="tab-btn" data-level="5">HSK 5</button>
-                <button class="tab-btn" data-level="6">HSK 6</button>
-            </div>
-            
-            <div class="tabs-container">
-                <span class="tab-label">Skill:</span>
-                <button class="tab-btn skill-btn active" data-skill="all">All</button>
-                <button class="tab-btn skill-btn" data-skill="listening">Listening</button>
-                <button class="tab-btn skill-btn" data-skill="reading">Reading</button>
+        <div class="filters-bar">
+            <div class="filter-group">
+                <label class="filter-label" for="filter-level">Level</label>
+                <div class="select-wrapper">
+                    <select id="filter-level" class="filter-select">
+                        <option value="all">All Levels</option>
+                        <option value="1">HSK 1</option>
+                        <option value="2">HSK 2</option>
+                        <option value="3">HSK 3</option>
+                        <option value="4">HSK 4</option>
+                        <option value="5">HSK 5</option>
+                        <option value="6">HSK 6</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down select-icon" aria-hidden="true"></i>
+                </div>
             </div>
 
-            <div class="tabs-container">
-                <span class="tab-label">Category:</span>
-                <button class="tab-btn category-btn active" data-category="all">All</button>
-                <button class="tab-btn category-btn" data-category="practice">
-                    <i class="fa-solid fa-list-check" aria-hidden="true"></i>
-                    <span>Practice</span>
-                </button>
-                <button class="tab-btn category-btn" data-category="exam">
-                    <i class="fa-solid fa-file-lines" aria-hidden="true"></i>
-                    <span>Exam</span>
-                </button>
+            <div class="filter-group">
+                <label class="filter-label" for="filter-skill">Skill</label>
+                <div class="select-wrapper">
+                    <select id="filter-skill" class="filter-select">
+                        <option value="all">All Skills</option>
+                        <option value="listening">Listening</option>
+                        <option value="reading">Reading</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down select-icon" aria-hidden="true"></i>
+                </div>
             </div>
 
-            <div class="tabs-container">
-                <span class="tab-label">Status:</span>
-                <button class="tab-btn status-btn active" data-status="all">All</button>
-                <button class="tab-btn status-btn" data-status="Not start">Not start</button>
-                <button class="tab-btn status-btn" data-status="Finish and success">Finish and success</button>
-                <button class="tab-btn status-btn" data-status="Finish and fail">Finish and fail</button>
+            <div class="filter-group">
+                <label class="filter-label" for="filter-category">Category</label>
+                <div class="select-wrapper">
+                    <select id="filter-category" class="filter-select">
+                        <option value="all">All Categories</option>
+                        <option value="practice">Practice</option>
+                        <option value="exam">Exam</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down select-icon" aria-hidden="true"></i>
+                </div>
+            </div>
+
+            <div class="filter-group">
+                <label class="filter-label" for="filter-status">Status</label>
+                <div class="select-wrapper">
+                    <select id="filter-status" class="filter-select">
+                        <option value="all">All Statuses</option>
+                        <option value="Not start">Not start</option>
+                        <option value="Finish and success">Finish and success</option>
+                        <option value="Finish and fail">Finish and fail</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down select-icon" aria-hidden="true"></i>
+                </div>
             </div>
         </div>
 
@@ -72,6 +85,9 @@
                 <div class="state-sub">Analysing your vocabulary progress.</div>
             </div>
         </div>
+
+        <!-- Pagination -->
+        <div id="pagination-bar" class="pagination-bar" style="display:none;"></div>
     </div>
 
     <!-- Sticky Multi-select Bar -->

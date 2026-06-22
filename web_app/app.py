@@ -158,4 +158,5 @@ def serve_lesson_audio(filename):
 
 if __name__ == '__main__':
     debug_mode = os.getenv('FLASK_DEBUG', '').lower() in ('1', 'true', 'yes', 'on')
-    socketio.run(app, debug=debug_mode, port=5000, use_reloader=False, allow_unsafe_werkzeug=True)
+    port = int(os.getenv('PORT', 5000))
+    socketio.run(app, debug=debug_mode, port=port, use_reloader=False, allow_unsafe_werkzeug=True)

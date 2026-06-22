@@ -3,7 +3,7 @@ const Picker = {
     groupedPassages: {},
     onPassageSelected: null,
     progressSummary: null,
-    
+
     init(onPassageSelectedCallback, titlePrefix = "Select HSK Level", autoShow = true) {
         this.onPassageSelected = onPassageSelectedCallback;
         const mainTitle = document.getElementById('picker-main-title');
@@ -40,7 +40,7 @@ const Picker = {
             const res = await fetch(url);
             const data = await res.json();
             this.progressSummary = await this.loadPickerProgress(hskLevel);
-            
+
             // Group passages by lesson
             this.groupedPassages = {};
             data.passages.forEach(p => {
@@ -74,7 +74,7 @@ const Picker = {
     renderLessons() {
         const container = document.getElementById('picker-lesson-list');
         container.innerHTML = '';
-        
+
         // Sort lessons numerically if possible
         const lessons = Object.keys(this.groupedPassages).sort((a, b) => {
             if (a === 'Other') return 1;
@@ -92,17 +92,17 @@ const Picker = {
         lessons.forEach(lessonNum => {
             const card = document.createElement('div');
             card.className = 'lesson-card';
-            
+
             const count = this.groupedPassages[lessonNum].length;
             const prefix = lessonNum === 'Other' ? '' : 'Lesson ';
             const progress = this.progressSummary?.lessons?.[lessonNum];
-            const progressHtml = progress ? `
-                <div class="picker-progress-lines">
-                    <div>Word Learned: ${progress.learned_words}/${progress.total_words}</div>
-                    <div>Lesson Learned: ${progress.lesson_learned}/${progress.lesson_total}</div>
-                </div>
-            ` : '';
-            
+            const progressHtml = progress
+                ? `<div class="picker-progress-lines">
+                    ${this._progressBar(progress.learned_words, progress.total_words, 'Words')}
+                    ${this._progressBar(progress.lesson_learned, progress.lesson_total, 'Lesson')}
+                   </div>`
+                : '';
+
             card.innerHTML = `
                 <div class="lesson-card-left">
                     <div class="lesson-card-title">${this.escapeHtml(prefix + lessonNum)}</div>
@@ -110,7 +110,7 @@ const Picker = {
                 </div>
                 <div class="lesson-card-count">${count} part${count !== 1 ? 's' : ''}</div>
             `;
-            
+
             card.addEventListener('click', () => {
                 this.showPartPicker(lessonNum);
             });
@@ -122,40 +122,35 @@ const Picker = {
         const prefix = lessonNum === 'Other' ? 'Other Passages' : `Lesson ${lessonNum}`;
         document.getElementById('picker-part-title').innerText = `${this.currentHskLevel} — ${prefix}`;
         this.switchScreen('picker-screen-part');
-        
+
         const container = document.getElementById('picker-part-list');
         container.innerHTML = '';
-        
+
         const parts = this.groupedPassages[lessonNum] || [];
-        
+
         parts.forEach(p => {
             // e.g. H1_10_3 => Part 3
             const pParts = p.passage_id.split('_');
             const partName = pParts.length >= 3 ? `Part ${pParts[2]}` : p.passage_id;
-            
+
             const btn = document.createElement('div');
-            btn.className = 'dash-card';
-            btn.style.padding = '15px';
-            btn.style.cursor = 'pointer';
-            btn.style.textAlign = 'center';
-            btn.style.display = 'flex';
-            btn.style.alignItems = 'center';
-            btn.style.justifyContent = 'center';
-            btn.style.flexDirection = 'column';
-            btn.style.gap = '8px';
+            btn.className = 'lesson-card';
+
             const progress = this.progressSummary?.parts?.[p.passage_id];
-            const progressHtml = progress ? `
-                <div class="picker-progress-lines picker-progress-lines-centered">
-                    <div>Word Learned: ${progress.learned_words}/${progress.total_words}</div>
-                    <div>Lesson Learned: ${progress.lesson_learned}/${progress.lesson_total}</div>
-                </div>
-            ` : '';
-            
+            const progressHtml = progress
+                ? `<div class="picker-progress-lines">
+                    ${this._progressBar(progress.learned_words, progress.total_words, 'Words')}
+                    ${this._progressBar(progress.lesson_learned, progress.lesson_total, 'Lesson')}
+                   </div>`
+                : '';
+
             btn.innerHTML = `
-                <div class="dash-title" style="margin:0;">${this.escapeHtml(partName)}</div>
-                ${progressHtml}
+                <div class="lesson-card-left">
+                    <div class="lesson-card-title">${this.escapeHtml(partName)}</div>
+                    ${progressHtml}
+                </div>
             `;
-            
+
             btn.addEventListener('click', () => {
                 this.hide();
                 if (this.onPassageSelected) {
@@ -164,6 +159,24 @@ const Picker = {
             });
             container.appendChild(btn);
         });
+    },
+
+    // Returns a coloured progress bar HTML string.
+    // ≤25% → red, 26–50% → yellow, ≥51% → green
+    _progressBar(done, total, label) {
+        if (!total || total === 0) return '';
+        const pct = Math.max(0, Math.min(100, Math.round((done / total) * 100)));
+        let colorClass;
+        if (pct <= 25) colorClass = 'pct-red';
+        else if (pct <= 50) colorClass = 'pct-yellow';
+        else colorClass = 'pct-green';
+        return `<div class="picker-progress-row">
+            <span class="picker-progress-label">${label}</span>
+            <div class="picker-progress-track ${colorClass}" role="progressbar" aria-label="${label} progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}">
+                <span class="picker-progress-fill" style="width:${pct}%"></span>
+            </div>
+            <span class="picker-progress-pct">${pct}%</span>
+        </div>`;
     },
 
     escapeHtml(value) {

@@ -20,11 +20,35 @@
 
             <div class="vocab-content-card">
                 <div class="vocab-table-header">
-                    <div class="vocab-mode-toggle" aria-label="Learning mode">
-                        <button id="mode-free-btn" class="mode-toggle-btn" onclick="setTableMode('free')">Free</button>
-                        <button id="mode-standard-btn" class="mode-toggle-btn active" onclick="setTableMode('standard')">Standard</button>
-                        <button id="mode-unsure-btn" class="mode-toggle-btn" onclick="setTableMode('unsure')">Unsure</button>
-                        <button id="mode-unlearn-btn" class="mode-toggle-btn" onclick="setTableMode('unlearn')">Unlearn</button>
+                    <div class="vocab-mode-select-wrap">
+                        <label for="mode-select" class="vocab-mode-label">Mode</label>
+                        <select id="mode-select" class="vocab-mode-select" onchange="setTableMode(this.value)">
+                            <option value="free">Free</option>
+                            <option value="standard" selected>Standard</option>
+                            <option value="unsure">Unsure</option>
+                            <option value="unlearn">Unlearn</option>
+                        </select>
+                    </div>
+                    <div class="vocab-action-buttons">
+                        <button class="btn action-outline" onclick="clearSelection()">Clear Selection</button>
+                        <button id="btn-flashcards" class="btn action-secondary" onclick="openSelectedFlashcards()" disabled>Flash Cards</button>
+                        <button id="btn-start-selected" class="btn action-primary" onclick="startSelectedTraining()" disabled>Start Training</button>
+                    </div>
+                </div>
+
+                <div class="vocab-search-row">
+                    <div class="vocab-search-wrap">
+                        <i class="fa-regular fa-magnifying-glass vocab-search-icon" aria-hidden="true"></i>
+                        <input
+                            type="text"
+                            id="vocab-search-input"
+                            class="vocab-search-input"
+                            placeholder="Search by character, pinyin or meaning…"
+                            oninput="handleSearchInput()"
+                            autocomplete="off"
+                            spellcheck="false"
+                        >
+                        <button class="vocab-search-clear" id="vocab-search-clear" onclick="clearSearch()" style="display:none;" aria-label="Clear search">&#x2715;</button>
                     </div>
                 </div>
 
@@ -60,15 +84,6 @@
                             <option value="20" selected>20</option>
                             <option value="50">50</option>
                         </select>
-                    </div>
-                </div>
-
-                <div class="vocab-action-bar">
-                    <div id="selection-count" class="selection-count">0 selected</div>
-                    <div class="vocab-action-buttons">
-                        <button class="btn action-outline" onclick="clearSelection()">Clear Selection</button>
-                        <button id="btn-flashcards" class="btn action-secondary" onclick="openSelectedFlashcards()" disabled>Flash Cards</button>
-                        <button id="btn-start-selected" class="btn action-primary" onclick="startSelectedTraining()" disabled>Start Training</button>
                     </div>
                 </div>
 

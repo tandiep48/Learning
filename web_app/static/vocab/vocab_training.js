@@ -5,6 +5,14 @@ let taskStartTime = 0;
 let currentTrainingPassageId = null;
 let isLessonPartFlow = false;
 
+// ── Speaking state ───────────────────────────────────────────────────────────
+let speakingRecorder = null;
+let speakingStream = null;
+let speakingChunks = [];
+let speakingTimer = null;
+let speakingAttemptId = 0;
+const SPEAKING_MAX_MS = 10000;
+
 document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
     isLessonPartFlow = params.get('flow') === 'lesson-part';
@@ -42,6 +50,7 @@ function switchScreen(screenId) {
 }
 
 function goHome() {
+    resetSpeakingTask(true);
     if (currentTrainingPassageId) {
         window.location.href = `/learning?passage_id=${encodeURIComponent(currentTrainingPassageId)}`;
         return;
@@ -91,6 +100,9 @@ function loadTask() {
         return;
     }
 
+    // Reset speaking state between tasks
+    resetSpeakingTask(false);
+
     switchScreen('screen-training');
     const task = sessionData.tasks[currentTaskIndex];
     const total = sessionData.tasks.length;
@@ -101,12 +113,17 @@ function loadTask() {
     document.getElementById('audio-controls').style.display = 'none';
     document.getElementById('mc-area').style.display = 'none';
     document.getElementById('typing-area').style.display = 'none';
+    document.getElementById('speaking-area').style.display = 'none';
     document.getElementById('typing-input').value = '';
 
     const mcFeedback = document.getElementById('mc-feedback');
     if (mcFeedback) { mcFeedback.style.display = 'none'; mcFeedback.innerHTML = ''; }
     const typingFeedback = document.getElementById('typing-feedback');
     if (typingFeedback) { typingFeedback.style.display = 'none'; typingFeedback.innerHTML = ''; }
+
+    // Show/hide skip button (always visible during training)
+    const skipBtn = document.getElementById('btn-skip-task');
+    if (skipBtn) skipBtn.style.display = '';
 
     const instructionEl = document.getElementById('task-instruction');
     const audioEl = document.getElementById('audio-player');
@@ -131,6 +148,14 @@ function loadTask() {
         document.getElementById('word-display').innerText = task.word;
         document.getElementById('word-display').style.display = 'block';
         setupMultipleChoice(task);
+    } else if (task.type === "speaking") {
+        instructionEl.innerText = 'Read and pronounce this word:';
+        document.getElementById('speaking-prompt').textContent = task.word || '';
+        document.getElementById('speaking-word-reveal').style.display = 'none';
+        document.getElementById('speaking-reveal-hanzi').textContent = '';
+        document.getElementById('speaking-reveal-pinyin').textContent = '';
+        setSpeakingTaskStatus('');
+        document.getElementById('speaking-area').style.display = 'flex';
     }
 }
 
@@ -188,6 +213,10 @@ async function checkAnswer(task, userAnswer, correctAnswer, element) {
     allBtns.forEach(b => b.disabled = true);
     const typingInput = document.getElementById('typing-input');
     if (typingInput) typingInput.disabled = true;
+
+    // Hide skip while answering
+    const skipBtn = document.getElementById('btn-skip-task');
+    if (skipBtn) skipBtn.style.display = 'none';
 
     const gameInfo = { pinyin: task.pinyin, meaning_en: task.meaning_en };
     if (task.options) gameInfo.options = task.options;
@@ -253,7 +282,228 @@ function nextTask() {
     loadTask();
 }
 
-// ── Finish & Success Popup ─────────────────────────────────────
+// ── Skip ─────────────────────────────────────────────────────────────────────
+
+function skipTask() {
+    const task = sessionData?.tasks[currentTaskIndex];
+    if (!task) return;
+
+    const responseTime = Date.now() - taskStartTime;
+
+    // Always log skip as is_correct=false to vocab_records
+    fetch('/api/vocab/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            session_id: sessionData.session_id,
+            type: task.type,
+            word: task.word,
+            round_num: sessionData.is_retry ? 2 : 1,
+            user_answer: '',
+            is_correct: false,
+            response_time_ms: responseTime,
+            game_info: { pinyin: task.pinyin, meaning_en: task.meaning_en, skipped: true }
+        })
+    }).catch(e => console.error('DB skip log failed', e));
+
+    // Mark as missed for non-speaking tasks (they show in retry list)
+    if (task.type !== 'speaking') {
+        missedTasks.push(task);
+    }
+
+    // Reset speaking state if we're skipping mid-recording
+    if (task.type === 'speaking') {
+        resetSpeakingTask(true);
+    }
+
+    nextTask();
+}
+
+// ── Speaking Task ─────────────────────────────────────────────────────────────
+
+function getSupportedMimeType() {
+    const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/ogg'];
+    return types.find(t => MediaRecorder.isTypeSupported(t)) || '';
+}
+
+function setSpeakingTaskStatus(msg, isError = false) {
+    const el = document.getElementById('speaking-task-status');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.color = isError ? 'var(--danger)' : 'var(--text-muted)';
+}
+
+function setSpeakTaskBtnState(state) {
+    const btn = document.getElementById('btn-speak-task');
+    const label = document.getElementById('speak-task-label');
+    if (!btn || !label) return;
+    btn.classList.toggle('recording', state === 'recording');
+    btn.disabled = (state === 'scoring');
+    if (state === 'recording') {
+        label.textContent = 'Stop';
+    } else if (state === 'scoring') {
+        label.textContent = 'Scoring...';
+    } else {
+        label.textContent = 'Speak';
+    }
+}
+
+async function toggleSpeakingTask() {
+    if (speakingRecorder && speakingRecorder.state === 'recording') {
+        stopSpeakingTask();
+        return;
+    }
+    await startSpeakingTask();
+}
+
+async function startSpeakingTask() {
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+        setSpeakingTaskStatus('Your browser does not support audio recording.', true);
+        return;
+    }
+
+    speakingAttemptId++;
+    speakingChunks = [];
+    setSpeakingTaskStatus('Recording... say the word clearly.');
+    setSpeakTaskBtnState('recording');
+
+    try {
+        speakingStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mimeType = getSupportedMimeType();
+        speakingRecorder = mimeType
+            ? new MediaRecorder(speakingStream, { mimeType })
+            : new MediaRecorder(speakingStream);
+
+        speakingRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) speakingChunks.push(e.data);
+        };
+
+        const capturedAttemptId = speakingAttemptId;
+        const capturedMime = mimeType;
+        speakingRecorder.onstop = () => submitSpeakingTask(capturedAttemptId, capturedMime);
+
+        speakingRecorder.start();
+        speakingTimer = setTimeout(stopSpeakingTask, SPEAKING_MAX_MS);
+    } catch (e) {
+        console.error(e);
+        resetSpeakingTask(false);
+        setSpeakingTaskStatus('Microphone access denied. Please allow microphone and try again.', true);
+    }
+}
+
+function stopSpeakingTask() {
+    if (speakingTimer) { clearTimeout(speakingTimer); speakingTimer = null; }
+    if (speakingRecorder && speakingRecorder.state === 'recording') {
+        setSpeakTaskBtnState('scoring');
+        setSpeakingTaskStatus('Processing...');
+        speakingRecorder.stop();
+    }
+    if (speakingStream) {
+        speakingStream.getTracks().forEach(t => t.stop());
+        speakingStream = null;
+    }
+}
+
+async function submitSpeakingTask(attemptId, mimeType) {
+    if (attemptId !== speakingAttemptId) return;
+    if (!speakingChunks.length) {
+        setSpeakTaskBtnState('idle');
+        setSpeakingTaskStatus('No audio was recorded. Please try again.', true);
+        return;
+    }
+
+    const task = sessionData.tasks[currentTaskIndex];
+    const responseTime = Date.now() - taskStartTime;
+    const blobType = mimeType || speakingChunks[0]?.type || 'audio/webm';
+    const extension = blobType.includes('ogg') ? 'ogg' : 'webm';
+    const blob = new Blob(speakingChunks, { type: blobType });
+    const formData = new FormData();
+    formData.append('word', task.word);
+    formData.append('audio', blob, `speaking-${Date.now()}.${extension}`);
+
+    try {
+        const response = await fetch('/api/vocab/speaking/score', { method: 'POST', body: formData });
+        const data = await response.json();
+
+        if (attemptId !== speakingAttemptId) return;
+        setSpeakTaskBtnState('idle');
+
+        const isCorrect = !response.ok ? false : (data.is_correct || false);
+
+        // Log result to vocab_records
+        fetch('/api/vocab/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                session_id: sessionData.session_id,
+                type: 'speaking',
+                word: task.word,
+                round_num: sessionData.is_retry ? 2 : 1,
+                user_answer: data.recognized_text || '',
+                is_correct: isCorrect,
+                response_time_ms: responseTime,
+                game_info: { pinyin: task.pinyin, score: data.score }
+            })
+        }).catch(e => console.error('DB speaking log failed', e));
+
+        // Reveal Hanzi + pinyin regardless of result
+        revealSpeakingWord(task, isCorrect, data);
+
+    } catch (e) {
+        console.error(e);
+        if (attemptId !== speakingAttemptId) return;
+        setSpeakTaskBtnState('idle');
+        setSpeakingTaskStatus('Could not score recording. Please try again.', true);
+    }
+}
+
+function revealSpeakingWord(task, isCorrect, data) {
+    // Show pinyin + meaning (Hanzi is already visible as the prompt)
+    document.getElementById('speaking-reveal-hanzi').textContent = task.pinyin || '';
+    document.getElementById('speaking-reveal-pinyin').textContent = task.meaning_vn || task.meaning_en || '';
+    document.getElementById('speaking-word-reveal').style.display = 'flex';
+
+    const statusMsg = isCorrect ? '✓ Great pronunciation!' : '✗ Try again next time';
+    setSpeakingTaskStatus(statusMsg, !isCorrect);
+
+    // Hide speak button
+    const speakBtn = document.getElementById('btn-speak-task');
+    if (speakBtn) speakBtn.style.display = 'none';
+
+    // Hide skip button
+    const skipBtn = document.getElementById('btn-skip-task');
+    if (skipBtn) skipBtn.style.display = 'none';
+
+    // Play audio
+    const audioEl = document.getElementById('audio-player');
+    if (task.audio_key && audioEl.src) {
+        audioEl.play().catch(() => {});
+    }
+
+    // Auto-advance after 2.5s
+    setTimeout(() => {
+        if (speakBtn) speakBtn.style.display = '';
+        nextTask();
+    }, 2500);
+}
+
+function resetSpeakingTask(stopActive) {
+    speakingAttemptId++;
+    if (speakingTimer) { clearTimeout(speakingTimer); speakingTimer = null; }
+    if (stopActive && speakingRecorder && speakingRecorder.state === 'recording') {
+        speakingRecorder.onstop = null;
+        speakingRecorder.stop();
+    }
+    if (speakingStream) {
+        speakingStream.getTracks().forEach(t => t.stop());
+        speakingStream = null;
+    }
+    speakingRecorder = null;
+    speakingChunks = [];
+    setSpeakTaskBtnState('idle');
+}
+
+// ── Finish & Success Popup ─────────────────────────────────────────────────
 function finishRound() {
     const total   = sessionData.tasks.length;
     const missed  = missedTasks.length;

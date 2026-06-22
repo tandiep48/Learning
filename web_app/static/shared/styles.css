@@ -484,7 +484,7 @@ body.with-site-nav > .vl-container {
 
 .site-nav a,
 .site-auth a {
-    color: var(--text-muted);
+    color: #ffffff;
     text-decoration: none;
     font-weight: 700;
     font-size: 0.92rem;
@@ -495,15 +495,15 @@ body.with-site-nav > .vl-container {
 
 .site-nav a:hover,
 .site-auth a:hover {
-    color: var(--text-main);
-    background: rgba(87, 104, 86, 0.08);
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.12);
 }
 
 .site-auth {
     display: flex;
     align-items: center;
     gap: 8px;
-    color: var(--text-muted);
+    color: #ffffff;
     white-space: nowrap;
 }
 

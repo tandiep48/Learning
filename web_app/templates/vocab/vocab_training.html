@@ -41,10 +41,32 @@
                     <div id="typing-feedback" class="task-feedback" style="display:none;"></div>
                     <button id="typing-submit-btn" class="btn primary" onclick="submitTyping()">Submit</button>
                 </div>
+
+                <!-- Speaking task area -->
+                <div id="speaking-area" style="display:none;">
+                    <div id="speaking-prompt" class="speaking-prompt"></div>
+                    <button id="btn-speak-task" class="btn-speak-task" onclick="toggleSpeakingTask()">
+                        <i class="fa-solid fa-microphone" aria-hidden="true"></i>
+                        <span id="speak-task-label">Speak</span>
+                    </button>
+                    <div id="speaking-task-status" class="speaking-task-status"></div>
+                    <!-- Revealed after answer (right or wrong) -->
+                    <div id="speaking-word-reveal" class="speaking-word-reveal" style="display:none;">
+                        <div id="speaking-reveal-hanzi" class="speaking-reveal-hanzi"></div>
+                        <div id="speaking-reveal-pinyin" class="speaking-reveal-pinyin"></div>
+                    </div>
+                </div>
             </div>
 
             <div class="nav-buttons end-session">
                 <button class="btn secondary" onclick="confirmQuit()">Quit Session</button>
+            </div>
+
+            <!-- Floating skip button -->
+            <div class="skip-float-wrap">
+                <button id="btn-skip-task" class="skip-float-btn" onclick="skipTask()">
+                    Skip <i class="fa-solid fa-forward-step" aria-hidden="true"></i>
+                </button>
             </div>
         </div>
 
