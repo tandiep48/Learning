@@ -2,6 +2,39 @@
 
 /* Training page entry point. Page-specific trainer styles can now live here. */
 
+.trainer-topbar {
+    display: flex;
+    justify-content: flex-start;
+    width: 100%;
+    margin-bottom: 16px;
+}
+
+.trainer-quit-btn {
+    width: auto;
+}
+
+.trainer-task-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    margin-top: 18px;
+}
+
+.trainer-task-actions > button {
+    flex: 1 1 0;
+    justify-content: center;
+    min-width: 0;
+    width: 100%;
+}
+
+@media (max-width: 520px) {
+    .trainer-task-actions {
+        flex-direction: column;
+    }
+}
+
 .task-feedback {
     margin-top: 15px;
     text-align: center;
