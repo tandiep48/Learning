@@ -11,6 +11,8 @@ from routes.practice_routes import practice_bp
 from routes.competition_routes import competition_bp
 from routes.auth_routes import auth_bp, get_user_by_id
 from routes.user_routes import user_bp
+from routes.vocab_crud_routes import vocab_crud_bp
+from routes.passage_crud_routes import passage_crud_bp
 from competition_socket import init_competition_socket
 
 load_dotenv()
@@ -36,6 +38,8 @@ app.register_blueprint(practice_bp)
 app.register_blueprint(competition_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(user_bp)
+app.register_blueprint(vocab_crud_bp)
+app.register_blueprint(passage_crud_bp)
 init_competition_socket(socketio)
 
 GCS_BUCKET_URL = os.getenv('GCS_BUCKET_URL', '')
@@ -153,12 +157,13 @@ def serve_audio(filename):
 def serve_lesson_audio(filename):
     return redirect(f"{GCS_BUCKET_URL}/lesson_audio/{filename}")
 
-LESSON_IMAGES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'images', 'lessons')
-
 @app.route('/lesson-image/<hsk>/<filename>')
 def serve_lesson_image(hsk, filename):
-    hsk_dir = os.path.join(LESSON_IMAGES_DIR, hsk.upper())
-    return send_from_directory(hsk_dir, filename)
+    # Convert formats like 'h1-lesson-2.png' to 'H1-lesson 2.png'
+    formatted_filename = filename.lower().replace('-lesson-', '-lesson ')
+    if formatted_filename.startswith(hsk.lower()):
+        formatted_filename = hsk.upper() + formatted_filename[len(hsk):]
+    return redirect(f"{GCS_BUCKET_URL}/lesson_images/{hsk.upper()}/{formatted_filename}")
 
 if __name__ == '__main__':
     debug_mode = os.getenv('FLASK_DEBUG', '').lower() in ('1', 'true', 'yes', 'on')
