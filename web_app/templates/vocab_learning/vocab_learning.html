@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vocab Learning - {{ hsk_level }}</title>
     <link rel="stylesheet" href="/static/shared/styles.css">
-    <link rel="stylesheet" href="/static/shared/vocab_table.css?v=7">
-    <link rel="stylesheet" href="/static/shared/passage_picker.css?v=2">
+    <link rel="stylesheet" href="/static/shared/vocab_table.css?v=8">
+    <link rel="stylesheet" href="/static/shared/passage_picker.css?v=3">
     <link rel="stylesheet" href="/static/vocab_learning/vocab_learning.css?v=8">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
@@ -70,6 +70,10 @@
                 <button class="vl-train-btn" onclick="showVocabSummary()">
                     <i class="fa-solid fa-table-list" aria-hidden="true"></i>
                     <span>Summary</span>
+                </button>
+                <button class="vl-train-btn" onclick="shuffleLearningWords()" title="Shuffle words">
+                    <i class="fa-solid fa-shuffle" aria-hidden="true"></i>
+                    <span>Shuffle</span>
                 </button>
                 <button id="btn-next" class="vl-nav-btn" onclick="nextWord()" title="Next">Next &rarr;</button>
             </div>
@@ -143,6 +147,6 @@
     </div>
 
     <script src="/static/shared/passage_picker.js?v=7"></script>
-    <script src="/static/vocab_learning/vocab_learning.js?v=7"></script>
+    <script src="/static/vocab_learning/vocab_learning.js?v=10"></script>
 </body>
 </html>

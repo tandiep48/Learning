@@ -10,6 +10,11 @@ let tableAudio = null;
 let isPlayingTableAudio = false;
 let allRowsHidden = false;
 let hiddenRows = new Set();
+let hiddenCells = new Set();
+let hiddenColumns = new Set();
+let revealedColumnCells = new Set();
+let activeTableAudioButton = null;
+let activeAudioRevealRow = null;
 
 let searchMode = false;
 let searchDebounceTimer = null;
@@ -21,7 +26,10 @@ document.addEventListener('DOMContentLoaded', () => {
 function initTableTrainer() {
     const pageSizeEl = document.getElementById('filter-page-size');
     if (pageSizeEl) pageSize = Number(pageSizeEl.value) || 20;
-    setTableMode('standard');
+    const params = new URLSearchParams(window.location.search);
+    const requestedMode = params.get('mode');
+    const allowedModes = new Set(['standard', 'free', 'unsure', 'unlearn', 'recent']);
+    setTableMode(allowedModes.has(requestedMode) ? requestedMode : 'standard');
     updateSelectionUI();
 }
 
@@ -54,7 +62,7 @@ function setTableMode(mode) {
 }
 
 function isHistoryMode() {
-    return tableMode === 'unsure' || tableMode === 'unlearn';
+    return tableMode === 'unsure' || tableMode === 'unlearn' || tableMode === 'recent';
 }
 
 function resetSelect(id, label, disabled = false) {
@@ -188,7 +196,10 @@ async function loadVocabTable() {
     }
 
     try {
-        const res = await fetch(`/api/vocab/table?${params.toString()}`);
+        const url = tableMode === 'recent'
+            ? `/api/user/learned-vocab?page=${encodeURIComponent(currentPage)}&page_size=${encodeURIComponent(pageSize)}`
+            : `/api/vocab/table?${params.toString()}`;
+        const res = await fetch(url);
         const data = await res.json();
         if (!res.ok || data.error) {
             clearTable(data.error || 'Failed to load vocabulary.');
@@ -238,7 +249,8 @@ function renderVocabTable(rows) {
     const table = document.createElement('table');
     table.className = 'vocab-table';
     table.id = 'trainer-vocab-table';
-    table.classList.toggle('all-vocab-hidden', allRowsHidden);
+    syncAllRowsHiddenState();
+    ['cn', 'py', 'vn'].forEach(col => table.classList.toggle(`hide-${col}`, hiddenColumns.has(col)));
     table.innerHTML = `
         <thead>
             <tr>
@@ -246,19 +258,16 @@ function renderVocabTable(rows) {
                     <input type="checkbox" id="select-page-checkbox" onchange="togglePageSelection(this.checked)" title="Select visible rows">
                 </th>
                 <th class="vocab-tools-col">
-                    <button class="vocab-header-icon-btn" onclick="event.stopPropagation(); playAllTableAudio()" title="Play all visible" aria-label="Play all visible">
+                    <button class="vocab-header-icon-btn" id="table-play-all-btn" onclick="event.stopPropagation(); playAllTableAudio()" title="Play all visible" aria-label="Play all visible">
                         <i class="fa-solid fa-play play-icon" aria-hidden="true"></i>
                     </button>
                     <button class="vocab-header-icon-btn" onclick="event.stopPropagation(); shuffleVisibleRows()" title="Shuffle visible" aria-label="Shuffle visible">
                         <i class="fa-solid fa-shuffle" aria-hidden="true"></i>
                     </button>
-                    <button class="vocab-header-icon-btn" id="toggle-all-vocab-btn" onclick="event.stopPropagation(); toggleAllVocabVisibility()" title="Hide or show all rows" aria-label="Hide or show all rows">
-                        <i class="fa-solid ${allRowsHidden ? 'fa-eye' : 'fa-eye-slash'}" aria-hidden="true"></i>
-                    </button>
                 </th>
-                <th onclick="toggleVocabColumn('cn', 'trainer-vocab-table')">Character</th>
-                <th onclick="toggleVocabColumn('py', 'trainer-vocab-table')">Pinyin</th>
-                <th onclick="toggleVocabColumn('vn', 'trainer-vocab-table')">Meaning (VN)</th>
+                <th>${renderColumnHeader('cn', 'Character', 'trainer-vocab-table')}</th>
+                <th>${renderColumnHeader('py', 'Pinyin', 'trainer-vocab-table')}</th>
+                <th>${renderColumnHeader('vn', 'Meaning (VN)', 'trainer-vocab-table')}</th>
             </tr>
         </thead>
         <tbody></tbody>
@@ -272,18 +281,20 @@ function renderVocabTable(rows) {
         tr.classList.toggle('row-vocab-hidden', hiddenRows.has(word));
         const checked = selectedWords.has(word) ? 'checked' : '';
         const audioCell = row.audio_key
-            ? `<button class="vocab-audio-btn" onclick="playTableAudio('${escapeAttr(row.audio_key)}')" title="Play audio" aria-label="Play audio"><i class="fa-solid fa-play play-icon" aria-hidden="true"></i></button>`
+            ? `<button class="vocab-audio-btn" onclick="playTableAudio('${escapeAttr(row.audio_key)}', ${escapeJsArg(word)}, this)" title="Play audio" aria-label="Play audio"><i class="fa-solid fa-play play-icon" aria-hidden="true"></i></button>`
             : '<span class="vocab-no-audio">-</span>';
         const pinyin = escapeAttr(row.pinyin || '');
-        const writeBtn = `<button class="vocab-stroke-row-btn" onclick="openVocabStrokeModal(${escapeJsArg(word)}, '${pinyin}')" title="Write character" aria-label="Write character">&#9999;</button>`;
+        const writeBtn = /[\u4e00-\u9fff]/.test(word)
+            ? `<button class="vocab-stroke-row-btn" onclick="openVocabStrokeModal(${escapeJsArg(word)}, '${pinyin}')" title="Write character" aria-label="Write character"><i class="fa-solid fa-pen-nib" aria-hidden="true"></i></button>`
+            : '';
         tr.innerHTML = `
             <td class="vocab-select-col">
                 <input type="checkbox" class="vocab-row-checkbox" ${checked} onchange="toggleWordSelection(${index}, this.checked)">
             </td>
             <td class="vocab-tools-cell">${audioCell}${writeBtn}</td>
-            <td class="vocab-cn clickable-cell" onclick="this.classList.toggle('hidden-cell')">${escapeHtml(word)}</td>
-            <td class="vocab-pinyin clickable-cell" onclick="this.classList.toggle('hidden-cell')">${escapeHtml(row.pinyin || '')}</td>
-            <td class="vocab-meaning-vn clickable-cell" onclick="this.classList.toggle('hidden-cell')">${escapeHtml(row.meaning_vn || row.meaning_en || '')}</td>
+            <td class="vocab-cn clickable-cell ${getVocabCellClasses(word, 'cn')}" onclick="toggleVocabCell(this, 'cn', ${escapeJsArg(word)}, 'trainer-vocab-table')">${escapeHtml(word)}</td>
+            <td class="vocab-pinyin clickable-cell ${getVocabCellClasses(word, 'py')}" onclick="toggleVocabCell(this, 'py', ${escapeJsArg(word)}, 'trainer-vocab-table')">${escapeHtml(row.pinyin || '')}</td>
+            <td class="vocab-meaning-vn clickable-cell ${getVocabCellClasses(word, 'vn')}" onclick="toggleVocabCell(this, 'vn', ${escapeJsArg(word)}, 'trainer-vocab-table')">${escapeHtml(row.meaning_vn || row.meaning_en || '')}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -383,13 +394,93 @@ function openSelectedFlashcards() {
     window.location.href = '/vocab-learning?source=selection';
 }
 
+function renderColumnHeader(colType, label, tableId) {
+    const isHidden = hiddenColumns.has(colType);
+    return `
+        <span class="vocab-column-header-label">${escapeHtml(label)}</span>
+        <button type="button" class="vocab-column-toggle" data-col="${colType}" onclick="event.stopPropagation(); toggleVocabColumn('${colType}', '${tableId}')" title="${isHidden ? 'Show' : 'Hide'} ${escapeAttr(label)}" aria-label="${isHidden ? 'Show' : 'Hide'} ${escapeAttr(label)}">
+            <i class="fa-solid ${isHidden ? 'fa-eye' : 'fa-eye-slash'}" aria-hidden="true"></i>
+        </button>
+    `;
+}
+
 function toggleVocabColumn(colType, tableId) {
-    document.getElementById(tableId)?.classList.toggle(`hide-${colType}`);
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    currentRows.forEach(row => revealedColumnCells.delete(getVocabCellKey(row.word || row.cn || '', colType)));
+    if (hiddenColumns.has(colType)) hiddenColumns.delete(colType);
+    else {
+        hiddenColumns.add(colType);
+        currentRows.forEach(row => hiddenCells.delete(getVocabCellKey(row.word || row.cn || '', colType)));
+    }
+    table.classList.toggle(`hide-${colType}`, hiddenColumns.has(colType));
+    updateColumnToggleIcon(colType);
+    refreshVocabCellVisibility();
+}
+
+function toggleVocabCell(cell, colType, word, tableId) {
+    const table = document.getElementById(tableId);
+    const key = getVocabCellKey(word, colType);
+    if (table?.classList.contains(`hide-${colType}`)) {
+        const shouldReveal = !revealedColumnCells.has(key);
+        if (shouldReveal) revealedColumnCells.add(key);
+        else revealedColumnCells.delete(key);
+        cell.classList.toggle('column-cell-revealed', shouldReveal);
+        return;
+    }
+    const shouldHide = !hiddenCells.has(key);
+    if (shouldHide) hiddenCells.add(key);
+    else hiddenCells.delete(key);
+    cell.classList.toggle('hidden-cell', shouldHide);
+}
+
+function updateColumnToggleIcon(colType) {
+    const button = document.querySelector(`.vocab-column-toggle[data-col="${colType}"]`);
+    if (!button) return;
+    const icon = button.querySelector('.fa-solid');
+    const isHidden = hiddenColumns.has(colType);
+    icon?.classList.toggle('fa-eye', isHidden);
+    icon?.classList.toggle('fa-eye-slash', !isHidden);
+    button.title = `${isHidden ? 'Show' : 'Hide'} column`;
+    button.setAttribute('aria-label', button.title);
+}
+
+function getVocabCellKey(word, colType) {
+    return `${word || ''}::${colType}`;
+}
+
+function getVocabCellClasses(word, colType) {
+    const key = getVocabCellKey(word, colType);
+    return [
+        hiddenCells.has(key) ? 'hidden-cell' : '',
+        revealedColumnCells.has(key) ? 'column-cell-revealed' : ''
+    ].filter(Boolean).join(' ');
+}
+
+function refreshVocabCellVisibility() {
+    const table = document.getElementById('trainer-vocab-table');
+    if (!table) return;
+    currentRows.forEach((row, index) => {
+        const word = row.word || row.cn || '';
+        const tr = document.getElementById(`trainer-vocab-tr-${index}`);
+        if (!tr) return;
+        [
+            ['cn', '.vocab-cn'],
+            ['py', '.vocab-pinyin'],
+            ['vn', '.vocab-meaning-vn']
+        ].forEach(([colType, selector]) => {
+            const cell = tr.querySelector(selector);
+            const key = getVocabCellKey(word, colType);
+            cell?.classList.toggle('hidden-cell', hiddenCells.has(key));
+            cell?.classList.toggle('column-cell-revealed', hiddenColumns.has(colType) && revealedColumnCells.has(key));
+        });
+    });
 }
 
 function toggleAllVocabVisibility() {
-    allRowsHidden = !allRowsHidden;
-    if (allRowsHidden) {
+    syncAllRowsHiddenState();
+    const shouldHide = !allRowsHidden;
+    if (shouldHide) {
         currentRows.forEach(row => hiddenRows.add(row.word || row.cn || ''));
     } else {
         currentRows.forEach(row => hiddenRows.delete(row.word || row.cn || ''));
@@ -398,23 +489,34 @@ function toggleAllVocabVisibility() {
 }
 
 function refreshVisibilityControls() {
-    const table = document.getElementById('trainer-vocab-table');
-    table?.classList.toggle('all-vocab-hidden', allRowsHidden);
-
-    const headerIcon = document.querySelector('#toggle-all-vocab-btn .fa-solid');
-    if (headerIcon) {
-        headerIcon.classList.toggle('fa-eye', allRowsHidden);
-        headerIcon.classList.toggle('fa-eye-slash', !allRowsHidden);
-    }
-
-    // Apply/remove hidden class on all rows based on global toggle
+    syncAllRowsHiddenState();
     currentRows.forEach((item, index) => {
         const row = document.getElementById(`trainer-vocab-tr-${index}`);
-        row?.classList.toggle('row-vocab-hidden', allRowsHidden);
+        row?.classList.toggle('row-vocab-hidden', hiddenRows.has(item.word || item.cn || ''));
     });
 }
 
+function syncAllRowsHiddenState() {
+    allRowsHidden = currentRows.length > 0 && currentRows.every(row => hiddenRows.has(row.word || row.cn || ''));
+}
+
+function revealRowForAudio(rowIndex) {
+    restoreAudioReveal();
+    const row = document.getElementById(`trainer-vocab-tr-${rowIndex}`);
+    if (!row) return;
+    row.classList.add('audio-revealed');
+    activeAudioRevealRow = row;
+}
+
+function restoreAudioReveal() {
+    activeAudioRevealRow?.classList.remove('audio-revealed');
+    activeAudioRevealRow = null;
+}
+
 function shuffleVisibleRows() {
+    if (tableAudio) tableAudio.pause();
+    isPlayingTableAudio = false;
+    resetTableAudioButtons();
     for (let i = currentRows.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [currentRows[i], currentRows[j]] = [currentRows[j], currentRows[i]];
@@ -422,25 +524,54 @@ function shuffleVisibleRows() {
     renderVocabTable(currentRows);
 }
 
-function playTableAudio(audioKey) {
+function setAudioButtonPlaying(button, playing) {
+    const icon = button?.querySelector('.fa-solid');
+    if (!icon) return;
+    icon.classList.toggle('fa-play', !playing);
+    icon.classList.toggle('fa-pause', playing);
+    icon.classList.toggle('play-icon', !playing);
+}
+
+function resetTableAudioButtons() {
+    if (activeTableAudioButton) setAudioButtonPlaying(activeTableAudioButton, false);
+    activeTableAudioButton = null;
+    setAudioButtonPlaying(document.getElementById('table-play-all-btn'), false);
+    restoreAudioReveal();
+}
+
+function playTableAudio(audioKey, word = '', button = null) {
     if (!audioKey) return;
     if (tableAudio) tableAudio.pause();
+    resetTableAudioButtons();
+    const rowIndex = currentRows.findIndex(row => (row.word || row.cn || '') === word);
+    if (rowIndex !== -1) revealRowForAudio(rowIndex);
     tableAudio = new Audio(`/audio/${audioKey}.mp3`);
-    tableAudio.play().catch(e => console.warn('Audio playback failed:', e));
+    activeTableAudioButton = button;
+    setAudioButtonPlaying(activeTableAudioButton, true);
+    tableAudio.onended = resetTableAudioButtons;
+    tableAudio.onerror = resetTableAudioButtons;
+    tableAudio.play().catch(e => {
+        resetTableAudioButtons();
+        console.warn('Audio playback failed:', e);
+    });
 }
 
 async function playAllTableAudio() {
     if (isPlayingTableAudio) {
         isPlayingTableAudio = false;
         if (tableAudio) tableAudio.pause();
+        resetTableAudioButtons();
         return;
     }
     isPlayingTableAudio = true;
+    resetTableAudioButtons();
+    setAudioButtonPlaying(document.getElementById('table-play-all-btn'), true);
     const playable = currentRows.map((row, index) => ({ ...row, index })).filter(row => row.audio_key);
     for (const row of playable) {
         if (!isPlayingTableAudio) break;
         document.querySelectorAll('#trainer-vocab-table tr').forEach(tr => tr.classList.remove('playing-highlight'));
         document.getElementById(`trainer-vocab-tr-${row.index}`)?.classList.add('playing-highlight');
+        revealRowForAudio(row.index);
         await new Promise(resolve => {
             if (tableAudio) tableAudio.pause();
             tableAudio = new Audio(`/audio/${row.audio_key}.mp3`);
@@ -448,10 +579,12 @@ async function playAllTableAudio() {
             tableAudio.onerror = resolve;
             tableAudio.play().catch(resolve);
         });
+        restoreAudioReveal();
         await new Promise(resolve => setTimeout(resolve, 400));
     }
     document.querySelectorAll('#trainer-vocab-table tr').forEach(tr => tr.classList.remove('playing-highlight'));
     isPlayingTableAudio = false;
+    resetTableAudioButtons();
 }
 
 function escapeHtml(value) {
