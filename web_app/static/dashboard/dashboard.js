@@ -2,13 +2,18 @@ document.addEventListener('DOMContentLoaded', () => {
     loadHomeDashboard();
 });
 
+let dashboardVocabBuckets = {};
+let dashboardVocabOrder = ['unsure', 'unlearn', 'recent'];
+let dashboardVocabIndex = 0;
+
 async function loadHomeDashboard() {
     setDashboardState('Loading your lesson dashboard...', true);
     try {
         // Fetch lesson data and global stats in parallel
-        const [lessonRes, statsRes] = await Promise.all([
+        const [lessonRes, statsRes, vocabRes] = await Promise.all([
             fetch(`/api/user/dashboard-current-lesson?page=1&page_size=5`),
-            fetch(`/api/user/global-stats`)
+            fetch(`/api/user/global-stats`),
+            fetch(`/api/user/dashboard-vocab-buckets`)
         ]);
 
         const lessonContentType = lessonRes.headers.get('content-type') || '';
@@ -26,6 +31,12 @@ async function loadHomeDashboard() {
 
         // Render lesson content
         renderHomeDashboard(lessonData);
+        if (vocabRes.ok) {
+            const vocabData = await vocabRes.json();
+            renderDashboardVocabBuckets(vocabData);
+        } else {
+            renderVocab(lessonData.vocab || {});
+        }
 
         // Render global stats (non-blocking — silently ignore errors)
         if (statsRes.ok) {
@@ -46,24 +57,44 @@ function renderHomeDashboard(data) {
     document.getElementById('home-lesson-title').textContent = `${lesson.hsk_level || 'HSK'} - Lesson ${lesson.lesson || ''}`;
     document.getElementById('home-lesson-subtitle').textContent = `Current part: Part ${lesson.part || '-'} - ${lesson.passage_ids?.length || 1} part${lesson.passage_ids?.length === 1 ? '' : 's'} in this lesson`;
     document.getElementById('home-continue-link').href = `/learning?passage_id=${encodeURIComponent(lesson.passage_id || '')}`;
+}
 
-    renderVocab(data.vocab || {});
+function renderDashboardVocabBuckets(data) {
+    dashboardVocabBuckets = data.buckets || {};
+    dashboardVocabOrder = (data.order || dashboardVocabOrder).filter(key => dashboardVocabBuckets[key]);
+    dashboardVocabIndex = 0;
+    renderActiveDashboardVocab();
+}
+
+function showDashboardVocabBucket(delta) {
+    if (!dashboardVocabOrder.length) return;
+    dashboardVocabIndex = (dashboardVocabIndex + delta + dashboardVocabOrder.length) % dashboardVocabOrder.length;
+    renderActiveDashboardVocab();
+}
+
+function renderActiveDashboardVocab() {
+    const key = dashboardVocabOrder[dashboardVocabIndex];
+    renderVocab(dashboardVocabBuckets[key] || {});
 }
 
 function renderVocab(vocab) {
     const rows = vocab.rows || [];
+    const title = document.getElementById('home-vocab-title');
     const count = document.getElementById('home-vocab-count');
     const state = document.getElementById('home-vocab-state');
     const wrap = document.getElementById('home-vocab-table-wrap');
     const viewAllRow = document.getElementById('home-vocab-view-all');
+    const viewAllLink = document.getElementById('home-vocab-view-all-link');
 
+    if (title) title.textContent = vocab.title || 'Vocabulary';
     count.textContent = `${vocab.total || 0} word${vocab.total === 1 ? '' : 's'}`;
+    if (viewAllLink) viewAllLink.href = `/vocab?mode=${encodeURIComponent(vocab.mode || 'standard')}`;
 
     if (!rows.length) {
-        state.textContent = 'No vocabulary found for this lesson.';
+        state.textContent = `No ${String(vocab.title || 'vocabulary').toLowerCase()} found.`;
         state.style.display = 'block';
         wrap.style.display = 'none';
-        if (viewAllRow) viewAllRow.style.display = 'none';
+        if (viewAllRow) viewAllRow.style.display = 'block';
         return;
     }
 

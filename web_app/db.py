@@ -1066,9 +1066,10 @@ def get_mastered_words_page(conn, user_id, page=1, page_size=24):
     SELECT COUNT(*) FROM mastered;
     """
     rows_query = base_cte + """
-    SELECT word, learned_at, COUNT(*) OVER() AS total
-    FROM mastered
-    ORDER BY learned_at DESC NULLS LAST, word
+    SELECT m.word, m.learned_at, v.pinyin, v.meaning_vn, v.meaning_en, v.audio_key, v.hsk_level
+    FROM mastered m
+    LEFT JOIN vocabulary v ON v.cn = m.word
+    ORDER BY m.learned_at DESC NULLS LAST, m.word
     LIMIT %s OFFSET %s;
     """
     try:
@@ -1085,7 +1086,14 @@ def get_mastered_words_page(conn, user_id, page=1, page_size=24):
             "rows": [
                 {
                     "word": row[0],
-                    "learned_at": row[1].isoformat() if hasattr(row[1], "isoformat") else row[1]
+                    "cn": row[0],
+                    "learned_at": row[1].isoformat() if hasattr(row[1], "isoformat") else row[1],
+                    "pinyin": row[2] or "",
+                    "meaning_vn": row[3] or "",
+                    "meaning_en": row[4] or "",
+                    "audio_key": row[5] or "",
+                    "hsk_level": row[6] or "",
+                    "level": row[6] or "",
                 }
                 for row in rows
             ],

@@ -55,9 +55,6 @@ def index():
 @app.route('/vocab')
 @login_required
 def vocab_page():
-    if request.args.get('mode'):
-        query = request.query_string.decode()
-        return redirect(f"/vocab-training?{query}" if query else "/vocab-training")
     return render_template('vocab/vocab.html')
 
 @app.route('/vocab-training')
