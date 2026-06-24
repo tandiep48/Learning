@@ -144,21 +144,20 @@ const Picker = {
             const partName = pParts.length >= 3 ? `Part ${pParts[2]}` : p.passage_id;
 
             const btn = document.createElement('div');
-            btn.className = 'lesson-card';
+            btn.className = 'dash-card';
+            btn.style.cssText = 'padding:18px 14px; cursor:pointer; text-align:center; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px;';
 
             const progress = this.progressSummary?.parts?.[p.passage_id];
             const progressHtml = progress
-                ? `<div class="picker-progress-lines">
+                ? `<div class="picker-progress-lines picker-progress-lines-centered">
                     ${this._progressBar(progress.learned_words, progress.total_words, 'Words')}
                     ${this._progressBar(progress.lesson_learned, progress.lesson_total, 'Lesson')}
                    </div>`
                 : '';
 
             btn.innerHTML = `
-                <div class="lesson-card-left">
-                    <div class="lesson-card-title">${this.escapeHtml(partName)}</div>
-                    ${progressHtml}
-                </div>
+                <div class="dash-title" style="margin:0; font-size:1.1rem;">${this.escapeHtml(partName)}</div>
+                ${progressHtml}
             `;
 
             btn.addEventListener('click', () => {
