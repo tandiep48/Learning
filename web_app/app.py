@@ -1,7 +1,7 @@
 import os
 import secrets
 from dotenv import load_dotenv
-from flask import Flask, render_template, redirect, url_for, request
+from flask import Flask, render_template, redirect, url_for, request, send_from_directory
 from flask_cors import CORS
 from flask_login import LoginManager, login_required
 from flask_socketio import SocketIO
@@ -155,6 +155,13 @@ def serve_audio(filename):
 @app.route('/lesson_audio/<path:filename>')
 def serve_lesson_audio(filename):
     return redirect(f"{GCS_BUCKET_URL}/lesson_audio/{filename}")
+
+LESSON_IMAGES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'images', 'lessons')
+
+@app.route('/lesson-image/<hsk>/<filename>')
+def serve_lesson_image(hsk, filename):
+    hsk_dir = os.path.join(LESSON_IMAGES_DIR, hsk.upper())
+    return send_from_directory(hsk_dir, filename)
 
 if __name__ == '__main__':
     debug_mode = os.getenv('FLASK_DEBUG', '').lower() in ('1', 'true', 'yes', 'on')

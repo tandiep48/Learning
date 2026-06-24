@@ -441,6 +441,10 @@ body.with-site-nav > .vl-container {
     color: #ffffff;
 }
 
+.site-header span {
+    color: inherit;
+}
+
 .site-header .site-nav a:hover,
 .site-header .site-auth a:hover {
     color: #ffffff;
