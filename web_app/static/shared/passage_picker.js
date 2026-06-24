@@ -36,10 +36,12 @@ const Picker = {
         this.switchScreen('picker-screen-lesson');
 
         try {
-            const url = `/api/lesson/passages?hsk_level=${hskLevel}`;
-            const res = await fetch(url);
+            const [res, progressSummary] = await Promise.all([
+                fetch(`/api/lesson/passages?hsk_level=${hskLevel}`),
+                this.loadPickerProgress(hskLevel),
+            ]);
             const data = await res.json();
-            this.progressSummary = await this.loadPickerProgress(hskLevel);
+            this.progressSummary = progressSummary;
 
             // Group passages by lesson
             this.groupedPassages = {};
@@ -96,6 +98,10 @@ const Picker = {
             const count = this.groupedPassages[lessonNum].length;
             const prefix = lessonNum === 'Other' ? '' : 'Lesson ';
             const progress = this.progressSummary?.lessons?.[lessonNum];
+
+            const hskKey = (this.currentHskLevel || '').replace('HSK', 'H');
+            const imgPath = `/lesson-image/${hskKey}/${hskKey.toLowerCase()}-lesson-${lessonNum}.png`;
+
             const progressHtml = progress
                 ? `<div class="picker-progress-lines">
                     ${this._progressBar(progress.learned_words, progress.total_words, 'Words')}
@@ -104,11 +110,15 @@ const Picker = {
                 : '';
 
             card.innerHTML = `
-                <div class="lesson-card-left">
+                <div class="lesson-card-img-wrap">
+                    <img class="lesson-card-img" src="${imgPath}" alt="Lesson ${lessonNum}" loading="lazy"
+                         onerror="this.parentElement.style.display='none'">
+                </div>
+                <div class="lesson-card-body">
                     <div class="lesson-card-title">${this.escapeHtml(prefix + lessonNum)}</div>
                     ${progressHtml}
+                    <div class="lesson-card-count">${count} part${count !== 1 ? 's' : ''}</div>
                 </div>
-                <div class="lesson-card-count">${count} part${count !== 1 ? 's' : ''}</div>
             `;
 
             card.addEventListener('click', () => {
@@ -134,21 +144,20 @@ const Picker = {
             const partName = pParts.length >= 3 ? `Part ${pParts[2]}` : p.passage_id;
 
             const btn = document.createElement('div');
-            btn.className = 'lesson-card';
+            btn.className = 'dash-card';
+            btn.style.cssText = 'padding:18px 14px; cursor:pointer; text-align:center; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px;';
 
             const progress = this.progressSummary?.parts?.[p.passage_id];
             const progressHtml = progress
-                ? `<div class="picker-progress-lines">
+                ? `<div class="picker-progress-lines picker-progress-lines-centered">
                     ${this._progressBar(progress.learned_words, progress.total_words, 'Words')}
                     ${this._progressBar(progress.lesson_learned, progress.lesson_total, 'Lesson')}
                    </div>`
                 : '';
 
             btn.innerHTML = `
-                <div class="lesson-card-left">
-                    <div class="lesson-card-title">${this.escapeHtml(partName)}</div>
-                    ${progressHtml}
-                </div>
+                <div class="dash-title" style="margin:0; font-size:1.1rem;">${this.escapeHtml(partName)}</div>
+                ${progressHtml}
             `;
 
             btn.addEventListener('click', () => {

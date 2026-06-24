@@ -32,6 +32,34 @@ document.addEventListener('DOMContentLoaded', () => {
     window.location.href = '/vocab';
 });
 
+function setCurrentAudioButtonPlaying(playing) {
+    const button = document.getElementById('btn-current-audio');
+    const icon = button?.querySelector('.fa-solid');
+    if (!button || !icon) return;
+    icon.classList.toggle('fa-play', !playing);
+    icon.classList.toggle('fa-pause', playing);
+    icon.classList.toggle('play-icon', !playing);
+    button.title = playing ? 'Pause audio' : 'Play audio';
+    button.setAttribute('aria-label', button.title);
+}
+
+function wireCurrentAudioEvents(audioEl) {
+    if (!audioEl) return;
+    audioEl.onended = () => setCurrentAudioButtonPlaying(false);
+    audioEl.onerror = () => setCurrentAudioButtonPlaying(false);
+    audioEl.onpause = () => setCurrentAudioButtonPlaying(false);
+    audioEl.onplay = () => setCurrentAudioButtonPlaying(true);
+}
+
+function playTrainerAudio(audioEl) {
+    if (!audioEl?.src) return;
+    wireCurrentAudioEvents(audioEl);
+    audioEl.play().catch(e => {
+        setCurrentAudioButtonPlaying(false);
+        console.warn('Audio playback failed:', e);
+    });
+}
+
 function readSelectedTrainerWords() {
     const raw = sessionStorage.getItem('selectedVocabTrainerWords');
     if (!raw) return [];
@@ -115,6 +143,8 @@ function loadTask() {
     document.getElementById('typing-area').style.display = 'none';
     document.getElementById('speaking-area').style.display = 'none';
     document.getElementById('typing-input').value = '';
+    const typingSubmitBtn = document.getElementById('typing-submit-btn');
+    if (typingSubmitBtn) typingSubmitBtn.style.display = 'none';
 
     const mcFeedback = document.getElementById('mc-feedback');
     if (mcFeedback) { mcFeedback.style.display = 'none'; mcFeedback.innerHTML = ''; }
@@ -127,6 +157,8 @@ function loadTask() {
 
     const instructionEl = document.getElementById('task-instruction');
     const audioEl = document.getElementById('audio-player');
+    setCurrentAudioButtonPlaying(false);
+    if (audioEl) audioEl.pause();
     if (task.audio_key) audioEl.src = `/audio/${task.audio_key}.mp3`;
     else audioEl.removeAttribute('src');
 
@@ -135,13 +167,14 @@ function loadTask() {
     if (task.type === "listen") {
         instructionEl.innerText = 'Listen to the audio and choose the correct meaning:';
         document.getElementById('audio-controls').style.display = 'block';
-        if (task.audio_key) audioEl.play().catch(e => console.warn('Audio playback failed:', e));
+        if (task.audio_key) playTrainerAudio(audioEl);
         setupMultipleChoice(task);
     } else if (task.type === "typing") {
         instructionEl.innerText = 'Type the following word:';
         document.getElementById('word-display').innerText = task.word;
         document.getElementById('word-display').style.display = 'block';
         document.getElementById('typing-area').style.display = 'flex';
+        if (typingSubmitBtn) typingSubmitBtn.style.display = 'inline-flex';
         document.getElementById('typing-input').focus();
     } else if (task.type === "meaning") {
         instructionEl.innerText = 'What is the meaning of this word?';
@@ -176,7 +209,14 @@ function setupMultipleChoice(task) {
 
 function playCurrentAudio() {
     const audioEl = document.getElementById('audio-player');
-    if (audioEl.src) audioEl.play().catch(e => console.warn('Audio playback failed:', e));
+    if (!audioEl.src) return;
+    if (!audioEl.paused) {
+        audioEl.pause();
+        setCurrentAudioButtonPlaying(false);
+        return;
+    }
+    audioEl.currentTime = 0;
+    playTrainerAudio(audioEl);
 }
 
 function submitTyping() {
@@ -206,7 +246,10 @@ async function checkAnswer(task, userAnswer, correctAnswer, element) {
 
     if (task.audio_key) {
         const audioEl = document.getElementById('audio-player');
-        if (audioEl.src) audioEl.play().catch(e => console.warn('Audio playback failed:', e));
+        if (audioEl.src) {
+            audioEl.currentTime = 0;
+            playTrainerAudio(audioEl);
+        }
     }
 
     const allBtns = document.querySelectorAll('#screen-training .btn');
@@ -477,7 +520,8 @@ function revealSpeakingWord(task, isCorrect, data) {
     // Play audio
     const audioEl = document.getElementById('audio-player');
     if (task.audio_key && audioEl.src) {
-        audioEl.play().catch(() => {});
+        audioEl.currentTime = 0;
+        playTrainerAudio(audioEl);
     }
 
     // Auto-advance after 2.5s

@@ -198,6 +198,21 @@ body.vocab-select-page > .app-container {
     visibility: hidden;
 }
 
+.vocab-table tr.audio-revealed .vocab-cn,
+.vocab-table tr.audio-revealed .vocab-pinyin,
+.vocab-table tr.audio-revealed .vocab-meaning-vn {
+    opacity: 1 !important;
+    color: inherit !important;
+    background-color: transparent !important;
+    visibility: visible !important;
+}
+
+.vocab-table tr.audio-revealed .vocab-cn *,
+.vocab-table tr.audio-revealed .vocab-pinyin *,
+.vocab-table tr.audio-revealed .vocab-meaning-vn * {
+    visibility: visible !important;
+}
+
 .vocab-content-card {
     background: #ffffff;
     border: 1px solid rgba(87, 104, 86, 0.08);

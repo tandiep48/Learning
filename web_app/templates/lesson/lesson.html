@@ -6,10 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lesson Practice - {{ hsk_level }}</title>
     <link rel="stylesheet" href="/static/shared/styles.css">
-    <link rel="stylesheet" href="/static/shared/passage_picker.css">
+    <link rel="stylesheet" href="/static/shared/passage_picker.css?v=2">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="/static/shared/success_popup.css">
-    <link rel="stylesheet" href="/static/lesson/lesson.css?v=2">
+    <link rel="stylesheet" href="/static/lesson/lesson.css?v=4">
 </head>
 
 <body class="with-site-nav">
@@ -23,6 +23,10 @@
         </div>
 
         <div id="screen-training" class="screen">
+            <div class="trainer-topbar">
+                <button class="btn secondary trainer-quit-btn" onclick="confirmQuit()">Quit Session</button>
+            </div>
+
             <div class="progress-bar">
                 <div class="progress-fill" id="progress-fill"></div>
             </div>
@@ -50,7 +54,6 @@
                     <div id="typing-feedback"
                         style="display:none; margin-top: 10px; margin-bottom: 15px; text-align: center; font-size: 22px; padding: 10px; border-radius: 8px; background: rgba(87, 104, 86, 0.08); width: 100%; box-sizing: border-box;">
                     </div>
-                    <button class="btn primary" onclick="submitTyping()">Submit</button>
                 </div>
 
                 <div id="reorder-area" style="display:none; width: 100%;">
@@ -64,8 +67,16 @@
                     <div id="reorder-feedback"
                         style="display:none; margin-bottom: 15px; text-align: center; font-size: 24px; padding: 10px; border-radius: 8px; background: rgba(87, 104, 86, 0.08);">
                     </div>
+                </div>
 
-                    <button class="btn primary" style="width: 100%;" onclick="submitReorder()">Submit Sentence</button>
+                <div class="trainer-task-actions">
+                    <button id="btn-skip-task" class="btn secondary lesson-skip-btn" onclick="skipTask()">
+                        Skip <i class="fa-solid fa-forward-step" aria-hidden="true"></i>
+                    </button>
+                    <button id="typing-submit-btn" class="btn primary" onclick="submitTyping()"
+                        style="display:none;">Submit</button>
+                    <button id="reorder-submit-btn" class="btn primary" onclick="submitReorder()"
+                        style="display:none;">Submit Sentence</button>
                 </div>
             </div>
 
@@ -75,9 +86,6 @@
                     Question &rarr;</button>
             </div>
 
-            <div class="nav-buttons end-session">
-                <button class="btn secondary" onclick="confirmQuit()">Quit Session</button>
-            </div>
         </div>
 
         <div id="screen-complete" class="screen">
@@ -118,9 +126,9 @@
         </div>
     </div>
 
-    <script src="/static/shared/passage_picker.js?v=2"></script>
+    <script src="/static/shared/passage_picker.js?v=7"></script>
     <script src="/static/shared/success_popup.js"></script>
-    <script src="/static/lesson/lesson.js"></script>
+    <script src="/static/lesson/lesson.js?v=4"></script>
 </body>
 
 </html>

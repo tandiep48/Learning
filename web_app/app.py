@@ -1,7 +1,7 @@
 import os
 import secrets
 from dotenv import load_dotenv
-from flask import Flask, render_template, redirect, url_for, request
+from flask import Flask, render_template, redirect, url_for, request, send_from_directory
 from flask_cors import CORS
 from flask_login import LoginManager, login_required
 from flask_socketio import SocketIO
@@ -11,6 +11,8 @@ from routes.practice_routes import practice_bp
 from routes.competition_routes import competition_bp
 from routes.auth_routes import auth_bp, get_user_by_id
 from routes.user_routes import user_bp
+from routes.vocab_crud_routes import vocab_crud_bp
+from routes.passage_crud_routes import passage_crud_bp
 from competition_socket import init_competition_socket
 
 load_dotenv()
@@ -36,6 +38,8 @@ app.register_blueprint(practice_bp)
 app.register_blueprint(competition_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(user_bp)
+app.register_blueprint(vocab_crud_bp)
+app.register_blueprint(passage_crud_bp)
 init_competition_socket(socketio)
 
 GCS_BUCKET_URL = os.getenv('GCS_BUCKET_URL', '')
@@ -55,9 +59,6 @@ def index():
 @app.route('/vocab')
 @login_required
 def vocab_page():
-    if request.args.get('mode'):
-        query = request.query_string.decode()
-        return redirect(f"/vocab-training?{query}" if query else "/vocab-training")
     return render_template('vocab/vocab.html')
 
 @app.route('/vocab-training')
@@ -155,6 +156,14 @@ def serve_audio(filename):
 @app.route('/lesson_audio/<path:filename>')
 def serve_lesson_audio(filename):
     return redirect(f"{GCS_BUCKET_URL}/lesson_audio/{filename}")
+
+@app.route('/lesson-image/<hsk>/<filename>')
+def serve_lesson_image(hsk, filename):
+    # Convert formats like 'h1-lesson-2.png' to 'H1-lesson 2.png'
+    formatted_filename = filename.lower().replace('-lesson-', '-lesson ')
+    if formatted_filename.startswith(hsk.lower()):
+        formatted_filename = hsk.upper() + formatted_filename[len(hsk):]
+    return redirect(f"{GCS_BUCKET_URL}/lesson_images/{hsk.upper()}/{formatted_filename}")
 
 if __name__ == '__main__':
     debug_mode = os.getenv('FLASK_DEBUG', '').lower() in ('1', 'true', 'yes', 'on')

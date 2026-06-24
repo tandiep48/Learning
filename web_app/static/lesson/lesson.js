@@ -93,6 +93,12 @@ function loadTask() {
     document.getElementById('typing-area').style.display = 'none';
     document.getElementById('reorder-area').style.display = 'none';
     document.getElementById('wrong-answer-next').style.display = 'none';
+    const skipBtn = document.getElementById('btn-skip-task');
+    const typingSubmitBtn = document.getElementById('typing-submit-btn');
+    const reorderSubmitBtn = document.getElementById('reorder-submit-btn');
+    if (skipBtn) skipBtn.style.display = '';
+    if (typingSubmitBtn) typingSubmitBtn.style.display = 'none';
+    if (reorderSubmitBtn) reorderSubmitBtn.style.display = 'none';
 
     const typingInput = document.getElementById('typing-input');
     typingInput.value = '';
@@ -139,9 +145,11 @@ function loadTask() {
         document.getElementById('word-display').innerText = task.content;
         document.getElementById('word-display').style.display = 'block';
         document.getElementById('typing-area').style.display = 'flex';
+        if (typingSubmitBtn) typingSubmitBtn.style.display = 'inline-flex';
         document.getElementById('typing-input').focus();
     } else if (task.type === "reorder") {
         instructionEl.innerHTML = '<i class="fa-solid fa-arrows-up-down-left-right" aria-hidden="true"></i><span>Reorder the words to form the correct sentence:</span>';
+        if (reorderSubmitBtn) reorderSubmitBtn.style.display = 'inline-flex';
         setupReorder(task);
     }
 }
@@ -151,11 +159,12 @@ function setupMultipleChoice(task) {
     mcArea.innerHTML = '';
     mcArea.style.display = 'grid';
 
-    task.options.forEach(opt => {
+    task.options.forEach((opt, idx) => {
         const btn = document.createElement('button');
         btn.className = 'btn';
-        btn.innerText = opt;
-        btn.onclick = (e) => submitMC(opt, task, e.target);
+        btn.dataset.optionIndex = idx;
+        btn.innerHTML = `<span class="mc-btn-inner"><span class="key-hint">${idx + 1}</span>${escapeHtml(opt)}</span>`;
+        btn.onclick = () => submitMC(opt, task, btn);
         mcArea.appendChild(btn);
     });
 }
@@ -210,8 +219,37 @@ function submitMC(selected, task, btnElement) {
 function submitReorder() {
     const task = sessionData.tasks[currentTaskIndex];
     const userSentence = currentReorderTokens.join('');
-    const btnElement = document.querySelector('#reorder-area .primary');
+    const btnElement = document.getElementById('reorder-submit-btn');
     checkAnswer(task, userSentence, task.correct_answer, btnElement);
+}
+
+function skipTask() {
+    const task = sessionData?.tasks[currentTaskIndex];
+    if (!task) return;
+
+    task.user_answer = '';
+    missedTasks.push(task);
+
+    const gameInfo = { skipped: true };
+    if (task.options) gameInfo.options = task.options;
+    if (task.shuffled_tokens) gameInfo.tokens = task.shuffled_tokens;
+
+    fetch('/api/lesson/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            session_id: sessionData.session_id,
+            passage_id: task.passage_id,
+            line_id: task.line_id,
+            type: task.type,
+            user_answer: '',
+            is_correct: false,
+            response_time_ms: Date.now() - taskStartTime,
+            game_info: gameInfo
+        })
+    }).catch(e => console.error("DB skip log failed", e));
+
+    nextTask();
 }
 
 async function checkAnswer(task, userAnswer, correctAnswer, element) {
@@ -231,7 +269,10 @@ async function checkAnswer(task, userAnswer, correctAnswer, element) {
         if (task.options) {
             const mcBtns = document.querySelectorAll('#mc-area .btn');
             mcBtns.forEach(btn => {
-                if (btn.innerText === correctAnswer) {
+                const textContent = btn.querySelector('.mc-btn-inner')
+                    ? btn.querySelector('.mc-btn-inner').textContent.slice(1).trim()
+                    : btn.innerText.slice(1).trim();
+                if (textContent === correctAnswer) {
                     btn.style.backgroundColor = "var(--success)";
                     btn.style.color = "white";
                     btn.style.borderColor = "var(--success)";
@@ -266,6 +307,8 @@ async function checkAnswer(task, userAnswer, correctAnswer, element) {
     });
     const typingInput = document.getElementById('typing-input');
     if (typingInput) typingInput.disabled = true;
+    const skipBtn = document.getElementById('btn-skip-task');
+    if (skipBtn) skipBtn.style.display = 'none';
 
     const gameInfo = {};
     if (task.options) gameInfo.options = task.options;
@@ -312,6 +355,8 @@ function resetTaskUI(element, isCorrect, task) {
         typingInput.style.color = "";
         typingInput.style.borderColor = "";
     }
+    const skipBtn = document.getElementById('btn-skip-task');
+    if (skipBtn) skipBtn.style.display = '';
 
     document.getElementById('wrong-answer-next').style.display = 'none';
 }
@@ -416,17 +461,38 @@ function retryMissed() {
     loadTask();
 }
 
-// Add Enter key listener for typing
 document.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter' && document.getElementById('screen-training').classList.contains('active')) {
+    const trainingActive = document.getElementById('screen-training').classList.contains('active');
+    if (!trainingActive) return;
+
+    if (e.key === 'Enter') {
         if (document.getElementById('typing-area').style.display !== 'none') {
             const typingInput = document.getElementById('typing-input');
             if (!typingInput.disabled) {
                 submitTyping();
             }
         }
+        return;
+    }
+
+    const keyMap = { '1': 0, '2': 1, '3': 2, '4': 3 };
+    if (e.key in keyMap) {
+        const mcArea = document.getElementById('mc-area');
+        if (mcArea.style.display === 'none') return;
+        const btns = mcArea.querySelectorAll('.btn');
+        const idx = keyMap[e.key];
+        if (idx < btns.length && !btns[idx].disabled) btns[idx].click();
     }
 });
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
 
 function filterPassages() {
     const query = document.getElementById('search-input').value.toLowerCase();

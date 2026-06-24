@@ -11,3 +11,4 @@ pytest
 python-dotenv
 rapidfuzz
 vosk
+SQLAlchemy

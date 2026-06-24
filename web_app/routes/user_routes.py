@@ -10,6 +10,8 @@ from werkzeug.utils import secure_filename
 from db import (
     get_db_connection,
     get_mastered_words_page,
+    get_unlearned_words_from_db,
+    get_unsure_words_from_db,
     get_passage_vocab,
     get_profile_summary,
     get_recent_learning,
@@ -96,6 +98,34 @@ def paginate_dashboard_rows(rows, page, page_size):
     return rows[start:start + page_size], total, total_pages, page
 
 
+def dashboard_rows_for_words(conn, words, limit=5):
+    ordered_words = [word for word in words if word]
+    if not conn or not ordered_words:
+        return []
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT cn, pinyin, meaning_vn, meaning_en, audio_key, hsk_level
+                FROM vocabulary
+                WHERE cn = ANY(%s)
+            """, (ordered_words,))
+            by_word = {
+                row[0]: normalize_dashboard_vocab_row({
+                    "word": row[0],
+                    "pinyin": row[1],
+                    "meaning_vn": row[2],
+                    "meaning_en": row[3],
+                    "audio_key": row[4],
+                    "hsk_level": row[5],
+                })
+                for row in cur.fetchall()
+            }
+        return [by_word[word] for word in ordered_words if word in by_word][:limit]
+    except Exception as e:
+        print(f"Dashboard vocabulary lookup failed: {e}")
+        return []
+
+
 def format_dashboard_duration(ms):
     seconds = round((int(ms or 0)) / 1000)
     if seconds < 60:
@@ -144,7 +174,48 @@ def learned_vocab_page():
     finally:
         if conn:
             conn.close()
+    result["rows"] = [normalize_dashboard_vocab_row(row) for row in result.get("rows", [])]
     return jsonify(result)
+
+
+@user_bp.route('/api/user/dashboard-vocab-buckets', methods=['GET'])
+@login_required
+def dashboard_vocab_buckets():
+    limit = 5
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database unavailable"}), 503
+    try:
+        unsure_words = get_unsure_words_from_db(conn, current_user.id)
+        unlearned_words = get_unlearned_words_from_db(conn, current_user.id)
+        recent = get_mastered_words_page(conn, current_user.id, 1, limit)
+        buckets = {
+            "unsure": {
+                "key": "unsure",
+                "title": "Unsure Words",
+                "mode": "unsure",
+                "total": len(unsure_words),
+                "rows": dashboard_rows_for_words(conn, unsure_words, limit),
+            },
+            "unlearn": {
+                "key": "unlearn",
+                "title": "Unlearned Words",
+                "mode": "unlearn",
+                "total": len(unlearned_words),
+                "rows": dashboard_rows_for_words(conn, unlearned_words, limit),
+            },
+            "recent": {
+                "key": "recent",
+                "title": "Recent Learned Words",
+                "mode": "recent",
+                "total": recent.get("total", 0),
+                "rows": [normalize_dashboard_vocab_row(row) for row in recent.get("rows", [])],
+            },
+        }
+    finally:
+        if conn:
+            conn.close()
+    return jsonify({"buckets": buckets, "order": ["unsure", "unlearn", "recent"]})
 
 
 @user_bp.route('/api/user/recent-learning', methods=['GET'])

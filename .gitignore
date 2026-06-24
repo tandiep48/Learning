@@ -4,6 +4,7 @@ __pycache__
 .vscode
 .venv
 venv
+.claude
 
 # folder sharing_file
 sharing_file
@@ -27,3 +28,6 @@ excel_file
 
 # docs folder
 docs
+
+# image folder
+web_app/static/images/lessons

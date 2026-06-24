@@ -2,6 +2,40 @@
     width: min(1280px, calc(100% - 40px));
 }
 
+.trainer-topbar {
+    display: flex;
+    justify-content: flex-start;
+    width: 100%;
+    max-width: 820px;
+    margin: 0 auto 16px;
+}
+
+.trainer-quit-btn {
+    width: auto;
+}
+
+.trainer-task-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    margin-top: 18px;
+}
+
+.trainer-task-actions > button {
+    flex: 1 1 0;
+    justify-content: center;
+    min-width: 0;
+    width: 100%;
+}
+
+.lesson-skip-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
 #screen-training .task-card,
 #screen-complete {
     max-width: 820px;
@@ -99,6 +133,31 @@
     color: var(--primary);
 }
 
+.mc-btn-inner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+.key-hint {
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(87, 104, 86, 0.1);
+    color: var(--primary);
+    font-size: 0.82rem;
+    font-weight: 800;
+}
+
+#mc-area .btn:hover .key-hint {
+    background: rgba(87, 104, 86, 0.18);
+}
+
 .lesson-complete-icon {
     display: flex;
     justify-content: center;
@@ -114,5 +173,9 @@
 @media (max-width: 640px) {
     .lesson-container {
         width: 100%;
+    }
+
+    .trainer-task-actions {
+        flex-direction: column;
     }
 }

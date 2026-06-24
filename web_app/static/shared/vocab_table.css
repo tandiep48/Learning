@@ -77,6 +77,44 @@
 .vocab-table.hide-cn .vocab-cn { opacity: 0; }
 .vocab-table.hide-py .vocab-pinyin { opacity: 0; }
 .vocab-table.hide-vn .vocab-meaning-vn { opacity: 0; }
+.vocab-table.hide-cn .vocab-cn.column-cell-revealed,
+.vocab-table.hide-py .vocab-pinyin.column-cell-revealed,
+.vocab-table.hide-vn .vocab-meaning-vn.column-cell-revealed,
+.vocab-table tr.audio-revealed .vocab-cn,
+.vocab-table tr.audio-revealed .vocab-pinyin,
+.vocab-table tr.audio-revealed .vocab-meaning-vn {
+    opacity: 1 !important;
+    color: revert !important;
+    background-color: transparent !important;
+    visibility: visible !important;
+}
+.vocab-table tr.audio-revealed .vocab-cn *,
+.vocab-table tr.audio-revealed .vocab-pinyin *,
+.vocab-table tr.audio-revealed .vocab-meaning-vn * {
+    visibility: visible !important;
+}
+.vocab-column-header-label {
+    vertical-align: middle;
+}
+.vocab-column-toggle {
+    width: 26px;
+    height: 26px;
+    margin-left: 8px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid currentColor;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font-size: 0.82rem;
+    vertical-align: middle;
+}
+.vocab-column-toggle:hover {
+    background: rgba(255, 255, 255, 0.16);
+}
 .vocab-table tbody tr {
     border-bottom: 1px solid rgba(87, 104, 86,0.04);
     transition: background 0.15s;

@@ -43,64 +43,93 @@
     color: var(--text-main);
 }
 
-/* -- Lesson List -- */
+/* -- Lesson List (3-column grid) -- */
 .lesson-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-top: 15px;
-    max-height: 60vh;
-    overflow-y: auto;
-    padding-right: 8px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 20px;
 }
 .lesson-card {
-    background: rgba(87, 104, 86,0.04);
-    border: 1px solid rgba(87, 104, 86,0.06);
-    border-radius: 12px;
-    padding: 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    background: #ffffff;
+    border: 1px solid rgba(87, 104, 86, 0.1);
+    border-radius: 14px;
+    overflow: hidden;
     cursor: pointer;
-    transition: all 0.2s;
-}
-.lesson-card:hover {
-    background: rgba(87, 104, 86,0.08);
-    transform: translateX(4px);
-}
-.lesson-card-left {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    box-shadow: 0 2px 8px rgba(87, 104, 86, 0.06);
+}
+.lesson-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(87, 104, 86, 0.13);
+}
+.lesson-card-img-wrap {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: rgba(87, 104, 86, 0.05);
+}
+.lesson-card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.3s ease;
+}
+.lesson-card:hover .lesson-card-img {
+    transform: scale(1.04);
+}
+.lesson-card-body {
+    padding: 12px 14px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
 }
 .lesson-card-title {
-    font-size: 1.15rem;
-    font-weight: 600;
+    font-size: 1rem;
+    font-weight: 700;
     color: var(--text-main);
 }
 .lesson-card-preview {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     color: var(--text-muted);
 }
 .picker-progress-lines {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 2px;
     color: var(--text-muted);
-    font-size: 0.9rem;
-    line-height: 1.35;
+    font-size: 0.8rem;
+    line-height: 1.4;
 }
 .picker-progress-lines-centered {
     align-items: center;
-    font-size: 0.84rem;
+    font-size: 0.8rem;
 }
 .lesson-card-count {
-    background: rgba(87, 104, 86,0.1);
+    margin-top: auto;
+    align-self: flex-start;
+    background: rgba(87, 104, 86, 0.08);
     color: var(--primary);
-    padding: 4px 10px;
+    padding: 3px 10px;
     border-radius: 20px;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 600;
+}
+
+@media (max-width: 640px) {
+    .lesson-list {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+}
+@media (max-width: 400px) {
+    .lesson-list {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* -- Picker Screens -- */
@@ -110,6 +139,25 @@
 }
 .picker-screen.active {
     display: block;
+}
+
+.picker-top-link {
+    margin-bottom: 20px;
+}
+
+.picker-back-button {
+    background: none;
+    border: none;
+    color: var(--primary);
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+    padding: 0;
+    text-decoration: none;
+}
+
+.picker-back-button:hover {
+    color: var(--primary-hover);
 }
 
 /* -- Lesson and part progress bars -- */

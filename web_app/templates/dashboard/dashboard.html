@@ -22,14 +22,22 @@
                 <div class="dashboard-panel-heading">
                     <div>
                         <span class="dashboard-kicker">Vocabulary</span>
-                        <h2>Recent Lesson Words</h2>
+                        <h2 id="home-vocab-title">Unsure Words</h2>
                     </div>
-                    <span id="home-vocab-count" class="dashboard-count">0 words</span>
+                    <div class="dashboard-vocab-controls">
+                        <button class="dashboard-icon-btn" onclick="showDashboardVocabBucket(-1)" title="Previous vocabulary table" aria-label="Previous vocabulary table">
+                            <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+                        </button>
+                        <span id="home-vocab-count" class="dashboard-count">0 words</span>
+                        <button class="dashboard-icon-btn" onclick="showDashboardVocabBucket(1)" title="Next vocabulary table" aria-label="Next vocabulary table">
+                            <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                        </button>
+                    </div>
                 </div>
                 <div id="home-vocab-state" class="dashboard-empty">Loading vocabulary...</div>
                 <div id="home-vocab-table-wrap" class="home-vocab-table-wrap" style="display:none;"></div>
                 <div class="vocab-view-all-row" id="home-vocab-view-all" style="display:none;">
-                    <a href="/vocab" class="vocab-view-all-link">View all vocabulary &rarr;</a>
+                    <a id="home-vocab-view-all-link" href="/vocab" class="vocab-view-all-link">View all vocabulary &rarr;</a>
                 </div>
             </div>
 
