@@ -1,0 +1,196 @@
+.head {
+    width: 40.75pt;
+    border: solid #E5E5E5 1.0pt;
+    border-top: none;
+    background: var(--btn-bg-secondary);
+    padding: 0cm 0cm 0cm 0cm;
+    height: 32.4pt;
+    text-align: center;
+}
+
+.cell {
+    width: 31.25pt;
+    border: solid #E5E5E5 1.0pt;
+    padding: 0cm 0cm 0cm 0cm;
+    height: 32.25pt;
+}
+
+i.fa.fa-volume-up.custom-pinyin {
+    display: block;
+    height: 30px;
+    line-height: 30px;
+    background-color: #e3e3e3;
+    border: 1px solid #bbb;
+    border-radius: 15px;
+    padding-left: 2px;
+    padding-right: 15px;
+    color: #333;
+    cursor: pointer;
+    font-size: 18px;
+}
+
+i.fa.fa-volume-up.custom-pinyin:hover {
+    cursor: pointer;
+    background: #ccefff;
+}
+
+.cell:hover {
+    visibility: visible;
+    background-color: #E5E5E5;
+    cursor: pointer;
+}
+
+.cell-basic:hover {
+    visibility: visible;
+    background-color: #E5E5E5;
+    font-weight: bolder;
+    cursor: pointer;
+}
+
+.tg {
+    border: 1px solid #000;
+}
+
+.tg td {
+    border: 1px solid #000;
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+    overflow: hidden;
+    padding: 10px 5px;
+    background-clip: padding-box;
+}
+
+.tg th {
+    border: 1px solid #000;
+    font-family: Arial, sans-serif;
+    font-weight: normal;
+    overflow: hidden;
+    padding: 10px 5px;
+    word-break: normal;
+}
+
+.tg .tg-46ru {
+    background-color: var(--btn-bg-secondary);
+    border-color: inherit;
+    text-align: center;
+    vertical-align: top;
+    font-weight: bolder;
+    font-size: 24px;
+}
+
+.tg .tg-0pky {
+    border-color: inherit;
+    text-align: center;
+    vertical-align: top;
+    width: 100px;
+    cursor: pointer;
+}
+
+.tg .tg-0pky:hover {
+    background-color: rgb(238, 238, 238);
+    font-weight: bolder;
+}
+
+.highlight-cell {
+    background-color: rgb(238, 238, 238);
+    font-weight: bolder;
+}
+
+.pronounce-detail {
+    background-color: rgb(235, 232, 232);
+    height: 100px;
+    width: 100%;
+    border-radius: 2em;
+    margin-bottom: 1em;
+    padding: 0 10px;
+}
+
+#pinyin-0 tr:last-of-type td:first-of-type {
+    border-bottom-left-radius: 2rem;
+}
+
+#pinyin-0 tr:last-of-type td:last-of-type {
+    border-bottom-right-radius: 2rem;
+}
+
+th:first-of-type {
+    border-top-left-radius: 2rem;
+}
+
+th:last-of-type {
+    border-top-right-radius: 2rem;
+}
+
+.pinyin-toggle a {
+    text-decoration: none;
+    color: var(--txt-secondary);
+    font-size: 18px;
+    font-weight: 500;
+    padding: 4px 8px;
+}
+
+.pinyin-toggle a.active {
+    color: var(--txt-primary);
+    font-weight: 600;
+    border-bottom: 2px solid var(--btn-bg-primary);
+}
+
+/* Custom Popover Styles */
+.pinyin-popover {
+    position: absolute;
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1050;
+    padding: 0.25rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.pinyin-popover .tone-button {
+    cursor: pointer;
+    padding: 8px 16px;
+    font-size: 1rem;
+    text-align: center;
+    border: none;
+    background-color: transparent;
+    width: 100%;
+    border-radius: 4px;
+}
+
+.pinyin-popover .tone-button:hover {
+    background-color: #f0f0f0;
+}
+
+.cell .btn-pinyin {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.cell .btn-pinyin:hover {
+    background-color: #e9ecef;
+}
+
+/* Tooltip replacement logic style if needed */
+.pinyin-tooltip {
+    position: absolute;
+    background: #333;
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 14px;
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.2s;
+    white-space: nowrap;
+}
+.pinyin-tooltip.visible {
+    opacity: 1;
+}

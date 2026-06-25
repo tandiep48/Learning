@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Pinyin</title>
+    <link rel="stylesheet" href="/static/shared/styles.css">
+    <link rel="stylesheet" href="/static/lesson/pinyin.css">
+</head>
+<body class="with-site-nav">
+    {% include 'shared/site_nav.html' %}
+    <div class="app-container lesson-container">
+        <!-- Custom Popover Element -->
+<div id="pinyin-popover" class="pinyin-popover" style="display: none;" onclick="event.stopPropagation()">
+</div>
+
+<div class="container mt-3">
+  
+
+  <div class="d-flex flex-column justify-content-center align-items-center my-4">
+    <h2 class="text-h2 text-center mb-2">HSK 1 - Lesson 1</h2>
+    <nav class="pinyin-toggle">
+      <a href="/lesson/basic-pinyin">Basic</a> /
+      <a href="/lesson/advanced-pinyin" class="active">Advanced</a>
+    </nav>
+  </div>
+
+  <div class="row justify-content-center align-items-center mt-3">
+    <!-- This container will make the table scrollable on small screens -->
+    <div class="table-responsive">
+      <!-- TABLE 1 -->
+      <table class="MsoNormalTable" cellspacing="0" cellpadding="0" style="border-collapse: collapse">
+        <thead>
+          <tr style="height: 32.65pt; background: #00bfd8">
+            <th class="head" style="background: #fff4df">&nbsp;</th>
+            <th class="head">&nbsp;</th>
+            <th class="head">b</th>
+            <th class="head">p</th>
+            <th class="head">m</th>
+            <th class="head">f</th>
+            <th class="head">d</th>
+            <th class="head">t</th>
+            <th class="head">n</th>
+            <th class="head">l</th>
+            <th class="head">g</th>
+            <th class="head">k</th>
+            <th class="head">h</th>
+            <th class="head">j</th>
+            <th class="head">q</th>
+            <th class="head">x</th>
+            <th class="head">z</th>
+            <th class="head">c</th>
+            <th class="head">s</th>
+            <th class="head">zh</th>
+            <th class="head">ch</th>
+            <th class="head">sh</th>
+            <th class="head">r</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="head">a</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('a', event)">a</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ba', event)">ba</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('pa', event)">pa</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ma', event)">ma</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('fa', event)">fa</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('da', event)">da</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ta', event)">ta</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('na', event)">na</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('la', event)">la</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ga', event)">ga</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ka', event)">ka</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ha', event)">ha</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('za', event)">za</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ca', event)">ca</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('sa', event)">sa</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zha', event)">zha</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('cha', event)">cha</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('sha', event)">sha</span></td>
+            <td class="cell"></td>
+          </tr>
+          <tr>
+            <td class="head">ai</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ai', event)">ai</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('bai', event)">bai</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('pai', event)">pai</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('mai', event)">mai</span></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('dai', event)">dai</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('tai', event)">tai</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('nai', event)">nai</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('lai', event)">lai</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('gai', event)">gai</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('kai', event)">kai</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('hai', event)">hai</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zai', event)">zai</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('cai', event)">cai</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('sai', event)">sai</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zhai', event)">zhai</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('chai', event)">chai</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('shai', event)">shai</span></td>
+            <td class="cell"></td>
+          </tr>
+          <tr>
+            <td class="head">an</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('an', event)">an</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ban', event)">ban</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('pan', event)">pan</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('man', event)">man</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('fan', event)">fan</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('dan', event)">dan</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('tan', event)">tan</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('nan', event)">nan</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('lan', event)">lan</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('gan', event)">gan</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('kan', event)">kan</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('han', event)">han</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zan', event)">zan</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('can', event)">can</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('san', event)">san</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zhan', event)">zhan</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('chan', event)">chan</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('shan', event)">shan</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ran', event)">ran</span></td>
+          </tr>
+          <tr>
+            <td class="head">ang</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ang', event)">ang</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('bang', event)">bang</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('pang', event)">pang</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('mang', event)">mang</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('fang', event)">fang</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('dang', event)">dang</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('tang', event)">tang</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('nang', event)">nang</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('lang', event)">lang</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('gang', event)">gang</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('kang', event)">kang</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('hang', event)">hang</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zang', event)">zang</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('cang', event)">cang</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('sang', event)">sang</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zhang', event)">zhang</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('chang', event)">chang</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('shang', event)">shang</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('rang', event)">rang</span></td>
+          </tr>
+          <tr>
+            <td class="head">ao</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ao', event)">ao</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('bao', event)">bao</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('pao', event)">pao</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('mao', event)">mao</span></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('dao', event)">dao</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('tao', event)">tao</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('nao', event)">nao</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('lao', event)">lao</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('gao', event)">gao</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('kao', event)">kao</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('hao', event)">hao</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zao', event)">zao</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('cao', event)">cao</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('sao', event)">sao</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zhao', event)">zhao</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('chao', event)">chao</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('shao', event)">shao</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('rao', event)">rao</span></td>
+          </tr>
+          <tr>
+            <td class="head">e</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('e', event)">e</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('me', event)">me</span></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('de', event)">de</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('te', event)">te</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ne', event)">ne</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('le', event)">le</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ge', event)">ge</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ke', event)">ke</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('he', event)">he</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ze', event)">ze</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ce', event)">ce</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('se', event)">se</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zhe', event)">zhe</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('che', event)">che</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('she', event)">she</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('re', event)">re</span></td>
+          </tr>
+          <tr>
+            <td class="head">ei</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ei', event)">ei</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('bei', event)">bei</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('pei', event)">pei</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('mei', event)">mei</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('fei', event)">fei</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('dei', event)">dei</span></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('nei', event)">nei</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('lei', event)">lei</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('gei', event)">gei</span></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('hei', event)">hei</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zei', event)">zei</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zhei', event)">zhei</span></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('shei', event)">shei</span></td>
+            <td class="cell"></td>
+          </tr>
+          <tr>
+            <td class="head">en</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('en', event)">en</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ben', event)">ben</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('pen', event)">pen</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('men', event)">men</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('fen', event)">fen</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('nen', event)">nen</span></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('gen', event)">gen</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ken', event)">ken</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('hen', event)">hen</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zen', event)">zen</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('cen', event)">cen</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('sen', event)">sen</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zhen', event)">zhen</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('chen', event)">chen</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('shen', event)">shen</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ren', event)">ren</span></td>
+          </tr>
+          <tr>
+            <td class="head">eng</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('eng', event)">eng</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('beng', event)">beng</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('peng', event)">peng</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('meng', event)">meng</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('feng', event)">feng</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('deng', event)">deng</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('teng', event)">teng</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('neng', event)">neng</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('leng', event)">leng</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('geng', event)">geng</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('keng', event)">keng</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('heng', event)">heng</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zeng', event)">zeng</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ceng', event)">ceng</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('seng', event)">seng</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zheng', event)">zheng</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('cheng', event)">cheng</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('sheng', event)">sheng</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('reng', event)">reng</span></td>
+          </tr>
+          <tr>
+            <td class="head">er</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('er', event)">er</span></td>
+            <td class="cell" colspan="21"></td>
+          </tr>
+          <tr>
+            <td class="head">i</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('yi', event)">yi</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('bi', event)">bi</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('pi', event)">pi</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('mi', event)">mi</span></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('di', event)">di</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ti', event)">ti</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ni', event)">ni</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('li', event)">li</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ji', event)">ji</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('qi', event)">qi</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('xi', event)">xi</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zi', event)">zi</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ci', event)">ci</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('si', event)">si</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zhi', event)">zhi</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('chi', event)">chi</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('shi', event)">shi</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ri', event)">ri</span></td>
+          </tr>
+          <tr>
+            <td class="head">ia</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ya', event)">ya</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('lia', event)">lia</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('jia', event)">jia</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('qia', event)">qia</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('xia', event)">xia</span></td>
+            <td class="cell" colspan="7"></td>
+          </tr>
+          <tr>
+            <td class="head">ian</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('yan', event)">yan</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('bian', event)">bian</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('pian', event)">pian</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('mian', event)">mian</span></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('dian', event)">dian</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('tian', event)">tian</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('nian', event)">nian</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('lian', event)">lian</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('jian', event)">jian</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('qian', event)">qian</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('xian', event)">xian</span></td>
+            <td class="cell" colspan="7"></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <br />
+
+      <!-- TABLE 2 -->
+      <table class="MsoNormalTable" cellspacing="0" cellpadding="0" style="border-collapse: collapse">
+        <thead>
+          <tr style="height: 32.65pt; background: #00bfd8">
+            <th class="head" style="background: #fff4df">&nbsp;</th>
+            <th class="head">&nbsp;</th>
+            <th class="head">b</th>
+            <th class="head">p</th>
+            <th class="head">m</th>
+            <th class="head">f</th>
+            <th class="head">d</th>
+            <th class="head">t</th>
+            <th class="head">n</th>
+            <th class="head">l</th>
+            <th class="head">g</th>
+            <th class="head">k</th>
+            <th class="head">h</th>
+            <th class="head">j</th>
+            <th class="head">q</th>
+            <th class="head">x</th>
+            <th class="head">z</th>
+            <th class="head">c</th>
+            <th class="head">s</th>
+            <th class="head">zh</th>
+            <th class="head">ch</th>
+            <th class="head">sh</th>
+            <th class="head">r</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="head">iang</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('yang', event)">yang</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('niang', event)">niang</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('liang', event)">liang</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('jiang', event)">jiang</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('qiang', event)">qiang</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('xiang', event)">xiang</span></td>
+            <td class="cell" colspan="7"></td>
+          </tr>
+          <tr>
+            <td class="head">iao</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('yao', event)">yao</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('biao', event)">biao</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('piao', event)">piao</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('miao', event)">miao</span></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('diao', event)">diao</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('tiao', event)">tiao</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('niao', event)">niao</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('liao', event)">liao</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('jiao', event)">jiao</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('qiao', event)">qiao</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('xiao', event)">xiao</span></td>
+            <td class="cell" colspan="7"></td>
+          </tr>
+          <tr>
+            <td class="head">ie</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ye', event)">ye</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('bie', event)">bie</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('pie', event)">pie</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('mie', event)">mie</span></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('die', event)">die</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('tie', event)">tie</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('nie', event)">nie</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('lie', event)">lie</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('jie', event)">jie</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('qie', event)">qie</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('xie', event)">xie</span></td>
+            <td class="cell" colspan="7"></td>
+          </tr>
+          <tr>
+            <td class="head">in</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('yin', event)">yin</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('bin', event)">bin</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('pin', event)">pin</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('min', event)">min</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('nin', event)">nin</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('lin', event)">lin</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('jin', event)">jin</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('qin', event)">qin</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('xin', event)">xin</span></td>
+            <td class="cell" colspan="7"></td>
+          </tr>
+          <tr>
+            <td class="head">ing</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ying', event)">ying</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('bing', event)">bing</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ping', event)">ping</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ming', event)">ming</span></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ding', event)">ding</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ting', event)">ting</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ning', event)">ning</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ling', event)">ling</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('jing', event)">jing</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('qing', event)">qing</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('xing', event)">xing</span></td>
+            <td class="cell" colspan="7"></td>
+          </tr>
+          <tr>
+            <td class="head">iong</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('yong', event)">yong</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('jiong', event)">jiong</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('qiong', event)">qiong</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('xiong', event)">xiong</span></td>
+            <td class="cell" colspan="7"></td>
+          </tr>
+          <tr>
+            <td class="head">iou</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('you', event)">you</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('miu', event)">miu</span></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('diu', event)">diu</span></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('niu', event)">niu</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('liu', event)">liu</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('jiu', event)">jiu</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('qiu', event)">qiu</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('xiu', event)">xiu</span></td>
+            <td class="cell" colspan="7"></td>
+          </tr>
+          <tr>
+            <td class="head">o</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('o', event)">o</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('bo', event)">bo</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('po', event)">po</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('mo', event)">mo</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('fo', event)">fo</span></td>
+            <td class="cell" colspan="17"></td>
+          </tr>
+          <tr>
+            <td class="head">ong</td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('dong', event)">dong</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('tong', event)">tong</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('nong', event)">nong</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('long', event)">long</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('gong', event)">gong</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('kong', event)">kong</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('hong', event)">hong</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zong', event)">zong</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('cong', event)">cong</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('song', event)">song</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zhong', event)">zhong</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('chong', event)">chong</span></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('rong', event)">rong</span></td>
+          </tr>
+          <tr>
+            <td class="head">ou</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ou', event)">ou</span></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('pou', event)">pou</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('mou', event)">mou</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('fou', event)">fou</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('dou', event)">dou</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('tou', event)">tou</span></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('lou', event)">lou</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('gou', event)">gou</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('kou', event)">kou</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('hou', event)">hou</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zou', event)">zou</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('cou', event)">cou</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('sou', event)">sou</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zhou', event)">zhou</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('chou', event)">chou</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('shou', event)">shou</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('rou', event)">rou</span></td>
+          </tr>
+          <tr>
+            <td class="head">u</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('wu', event)">wu</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('bu', event)">bu</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('pu', event)">pu</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('mu', event)">mu</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('fu', event)">fu</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('du', event)">du</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('tu', event)">tu</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('nu', event)">nu</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('lu', event)">lu</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('gu', event)">gu</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ku', event)">ku</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('hu', event)">hu</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zu', event)">zu</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('cu', event)">cu</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('su', event)">su</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zhu', event)">zhu</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('chu', event)">chu</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('shu', event)">shu</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ru', event)">ru</span></td>
+          </tr>
+          <tr>
+            <td class="head">ua</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('wa', event)">wa</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('gua', event)">gua</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('kua', event)">kua</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('hua', event)">hua</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zhua', event)">zhua</span></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('shua', event)">shua</span></td>
+            <td class="cell"></td>
+          </tr>
+          <tr>
+            <td class="head">uai</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('wai', event)">wai</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('guai', event)">guai</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('kuai', event)">kuai</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('huai', event)">huai</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zhuai', event)">zhuai</span></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('shuai', event)">shuai</span></td>
+            <td class="cell"></td>
+          </tr>
+          <tr>
+            <td class="head">uan</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('wan', event)">wan</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('duan', event)">duan</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('tuan', event)">tuan</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('nuan', event)">nuan</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('luan', event)">luan</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('guan', event)">guan</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('kuan', event)">kuan</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('huan', event)">huan</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zuan', event)">zuan</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('cuan', event)">cuan</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('suan', event)">suan</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zhuan', event)">zhuan</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('chuan', event)">chuan</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('shuan', event)">shuan</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ruan', event)">ruan</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <br />
+
+      <!-- TABLE 3 -->
+      <table class="MsoNormalTable" cellspacing="0" cellpadding="0" style="border-collapse: collapse">
+        <thead>
+          <tr style="height: 32.65pt; background: #00bfd8">
+            <th class="head" style="background: #fff4df">&nbsp;</th>
+            <th class="head">&nbsp;</th>
+            <th class="head">b</th>
+            <th class="head">p</th>
+            <th class="head">m</th>
+            <th class="head">f</th>
+            <th class="head">d</th>
+            <th class="head">t</th>
+            <th class="head">n</th>
+            <th class="head">l</th>
+            <th class="head">g</th>
+            <th class="head">k</th>
+            <th class="head">h</th>
+            <th class="head">j</th>
+            <th class="head">q</th>
+            <th class="head">x</th>
+            <th class="head">z</th>
+            <th class="head">c</th>
+            <th class="head">s</th>
+            <th class="head">zh</th>
+            <th class="head">ch</th>
+            <th class="head">sh</th>
+            <th class="head">r</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="head">uang</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('wang', event)">wang</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('guang', event)">guang</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('kuang', event)">kuang</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('huang', event)">huang</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zhuang', event)">zhuang</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('chuang', event)">chuang</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('shuang', event)">shuang</span></td>
+            <td class="cell"></td>
+          </tr>
+          <tr>
+            <td class="head">uei</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('wei', event)">wei</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('dui', event)">dui</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('tui', event)">tui</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('gui', event)">gui</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('kui', event)">kui</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('hui', event)">hui</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zui', event)">zui</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('cui', event)">cui</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('sui', event)">sui</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zhui', event)">zhui</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('chui', event)">chui</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('shui', event)">shui</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('rui', event)">rui</span></td>
+          </tr>
+          <tr>
+            <td class="head">uen</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('wen', event)">wen</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('dun', event)">dun</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('tun', event)">tun</span></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('lun', event)">lun</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('gun', event)">gun</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('kun', event)">kun</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('hun', event)">hun</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zun', event)">zun</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('cun', event)">cun</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('sun', event)">sun</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zhun', event)">zhun</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('chun', event)">chun</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('shun', event)">shun</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('run', event)">run</span></td>
+          </tr>
+          <tr>
+            <td class="head">ueng</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('weng', event)">weng</span></td>
+            <td class="cell" colspan="21"></td>
+          </tr>
+          <tr>
+            <td class="head">uo</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('wo', event)">wo</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('duo', event)">duo</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('tuo', event)">tuo</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('nuo', event)">nuo</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('luo', event)">luo</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('guo', event)">guo</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('kuo', event)">kuo</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('huo', event)">huo</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zuo', event)">zuo</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('cuo', event)">cuo</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('suo', event)">suo</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('zhuo', event)">zhuo</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('chuo', event)">chuo</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('shuo', event)">shuo</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ruo', event)">ruo</span></td>
+          </tr>
+          <tr>
+            <td class="head">ü</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('yu', event)">yu</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('nü', event)">nü</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('lü', event)">lü</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('ju', event)">ju</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('qu', event)">qu</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('xu', event)">xu</span></td>
+            <td class="cell" colspan="7"></td>
+          </tr>
+          <tr>
+            <td class="head">üe</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('yue', event)">yue</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('nüe', event)">nüe</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('lüe', event)">lüe</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('jue', event)">jue</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('que', event)">que</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('xue', event)">xue</span></td>
+            <td class="cell" colspan="7"></td>
+          </tr>
+          <tr>
+            <td class="head">üan</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('yuan', event)">yuan</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('juan', event)">juan</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('quan', event)">quan</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('xuan', event)">xuan</span></td>
+            <td class="cell" colspan="7"></td>
+          </tr>
+          <tr>
+            <td class="head">ün</td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('yun', event)">yun</span></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('jun', event)">jun</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('qun', event)">qun</span></td>
+            <td class="cell"><span class="btn-pinyin" onclick="displayPinyinPopover('xun', event)">xun</span></td>
+            <td class="cell" colspan="7"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+    <div class="d-flex justify-content-center my-4">
+    
+  </div>
+</div>
+
+    </div>
+    
+    <div id="pinyin-tooltip" class="pinyin-tooltip"></div>
+    
+    
+
+    <script src="/static/lesson/pinyin.js"></script>
+</body>
+</html>

@@ -50,7 +50,16 @@ def inject_avatar_helpers():
         if not avatar_path or not GCS_BUCKET_URL:
             return None
         return f"{GCS_BUCKET_URL.rstrip('/')}/{str(avatar_path).lstrip('/')}"
-    return {"avatar_url": avatar_url}
+
+    def hsk_image_url(level):
+        if not GCS_BUCKET_URL:
+            return ''
+        level_num = str(level).replace('HSK', '').replace('hsk', '').replace('H', '').replace('h', '')
+        if level_num not in {'1', '2', '3', '4', '5', '6'}:
+            return ''
+        return f"{GCS_BUCKET_URL.rstrip('/')}/hsk_images/hsk{level_num}.png"
+
+    return {"avatar_url": avatar_url, "hsk_image_url": hsk_image_url}
 
 @app.route('/')
 def index():
@@ -85,6 +94,16 @@ def grammar_page():
 @login_required
 def lesson_page():
     return render_template('lesson/lesson.html')
+
+@app.route('/lesson/basic-pinyin')
+@login_required
+def basic_pinyin_page():
+    return render_template('lesson/basic_pinyin.html')
+
+@app.route('/lesson/advanced-pinyin')
+@login_required
+def advanced_pinyin_page():
+    return render_template('lesson/advanced_pinyin.html')
 
 @app.route('/reading')
 @login_required
