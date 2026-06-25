@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reading Practice - {{ hsk_level }}</title>
     <link rel="stylesheet" href="/static/shared/styles.css">
-    <link rel="stylesheet" href="/static/shared/passage_picker.css?v=2">
+    <link rel="stylesheet" href="/static/shared/passage_picker.css?v=6">
     <link rel="stylesheet" href="/static/shared/vocab_table.css?v=7">
-    <link rel="stylesheet" href="/static/vocab_learning/vocab_learning.css?v=7">
-    <link rel="stylesheet" href="/static/reading/reading.css?v=8">
+    <link rel="stylesheet" href="/static/vocab_learning/vocab_learning.css?v=10">
+    <link rel="stylesheet" href="/static/reading/reading.css?v=10">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 <body class="with-site-nav">
@@ -142,7 +142,47 @@
         </div>
     </div>
 
-    <script src="/static/shared/passage_picker.js?v=6"></script>
-    <script src="/static/reading/reading.js?v=8"></script>
+    <div id="word-popup-overlay" class="word-popup-overlay" onclick="closeWordPopup()">
+        <div class="word-popup" onclick="event.stopPropagation()">
+            <button class="word-popup-close" onclick="closeWordPopup()" aria-label="Close">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div id="word-popup-hanzi" class="word-popup-hanzi"></div>
+            <div id="word-popup-pinyin" class="word-popup-pinyin"></div>
+            <div id="word-popup-meaning-vn" class="word-popup-meaning"></div>
+            <div id="word-popup-meaning-en" class="word-popup-meaning word-popup-meaning-en"></div>
+            <div class="word-popup-actions">
+                <button id="word-popup-audio-btn" class="word-popup-btn" onclick="playWordPopupAudio()">
+                    <i class="fa-solid fa-volume-high"></i>
+                    <span>Listen</span>
+                </button>
+                <button id="word-popup-stroke-btn" class="word-popup-btn" onclick="toggleWordStroke()">
+                    <i class="fa-solid fa-pen-nib"></i>
+                    <span>Stroke</span>
+                </button>
+            </div>
+            <div id="word-popup-stroke-area" class="word-popup-stroke-area" style="display:none;">
+                <div id="word-stroke-tabs" class="stroke-char-tabs"></div>
+                <div id="word-stroke-canvas" class="stroke-canvas-wrap">
+                    <div id="word-stroke-container"></div>
+                </div>
+                <div class="stroke-controls">
+                    <button class="stroke-btn" onclick="wordStrokeAnimate()">
+                        <i class="fa-solid fa-play"></i> Animate
+                    </button>
+                    <button class="stroke-btn" onclick="wordStrokeQuiz()">
+                        <i class="fa-solid fa-pen"></i> Practice
+                    </button>
+                    <button class="stroke-btn secondary" onclick="wordStrokeReset()">
+                        <i class="fa-solid fa-rotate-left"></i> Reset
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
+    <script src="/static/shared/passage_picker.js?v=7"></script>
+    <script src="/static/reading/reading.js?v=9"></script>
 </body>
 </html>

@@ -73,6 +73,12 @@ body.vocab-select-page > .app-container {
     min-height: calc(100vh - 68px);
 }
 
+body.vocab-select-page {
+    --bg-color: #ffffff;
+    background: #ffffff;
+    color: #111111;
+}
+
 .vocab-select-page .vocab-mode-toggle {
     flex-wrap: wrap;
 }
@@ -214,8 +220,8 @@ body.vocab-select-page > .app-container {
 }
 
 .vocab-content-card {
-    background: #ffffff;
-    border: 1px solid rgba(87, 104, 86, 0.08);
+    background: #CBE2D4;
+    border: 1px solid #afcfbd;
     border-radius: 16px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
     padding: 24px;

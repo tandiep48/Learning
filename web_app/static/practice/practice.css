@@ -13,6 +13,11 @@
     padding: 0;
 }
 
+body {
+    background: #ffffff;
+    color: #111111;
+}
+
 /* Screens */
 .p-screen { display: none; flex-direction: column; min-height: 100vh; }
 .p-screen.active { display: flex; animation: fadeIn 0.3s ease; }
@@ -36,7 +41,7 @@
     padding: 20px 20px 10px;
     position: sticky;
     top: 0;
-    background: var(--bg-color);
+    background: #ffffff;
     z-index: 10;
     border-bottom: 1px solid rgba(87, 104, 86,0.07);
 }
@@ -133,8 +138,8 @@
 
 /* Individual question block */
 .p-question-block {
-    background: rgba(87, 104, 86,0.04);
-    border: 1px solid rgba(87, 104, 86,0.09);
+    background: #CBE2D4;
+    border: 1px solid #afcfbd;
     border-radius: 14px;
     padding: 18px;
     display: flex;
@@ -151,7 +156,7 @@
     line-height: 1.9;
     color: var(--text-main);
     white-space: pre-wrap;
-    background: rgba(87, 104, 86,0.03);
+    background: #ffffff;
     padding: 14px 16px;
     border-radius: 10px;
     border-left: 3px solid var(--primary);
@@ -208,7 +213,7 @@
     padding: 18px;
     border: 2px solid rgba(87, 104, 86,0.12);
     border-radius: 12px;
-    background: rgba(87, 104, 86,0.04);
+    background: #ffffff;
     color: var(--text-main);
     font-size: 1rem;
     font-weight: 700;
@@ -555,3 +560,48 @@
 .result-score-num { font-size: 2.5rem; font-weight: 800; color: var(--success); }
 .result-score-label { color: var(--text-muted); font-size: 0.85rem; margin-top: 4px; }
 .result-actions { display: flex; gap: 12px; width: 100%; max-width: 360px; }
+
+/* Exercise / Exam theme pass */
+body {
+    background: #ffffff;
+    color: #111111;
+}
+
+.p-topbar {
+    background: #ffffff;
+}
+
+.p-question-block,
+.t5l-row,
+.t5r-row,
+.result-score-box {
+    background: #CBE2D4;
+    border-color: #afcfbd;
+    color: #111111;
+}
+
+.p-paragraph,
+.tf-btn,
+.mc-option,
+.chip-bank,
+.chip-answer,
+.t5l-key-btn,
+.t5l-opt-part,
+.t5r-sentence-part {
+    background: #ffffff;
+    color: #111111;
+}
+
+.tf-btn:hover:not(:disabled),
+.mc-option:hover:not(:disabled),
+.t5l-key-btn:hover:not(:disabled),
+.chip:hover {
+    background: #bddbc9;
+}
+
+.tf-btn.selected,
+.mc-option.selected,
+.chip.in-answer {
+    background: #bddbc9;
+    border-color: #93bda7;
+}

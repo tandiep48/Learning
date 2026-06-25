@@ -4,6 +4,7 @@ let missedTasks = [];
 let taskStartTime = 0;
 let currentReorderTokens = [];
 let currentPassageId = null;
+let lessonWideTrainingMeta = null;
 let isLessonPartFlow = false;
 
 // Fetch passages on load
@@ -15,11 +16,30 @@ window.onload = async () => {
         startSession(passage.passage_id);
     }, "Lesson Practice", !params.get('passage_id'));
 
+    const lessonWideLesson = readLessonWideLessonTrainer();
+    if (lessonWideLesson?.passage_ids?.length) {
+        lessonWideTrainingMeta = lessonWideLesson;
+        startSession(lessonWideLesson.passage_ids[0], lessonWideLesson.passage_ids);
+        return;
+    }
+
     const autoPassage = params.get('passage_id');
     if (autoPassage) {
         startSession(autoPassage);
     }
 };
+
+function readLessonWideLessonTrainer() {
+    const raw = sessionStorage.getItem('lessonWideLessonTrainer');
+    if (!raw) return null;
+    sessionStorage.removeItem('lessonWideLessonTrainer');
+    try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed?.passage_ids) ? parsed : null;
+    } catch (e) {
+        return null;
+    }
+}
 
 function switchScreen(screenId) {
     document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
@@ -40,15 +60,26 @@ function goHome() {
     closeQuitModal();
 }
 
-async function startSession(passage_id) {
+async function startSession(passage_id, passage_ids = null) {
+    if (passage_id === 'H1_1_1') {
+        window.location.href = '/lesson/basic-pinyin';
+        return;
+    } else if (passage_id === 'H1_1_2') {
+        window.location.href = '/lesson/advanced-pinyin';
+        return;
+    }
+
     currentPassageId = passage_id;
     switchScreen('screen-loading');
 
     try {
+        const bodyData = passage_ids?.length
+            ? { passage_ids: passage_ids, limit: 0 }
+            : { passage_id: passage_id, limit: 12 };
         const response = await fetch('/api/lesson/start', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ passage_id: passage_id, limit: 12 })
+            body: JSON.stringify(bodyData)
         });
 
         const data = await response.json();

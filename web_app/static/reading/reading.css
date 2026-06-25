@@ -1,6 +1,9 @@
 /* ── Toolbar ── */
 .reading-container {
     width: min(1280px, calc(100% - 40px));
+    background: transparent;
+    border: 0;
+    box-shadow: none;
 }
 
 .toolbar {
@@ -15,7 +18,8 @@
 
 /* ── Reading Lines ── */
 .reading-line {
-    background: rgba(0,0,0,0.2);
+    background: #CBE2D4;
+    border: 1px solid #afcfbd;
     border-radius: 10px;
     padding: 18px 20px;
     margin-bottom: 14px;
@@ -44,7 +48,7 @@
 }
 .meaning-text.show { display: block; }
 .audio-btn {
-    background: rgba(87, 104, 86,0.1);
+    background: var(--primary);
     border: none;
     color: white;
     padding: 10px;
@@ -97,12 +101,12 @@
     padding: 18px;
     border: 1px solid #d9ded9;
     border-radius: 10px;
-    background: #ffffff;
+    background: #CBE2D4;
     transition: background 0.15s, border-color 0.15s;
 }
 
 .lesson-preview-line:hover {
-    background: rgba(87, 104, 86, 0.03);
+    background: #bddbc9;
     border-color: rgba(87, 104, 86, 0.28);
 }
 
@@ -341,4 +345,117 @@
     .lesson-summary-actions {
         flex-direction: column;
     }
+}
+
+/* ── Clickable tokens ── */
+.line-token {
+    display: inline;
+    cursor: default;
+}
+.line-token.clickable {
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.15s;
+}
+.line-token.clickable:hover {
+    background: rgba(87, 104, 86, 0.15);
+}
+
+/* ── Word Popup ── */
+.word-popup-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 200;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0;
+}
+.word-popup-overlay.open {
+    display: flex;
+}
+.word-popup {
+    background: var(--card-bg);
+    border-radius: 20px 20px 0 0;
+    padding: 28px 24px 36px;
+    width: 100%;
+    max-width: 480px;
+    position: relative;
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.15);
+    animation: slideUp 0.22s ease;
+}
+@keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+}
+.word-popup-close {
+    position: absolute;
+    top: 14px; right: 16px;
+    background: rgba(87,104,86,0.08);
+    border: none;
+    border-radius: 50%;
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    transition: background 0.15s;
+}
+.word-popup-close:hover { background: rgba(87,104,86,0.18); }
+.word-popup-hanzi {
+    font-family: SimSun, 'Songti SC', serif;
+    font-size: 2.8rem;
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1.1;
+    margin-bottom: 6px;
+}
+.word-popup-pinyin {
+    font-size: 1.05rem;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+}
+.word-popup-meaning {
+    font-size: 0.95rem;
+    color: var(--text-main);
+    margin-bottom: 4px;
+}
+.word-popup-meaning-en {
+    color: var(--text-muted);
+    font-size: 0.88rem;
+}
+.word-popup-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+}
+.word-popup-btn {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border: 1px solid rgba(87,104,86,0.2);
+    border-radius: 10px;
+    background: rgba(87,104,86,0.06);
+    color: var(--primary);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.word-popup-btn:hover { background: rgba(87,104,86,0.14); }
+.word-popup-btn.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+.word-popup-stroke-area {
+    margin-top: 18px;
+}
+.word-popup-not-found {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-top: 10px;
+    font-style: italic;
 }

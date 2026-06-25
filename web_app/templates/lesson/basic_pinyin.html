@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basic Pinyin</title>
+    <link rel="stylesheet" href="/static/shared/styles.css">
+    <link rel="stylesheet" href="/static/lesson/pinyin.css">
+</head>
+<body class="with-site-nav">
+    {% include 'shared/site_nav.html' %}
+    <div class="app-container lesson-container">
+        <div class="container mt-3">
+  
+
+  <div class="d-flex flex-column justify-content-center align-items-center my-4">
+    <h2 class="text-h2 text-center mb-2">HSK 1 - Lesson 1</h2>
+    <nav class="pinyin-toggle">
+      <a href="/lesson/basic-pinyin" class="active">Basic</a> /
+      <a href="/lesson/advanced-pinyin">Advanced</a>
+    </nav>
+  </div>
+
+  <div class="d-flex justify-content-center mt-3">
+    <table id="pinyin-0" class="tg" style="border-collapse: unset; border-radius: 2rem">
+      <thead>
+        <tr>
+          <th class="tg-46ru font-big" colspan="4">Initials</th>
+          <th class="tg-46ru font-big" colspan="4">Finals</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('b')"
+          >
+            b
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('p')"
+          >
+            p
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('m')"
+          >
+            m
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('f')"
+          >
+            f
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('i')"
+          >
+            i
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('u')"
+          >
+            u
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ü')"
+          >
+            ü
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('er')"
+          >
+            er
+          </td>
+        </tr>
+        <tr>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('d')"
+          >
+            d
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('t')"
+          >
+            t
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('n')"
+          >
+            n
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('l')"
+          >
+            l
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('a')"
+          >
+            a
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ia')"
+          >
+            ia
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ua')"
+          >
+            ua
+          </td>
+          <td class="tg-0pky" onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"></td>
+        </tr>
+        <tr>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('g')"
+          >
+            g
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('k')"
+          >
+            k
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('h')"
+          >
+            h
+          </td>
+          <td class="tg-0pky" onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"></td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('o')"
+          >
+            o
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('uo')"
+          >
+            uo
+          </td>
+          <td class="tg-0pky" onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"></td>
+          <td class="tg-0pky" onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"></td>
+        </tr>
+        <tr>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('j')"
+          >
+            j
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('q')"
+          >
+            q
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('x')"
+          >
+            x
+          </td>
+          <td class="tg-0pky" onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"></td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('e')"
+          >
+            e
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ie')"
+          >
+            ie
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('üe')"
+          >
+            üe
+          </td>
+          <td class="tg-0pky" onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"></td>
+        </tr>
+        <tr>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('zh')"
+          >
+            zh
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ch')"
+          >
+            ch
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('sh')"
+          >
+            sh
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('r')"
+          >
+            r
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ai')"
+          >
+            ai
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('uai')"
+          >
+            uai
+          </td>
+          <td class="tg-0pky" onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"></td>
+          <td class="tg-0pky" onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"></td>
+        </tr>
+        <tr>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('z')"
+          >
+            z
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('c')"
+          >
+            c
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('s')"
+          >
+            s
+          </td>
+          <td class="tg-0pky" onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"></td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ei')"
+          >
+            ei
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('uei(ui)')"
+          >
+            uei(ui)
+          </td>
+          <td class="tg-0pky" onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"></td>
+          <td class="tg-0pky" onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"></td>
+        </tr>
+        <tr>
+          <td class="tg-46ru font-big" colspan="4">Tones</td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ao')"
+          >
+            ao
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('iao')"
+          >
+            iao
+          </td>
+          <td class="tg-0pky" onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"></td>
+          <td class="tg-0pky" onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"></td>
+        </tr>
+        <tr>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ā')"
+          >
+            ā
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('á')"
+          >
+            á
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ǎ')"
+          >
+            ǎ
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('à')"
+          >
+            à
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ou')"
+          >
+            ou
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('iou(iu)')"
+          >
+            iou(iu)
+          </td>
+          <td class="tg-0pky" onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"></td>
+          <td class="tg-0pky" onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"></td>
+        </tr>
+        <tr>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ō')"
+          >
+            ō
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ó')"
+          >
+            ó
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ǒ')"
+          >
+            ǒ
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ò')"
+          >
+            ò
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('an')"
+          >
+            an
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ian')"
+          >
+            ian
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('uan')"
+          >
+            uan
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('üan')"
+          >
+            üan
+          </td>
+        </tr>
+        <tr>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ē')"
+          >
+            ē
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('é')"
+          >
+            é
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ě')"
+          >
+            ě
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('è')"
+          >
+            è
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('en')"
+          >
+            en
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('in')"
+          >
+            in
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('uen(un)')"
+          >
+            uen(un)
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ün')"
+          >
+            ün
+          </td>
+        </tr>
+        <tr>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ī')"
+          >
+            ī
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('í')"
+          >
+            í
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ǐ')"
+          >
+            ǐ
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ì')"
+          >
+            ì
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ang')"
+          >
+            ang
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('iang')"
+          >
+            iang
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('uang')"
+          >
+            uang
+          </td>
+          <td class="tg-0pky" onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"></td>
+        </tr>
+        <tr>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ū')"
+          >
+            ū
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ú')"
+          >
+            ú
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ǔ')"
+          >
+            ǔ
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ù')"
+          >
+            ù
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('eng')"
+          >
+            eng
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ing')"
+          >
+            ing
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ueng')"
+          >
+            ueng
+          </td>
+          <td class="tg-0pky" onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"></td>
+        </tr>
+        <tr>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ǖ')"
+          >
+            ǖ
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ǘ')"
+          >
+            ǘ
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ǚ')"
+          >
+            ǚ
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ǜ')"
+          >
+            ǜ
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('ong')"
+          >
+            ong
+          </td>
+          <td
+            class="tg-0pky"
+            onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
+            onclick="playPinyin('iong')"
+          >
+            iong
+          </td>
+          <td class="tg-0pky" onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"></td>
+          <td class="tg-0pky" onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="d-flex justify-content-center my-4">
+    
+  </div>
+</div>
+
+    </div>
+    
+    <div id="pinyin-tooltip" class="pinyin-tooltip"></div>
+    
+    
+    <script src="/static/lesson/pinyin.js"></script>
+</body>
+</html>

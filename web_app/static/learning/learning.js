@@ -13,6 +13,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // Start immediately — skip the intermediate action screen
         saveRecentLearning();
         const passageId = encodeURIComponent(passage.passage_id);
+        
+        if (passage.passage_id === 'H1_1_1') {
+            window.location.href = '/lesson/basic-pinyin';
+            return;
+        } else if (passage.passage_id === 'H1_1_2') {
+            window.location.href = '/lesson/advanced-pinyin';
+            return;
+        }
+        
         window.location.href = `/vocab-learning?passage_id=${passageId}&flow=lesson-part`;
     }, 'Learning', !autoPassageId);
 
@@ -86,6 +95,13 @@ function startGuidedLessonPart() {
     if (!selectedPassage || !selectedPassage.passage_id) return;
     saveRecentLearning();
     const passageId = encodeURIComponent(selectedPassage.passage_id);
+    if (selectedPassage.passage_id === 'H1_1_1') {
+        window.location.href = '/lesson/basic-pinyin';
+        return;
+    } else if (selectedPassage.passage_id === 'H1_1_2') {
+        window.location.href = '/lesson/advanced-pinyin';
+        return;
+    }
     window.location.href = `/vocab-learning?passage_id=${passageId}&flow=lesson-part`;
 }
 
@@ -111,6 +127,13 @@ function showRecentPanel(passageId) {
 
 function continueRecentLesson() {
     if (!recentPassageId) return;
+    if (recentPassageId === 'H1_1_1') {
+        window.location.href = '/lesson/basic-pinyin';
+        return;
+    } else if (recentPassageId === 'H1_1_2') {
+        window.location.href = '/lesson/advanced-pinyin';
+        return;
+    }
     window.location.href = `/learning?passage_id=${encodeURIComponent(recentPassageId)}`;
 }
 

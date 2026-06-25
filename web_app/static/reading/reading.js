@@ -2,7 +2,7 @@ let currentPassage = null;
 let pinyinVisible = false;
 let meaningVisible = false;
 let currentAudio = null;
-let vocabLoaded = false;   // cache: don't re-fetch each open
+let vocabLoaded = false;
 let currentVocabList = [];
 let isPlayingAll = false;
 let isLessonPartFlow = false;
@@ -382,6 +382,7 @@ function renderLessonSummary() {
         return;
     }
 
+    prefetchTokens(lines);
     preview.innerHTML = lines.map((line, index) => {
         const audioSrc = getLessonAudioSrc(line);
         const audioBtn = audioSrc
@@ -391,7 +392,7 @@ function renderLessonSummary() {
         <div class="lesson-preview-line">
             ${audioBtn}
             <div class="lesson-preview-text">
-                <div class="hanzi-text">${escapeHtml(line.content || '')}</div>
+                <div class="hanzi-text">${renderTokens(line)}</div>
                 <div class="pinyin-text lesson-summary-pinyin ${lessonSummaryPinyinVisible ? 'show' : ''}">${escapeHtml(line.pinyin || '')}</div>
                 <div class="meaning-text lesson-summary-meaning ${lessonSummaryMeaningVisible ? 'show' : ''}">${escapeHtml(line.translations?.vi || line.translations?.en || '')}</div>
             </div>
@@ -707,4 +708,139 @@ function escapeHtml(value) {
 
 function escapeAttr(value) {
     return escapeHtml(value).replace(/`/g, '&#096;');
+}
+
+// ── Token rendering ───────────────────────────────────────────────────────────
+const PUNCT_RE = /^[　-〿＀-￯。，、；：？！…—～·「」『』【】《》〈〉""''()（）\[\]{}<>,.!?;:'"\/\\|\s]+$/;
+const _wordCache = new Map();
+
+function renderTokens(line) {
+    const tokens = line.tokens;
+    if (!tokens || tokens.length === 0) return escapeHtml(line.content || '');
+    return tokens.map(tok => {
+        if (PUNCT_RE.test(tok)) {
+            return `<span class="line-token">${escapeHtml(tok)}</span>`;
+        }
+        return `<span class="line-token clickable" onclick="showWordPopup('${escapeAttr(tok)}')">${escapeHtml(tok)}</span>`;
+    }).join('');
+}
+
+async function prefetchTokens(lines) {
+    const words = [...new Set(
+        lines.flatMap(l => (l.tokens || []).filter(t => !PUNCT_RE.test(t)))
+    )].filter(w => !_wordCache.has(w));
+    if (!words.length) return;
+    try {
+        const res = await fetch(`/api/vocab/lookup-batch?words=${encodeURIComponent(words.join(','))}`);
+        const data = await res.json();
+        for (const [word, info] of Object.entries(data)) {
+            _wordCache.set(word, info);
+        }
+        words.forEach(w => { if (!_wordCache.has(w)) _wordCache.set(w, null); });
+    } catch (e) {
+        words.forEach(w => _wordCache.set(w, null));
+    }
+}
+
+// ── Word popup ────────────────────────────────────────────────────────────────
+let _popupAudioKey = null;
+let _popupWord = null;
+let _popupWriters = [];
+let _popupStrokeOpen = false;
+let _popupActiveCharIdx = 0;
+
+function showWordPopup(word) {
+    _popupWord = word;
+    _popupAudioKey = null;
+    _popupWriters = [];
+    _popupStrokeOpen = false;
+    _popupActiveCharIdx = 0;
+
+    const cached = _wordCache.get(word);
+    const notFound = cached === null || cached === undefined;
+    const pinyin    = cached?.pinyin     || '';
+    const meaningVn = cached?.meaning_vn || '';
+    const meaningEn = cached?.meaning_en || '';
+    _popupAudioKey  = cached?.audio_key  || null;
+
+    document.getElementById('word-popup-hanzi').textContent = word;
+    document.getElementById('word-popup-pinyin').textContent = pinyin;
+    document.getElementById('word-popup-meaning-vn').textContent = notFound ? '' : meaningVn;
+    document.getElementById('word-popup-meaning-en').textContent = meaningEn;
+    if (notFound) {
+        document.getElementById('word-popup-meaning-vn').innerHTML = '<span class="word-popup-not-found">Not found in vocabulary</span>';
+    }
+    document.getElementById('word-popup-stroke-area').style.display = 'none';
+    document.getElementById('word-stroke-tabs').innerHTML = '';
+    document.getElementById('word-stroke-container').innerHTML = '';
+    document.getElementById('word-popup-stroke-btn').classList.remove('active');
+    document.getElementById('word-popup-overlay').classList.add('open');
+}
+
+function closeWordPopup() {
+    document.getElementById('word-popup-overlay').classList.remove('open');
+    _popupWriters.forEach(w => { try { w.cancelAnimation(); } catch(_) {} });
+    _popupWriters = [];
+    _popupStrokeOpen = false;
+}
+
+function playWordPopupAudio() {
+    if (!_popupAudioKey) return;
+    const hskLevel = currentPassage?.hsk_level || 'HSK1';
+    const src = `/audio/${_popupAudioKey}.mp3`;
+    playAudio(src);
+}
+
+function toggleWordStroke() {
+    _popupStrokeOpen = !_popupStrokeOpen;
+    const area = document.getElementById('word-popup-stroke-area');
+    const btn = document.getElementById('word-popup-stroke-btn');
+    btn.classList.toggle('active', _popupStrokeOpen);
+    if (_popupStrokeOpen) {
+        area.style.display = 'block';
+        _buildWordStroke(_popupWord || '', 0);
+    } else {
+        area.style.display = 'none';
+        _popupWriters.forEach(w => { try { w.cancelAnimation(); } catch(_) {} });
+        _popupWriters = [];
+    }
+}
+
+function _buildWordStroke(word, charIdx) {
+    const chars = [...word];
+    if (!chars.length) return;
+    _popupActiveCharIdx = charIdx;
+
+    const tabs = document.getElementById('word-stroke-tabs');
+    tabs.innerHTML = chars.map((ch, i) =>
+        `<button class="stroke-tab${i === charIdx ? ' active' : ''}" onclick="_buildWordStroke('${escapeAttr(word)}', ${i})">${escapeHtml(ch)}</button>`
+    ).join('');
+
+    const container = document.getElementById('word-stroke-container');
+    container.innerHTML = '';
+    _popupWriters.forEach(w => { try { w.cancelAnimation(); } catch(_) {} });
+    _popupWriters = [];
+
+    const writer = HanziWriter.create(container, chars[charIdx], {
+        width: 200, height: 200,
+        padding: 10,
+        showOutline: true,
+        strokeColor: '#576856',
+        outlineColor: 'rgba(87,104,86,0.15)',
+    });
+    _popupWriters = [writer];
+}
+
+function wordStrokeAnimate() {
+    _popupWriters.forEach(w => w.animateCharacter());
+}
+
+function wordStrokeQuiz() {
+    _popupWriters.forEach(w => w.quiz());
+}
+
+function wordStrokeReset() {
+    const word = _popupWord || '';
+    const chars = [...word];
+    if (chars[_popupActiveCharIdx]) _buildWordStroke(word, _popupActiveCharIdx);
 }

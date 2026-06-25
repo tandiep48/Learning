@@ -1,4 +1,9 @@
-body { align-items: flex-start; padding: 40px 20px; }
+body {
+    align-items: flex-start;
+    padding: 40px 20px;
+    background: #ffffff;
+    color: #111111;
+}
 .practice-select-container {
     width: 100%;
     max-width: 1120px;
@@ -32,8 +37,8 @@ body { align-items: flex-start; padding: 40px 20px; }
     gap: 16px;
 }
 .lesson-card {
-    background: rgba(87, 104, 86,0.05);
-    border: 1px solid rgba(87, 104, 86,0.1);
+    background: #CBE2D4;
+    border: 1px solid #afcfbd;
     border-radius: 12px;
     padding: 24px 16px;
     text-decoration: none;
@@ -47,8 +52,8 @@ body { align-items: flex-start; padding: 40px 20px; }
     color: var(--text-main);
 }
 .lesson-card:hover {
-    background: rgba(87, 104, 86,0.1);
-    border-color: var(--primary);
+    background: #bddbc9;
+    border-color: #93bda7;
     transform: translateY(-3px);
     box-shadow: 0 8px 24px rgba(87, 104, 86,0.16);
 }

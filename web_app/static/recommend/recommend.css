@@ -1,9 +1,14 @@
 /* ── Recommend Page Layout ── */
-body { align-items: flex-start; padding: 40px 20px; }
+body {
+    align-items: flex-start;
+    padding: 40px 20px;
+    background: #ffffff;
+    color: #111111;
+}
 
 .recommend-container {
     width: 100%;
-    max-width: 860px;
+    max-width: min(1280px, calc(100% - 40px));
     margin: 0 auto;
 }
 
@@ -193,8 +198,8 @@ body { align-items: flex-start; padding: 40px 20px; }
 }
 
 .rec-card {
-    background: rgba(87, 104, 86,0.04);
-    border: 1px solid rgba(87, 104, 86,0.08);
+    background: #CBE2D4;
+    border: 1px solid #afcfbd;
     border-radius: 18px;
     padding: 22px 24px;
     display: flex;
@@ -203,8 +208,8 @@ body { align-items: flex-start; padding: 40px 20px; }
     transition: all 0.25s ease;
 }
 .rec-card:hover {
-    background: rgba(87, 104, 86,0.08);
-    border-color: rgba(87, 104, 86,0.28);
+    background: #bddbc9;
+    border-color: #93bda7;
     transform: translateY(-3px);
     box-shadow: 0 12px 36px rgba(87, 104, 86,0.14);
 }
@@ -307,7 +312,7 @@ body { align-items: flex-start; padding: 40px 20px; }
 
 /* ── Preview ── */
 .rec-preview {
-    background: rgba(87, 104, 86,0.05);
+    background: #ffffff;
     border-radius: 10px;
     padding: 10px 14px;
     font-size: 0.85rem;
