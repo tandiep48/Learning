@@ -1,6 +1,8 @@
 body {
     align-items: flex-start;
     padding: 32px 20px;
+    background: #ffffff;
+    color: #111111;
 }
 
 .competition-shell {
@@ -29,8 +31,8 @@ body {
 }
 
 .competition-panel {
-    background: var(--card-bg);
-    border: 1px solid rgba(87, 104, 86, 0.1);
+    background: #CBE2D4;
+    border: 1px solid #afcfbd;
     border-radius: 8px;
     padding: 22px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
@@ -81,8 +83,8 @@ body {
 }
 
 .competition-room-bar {
-    background: var(--card-bg);
-    border: 1px solid rgba(87, 104, 86, 0.1);
+    background: #CBE2D4;
+    border: 1px solid #afcfbd;
     border-radius: 8px;
     padding: 16px;
     margin-bottom: 16px;
@@ -115,9 +117,9 @@ body {
 .member-row,
 .chat-message,
 .ranking-row {
-    border: 1px solid rgba(87, 104, 86, 0.1);
+    border: 1px solid #afcfbd;
     border-radius: 8px;
-    background: rgba(87, 104, 86, 0.04);
+    background: #ffffff;
     padding: 10px 12px;
 }
 
@@ -167,8 +169,8 @@ body {
 }
 
 .competition-question-card {
-    background: var(--card-bg);
-    border: 1px solid rgba(87, 104, 86, 0.1);
+    background: #CBE2D4;
+    border: 1px solid #afcfbd;
     border-radius: 8px;
     padding: clamp(18px, 4vw, 30px);
     min-height: 360px;
@@ -196,7 +198,7 @@ body {
     border-radius: 8px;
     padding: 12px;
     cursor: pointer;
-    background: rgba(87, 104, 86, 0.04);
+    background: #ffffff;
 }
 
 .competition-option input {
