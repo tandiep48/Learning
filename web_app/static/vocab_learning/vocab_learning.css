@@ -1,12 +1,14 @@
 /* ── Vocab Learning Page Layout ── */
 body {
+    background: #ffffff;
+    color: #111111;
     align-items: flex-start;
     padding: 32px 20px;
 }
 
 .vl-container {
     width: 100%;
-    max-width: 1280px;
+    max-width: min(1600px, calc(100% - 40px));
     margin: 0 auto;
 }
 
@@ -23,6 +25,15 @@ body {
 
 .vl-back:hover {
     color: var(--primary);
+}
+
+.vl-container,
+.vl-container h1,
+.vl-container h2,
+.vl-container h3,
+.vl-container p,
+.vl-container input {
+    color: #111111;
 }
 
 /* ── Lesson Picker ── */
@@ -78,8 +89,8 @@ body {
 
 /* ── Word Card ── */
 .vl-card {
-    background: #ffffff;
-    border: 1px solid rgba(87, 104, 86, 0.1);
+    background: #CBE2D4;
+    border: 1px solid #afcfbd;
     border-radius: 24px;
     padding: 40px 32px;
     text-align: center;
@@ -126,7 +137,7 @@ body {
 .vl-hanzi {
     font-size: 80px;
     font-weight: 700;
-    color: var(--text-main);
+    color: #111111;
     line-height: 1.2;
     margin-bottom: 10px;
     letter-spacing: 0;
@@ -142,7 +153,7 @@ body {
 
 .vl-meaning {
     font-size: 1.05rem;
-    color: var(--text-muted);
+    color: #2b2b2b;
     margin-bottom: 28px;
     min-height: 1.5rem;
 }
@@ -564,7 +575,7 @@ body {
 
 #vl-summary-body {
     overflow-x: auto;
-    background: #ffffff !important;
+    background: #CBE2D4 !important;
     border-radius: 20px;
 }
 

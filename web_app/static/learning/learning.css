@@ -1,11 +1,13 @@
 body {
+    background: #ffffff;
+    color: #111111;
     align-items: flex-start;
     padding: 40px 20px;
 }
 
 .learning-container {
     width: 100%;
-    max-width: 960px;
+    max-width: min(1600px, calc(100% - 40px));
     margin: 0 auto;
     padding: 32px 20px;
 }
@@ -20,8 +22,8 @@ body {
     gap: 18px;
     padding: 18px;
     margin-bottom: 22px;
-    background: rgba(67, 97, 238, 0.12);
-    border: 1px solid rgba(67, 97, 238, 0.28);
+    background: #CBE2D4;
+    border: 1px solid #afcfbd;
     border-radius: 8px;
 }
 

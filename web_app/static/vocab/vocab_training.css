@@ -157,6 +157,42 @@
     color: #ffffff;
 }
 
+/* Lesson-wide learner theme: white page, eye-protection cards, black card text */
+body {
+    background: #ffffff;
+    color: #111111;
+}
+
+.app-container {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+}
+
+#screen-training .task-card,
+#screen-complete {
+    background: #CBE2D4;
+    border: 1px solid #afcfbd;
+    box-shadow: 0 18px 44px rgba(0, 122, 97, 0.08);
+    color: #111111;
+}
+
+#screen-training .task-card *,
+#screen-complete * {
+    color: inherit;
+}
+
+#screen-training .task-card .btn.primary,
+#screen-complete .btn.primary,
+#typing-submit-btn,
+.btn-speak-task {
+    color: #ffffff;
+}
+
+.training-complete-table th {
+    color: #ffffff;
+}
+
 /* ── Speaking task ─────────────────────────────────────────────────────────── */
 
 #speaking-area {

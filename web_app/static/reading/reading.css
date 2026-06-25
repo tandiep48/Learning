@@ -1,6 +1,9 @@
 /* ── Toolbar ── */
 .reading-container {
     width: min(1280px, calc(100% - 40px));
+    background: transparent;
+    border: 0;
+    box-shadow: none;
 }
 
 .toolbar {
@@ -15,7 +18,8 @@
 
 /* ── Reading Lines ── */
 .reading-line {
-    background: rgba(0,0,0,0.2);
+    background: #CBE2D4;
+    border: 1px solid #afcfbd;
     border-radius: 10px;
     padding: 18px 20px;
     margin-bottom: 14px;
@@ -44,7 +48,7 @@
 }
 .meaning-text.show { display: block; }
 .audio-btn {
-    background: rgba(87, 104, 86,0.1);
+    background: var(--primary);
     border: none;
     color: white;
     padding: 10px;
@@ -97,12 +101,12 @@
     padding: 18px;
     border: 1px solid #d9ded9;
     border-radius: 10px;
-    background: #ffffff;
+    background: #CBE2D4;
     transition: background 0.15s, border-color 0.15s;
 }
 
 .lesson-preview-line:hover {
-    background: rgba(87, 104, 86, 0.03);
+    background: #bddbc9;
     border-color: rgba(87, 104, 86, 0.28);
 }
 

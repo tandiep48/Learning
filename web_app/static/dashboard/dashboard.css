@@ -456,6 +456,35 @@
     gap: 14px;
 }
 
+/* White dashboard page background */
+body.dashboard-page {
+    --bg-color: #ffffff;
+    background: #ffffff;
+    color: #111111;
+}
+
+.current-lesson-row,
+.dashboard-panel,
+.dashboard-empty-state {
+    background: #CBE2D4;
+    border-color: #afcfbd;
+}
+
+.activity-nav-card,
+.activity-card,
+.stats-bucket-card,
+.dashboard-empty {
+    background: rgba(255, 255, 255, 0.72);
+    border-color: #afcfbd;
+}
+
+.activity-nav-card:hover,
+.activity-card:hover,
+.stats-bucket-card:hover {
+    background: #ffffff;
+    border-color: #93bda7;
+}
+
 @media (max-width: 980px) {
     .dashboard-two-column {
         grid-template-columns: 1fr;
