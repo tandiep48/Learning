@@ -104,25 +104,37 @@ def get_passage_grammar(passage_id):
 def start_session():
     data = request.json
     passage_id = data.get("passage_id")
+    passage_ids = data.get("passage_ids") or []
+    if passage_id and not passage_ids:
+        passage_ids = [passage_id]
+    if not isinstance(passage_ids, list) or not passage_ids:
+        return jsonify({"error": "passage_id or passage_ids is required"}), 400
     
     conn = get_db_connection()
-    passage = get_passage_content(conn, passage_id)
-    if not passage:
+    passages = []
+    for pid in passage_ids:
+        passage = get_passage_content(conn, pid)
+        if passage:
+            passages.append((pid, passage))
+    if not passages:
         conn.close()
         return jsonify({"error": "Passage not found"}), 404
         
     global_vn_meanings = get_all_vn_meanings(conn)
     conn.close()
     
-    lines = passage.get("lines", [])
+    line_items = []
+    for pid, passage in passages:
+        for line in passage.get("lines", []):
+            line_items.append((pid, passage, line))
     
     # We will generate a mix of tasks for the lines in this passage
     tasks = []
     
     # Collect all Vietnamese meanings in this passage for distractors
-    all_vn_meanings = [l["translations"]["vi"] for l in lines]
+    all_vn_meanings = [line["translations"]["vi"] for _, _, line in line_items]
     
-    for line in lines:
+    for line_passage_id, passage, line in line_items:
         line_id = line.get("line_id", 0)
         correct_meaning = line["translations"]["vi"]
         
@@ -139,7 +151,7 @@ def start_session():
         
         tasks.append({
             "type": "meaning",
-            "passage_id": passage_id,
+            "passage_id": line_passage_id,
             "line_id": line_id,
             "content": line["content"],
             "options": m_options,
@@ -151,7 +163,7 @@ def start_session():
         # 2. Listening Task
         tasks.append({
             "type": "listening",
-            "passage_id": passage_id,
+            "passage_id": line_passage_id,
             "line_id": line_id,
             "options": m_options, # Same options logic as meaning
             "correct_answer": correct_meaning,
@@ -167,7 +179,7 @@ def start_session():
             random.shuffle(shuffled_tokens)
             tasks.append({
                 "type": "reorder",
-                "passage_id": passage_id,
+                "passage_id": line_passage_id,
                 "line_id": line_id,
                 "content": line["content"],
                 "tokens": tokens,
@@ -180,7 +192,7 @@ def start_session():
         # 4. Typing Task
         tasks.append({
             "type": "typing",
-            "passage_id": passage_id,
+            "passage_id": line_passage_id,
             "line_id": line_id,
             "content": line["content"],
             "correct_answer": line["content"],
@@ -194,7 +206,8 @@ def start_session():
     # We might want to limit the tasks if it's too long
     # Let's limit to 10 tasks per session by default
     limit = data.get("limit", 10)
-    if len(tasks) > limit:
+    if str(limit).isdigit() and int(limit) > 0 and len(tasks) > int(limit):
+        limit = int(limit)
         tasks = tasks[:limit]
         
     return jsonify({

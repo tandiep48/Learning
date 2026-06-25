@@ -26,6 +26,7 @@ const Picker = {
     showLevelPicker() {
         this.currentHskLevel = null;
         this.progressSummary = null;
+        this.hideLessonActionCard();
         this.switchScreen('picker-screen-level');
     },
 
@@ -42,6 +43,14 @@ const Picker = {
             ]);
             const data = await res.json();
             this.progressSummary = progressSummary;
+
+            // Hardcode HSK 1 Lesson 1 (Basic/Advanced Pinyin)
+            if (hskLevel === 'HSK1') {
+                // Remove any existing Lesson 1 parts if they exist from API
+                data.passages = data.passages.filter(p => !p.passage_id.startsWith('H1_1_'));
+                // Inject ONE hardcoded pinyin page so the lesson card appears
+                data.passages.push({ passage_id: 'H1_1_1', hsk_level: 'HSK1' });
+            }
 
             // Group passages by lesson
             this.groupedPassages = {};
@@ -99,6 +108,9 @@ const Picker = {
             const prefix = lessonNum === 'Other' ? '' : 'Lesson ';
             const progress = this.progressSummary?.lessons?.[lessonNum];
 
+            const isPinyinLesson = this.currentHskLevel === 'HSK1' && lessonNum === '1';
+            const countLabel = isPinyinLesson ? 'Pinyin Guide' : `${count} part${count !== 1 ? 's' : ''}`;
+
             const hskKey = (this.currentHskLevel || '').replace('HSK', 'H');
             const imgPath = `/lesson-image/${hskKey}/${hskKey.toLowerCase()}-lesson-${lessonNum}.png`;
 
@@ -117,11 +129,15 @@ const Picker = {
                 <div class="lesson-card-body">
                     <div class="lesson-card-title">${this.escapeHtml(prefix + lessonNum)}</div>
                     ${progressHtml}
-                    <div class="lesson-card-count">${count} part${count !== 1 ? 's' : ''}</div>
+                    <div class="lesson-card-count">${countLabel}</div>
                 </div>
             `;
 
             card.addEventListener('click', () => {
+                if (isPinyinLesson) {
+                    window.location.href = '/lesson/basic-pinyin';
+                    return;
+                }
                 this.showPartPicker(lessonNum);
             });
             container.appendChild(card);
@@ -136,7 +152,8 @@ const Picker = {
         const container = document.getElementById('picker-part-list');
         container.innerHTML = '';
 
-        const parts = this.groupedPassages[lessonNum] || [];
+        const parts = [...(this.groupedPassages[lessonNum] || [])].sort((a, b) => this.getPartNumber(a.passage_id) - this.getPartNumber(b.passage_id));
+        this.renderLessonActionCard(lessonNum, parts);
 
         parts.forEach(p => {
             // e.g. H1_10_3 => Part 3
@@ -144,8 +161,7 @@ const Picker = {
             const partName = pParts.length >= 3 ? `Part ${pParts[2]}` : p.passage_id;
 
             const btn = document.createElement('div');
-            btn.className = 'dash-card';
-            btn.style.cssText = 'padding:18px 14px; cursor:pointer; text-align:center; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px;';
+            btn.className = 'part-list-item';
 
             const progress = this.progressSummary?.parts?.[p.passage_id];
             const progressHtml = progress
@@ -156,7 +172,7 @@ const Picker = {
                 : '';
 
             btn.innerHTML = `
-                <div class="dash-title" style="margin:0; font-size:1.1rem;">${this.escapeHtml(partName)}</div>
+                <div class="part-list-title">${this.escapeHtml(partName)}</div>
                 ${progressHtml}
             `;
 
@@ -170,11 +186,74 @@ const Picker = {
         });
     },
 
+    hideLessonActionCard() {
+        const actionCard = document.getElementById('picker-lesson-action-card');
+        if (actionCard) {
+            actionCard.hidden = true;
+            actionCard.innerHTML = '';
+        }
+    },
+
+    renderLessonActionCard(lessonNum, parts) {
+        const actionCard = document.getElementById('picker-lesson-action-card');
+        if (!actionCard) return;
+
+        const progress = this.progressSummary?.lessons?.[lessonNum];
+        const wordsPct = this._progressPct(progress?.learned_words, progress?.total_words);
+        const lessonPct = this._progressPct(progress?.lesson_learned, progress?.lesson_total);
+        const canStartVocab = wordsPct === 100 && parts.length > 0;
+        const canStartLesson = lessonPct === 100 && parts.length > 0;
+        const partCount = parts.length;
+
+        actionCard.hidden = false;
+        actionCard.innerHTML = `
+            <div class="picker-lesson-action-header">
+                <div>
+                    <div class="picker-lesson-action-title">Full Lesson Trainer</div>
+                    <div class="picker-lesson-action-sub">${partCount} part${partCount !== 1 ? 's' : ''} in this lesson</div>
+                </div>
+                <div class="picker-lesson-action-buttons">
+                    <button type="button" class="picker-action-btn" data-action="vocab" ${canStartVocab ? '' : 'disabled'}>Vocab Trainer</button>
+                    <button type="button" class="picker-action-btn" data-action="lesson" ${canStartLesson ? '' : 'disabled'}>Lesson Trainer</button>
+                </div>
+            </div>
+            <div class="picker-lesson-progress">
+                ${progress ? this._progressBar(progress.learned_words, progress.total_words, 'Words') : this._emptyProgressBar('Words')}
+                ${progress ? this._progressBar(progress.lesson_learned, progress.lesson_total, 'Lesson') : this._emptyProgressBar('Lesson')}
+            </div>
+        `;
+
+        actionCard.querySelector('[data-action="vocab"]')?.addEventListener('click', () => {
+            if (canStartVocab) this.startLessonWideVocabTrainer(lessonNum, parts);
+        });
+        actionCard.querySelector('[data-action="lesson"]')?.addEventListener('click', () => {
+            if (canStartLesson) this.startLessonWideLessonTrainer(lessonNum, parts);
+        });
+    },
+
+    startLessonWideVocabTrainer(lessonNum, parts) {
+        sessionStorage.setItem('lessonWideVocabTrainer', JSON.stringify(this.buildLessonTrainerPayload(lessonNum, parts)));
+        window.location.href = '/vocab-training';
+    },
+
+    startLessonWideLessonTrainer(lessonNum, parts) {
+        sessionStorage.setItem('lessonWideLessonTrainer', JSON.stringify(this.buildLessonTrainerPayload(lessonNum, parts)));
+        window.location.href = '/lesson';
+    },
+
+    buildLessonTrainerPayload(lessonNum, parts) {
+        return {
+            hsk_level: this.currentHskLevel,
+            lesson: lessonNum,
+            passage_ids: parts.map(p => p.passage_id).filter(Boolean),
+        };
+    },
+
     // Returns a coloured progress bar HTML string.
     // ≤25% → red, 26–50% → yellow, ≥51% → green
     _progressBar(done, total, label) {
         if (!total || total === 0) return '';
-        const pct = Math.max(0, Math.min(100, Math.round((done / total) * 100)));
+        const pct = this._progressPct(done, total);
         let colorClass;
         if (pct <= 25) colorClass = 'pct-red';
         else if (pct <= 50) colorClass = 'pct-yellow';
@@ -186,6 +265,27 @@ const Picker = {
             </div>
             <span class="picker-progress-pct">${pct}%</span>
         </div>`;
+    },
+
+    _emptyProgressBar(label) {
+        return `<div class="picker-progress-row">
+            <span class="picker-progress-label">${label}</span>
+            <div class="picker-progress-track pct-red" role="progressbar" aria-label="${label} progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <span class="picker-progress-fill" style="width:0%"></span>
+            </div>
+            <span class="picker-progress-pct">0%</span>
+        </div>`;
+    },
+
+    _progressPct(done, total) {
+        if (!total || total === 0) return 0;
+        return Math.max(0, Math.min(100, Math.round(((Number(done) || 0) / total) * 100)));
+    },
+
+    getPartNumber(passageId) {
+        const parts = String(passageId || '').split('_');
+        const part = parts.length >= 3 ? Number(parts[2]) : Number.MAX_SAFE_INTEGER;
+        return Number.isFinite(part) ? part : Number.MAX_SAFE_INTEGER;
     },
 
     escapeHtml(value) {

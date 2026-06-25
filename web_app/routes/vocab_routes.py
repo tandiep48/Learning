@@ -538,6 +538,21 @@ def start_session():
             passage_id = data.get("passage_id")
             passage_vocab = get_passage_vocab(db_conn, passage_id)
             words = [w["cn"] for w in passage_vocab]
+        elif mode == "8":
+            passage_ids = data.get("passage_ids") or []
+            if not isinstance(passage_ids, list) or not passage_ids:
+                db_conn.close()
+                return jsonify({"error": "passage_ids is required."}), 400
+
+            seen = set()
+            words = []
+            for passage_id in passage_ids:
+                passage_vocab = get_passage_vocab(db_conn, passage_id)
+                for row in passage_vocab:
+                    word = row.get("cn")
+                    if word and word not in seen:
+                        seen.add(word)
+                        words.append(word)
         else:
             db_conn.close()
             return jsonify({"error": "Invalid mode."}), 400
@@ -557,7 +572,7 @@ def start_session():
     if full_lesson_records.empty:
         return jsonify({"error": "No lesson records available."}), 404
 
-    subset_df = full_lesson_records[full_lesson_records["word"].isin(subset_words)].reset_index(drop=True)
+    subset_df = full_lesson_records[full_lesson_records["word"].isin(subset_words)].drop_duplicates("word").reset_index(drop=True)
     tasks = build_vocab_tasks(subset_df)
     
     return jsonify({

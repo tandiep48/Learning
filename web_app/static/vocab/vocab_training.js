@@ -3,6 +3,7 @@ let currentTaskIndex = 0;
 let missedTasks = [];
 let taskStartTime = 0;
 let currentTrainingPassageId = null;
+let lessonWideTrainingMeta = null;
 let isLessonPartFlow = false;
 
 // ── Speaking state ───────────────────────────────────────────────────────────
@@ -20,6 +21,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const trainerWords = readSelectedTrainerWords();
     if (trainerWords.length) {
         startSession('7', { words: trainerWords });
+        return;
+    }
+
+    const lessonWideVocab = readLessonWideVocabTrainer();
+    if (lessonWideVocab?.passage_ids?.length) {
+        lessonWideTrainingMeta = lessonWideVocab;
+        startSession('8', lessonWideVocab);
         return;
     }
 
@@ -72,6 +80,18 @@ function readSelectedTrainerWords() {
     }
 }
 
+function readLessonWideVocabTrainer() {
+    const raw = sessionStorage.getItem('lessonWideVocabTrainer');
+    if (!raw) return null;
+    sessionStorage.removeItem('lessonWideVocabTrainer');
+    try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed?.passage_ids) ? parsed : null;
+    } catch (e) {
+        return null;
+    }
+}
+
 function switchScreen(screenId) {
     document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
     if (screenId) document.getElementById(screenId)?.classList.add('active');
@@ -79,6 +99,10 @@ function switchScreen(screenId) {
 
 function goHome() {
     resetSpeakingTask(true);
+    if (lessonWideTrainingMeta?.passage_ids?.length) {
+        window.location.href = `/learning?passage_id=${encodeURIComponent(lessonWideTrainingMeta.passage_ids[0])}`;
+        return;
+    }
     if (currentTrainingPassageId) {
         window.location.href = `/learning?passage_id=${encodeURIComponent(currentTrainingPassageId)}`;
         return;
@@ -97,6 +121,7 @@ async function startSession(mode, extraParams = {}) {
     const bodyData = { mode };
     if (mode === "6") bodyData.passage_id = extraParams.passage_id;
     if (mode === "7") bodyData.words = extraParams.words || [];
+    if (mode === "8") bodyData.passage_ids = extraParams.passage_ids || [];
 
     try {
         const response = await fetch('/api/vocab/start', {
