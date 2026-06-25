@@ -16,13 +16,16 @@
 }
 .level-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+    max-width: 1080px;
+    margin: 0 auto;
 }
 .level-card {
-    background-color: white;
+    min-height: 280px;
+    background-color: #CBE2D4;
     border-radius: 16px;
-    padding: 30px 20px;
+    padding: 38px 28px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     cursor: pointer;
     transition: all 0.2s ease-in-out;
@@ -38,24 +41,52 @@
     border-color: var(--primary);
 }
 .level-icon {
-    width: 64px;
-    height: 64px;
+    width: 180px;
+    height: 180px;
     margin-bottom: 15px;
     border-radius: 18px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: rgba(87, 104, 86, 0.08);
-    border: 1px solid rgba(87, 104, 86, 0.16);
+    background: #ffffff;
+    border: 1px solid #afcfbd;
     color: var(--primary);
     font-size: 1.65rem;
     font-weight: 800;
 }
+.level-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
 .level-name {
-    font-size: 1.5rem;
+    font-size: 1.6rem;
     font-weight: 600;
     color: #1f2937;
     margin-bottom: 5px;
+}
+
+@media (max-width: 760px) {
+    .level-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .level-card {
+        min-height: 220px;
+        padding: 28px 18px;
+    }
+
+    .level-icon {
+        width: 136px;
+        height: 136px;
+    }
+}
+
+@media (max-width: 440px) {
+    .level-grid {
+        grid-template-columns: 1fr;
+    }
 }
 .nav-back {
     display: inline-block;
