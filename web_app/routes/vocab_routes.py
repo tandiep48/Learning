@@ -258,6 +258,53 @@ def paginate_rows(rows, page, page_size):
     end = start + page_size
     return rows[start:end], total, total_pages, page
 
+_word_cache: dict = {}
+
+@vocab_bp.route('/lookup-batch', methods=['GET'])
+@login_required
+def lookup_batch():
+    raw = request.args.get('words', '').strip()
+    if not raw:
+        return jsonify({})
+    words = list({w for w in raw.split(',') if w})[:80]
+
+    result = {}
+    missing = []
+    for w in words:
+        if w in _word_cache:
+            if _word_cache[w] is not None:
+                result[w] = _word_cache[w]
+        else:
+            missing.append(w)
+
+    if missing:
+        conn = get_db_connection()
+        if conn:
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT cn, pinyin, meaning_vn, meaning_en, audio_key
+                        FROM vocabulary WHERE cn = ANY(%s)
+                    """, (missing,))
+                    found = set()
+                    for row in cur.fetchall():
+                        entry = {
+                            "pinyin": row[1],
+                            "meaning_vn": row[2],
+                            "meaning_en": row[3],
+                            "audio_key": row[4],
+                        }
+                        _word_cache[row[0]] = entry
+                        result[row[0]] = entry
+                        found.add(row[0])
+                    for w in missing:
+                        if w not in found:
+                            _word_cache[w] = None
+            finally:
+                conn.close()
+
+    return jsonify(result)
+
 @vocab_bp.route('/search', methods=['GET'])
 @login_required
 def search_vocab():
