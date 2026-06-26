@@ -48,8 +48,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: #ffffff;
-    border: 1px solid #afcfbd;
+    background: transparent;
+    border: none;
     color: var(--primary);
     font-size: 1.65rem;
     font-weight: 800;
@@ -63,7 +63,7 @@
 .level-name {
     font-size: 1.6rem;
     font-weight: 600;
-    color: #1f2937;
+    color: #000000;
     margin-bottom: 5px;
 }
 

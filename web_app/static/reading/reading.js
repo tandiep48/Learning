@@ -389,7 +389,7 @@ function renderLessonSummary() {
             ? `<button type="button" class="lesson-passage-audio-btn" onclick="playPassageLineAudio(${index})" title="Play passage line ${index + 1}" aria-label="Play passage line ${index + 1}"><i class="fa-solid fa-volume-high" aria-hidden="true"></i></button>`
             : `<span class="lesson-passage-audio-btn lesson-passage-audio-empty" title="No audio available"></span>`;
         return `
-        <div class="lesson-preview-line">
+        <div class="lesson-preview-line" id="lesson-preview-line-${index}">
             ${audioBtn}
             <div class="lesson-preview-text">
                 <div class="hanzi-text">${renderTokens(line)}</div>
@@ -406,7 +406,37 @@ function playPassageLineAudio(index) {
     const line = lines[index];
     if (!line) return;
     const src = getLessonAudioSrc(line);
-    if (src) playAudio(src);
+    if (src) {
+        document.querySelectorAll('.lesson-preview-line').forEach(el => el.classList.remove('playing-highlight'));
+        const lineEl = document.getElementById(`lesson-preview-line-${index}`);
+        if (lineEl) lineEl.classList.add('playing-highlight');
+
+        if (currentAudio) {
+            currentAudio.pause();
+            currentAudio.onended = null;
+            currentAudio.onerror = null;
+        }
+        currentAudio = new Audio(src);
+        currentAudio.onended = () => { if (lineEl) lineEl.classList.remove('playing-highlight'); };
+        currentAudio.onerror = () => { if (lineEl) lineEl.classList.remove('playing-highlight'); };
+        currentAudio.play().catch(e => {
+            if (lineEl) lineEl.classList.remove('playing-highlight');
+            console.warn("Audio failed", e);
+        });
+    }
+}
+
+function backToPartPicker() {
+    resetLessonSpeakingPractice(true);
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+    }
+    if (currentPassage?.passage_id) {
+        window.location.href = `/learning?passage_id=${encodeURIComponent(currentPassage.passage_id)}&show_parts=true`;
+        return;
+    }
+    goHome();
 }
 
 function showLessonSummary() {

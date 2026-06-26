@@ -5,6 +5,7 @@ let recentPassageId = null;
 document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
     const autoPassageId = params.get('passage_id');
+    const showParts = params.get('show_parts') === 'true';
 
     Picker.init((passage) => {
         selectedPassage = passage;
@@ -32,11 +33,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (autoPassageId) {
-        openSelectedPassage(autoPassageId);
+        if (showParts) {
+            openSelectedPassageForParts(autoPassageId);
+        } else {
+            openSelectedPassage(autoPassageId);
+        }
     } else {
         loadRecentLearning();
     }
 });
+
+async function openSelectedPassageForParts(passageId) {
+    const parts = String(passageId || '').split('_');
+    selectedLessonNum = parts.length >= 2 ? parts[1] : null;
+    const hskLevel = normalizeHskLevel(parts[0]);
+    selectedPassage = {
+        passage_id: passageId,
+        hsk_level: hskLevel
+    };
+
+    if (hskLevel) {
+        await Picker.showLessonPicker(hskLevel);
+    }
+    if (selectedLessonNum) {
+        Picker.showPartPicker(selectedLessonNum);
+    }
+}
 
 async function openSelectedPassage(passageId) {
     const parts = String(passageId || '').split('_');

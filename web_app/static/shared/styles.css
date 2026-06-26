@@ -39,7 +39,9 @@ body {
 .complete-word,
 .ex-cn,
 .stroke-modal-word,
-.stroke-tab {
+.stroke-tab,
+.speaking-prompt,
+.speaking-reveal-hanzi {
     font-family: SimSun, 'Songti SC', 'Noto Serif CJK SC', serif;
 }
 

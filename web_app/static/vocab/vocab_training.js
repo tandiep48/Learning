@@ -18,6 +18,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
     isLessonPartFlow = params.get('flow') === 'lesson-part';
 
+    const typingInput = document.getElementById('typing-input');
+    if (typingInput) {
+        typingInput.addEventListener('input', (e) => {
+            const inputVal = e.target.value.trim();
+            if (!inputVal || !sessionData || !sessionData.tasks) return;
+            const task = sessionData.tasks[currentTaskIndex];
+            if (task && task.type === 'typing' && inputVal === task.word) {
+                submitTyping();
+            }
+        });
+    }
+
     const trainerWords = readSelectedTrainerWords();
     if (trainerWords.length) {
         startSession('7', { words: trainerWords });
@@ -100,11 +112,11 @@ function switchScreen(screenId) {
 function goHome() {
     resetSpeakingTask(true);
     if (lessonWideTrainingMeta?.passage_ids?.length) {
-        window.location.href = `/learning?passage_id=${encodeURIComponent(lessonWideTrainingMeta.passage_ids[0])}`;
+        window.location.href = `/vocab-learning?passage_id=${encodeURIComponent(lessonWideTrainingMeta.passage_ids[0])}&flow=lesson-part`;
         return;
     }
     if (currentTrainingPassageId) {
-        window.location.href = `/learning?passage_id=${encodeURIComponent(currentTrainingPassageId)}`;
+        window.location.href = `/vocab-learning?passage_id=${encodeURIComponent(currentTrainingPassageId)}&flow=lesson-part`;
         return;
     }
     closeQuitModal();
@@ -122,7 +134,6 @@ async function startSession(mode, extraParams = {}) {
     if (mode === "6") bodyData.passage_id = extraParams.passage_id;
     if (mode === "7") bodyData.words = extraParams.words || [];
     if (mode === "8") bodyData.passage_ids = extraParams.passage_ids || [];
-
     try {
         const response = await fetch('/api/vocab/start', {
             method: 'POST',
