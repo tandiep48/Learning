@@ -1,3 +1,14 @@
+body.with-site-nav {
+    background-color: #ffffff;
+}
+
+.lesson-container {
+    background-color: #CBE2D4;
+    border: 1px solid #afcfbd;
+    box-shadow: 0 18px 44px rgba(0, 122, 97, 0.08);
+    color: #111111;
+}
+
 .head {
     width: 40.75pt;
     border: solid #E5E5E5 1.0pt;

@@ -41,6 +41,7 @@ function readLessonWideLessonTrainer() {
     }
 }
 
+
 function switchScreen(screenId) {
     document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.picker-screen').forEach(el => el.classList.remove('active'));
@@ -49,7 +50,12 @@ function switchScreen(screenId) {
 
 function goHome() {
     if (currentPassageId) {
-        window.location.href = `/learning?passage_id=${encodeURIComponent(currentPassageId)}`;
+        const params = new URLSearchParams({
+            passage_id: currentPassageId,
+            flow: 'lesson-part',
+            mode: 'lesson-learner'
+        });
+        window.location.href = `/reading?${params.toString()}`;
         return;
     }
     document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
@@ -476,7 +482,12 @@ async function continueAfterLessonTraining() {
         console.warn("Grammar check failed", e);
     }
 
-    window.location.href = `/learning?passage_id=${encodeURIComponent(currentPassageId)}`;
+    const params = new URLSearchParams({
+        passage_id: currentPassageId,
+        flow: 'lesson-part',
+        mode: 'lesson-learner'
+    });
+    window.location.href = `/reading?${params.toString()}`;
 }
 
 function retryMissed() {

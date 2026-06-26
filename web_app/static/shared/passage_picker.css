@@ -32,12 +32,12 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: #ffffff;
-    border: 1px solid #afcfbd;
+    background: transparent;
+    border: none;
     color: var(--primary);
     font-size: 1.35rem;
     font-weight: 800;
-    box-shadow: 0 8px 20px rgba(87, 104, 86, 0.08);
+    box-shadow: none;
 }
 .level-icon img {
     width: 100%;
@@ -48,35 +48,37 @@
 .level-name {
     font-weight: 600;
     font-size: 1.35rem;
-    color: var(--text-main);
+    color: #000000;
+    margin-top: auto;
 }
 
 /* -- Lesson List (3-column grid) -- */
 .lesson-list {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: 16px;
     margin-top: 20px;
 }
 .lesson-card {
-    background: #CBE2D4;
-    border: 1px solid #afcfbd;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
     border-radius: 14px;
     overflow: hidden;
     cursor: pointer;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: stretch;
     box-shadow: 0 2px 8px rgba(87, 104, 86, 0.06);
 }
 .lesson-card:hover {
-    background: #bddbc9;
+    background: #fafafa;
     transform: translateY(-3px);
     box-shadow: 0 8px 24px rgba(87, 104, 86, 0.13);
 }
 .lesson-card-img-wrap {
-    width: 100%;
-    aspect-ratio: 1 / 1;
+    width: 140px;
+    flex-shrink: 0;
     overflow: hidden;
     background: rgba(87, 104, 86, 0.05);
 }
@@ -164,10 +166,13 @@
 .picker-lesson-action-card {
     margin-top: 20px;
     padding: 18px;
-    background: #CBE2D4;
-    border: 1px solid #afcfbd;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
     border-radius: 12px;
     color: #111111;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .picker-lesson-action-card[hidden] {
@@ -238,6 +243,9 @@
     flex-direction: column;
     gap: 10px;
     margin-top: 16px;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .part-list-item {
@@ -246,8 +254,8 @@
     justify-content: space-between;
     gap: 16px;
     padding: 16px 18px;
-    background: #CBE2D4;
-    border: 1px solid #afcfbd;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
     border-radius: 10px;
     color: #111111;
     cursor: pointer;
@@ -255,8 +263,8 @@
 }
 
 .part-list-item:hover {
-    background: #bddbc9;
-    border-color: #93bda7;
+    background: #fafafa;
+    border-color: #d1d5db;
     transform: translateX(3px);
 }
 
@@ -278,6 +286,9 @@
 
 .picker-top-link {
     margin-bottom: 20px;
+    max-width: 1080px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .picker-back-button {
@@ -311,7 +322,9 @@
 }
 
 .picker-progress-track {
-    width: 180px;
+    flex: 1;
+    min-width: 0;
+    max-width: 180px;
     height: 8px;
     overflow: hidden;
     border-radius: 999px;
@@ -329,8 +342,12 @@
     background: #dc2626;
 }
 
+.picker-progress-track.pct-orange .picker-progress-fill {
+    background: #ea580c;
+}
+
 .picker-progress-track.pct-yellow .picker-progress-fill {
-    background: #d97706;
+    background: #eab308;
 }
 
 .picker-progress-track.pct-green .picker-progress-fill {
@@ -345,8 +362,9 @@
     color: var(--text-muted);
     font-size: 0.78rem;
     font-weight: 600;
-    min-width: 30px;
+    min-width: 60px;
     text-align: right;
+    white-space: nowrap;
 }
 
 @media (max-width: 700px) {
@@ -367,4 +385,71 @@
     .part-list-title {
         white-space: normal;
     }
+}
+
+/* -- Layout Sections -- */
+#picker-screen-lesson .picker-header-section,
+#picker-screen-lesson .picker-toolbar-section,
+#picker-screen-lesson .lesson-list {
+    max-width: 1080px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#picker-screen-part .picker-header-section,
+#picker-screen-part .picker-toolbar-section {
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.picker-header-section {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 20px;
+    padding: 24px 32px;
+    margin-bottom: 24px;
+    background-color: transparent;
+    transition: background-color 0.3s ease;
+    border-radius: 16px;
+    width: 100%;
+}
+.picker-header-col1 {
+    flex-shrink: 0;
+    width: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.picker-header-col1 img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+.picker-header-col2 {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.picker-header-col2 h2 {
+    margin: 0;
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #111111;
+}
+.picker-header-col2 p.subtitle {
+    margin: 8px 0 0;
+    font-size: 1.15rem;
+    color: #333333;
+}
+.picker-toolbar-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+}
+.picker-cards-section {
+    width: 100%;
 }

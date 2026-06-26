@@ -472,7 +472,7 @@ function backToLessons() {
     stopSummaryAudio();
 
     if (lessonMeta?.passage_id) {
-        window.location.href = `/learning?passage_id=${encodeURIComponent(lessonMeta.passage_id)}`;
+        window.location.href = `/learning?passage_id=${encodeURIComponent(lessonMeta.passage_id)}&show_parts=true`;
         return;
     }
     document.getElementById('screen-learning').style.display = 'none';
@@ -488,8 +488,10 @@ function backToLessons() {
     lessonMeta = null;
 
     const audio = document.getElementById('vl-audio');
-    audio.pause();
-    audio.removeAttribute('src');
+    if (audio) {
+        audio.pause();
+        audio.removeAttribute('src');
+    }
 }
 
 function startLearningCards() {
@@ -499,6 +501,12 @@ function startLearningCards() {
     document.getElementById('screen-summary').style.display = 'none';
     document.getElementById('screen-learning').style.display = 'block';
     renderWord();
+}
+
+function showVocabSummary() {
+    resetSpeakingPractice(true);
+    document.getElementById('screen-learning').style.display = 'none';
+    document.getElementById('screen-summary').style.display = 'block';
 }
 
 function goToTrainer() {
