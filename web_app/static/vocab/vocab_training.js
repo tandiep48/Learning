@@ -18,6 +18,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
     isLessonPartFlow = params.get('flow') === 'lesson-part';
 
+    const typingInput = document.getElementById('typing-input');
+    if (typingInput) {
+        typingInput.addEventListener('input', (e) => {
+            const inputVal = e.target.value.trim();
+            if (!inputVal || !sessionData || !sessionData.tasks) return;
+            const task = sessionData.tasks[currentTaskIndex];
+            if (task && task.type === 'typing' && inputVal === task.word) {
+                submitTyping();
+            }
+        });
+    }
+
     const trainerWords = readSelectedTrainerWords();
     if (trainerWords.length) {
         startSession('7', { words: trainerWords });
