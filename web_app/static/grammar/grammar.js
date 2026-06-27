@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const backLink = document.getElementById('picker-back-link');
     if (backLink) {
+
         backLink.href = '/learning';
         backLink.innerHTML = '&larr; Back to Learning';
     }
@@ -29,12 +30,10 @@ function switchScreen(screenId) {
 
 function goHome() {
     if (currentPassageId) {
-        window.location.href = `/learning?passage_id=${encodeURIComponent(currentPassageId)}`;
-        return;
+        window.location.href = `/learning?passage_id=${encodeURIComponent(currentPassageId)}&show_parts=true`;
+    } else {
+        window.location.href = '/learning';
     }
-    currentPassageId = null;
-    document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
-    Picker.showLevelPicker();
 }
 
 async function loadGrammar(passageId) {
@@ -49,7 +48,8 @@ async function loadGrammar(passageId) {
     try {
         const res = await fetch(`/api/lesson/grammar/${encodeURIComponent(passageId)}`);
         const data = await res.json();
-        document.getElementById('grammar-title').textContent = `Grammar - ${passageId}`;
+        document.getElementById('grammar-title').textContent =
+            window.formatPassageLabel?.(passageId, `Grammar - ${passageId}`) || `Grammar - ${passageId}`;
 
         if (data.grammar && data.grammar.length > 0) {
             const sortedGrammar = groupAndSortGrammar(data.grammar);

@@ -29,7 +29,7 @@
                 <span id="vl-counter" class="vl-counter"></span>
             </div>
 
-            <div class="vl-progress-bar">
+            <div class="vl-progress-bar vl-card-progress">
                 <div id="vl-progress-fill" class="vl-progress-fill" style="width:0%"></div>
             </div>
 
@@ -84,7 +84,7 @@
         <div id="screen-summary" style="display:none;">
             <div class="vl-summary-topbar word-summary-topbar">
                 <button class="vl-back vl-plain-btn" onclick="backToLessons()">&larr; Back to Lessons</button>
-                <h2>Word Summary</h2>
+                <h2 id="word-summary-title">Word Summary</h2>
                 <button id="lesson-summary-nav-btn" class="vl-lesson-summary-btn"
                     onclick="goToLessonSummary()" title="Go to Lesson Summary">
                     <i class="fa-solid fa-book-open" aria-hidden="true"></i>
@@ -147,6 +147,7 @@
     </div>
 
     <script src="/static/shared/passage_picker.js?v=8"></script>
+    <script src="/static/shared/passage_label.js"></script>
     <script src="/static/vocab_learning/vocab_learning.js?v=10"></script>
 </body>
 </html>

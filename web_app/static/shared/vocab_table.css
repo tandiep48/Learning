@@ -229,11 +229,20 @@
     white-space: nowrap;
 }
 
+.vocab-no-col,
+.vocab-no-cell {
+    width: 64px;
+    text-align: center !important;
+    color: #111111;
+    font-weight: 700;
+}
+
 .vocab-tools-cell {
     text-align: center;
     white-space: nowrap;
 }
 
+.vocab-tools-cell .vocab-stroke-row-btn,
 .vocab-tools-cell .vocab-audio-btn {
     margin-right: 4px;
 }

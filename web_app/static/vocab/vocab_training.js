@@ -605,6 +605,7 @@ function _showCompleteScreen() {
     const retryBtn     = document.getElementById('btn-retry');
     const startLessonBtn = document.getElementById('btn-start-lesson');
     const emptyState   = document.getElementById('perfect-area');
+    const missedTitle  = document.getElementById('training-complete-title');
     tableBody.innerHTML = '';
 
     if (startLessonBtn) {
@@ -612,6 +613,7 @@ function _showCompleteScreen() {
     }
 
     if (missedTasks.length > 0) {
+        if (missedTitle) missedTitle.style.display = 'block';
         emptyState.style.display = 'none';
         retryBtn.style.display = 'inline-flex';
         const uniqueMissed = [...new Set(missedTasks.map(t => t.word))];
@@ -626,6 +628,7 @@ function _showCompleteScreen() {
             tableBody.appendChild(row);
         });
     } else {
+        if (missedTitle) missedTitle.style.display = 'none';
         emptyState.style.display = 'block';
         retryBtn.style.display = 'none';
     }

@@ -254,6 +254,7 @@ function renderVocabTable(rows) {
     table.innerHTML = `
         <thead>
             <tr>
+                <th class="vocab-no-col">No</th>
                 <th class="vocab-select-col">
                     <input type="checkbox" id="select-page-checkbox" onchange="togglePageSelection(this.checked)" title="Select visible rows">
                 </th>
@@ -288,10 +289,11 @@ function renderVocabTable(rows) {
             ? `<button class="vocab-stroke-row-btn" onclick="openVocabStrokeModal(${escapeJsArg(word)}, '${pinyin}')" title="Write character" aria-label="Write character"><i class="fa-solid fa-pen-nib" aria-hidden="true"></i></button>`
             : '';
         tr.innerHTML = `
+            <td class="vocab-no-cell">${index + 1}</td>
             <td class="vocab-select-col">
                 <input type="checkbox" class="vocab-row-checkbox" ${checked} onchange="toggleWordSelection(${index}, this.checked)">
             </td>
-            <td class="vocab-tools-cell">${audioCell}${writeBtn}</td>
+            <td class="vocab-tools-cell">${writeBtn}${audioCell}</td>
             <td class="vocab-cn clickable-cell ${getVocabCellClasses(word, 'cn')}" onclick="toggleVocabCell(this, 'cn', ${escapeJsArg(word)}, 'trainer-vocab-table')">${escapeHtml(word)}</td>
             <td class="vocab-pinyin clickable-cell ${getVocabCellClasses(word, 'py')}" onclick="toggleVocabCell(this, 'py', ${escapeJsArg(word)}, 'trainer-vocab-table')">${escapeHtml(row.pinyin || '')}</td>
             <td class="vocab-meaning-vn clickable-cell ${getVocabCellClasses(word, 'vn')}" onclick="toggleVocabCell(this, 'vn', ${escapeJsArg(word)}, 'trainer-vocab-table')">${escapeHtml(row.meaning_vn || row.meaning_en || '')}</td>

@@ -1,35 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'shared/trainer_base.html' %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vocabulary Training</title>
-    <link rel="stylesheet" href="/static/shared/styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <link rel="stylesheet" href="/static/shared/success_popup.css">
-    <link rel="stylesheet" href="/static/vocab/vocab_training.css?v=5">
-</head>
+{% block title %}Vocabulary Training{% endblock %}
 
-<body>
-    <div class="app-container">
-        <div id="screen-loading" class="screen active">
-            <div class="loader"></div>
-            <p>Fetching words...</p>
-        </div>
+{% block loading_text %}Fetching words...{% endblock %}
 
-        <div id="screen-training" class="screen">
-            <div class="trainer-topbar">
-                <button class="btn secondary trainer-quit-btn" onclick="confirmQuit()">Quit Session</button>
-            </div>
-
-            <div class="progress-bar">
-                <div class="progress-fill" id="progress-fill"></div>
-            </div>
-            <div class="task-counter" id="task-counter">Task 1/10</div>
-
-            <div class="task-card">
-                <div id="task-instruction" class="instruction"></div>
+{% block task_components %}
                 <div id="word-display" class="chinese-word" style="display:none;"></div>
 
                 <div id="audio-controls" style="display:none;" class="audio-controls">
@@ -63,18 +38,24 @@
                         <div id="speaking-reveal-pinyin" class="speaking-reveal-pinyin"></div>
                     </div>
                 </div>
+{% endblock %}
 
-                <div class="trainer-task-actions">
-                    <button id="btn-skip-task" class="skip-float-btn" onclick="skipTask()">
-                        Skip <i class="fa-solid fa-forward-step" aria-hidden="true"></i>
-                    </button>
+{% block submit_buttons %}
                     <button id="typing-submit-btn" class="btn primary" onclick="submitTyping()"
                         style="display:none;">Submit</button>
-                </div>
-            </div>
-        </div>
+{% endblock %}
 
-        <div id="screen-complete" class="screen">
+{% block screen_complete %}
+            <div class="nav-buttons training-complete-actions training-complete-top-actions">
+                <button class="btn primary" onclick="goHome()">Back to Vocabulary</button>
+                <button class="btn primary" id="btn-start-lesson" style="display:none;" onclick="startLearnLesson()">
+                    <i class="fa-solid fa-book-open" aria-hidden="true"></i>
+                    <span>Lesson Summary</span>
+                </button>
+            </div>
+
+            <h2 id="training-complete-title" class="training-complete-title">These are the words that you got it wrong and need to re-learned</h2>
+
             <div class="training-complete-table-wrap">
                 <table class="training-complete-table">
                     <thead>
@@ -90,29 +71,10 @@
             </div>
 
             <div class="nav-buttons training-complete-actions">
-                <button class="btn primary" onclick="goHome()">Back to Vocabulary</button>
                 <button class="btn primary" id="btn-retry" onclick="retryMissed()">Retry Missed</button>
-                <button class="btn primary" id="btn-start-lesson" style="display:none;" onclick="startLearnLesson()">
-                    <i class="fa-solid fa-book-open" aria-hidden="true"></i>
-                    <span>Lesson Summary</span>
-                </button>
             </div>
-        </div>
-    </div>
+{% endblock %}
 
-    <div id="quit-modal-overlay" class="quit-modal-overlay" onclick="closeQuitModalIfBackground(event)">
-        <div class="quit-modal">
-            <h3>Quit Session?</h3>
-            <p>Your current progress won't be saved.<br>Are you sure you want to quit?</p>
-            <div class="quit-modal-btns">
-                <button class="btn secondary" onclick="closeQuitModal()">Cancel</button>
-                <button class="btn danger" onclick="goHome()">Yes, Quit</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="/static/shared/success_popup.js"></script>
+{% block extra_js %}
     <script src="/static/vocab/vocab_training.js?v=4"></script>
-</body>
-
-</html>
+{% endblock %}
