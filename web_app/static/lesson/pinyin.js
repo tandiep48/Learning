@@ -25,20 +25,28 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.playPinyin = function(pinyinText) {
-        if ('speechSynthesis' in window) {
-            let textToSpeak = pinyinText.replace(/[āáǎà]/g, 'a')
-                                        .replace(/[ōóǒò]/g, 'o')
-                                        .replace(/[ēéěè]/g, 'e')
-                                        .replace(/[īíǐì]/g, 'i')
-                                        .replace(/[ūúǔù]/g, 'u')
-                                        .replace(/[ǖǘǚǜü]/g, 'v');
-            
-            let utterance = new SpeechSynthesisUtterance(textToSpeak);
-            utterance.lang = 'zh-CN';
-            window.speechSynthesis.speak(utterance);
-        } else {
-            alert("Speech Synthesis not supported in this browser. Trying to play: " + pinyinText);
+        if (window.currentAudio) {
+            window.currentAudio.pause();
         }
+        const audioUrl = `https://storage.googleapis.com/chinese-learning-audio-assets/audio_pinyin/${encodeURIComponent(pinyinText)}.mp3`;
+        const audio = new Audio(audioUrl);
+        window.currentAudio = audio;
+        
+        audio.play().catch(e => {
+            console.warn("Audio playback failed from bucket, falling back to TTS:", e);
+            if ('speechSynthesis' in window) {
+                let textToSpeak = pinyinText.replace(/[āáǎà]/g, 'a')
+                                            .replace(/[ōóǒò]/g, 'o')
+                                            .replace(/[ēéěè]/g, 'e')
+                                            .replace(/[īíǐì]/g, 'i')
+                                            .replace(/[ūúǔù]/g, 'u')
+                                            .replace(/[ǖǘǚǜü]/g, 'v');
+                
+                let utterance = new SpeechSynthesisUtterance(textToSpeak);
+                utterance.lang = 'zh-CN';
+                window.speechSynthesis.speak(utterance);
+            }
+        });
     };
 
     const tooltip = document.getElementById('pinyin-tooltip');
@@ -104,13 +112,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.playTone = function(pinyinWithTone) {
-        if ('speechSynthesis' in window) {
-            let utterance = new SpeechSynthesisUtterance(pinyinWithTone);
-            utterance.lang = 'zh-CN';
-            window.speechSynthesis.speak(utterance);
-        } else {
-            alert("Speech Synthesis not supported: " + pinyinWithTone);
+        if (window.currentAudio) {
+            window.currentAudio.pause();
         }
+        const audioUrl = `https://storage.googleapis.com/chinese-learning-audio-assets/audio_pinyin/${encodeURIComponent(pinyinWithTone)}.mp3`;
+        const audio = new Audio(audioUrl);
+        window.currentAudio = audio;
+        
+        audio.play().catch(e => {
+            console.warn("Audio playback failed from bucket, falling back to TTS:", e);
+            if ('speechSynthesis' in window) {
+                let utterance = new SpeechSynthesisUtterance(pinyinWithTone);
+                utterance.lang = 'zh-CN';
+                window.speechSynthesis.speak(utterance);
+            }
+        });
+        
         window.closePinyinPopover();
     };
 
