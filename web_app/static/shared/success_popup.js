@@ -142,7 +142,7 @@ const SuccessPopup = (() => {
         // Accuracy bar colour
         const barEl = _overlay.querySelector('#sp-bar');
         barEl.style.width = '0%';
-        const barColor = accuracy >= 90 ? '#4ade80' : accuracy >= 60 ? '#818cf8' : '#f87171';
+        const barColor = accuracy >= 90 ? '#16a34a' : accuracy >= 60 ? '#007a61' : '#f87171';
         barEl.style.background = `linear-gradient(90deg, ${barColor}, ${barColor}aa)`;
         // Animate bar after a frame
         requestAnimationFrame(() => requestAnimationFrame(() => {

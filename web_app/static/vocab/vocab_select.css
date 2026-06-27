@@ -158,6 +158,7 @@ body.vocab-select-page {
     white-space: nowrap;
 }
 
+.vocab-tools-cell .vocab-stroke-row-btn,
 .vocab-tools-cell .vocab-audio-btn {
     margin-right: 4px;
 }

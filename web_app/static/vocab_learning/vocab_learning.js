@@ -88,6 +88,7 @@ function startSelectedFlashcards(selectedRows) {
     tableVocabList = [...words];
     renderVocabTable();
     updateLessonSummaryNavigation();
+    updateWordSummaryTitle();
     document.getElementById('screen-summary').style.display = 'block';
 }
 
@@ -138,6 +139,7 @@ async function startLesson(passage) {
         tableVocabList = [...words];
         renderVocabTable();
         updateLessonSummaryNavigation();
+        updateWordSummaryTitle();
         showWordSummaryScreen();
 
     } catch (e) {
@@ -151,6 +153,7 @@ function showWordSummaryScreen() {
     document.querySelectorAll('.picker-screen').forEach(el => el.classList.remove('active'));
     document.getElementById('screen-loading').style.display = 'none';
     document.getElementById('screen-learning').style.display = 'none';
+    updateWordSummaryTitle();
     document.getElementById('screen-summary').style.display = 'block';
 }
 
@@ -538,6 +541,14 @@ function updateLessonSummaryNavigation() {
     button.hidden = !lessonMeta?.passage_id;
 }
 
+function updateWordSummaryTitle() {
+    const title = document.getElementById('word-summary-title');
+    if (!title) return;
+    title.textContent = lessonMeta?.passage_id
+        ? window.formatPassageLabel?.(lessonMeta.passage_id, 'Word Summary') || 'Word Summary'
+        : 'Word Summary';
+}
+
 document.addEventListener('keydown', (e) => {
     if (document.getElementById('screen-learning').style.display === 'none') return;
     if (e.key === 'ArrowLeft') prevWord();
@@ -592,6 +603,7 @@ function renderVocabTable() {
                             class="vocab-header-icon-btn" title="Shuffle vocabulary"
                             aria-label="Shuffle vocabulary"><i class="fa-solid fa-shuffle" aria-hidden="true"></i></button>
                     </th>
+                    <th class="vocab-no-col">No</th>
                     <th>${renderSummaryColumnHeader('cn', 'CHARACTER', tableId)}</th>
                     <th>${renderSummaryColumnHeader('py', 'PINYIN', tableId)}</th>
                     <th>${renderSummaryColumnHeader('vn', 'MEANING (VN)', tableId)}</th>
@@ -611,7 +623,8 @@ function renderVocabTable() {
             : '';
         html += `
             <tr id="vl-tr-${index}" data-audio="${escapeAttr(v.audio_key || '')}">
-                <td class="vocab-tools-cell">${audioBtn}${strokeBtn}</td>
+                <td class="vocab-tools-cell">${strokeBtn}${audioBtn}</td>
+                <td class="vocab-no-cell">${index + 1}</td>
                 <td class="vocab-cn clickable-cell ${getSummaryCellClasses(word, 'cn')}" onclick="toggleSummaryVocabCell(this, 'cn', ${escapeJsArg(word)}, '${tableId}')">${escapeHtml(v.word || '')}</td>
                 <td class="vocab-pinyin clickable-cell ${getSummaryCellClasses(word, 'py')}" onclick="toggleSummaryVocabCell(this, 'py', ${escapeJsArg(word)}, '${tableId}')">${escapeHtml(v.pinyin || '')}</td>
                 <td class="vocab-meaning-vn clickable-cell ${getSummaryCellClasses(word, 'vn')}" onclick="toggleSummaryVocabCell(this, 'vn', ${escapeJsArg(word)}, '${tableId}')">${escapeHtml(v.meaning_vn || v.meaning_en || '')}</td>

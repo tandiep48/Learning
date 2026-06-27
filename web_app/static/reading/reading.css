@@ -114,6 +114,11 @@
     flex: 1;
 }
 
+.lesson-preview-text .hanzi-text,
+.lesson-preview-text .line-token {
+    color: #111111;
+}
+
 .lesson-line-card {
     max-width: 900px;
 }
@@ -354,6 +359,10 @@
 }
 .line-token.clickable {
     cursor: pointer;
+    color: #111111;
+    text-decoration-line: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 4px;
     border-radius: 4px;
     transition: background 0.15s;
 }

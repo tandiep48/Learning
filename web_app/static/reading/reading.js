@@ -373,7 +373,9 @@ function getLessonAudioSrc(line) {
 function renderLessonSummary() {
     const title = document.getElementById('lesson-learner-title');
     const preview = document.getElementById('lesson-learner-preview');
-    if (title) title.textContent = 'Lesson Summary';
+    if (title) {
+        title.textContent = window.formatPassageLabel?.(currentPassage?.passage_id, 'Lesson Summary') || 'Lesson Summary';
+    }
     if (!preview) return;
 
     const lines = getLessonLines();

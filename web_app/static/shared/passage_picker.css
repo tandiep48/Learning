@@ -165,14 +165,15 @@
 /* -- Lesson-wide action card and part list -- */
 .picker-lesson-action-card {
     margin-top: 20px;
-    padding: 18px;
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
+    padding: 20px;
+    background: #CBE2D4;
+    border: 1px solid #afcfbd;
+    border-radius: 8px;
     color: #111111;
     max-width: 800px;
     margin-left: auto;
     margin-right: auto;
+    box-shadow: 0 10px 28px rgba(87, 104, 86, 0.08);
 }
 
 .picker-lesson-action-card[hidden] {
@@ -241,7 +242,7 @@
 .part-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
     margin-top: 16px;
     max-width: 800px;
     margin-left: auto;
@@ -253,18 +254,20 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    padding: 16px 18px;
+    padding: 18px 20px;
     background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
+    border: 1px solid #d9ded9;
+    border-radius: 8px;
     color: #111111;
     cursor: pointer;
-    transition: background 0.18s, border-color 0.18s, transform 0.18s;
+    box-shadow: 0 4px 14px rgba(87, 104, 86, 0.06);
+    transition: background 0.18s, border-color 0.18s, transform 0.18s, box-shadow 0.18s;
 }
 
 .part-list-item:hover {
-    background: #fafafa;
-    border-color: #d1d5db;
+    background: #eef6df;
+    border-color: #afcfbd;
+    box-shadow: 0 8px 22px rgba(87, 104, 86, 0.1);
     transform: translateX(3px);
 }
 
