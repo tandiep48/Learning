@@ -21,32 +21,9 @@
 
         {% include 'shared/passage_picker.html' %}
 
-        <section id="learning-action-screen" class="learning-action-screen" style="display:none;">
-            <div class="learning-topbar">
-                <button class="btn secondary learning-back-btn" onclick="backToPartPicker()">Back to Parts</button>
-                <a href="/" class="learning-home-link">Dashboard</a>
-            </div>
-
-            <div class="learning-heading">
-                <h1>Learning</h1>
-                <p id="learning-context" class="subtitle">Choose an activity.</p>
-            </div>
-
-            <div class="learning-guided-panel">
-                <button class="btn primary learning-start-btn" onclick="startGuidedLessonPart()">
-                    Start Lesson Part
-                </button>
-            </div>
-
-            <div class="learning-part-nav" aria-label="Part navigation">
-                <button id="btn-prev-part" class="btn secondary learning-part-nav-btn" onclick="goToAdjacentPart(-1)">Previous Part</button>
-                <button id="btn-next-part" class="btn secondary learning-part-nav-btn" onclick="goToAdjacentPart(1)">Next Part</button>
-            </div>
-        </section>
-
     </div>
 
     <script src="/static/shared/passage_picker.js?v=8"></script>
-    <script src="/static/learning/learning.js"></script>
+    <script src="/static/learning/learning.js?v=2"></script>
 </body>
 </html>
