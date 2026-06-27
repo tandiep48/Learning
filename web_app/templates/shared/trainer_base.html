@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Training{% endblock %}</title>
+    <link rel="stylesheet" href="/static/shared/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="/static/shared/success_popup.css">
+    <link rel="stylesheet" href="/static/vocab/vocab.css?v=6">
+    <link rel="stylesheet" href="/static/vocab/vocab_training.css?v=6">
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body class="{% block body_class %}{% endblock %}">
+    {% block pre_app %}{% endblock %}
+    <div class="app-container">
+        {% block in_app_top %}{% endblock %}
+
+        <div id="screen-loading" class="screen {% block loading_class %}active{% endblock %}">
+            <div class="loader"></div>
+            <p>{% block loading_text %}Loading...{% endblock %}</p>
+        </div>
+
+        <div id="screen-training" class="screen">
+            <div class="trainer-topbar">
+                <button class="btn secondary trainer-quit-btn" onclick="confirmQuit()">Quit Session</button>
+            </div>
+
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            <div class="task-counter" id="task-counter">Task 1/10</div>
+
+            <div class="task-card">
+                <div id="task-instruction" class="instruction"></div>
+                {% block task_components %}{% endblock %}
+                
+                <div class="trainer-task-actions">
+                    <button id="btn-skip-task" class="skip-float-btn" onclick="skipTask()">
+                        Skip <i class="fa-solid fa-forward-step" aria-hidden="true"></i>
+                    </button>
+                    {% block submit_buttons %}{% endblock %}
+                </div>
+                
+                {% block post_task_actions %}{% endblock %}
+            </div>
+        </div>
+
+        <div id="screen-complete" class="screen">
+            {% block screen_complete %}{% endblock %}
+        </div>
+    </div>
+
+    <div id="quit-modal-overlay" class="quit-modal-overlay" onclick="closeQuitModalIfBackground(event)">
+        <div class="quit-modal">
+            {% block quit_modal_icon %}{% endblock %}
+            <h3>Quit Session?</h3>
+            <p>Your current progress won't be saved.<br>Are you sure you want to quit?</p>
+            <div class="quit-modal-btns">
+                <button class="btn secondary" onclick="closeQuitModal()">Cancel</button>
+                <button class="btn danger" onclick="goHome()">Yes, Quit</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/shared/success_popup.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+
+</html>

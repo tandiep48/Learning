@@ -167,7 +167,7 @@ function loadTask() {
 
     if (task.type === "listening" || task.type === "listen") {
         instructionEl.innerHTML = '<i class="fa-solid fa-headphones-simple" aria-hidden="true"></i><span>Listen and choose the correct translation:</span>';
-        document.getElementById('audio-controls').style.display = 'flex';
+        document.getElementById('audio-controls').style.display = 'block';
         if (task.audio_key) {
             audioEl.play().catch(e => console.warn("Audio playback failed:", e));
         }
@@ -436,22 +436,29 @@ function _buildLessonCompleteScreen() {
     markLessonPartComplete();
 
     if (missedTasks.length > 0) {
-        document.getElementById('recap-area').style.display = 'block';
+        document.getElementById('recap-table-wrap').style.display = 'block';
+        document.getElementById('training-complete-title').style.display = 'block';
+        document.getElementById('recap-actions').style.display = 'flex';
         document.getElementById('perfect-area').style.display = 'none';
 
         const list = document.getElementById('recap-list');
         list.innerHTML = '';
 
         missedTasks.forEach(t => {
-            const li = document.createElement('li');
-            li.innerHTML = `<strong>${t.type}</strong> | ${t.content || 'Audio'} <br>
-                    <span style="color:var(--danger)">Your Answer: ${t.user_answer}</span> <br>
-                    <span style="color:var(--success)">Correct Answer: ${t.correct_answer}</span>`;
-            list.appendChild(li);
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${t.type}</strong></td>
+                <td>${t.content || 'Audio'}</td>
+                <td style="color:var(--danger)">${t.user_answer}</td>
+                <td style="color:var(--success); font-weight:bold;">${t.correct_answer}</td>
+            `;
+            list.appendChild(tr);
         });
     } else {
-        document.getElementById('recap-area').style.display = 'none';
-        document.getElementById('perfect-area').style.display = 'flex';
+        document.getElementById('recap-table-wrap').style.display = 'none';
+        document.getElementById('training-complete-title').style.display = 'none';
+        document.getElementById('recap-actions').style.display = 'none';
+        document.getElementById('perfect-area').style.display = 'block';
     }
 }
 

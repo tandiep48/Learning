@@ -394,7 +394,7 @@ h2,
 #screen-training {
     width: min(100%, 1080px);
     margin: 0 auto;
-    padding: clamp(12px, 3vw, 36px) 0;
+    padding: 0;
 }
 
 #screen-training .progress-bar {
