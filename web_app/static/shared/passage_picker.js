@@ -192,7 +192,7 @@ const Picker = {
             const progressHtml = progress
                 ? `<div class="picker-progress-lines">
                     ${this._progressBar(progress.learned_words, progress.total_words, 'Words')}
-                    ${this._progressBar(progress.lesson_learned, progress.lesson_total, 'Lesson')}
+                    ${this._progressBar(progress.lesson_learned, progress.lesson_total, 'Lesson', true)}
                    </div>`
                 : '';
 
@@ -258,7 +258,7 @@ const Picker = {
             const progressHtml = progress
                 ? `<div class="picker-progress-lines picker-progress-lines-centered">
                     ${this._progressBar(progress.learned_words, progress.total_words, 'Words')}
-                    ${this._progressBar(progress.lesson_learned, progress.lesson_total, 'Lesson')}
+                    ${this._progressBar(progress.lesson_learned, progress.lesson_total, 'Lesson', true)}
                    </div>`
                 : '';
 
@@ -292,8 +292,8 @@ const Picker = {
         const progress = this.progressSummary?.lessons?.[lessonNum];
         const wordsPct = this._progressPct(progress?.learned_words, progress?.total_words);
         const lessonPct = this._progressPct(progress?.lesson_learned, progress?.lesson_total);
-        const canStartVocab = wordsPct === 100 && parts.length > 0;
-        const canStartLesson = lessonPct === 100 && parts.length > 0;
+        const canStartVocab = parts.length > 0;
+        const canStartLesson = parts.length > 0;
         const partCount = parts.length;
 
         actionCard.hidden = false;
@@ -310,7 +310,7 @@ const Picker = {
             </div>
             <div class="picker-lesson-progress">
                 ${progress ? this._progressBar(progress.learned_words, progress.total_words, 'Words') : this._emptyProgressBar('Words')}
-                ${progress ? this._progressBar(progress.lesson_learned, progress.lesson_total, 'Lesson') : this._emptyProgressBar('Lesson')}
+                ${progress ? this._progressBar(progress.lesson_learned, progress.lesson_total, 'Lesson', true) : this._emptyProgressBar('Lesson', true)}
             </div>
         `;
 
@@ -340,9 +340,7 @@ const Picker = {
         };
     },
 
-    // Returns a coloured progress bar HTML string.
-    // ≤25% → red, 26–50% → yellow, ≥51% → green
-    _progressBar(done, total, label) {
+    _progressBar(done, total, label, asPercentage = false) {
         if (!total || total === 0) return '';
         const pct = this._progressPct(done, total);
         let colorClass;
@@ -350,22 +348,26 @@ const Picker = {
         else if (pct <= 50) colorClass = 'pct-orange';
         else if (pct <= 75) colorClass = 'pct-yellow';
         else colorClass = 'pct-green';
+        
+        const textDisplay = asPercentage ? `${Math.round(pct)}%` : `${Number(done) || 0} / ${total}`;
+        
         return `<div class="picker-progress-row">
             <span class="picker-progress-label">${label}</span>
             <div class="picker-progress-track ${colorClass}" role="progressbar" aria-label="${label} progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}">
                 <span class="picker-progress-fill" style="width:${pct}%"></span>
             </div>
-            <span class="picker-progress-pct">${Number(done) || 0} / ${total}</span>
+            <span class="picker-progress-pct">${textDisplay}</span>
         </div>`;
     },
 
-    _emptyProgressBar(label) {
+    _emptyProgressBar(label, asPercentage = false) {
+        const textDisplay = asPercentage ? `0%` : `0 / 0`;
         return `<div class="picker-progress-row">
             <span class="picker-progress-label">${label}</span>
             <div class="picker-progress-track pct-red" role="progressbar" aria-label="${label} progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                 <span class="picker-progress-fill" style="width:0%"></span>
             </div>
-            <span class="picker-progress-pct">0 / 0</span>
+            <span class="picker-progress-pct">${textDisplay}</span>
         </div>`;
     },
 
