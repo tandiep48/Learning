@@ -772,7 +772,6 @@ input[type="number"] {
     background: rgba(0, 122, 97, 0.36);
 }
 
-#screen-training .btn[style],
 #mc-feedback span,
 #typing-feedback span {
     color: #111111 !important;
