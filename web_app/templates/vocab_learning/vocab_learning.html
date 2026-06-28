@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,13 +9,15 @@
     <link rel="stylesheet" href="/static/shared/styles.css">
     <link rel="stylesheet" href="/static/shared/vocab_table.css?v=8">
     <link rel="stylesheet" href="/static/shared/passage_picker.css?v=6">
-    <link rel="stylesheet" href="/static/vocab_learning/vocab_learning.css?v=10">
+    <link rel="stylesheet" href="/static/vocab_learning/vocab_learning.css?v=11">
+    <link rel="stylesheet" href="/static/shared/sidebar.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
 </head>
 <body class="with-site-nav">
     {% include 'shared/site_nav.html' %}
-    <div class="vl-container">
+    {% include 'shared/sidebar.html' %}
+    <div class="app-container">
         {% include 'shared/passage_picker.html' %}
 
         <div id="screen-loading" style="display:none;">
@@ -25,7 +29,6 @@
 
         <div id="screen-learning" style="display:none;">
             <div class="vl-learning-topbar">
-                <button class="vl-back vl-plain-btn" onclick="showVocabSummary()">&larr; Back to Summary</button>
                 <span id="vl-counter" class="vl-counter"></span>
             </div>
 
@@ -83,13 +86,7 @@
 
         <div id="screen-summary" style="display:none;">
             <div class="vl-summary-topbar word-summary-topbar">
-                <button class="vl-back vl-plain-btn" onclick="backToLessons()">&larr; Back to Lessons</button>
                 <h2 id="word-summary-title">Word Summary</h2>
-                <button id="lesson-summary-nav-btn" class="vl-lesson-summary-btn"
-                    onclick="goToLessonSummary()" title="Go to Lesson Summary">
-                    <i class="fa-solid fa-book-open" aria-hidden="true"></i>
-                    <span>Lesson Summary</span>
-                </button>
             </div>
 
             <div class="vocab-content-card summary-content-card vocab-table-theme">
@@ -148,6 +145,7 @@
 
     <script src="/static/shared/passage_picker.js?v=8"></script>
     <script src="/static/shared/passage_label.js"></script>
-    <script src="/static/vocab_learning/vocab_learning.js?v=10"></script>
+    <script src="/static/vocab_learning/vocab_learning.js?v=9"></script>
+    <script src="/static/shared/sidebar.js"></script>
 </body>
 </html>

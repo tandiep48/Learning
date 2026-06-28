@@ -1,15 +1,5 @@
 /**
  * success_popup.js — shared celebration popup for vocab_trainer & lesson_trainer
- *
- * Usage:
- *   SuccessPopup.show({
- *     total:    <number>,   // total tasks attempted
- *     correct:  <number>,   // number correct
- *     onContinue: fn,       // called when primary CTA is clicked
- *     onRetry:  fn | null,  // if provided, shows a "Retry Missed" button
- *     onHome:   fn,         // called when "Back to Menu" is clicked
- *     continueLabel: 'View Summary',  // optional CTA label
- *   });
  */
 const SuccessPopup = (() => {
     let _overlay = null;
@@ -28,7 +18,6 @@ const SuccessPopup = (() => {
                 <canvas id="sp-confetti-canvas"></canvas>
                 <div class="sp-icon-wrap" id="sp-icon">🎉</div>
                 <h2 class="sp-title" id="sp-title">Training Complete!</h2>
-                <p class="sp-subtitle" id="sp-subtitle">Great job finishing the session.</p>
                 <div class="sp-stats">
                     <div class="sp-stat">
                         <div class="sp-stat-value" id="sp-total">0</div>
@@ -43,10 +32,6 @@ const SuccessPopup = (() => {
                         <div class="sp-stat-label">Accuracy</div>
                     </div>
                 </div>
-                <div class="sp-accuracy-bar-wrap">
-                    <div class="sp-accuracy-bar" id="sp-bar"></div>
-                </div>
-                <div class="sp-actions" id="sp-actions"></div>
             </div>`;
 
         document.body.appendChild(_overlay);
@@ -124,57 +109,34 @@ const SuccessPopup = (() => {
 
         // Icon & title
         const iconEl = _overlay.querySelector('#sp-icon');
-        iconEl.textContent = isPerfect ? '🏆' : '✅';
+        iconEl.innerHTML = isPerfect ? '<i class="fa-solid fa-trophy"></i>' : '<i class="fa-solid fa-circle-check"></i>';
         iconEl.className   = `sp-icon-wrap ${isPerfect ? 'perfect' : 'has-missed'}`;
 
         _overlay.querySelector('#sp-title').textContent =
             isPerfect ? 'Perfect Score! 🎉' : 'Session Complete!';
-        _overlay.querySelector('#sp-subtitle').textContent =
-            isPerfect
-                ? 'You got every question right. Incredible!'
-                : `Almost there — ${missed} question${missed > 1 ? 's' : ''} to review.`;
 
         // Stats
         _overlay.querySelector('#sp-total').textContent    = total;
         _overlay.querySelector('#sp-correct').textContent  = correct;
         _overlay.querySelector('#sp-accuracy').textContent = `${accuracy}%`;
 
-        // Accuracy bar colour
-        const barEl = _overlay.querySelector('#sp-bar');
-        barEl.style.width = '0%';
-        const barColor = accuracy >= 90 ? '#16a34a' : accuracy >= 60 ? '#007a61' : '#f87171';
-        barEl.style.background = `linear-gradient(90deg, ${barColor}, ${barColor}aa)`;
-        // Animate bar after a frame
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-            barEl.style.width = `${accuracy}%`;
-        }));
+        // Handle auto-close and click outside
+        const finishAction = () => {
+            if (_overlay.autoCloseTimeout) clearTimeout(_overlay.autoCloseTimeout);
+            hide();
+            if (onContinue) onContinue();
+        };
 
-        // Action buttons
-        const actionsEl = _overlay.querySelector('#sp-actions');
-        actionsEl.innerHTML = '';
+        // Close when clicking anywhere on the overlay (or the card)
+        _overlay.onclick = (e) => {
+            finishAction();
+        };
 
-        // "Back to Menu" secondary
-        const homeBtn = document.createElement('button');
-        homeBtn.className = 'sp-btn secondary';
-        homeBtn.innerHTML = '<i class="fa-solid fa-house"></i> Menu';
-        homeBtn.onclick = () => { hide(); if (onHome) onHome(); };
-        actionsEl.appendChild(homeBtn);
-
-        // "Retry Missed" warning (optional)
-        if (onRetry && missed > 0) {
-            const retryBtn = document.createElement('button');
-            retryBtn.className = 'sp-btn warning';
-            retryBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> Retry Missed';
-            retryBtn.onclick = () => { hide(); onRetry(); };
-            actionsEl.appendChild(retryBtn);
+        // Auto close after 3 seconds
+        if (_overlay.autoCloseTimeout) {
+            clearTimeout(_overlay.autoCloseTimeout);
         }
-
-        // Primary CTA
-        const continueBtn = document.createElement('button');
-        continueBtn.className = 'sp-btn primary';
-        continueBtn.innerHTML = `<i class="fa-solid fa-arrow-right"></i> ${continueLabel}`;
-        continueBtn.onclick = () => { hide(); if (onContinue) onContinue(); };
-        actionsEl.appendChild(continueBtn);
+        _overlay.autoCloseTimeout = setTimeout(finishAction, 3000);
 
         // Show overlay
         _overlay.classList.add('open');

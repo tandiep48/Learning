@@ -30,10 +30,11 @@ function stopAudio() {
     document.querySelectorAll('.p-audio-btn').forEach(b => b.classList.remove('playing'));
 }
 
-function playAudio(key, btnEl) {
+function playAudio(key, btnEl, level, category) {
     stopAudio();
-    const cat = window.practiceCategory || 'practice';
-    audioEl.src = `/practice_audio/${NUM}/${key}.mp3?category=${cat}`;
+    const cat = category || window.practiceCategory || 'practice';
+    const lvl = level || NUM || 1;
+    audioEl.src = `https://storage.googleapis.com/chinese-learning-audio-assets/question_bank/${cat}/${cat}-${lvl}/${key}.mp3`;
     audioEl.play().catch(() => {});
     if (btnEl) {
         btnEl.classList.add('playing');
@@ -48,7 +49,11 @@ function showScreen(id) {
 
 function imageUrl(level, filename, category) {
     const cat = category || 'practice';
-    return `/practice_image/${level}/${filename}?category=${cat}`;
+    let file = filename.trim();
+    if (!file.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/)) {
+        file += '.jpg';
+    }
+    return `https://storage.googleapis.com/chinese-learning-audio-assets/images/${cat}/${level}/${file}`;
 }
 
 // Detect any kind of blank: （ ）, （）, ( ), ()
@@ -76,14 +81,18 @@ function replaceAllBlanks(content, fills, interactive, blockId) {
 }
 
 function isImageFilename(val) {
-    return typeof val === 'string' && /\.(jpg|jpeg|png|gif|webp)$/i.test(val.trim());
+    if (typeof val !== 'string') return false;
+    const v = val.trim();
+    if (/\.(jpg|jpeg|png|gif|webp)$/i.test(v)) return true;
+    if (/^\d+\.\d+[a-zA-Z]*$/.test(v)) return true;
+    return false;
 }
 
-function makeAudioBtn(key, label) {
+function makeAudioBtn(key, label, level, category) {
     const btn = document.createElement('button');
     btn.className = 'p-audio-btn';
     btn.innerHTML = `<i class="fa-solid fa-play" aria-hidden="true"></i><span>${label || 'Play Audio'}</span>`;
-    btn.onclick = () => playAudio(key, btn);
+    btn.onclick = () => playAudio(key, btn, level, category);
     return btn;
 }
 
@@ -100,6 +109,10 @@ async function init() {
         if (referrer === 'recommend') {
             backBtn.href = '/recommend';
             backBtn.title = 'Back to Recommendations';
+        } else if (referrer && referrer.startsWith('exam-')) {
+            const lvl = referrer.split('-')[1];
+            backBtn.href = `/practice/${lvl}?category=exam`;
+            backBtn.title = `Back to HSK ${lvl} Exam`;
         } else if (referrer && referrer.startsWith('practice-')) {
             const lvl = referrer.split('-')[1];
             backBtn.href = `/practice/${lvl}`;
@@ -107,6 +120,12 @@ async function init() {
         } else {
             backBtn.href = '/practice';
             backBtn.title = 'Back to Practice';
+        }
+
+        const resultBackBtn = document.getElementById('result-back-btn');
+        if (resultBackBtn) {
+            resultBackBtn.href = backBtn.href;
+            resultBackBtn.textContent = '← ' + backBtn.title;
         }
     }
 
@@ -240,7 +259,7 @@ function renderType2Group(card, group) {
     if (isListening) {
         // Only show audio for the passage – no text
         if (passage?.audio_key?.length) {
-            card.appendChild(makeAudioBtn(passage.audio_key[0], 'Play Passage'));
+            card.appendChild(makeAudioBtn(passage.audio_key[0], 'Play Passage', passage.level, passage.category));
         }
     } else {
         // Reading: show content
@@ -263,7 +282,7 @@ function renderType2Group(card, group) {
             // Don't show question text; only show per-question audio for follow-up
             const keyIdx = idx === 0 && q.audio_key?.length === 2 ? 1 : 0;
             if (q.audio_key?.length) {
-                block.appendChild(makeAudioBtn(q.audio_key[keyIdx], `Question ${idx + 1}`));
+                block.appendChild(makeAudioBtn(q.audio_key[keyIdx], `Question ${idx + 1}`, q.level, q.category));
             }
         } else {
             // Reading: show question text
@@ -333,7 +352,7 @@ function renderType5ListeningGroup(card, group) {
         const audioPart = document.createElement('div');
         audioPart.className = 't5l-audio-part';
         if (q.audio_key?.length) {
-            const btn = makeAudioBtn(q.audio_key[0], `Audio ${idx + 1}`);
+            const btn = makeAudioBtn(q.audio_key[0], `Audio ${idx + 1}`, q.level, q.category);
             audioPart.appendChild(btn);
         }
 
@@ -471,7 +490,7 @@ function renderType6Group(card, group) {
     const passage = group.questions.find(q => q.content);
 
     if (isListening && passage?.audio_key?.length) {
-        card.appendChild(makeAudioBtn(passage.audio_key[0], 'Play Passage'));
+        card.appendChild(makeAudioBtn(passage.audio_key[0], 'Play Passage', passage.level, passage.category));
     }
 
     // Collect all option keys – they're shared across all blanks in the group
@@ -619,7 +638,11 @@ function renderQuestion(q, idx) {
     if (type === 1) {
         renderType1(block, q, blockId, skill);
     } else if (type === 3) {
-        renderType3(block, q, blockId, skill);
+        if (allImgOpts) {
+            renderType5Images(block, q, blockId, skill);
+        } else {
+            renderType3(block, q, blockId, skill);
+        }
     } else if (type === 4) {
         renderType4(block, q, blockId);
     } else if (type === 5) {
@@ -652,7 +675,7 @@ function renderQuestion(q, idx) {
 
 function renderType1(block, q, blockId, skill) {
     if (skill === 'listening' && q.audio_key?.length) {
-        block.appendChild(makeAudioBtn(q.audio_key[0]));
+        block.appendChild(makeAudioBtn(q.audio_key[0], null, q.level, q.category));
     }
 
     // Image
@@ -698,8 +721,7 @@ function renderType1(block, q, blockId, skill) {
 
 function renderType3(block, q, blockId, skill) {
     if (skill === 'listening') {
-        // ONLY show audio – no text, no question
-        if (q.audio_key?.length) block.appendChild(makeAudioBtn(q.audio_key[0]));
+        if (q.audio_key?.length) block.appendChild(makeAudioBtn(q.audio_key[0], null, q.level, q.category));
     } else {
         // Reading: show content and question
         if (q.content) {
@@ -777,7 +799,7 @@ function toggleChip(chip, key, blockId, poolZone, ansZone) {
 // ── Type 5 (image options) ────────────────────────────────────
 
 function renderType5Images(block, q, blockId, skill) {
-    if (skill === 'listening' && q.audio_key?.length) block.appendChild(makeAudioBtn(q.audio_key[0]));
+    if (skill === 'listening' && q.audio_key?.length) block.appendChild(makeAudioBtn(q.audio_key[0], null, q.level, q.category));
     if (skill === 'reading' && q.content) {
         const para = document.createElement('div');
         para.className = 'p-paragraph p-centered';
@@ -813,7 +835,7 @@ function renderType5Images(block, q, blockId, skill) {
 // ── Type 5 (fill-in-blank) ────────────────────────────────────
 
 function renderType5Blank(block, q, blockId, skill) {
-    if (skill === 'listening' && q.audio_key?.length) block.appendChild(makeAudioBtn(q.audio_key[0]));
+    if (skill === 'listening' && q.audio_key?.length) block.appendChild(makeAudioBtn(q.audio_key[0], null, q.level, q.category));
 
     const contentEl = document.createElement('div');
     contentEl.className = 'p-paragraph p-centered';
@@ -831,7 +853,7 @@ function renderType5Blank(block, q, blockId, skill) {
 // ── Type 5 (text match) ───────────────────────────────────────
 
 function renderType5Match(block, q, blockId, skill) {
-    if (skill === 'listening' && q.audio_key?.length) block.appendChild(makeAudioBtn(q.audio_key[0]));
+    if (skill === 'listening' && q.audio_key?.length) block.appendChild(makeAudioBtn(q.audio_key[0], null, q.level, q.category));
     if (q.content) {
         const para = document.createElement('div');
         para.className = 'p-paragraph p-centered';

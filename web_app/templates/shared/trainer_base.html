@@ -38,13 +38,17 @@
                 {% block task_components %}{% endblock %}
                 
                 <div class="trainer-task-actions">
-                    <button id="btn-skip-task" class="skip-float-btn" onclick="skipTask()">
-                        Skip <i class="fa-solid fa-forward-step" aria-hidden="true"></i>
-                    </button>
-                    {% block submit_buttons %}{% endblock %}
+                    <!-- Actions moved to sticky bottom bar -->
                 </div>
                 
                 {% block post_task_actions %}{% endblock %}
+            </div>
+            
+            <div class="trainer-bottom-bar">
+                <button id="btn-skip-task" class="btn secondary skip-bottom-btn" onclick="skipTask()">
+                    Skip
+                </button>
+                {% block submit_buttons %}{% endblock %}
             </div>
         </div>
 

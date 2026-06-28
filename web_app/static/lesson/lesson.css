@@ -13,11 +13,12 @@
 }
 .chip {
     background: var(--primary);
-    color: white;
+    color: #ffffff;
+    font-family: "SimSun", serif;
     padding: 8px 16px;
     border-radius: 20px;
     cursor: pointer;
-        font-size: 20px;
+    font-size: 20px;
     user-select: none;
     transition: transform 0.1s;
 }
