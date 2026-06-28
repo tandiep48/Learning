@@ -1531,7 +1531,7 @@ def get_course_vocab(conn):
     import pandas as pd
     if not conn: return pd.DataFrame()
     with conn.cursor() as cur:
-        cur.execute("SELECT cn as word, pinyin, meaning_vn, meaning_en, audio_key, hsk_level as level FROM vocabulary WHERE hsk_level IS NOT NULL AND hsk_level != '' ORDER BY hsk_level, id")
+        cur.execute("SELECT cn as word, pinyin, meaning_vn, meaning_en, audio_key, hsk_level as level FROM vocabulary ORDER BY hsk_level, id")
         rows = cur.fetchall()
         df = pd.DataFrame(rows, columns=['word', 'pinyin', 'meaning_vn', 'meaning_en', 'audio_key', 'level'])
         return df
