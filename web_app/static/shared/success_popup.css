@@ -63,7 +63,7 @@
     align-items: center;
     justify-content: center;
     margin: 0 auto 20px;
-    font-size: 2.4rem;
+    font-size: 3rem;
     animation: spBounce 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.2s both;
 }
 @keyframes spBounce {
@@ -73,10 +73,12 @@
 .sp-icon-wrap.perfect {
     background: #CBE2D4;
     box-shadow: 0 0 0 1px #afcfbd;
+    color: #007a61;
 }
 .sp-icon-wrap.has-missed {
     background: #fff6d8;
     box-shadow: 0 0 0 1px #ead28a;
+    color: #d97706;
 }
 
 /* Title */
