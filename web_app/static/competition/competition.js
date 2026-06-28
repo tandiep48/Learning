@@ -386,7 +386,9 @@ function returnToLobby() {
 
 function playCompetitionAudio(key) {
     const audio = document.getElementById('competition-audio');
-    audio.src = `/practice_audio/${currentQuestions[currentQuestionIndex].level}/${key}.mp3?category=${currentQuestions[currentQuestionIndex].category || 'practice'}`;
+    const level = currentQuestions[currentQuestionIndex].level;
+    const category = currentQuestions[currentQuestionIndex].category || 'practice';
+    audio.src = `https://storage.googleapis.com/chinese-learning-audio-assets/question_bank/${category}/${category}-${level}/${key}.mp3`;
     audio.play().catch(() => {});
 }
 

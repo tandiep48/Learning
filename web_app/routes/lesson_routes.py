@@ -140,11 +140,6 @@ def start_session():
         
         # 1. Meaning Task
         meaning_options = list(set([opt for opt in all_vn_meanings if opt != correct_meaning]))
-        if len(meaning_options) < 3:
-            additional_distractors = list(set([opt for opt in global_vn_meanings if opt != correct_meaning and opt not in meaning_options]))
-            needed = 3 - len(meaning_options)
-            meaning_options.extend(random.sample(additional_distractors, min(needed, len(additional_distractors))))
-        
         distractors = random.sample(meaning_options, min(3, len(meaning_options)))
         m_options = distractors + [correct_meaning]
         random.shuffle(m_options)

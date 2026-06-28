@@ -365,6 +365,8 @@
     text-underline-offset: 4px;
     border-radius: 4px;
     transition: background 0.15s;
+    margin-right: 4px;
+    display: inline-block;
 }
 .line-token.clickable:hover {
     background: rgba(87, 104, 86, 0.15);
