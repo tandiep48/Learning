@@ -18,6 +18,7 @@ from competition_socket import init_competition_socket
 load_dotenv()
 
 app = Flask(__name__)
+app.json.sort_keys = False
 app.secret_key = os.getenv('FLASK_SECRET_KEY', secrets.token_hex(32))
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode=os.getenv("SOCKETIO_ASYNC_MODE", "threading"))
