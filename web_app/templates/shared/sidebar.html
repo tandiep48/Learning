@@ -1,42 +1,43 @@
 <!-- templates/shared/sidebar.html -->
-<button id="sidebar-toggle-btn" class="sidebar-toggle-btn" onclick="toggleSidebar()" aria-label="Toggle Sidebar">
-    <i class="fa-solid fa-bars"></i>
-</button>
-
-<div id="universal-sidebar" class="universal-sidebar collapsed">
-    <div class="sidebar-header">
-        <h3>Navigation</h3>
-        <button class="sidebar-close-btn" onclick="toggleSidebar()" aria-label="Close Sidebar">
-            <i class="fa-solid fa-xmark"></i>
-        </button>
-    </div>
-    
-    <div class="sidebar-content">
-        <div class="sidebar-section">
-            <button class="sidebar-btn sidebar-back-btn" onclick="goBackToPartPicker()">
-                <i class="fa-solid fa-arrow-left"></i> Part Selection
+<div class="page-layout sidebar-open" id="page-layout">
+    <aside id="universal-sidebar" class="universal-sidebar">
+        <div class="sidebar-header">
+            <h3>Navigation</h3>
+            <button class="sidebar-close-btn" onclick="toggleSidebar()" aria-label="Close Sidebar">
+                <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
 
-        <div class="sidebar-section">
-            <h4 class="sidebar-section-title">Current Part</h4>
-            <button class="sidebar-btn" id="sidebar-nav-lesson" onclick="navigateToDomain('lesson')">
-                <i class="fa-solid fa-book-open"></i> Lesson Summary
-            </button>
-            <button class="sidebar-btn" id="sidebar-nav-vocab" onclick="navigateToDomain('vocab')">
-                <i class="fa-solid fa-list"></i> Word Summary
-            </button>
-            <button class="sidebar-btn" id="sidebar-nav-grammar" onclick="navigateToDomain('grammar')">
-                <i class="fa-solid fa-spell-check"></i> Grammar
-            </button>
-        </div>
+        <div class="sidebar-content">
+            <div class="sidebar-section">
+                <button class="sidebar-btn sidebar-back-btn" onclick="goBackToPartPicker()">
+                    <i class="fa-solid fa-arrow-left"></i> Part Selection
+                </button>
+            </div>
 
-        <div class="sidebar-section">
-            <h4 class="sidebar-section-title">Lesson Parts</h4>
-            <div id="sidebar-parts-list" class="sidebar-parts-list">
-                <div class="sidebar-loader">Loading...</div>
+            <div class="sidebar-section">
+                <h4 class="sidebar-section-title">Current Part</h4>
+                <button class="sidebar-btn" id="sidebar-nav-vocab" onclick="navigateToDomain('vocab')">
+                    <i class="fa-solid fa-list"></i> Word Summary
+                </button>
+                <button class="sidebar-btn" id="sidebar-nav-lesson" onclick="navigateToDomain('lesson')">
+                    <i class="fa-solid fa-book-open"></i> Lesson Summary
+                </button>
+                <button class="sidebar-btn" id="sidebar-nav-grammar" onclick="navigateToDomain('grammar')">
+                    <i class="fa-solid fa-spell-check"></i> Grammar
+                </button>
+            </div>
+
+            <div class="sidebar-section">
+                <h4 class="sidebar-section-title">Lesson Parts</h4>
+                <div id="sidebar-parts-list" class="sidebar-parts-list">
+                    <div class="sidebar-loader">Loading...</div>
+                </div>
             </div>
         </div>
-    </div>
-</div>
-<div id="sidebar-overlay" class="sidebar-overlay hidden" onclick="toggleSidebar()"></div>
+    </aside>
+
+    <div class="page-main" id="page-main">
+        <button id="sidebar-toggle-btn" class="sidebar-toggle-btn" onclick="toggleSidebar()" aria-label="Open Sidebar">
+            <i class="fa-solid fa-bars"></i>
+        </button>

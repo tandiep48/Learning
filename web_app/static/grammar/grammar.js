@@ -36,6 +36,14 @@ function goHome() {
     }
 }
 
+function goBackToPartSelection() {
+    if (currentPassageId) {
+        window.location.href = `/learning?passage_id=${encodeURIComponent(currentPassageId)}&show_parts=true`;
+    } else {
+        window.location.href = '/learning';
+    }
+}
+
 async function loadGrammar(passageId) {
     currentPassageId = passageId;
     const learningLink = document.getElementById('grammar-learning-link');
@@ -48,8 +56,8 @@ async function loadGrammar(passageId) {
     try {
         const res = await fetch(`/api/lesson/grammar/${encodeURIComponent(passageId)}`);
         const data = await res.json();
-        document.getElementById('grammar-title').textContent =
-            window.formatPassageLabel?.(passageId, `Grammar - ${passageId}`) || `Grammar - ${passageId}`;
+        // Build clickable breadcrumb
+        if (window.buildBreadcrumb) buildBreadcrumb('grammar-breadcrumb', passageId);
 
         if (data.grammar && data.grammar.length > 0) {
             const sortedGrammar = groupAndSortGrammar(data.grammar);

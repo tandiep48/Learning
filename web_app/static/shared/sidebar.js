@@ -3,12 +3,12 @@ let sidebarPassageId = null;
 let currentDomain = null; // 'lesson', 'vocab', 'grammar'
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Determine current domain
+    // Determine current domain from URL
     const path = window.location.pathname;
     if (path.includes('reading')) currentDomain = 'lesson';
     else if (path.includes('vocab-learning')) currentDomain = 'vocab';
     else if (path.includes('grammar')) currentDomain = 'grammar';
-    
+
     // Highlight current domain button
     if (currentDomain) {
         const btn = document.getElementById(`sidebar-nav-${currentDomain}`);
@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Extract passage ID from URL
     const params = new URLSearchParams(window.location.search);
     sidebarPassageId = params.get('passage_id');
-    
+
     if (sidebarPassageId) {
         loadSidebarParts(sidebarPassageId);
     }
@@ -26,15 +26,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function toggleSidebar() {
     const sidebar = document.getElementById('universal-sidebar');
-    const overlay = document.getElementById('sidebar-overlay');
-    if (!sidebar || !overlay) return;
-    
+    const layout  = document.getElementById('page-layout');
+    if (!sidebar || !layout) return;
+
     if (sidebar.classList.contains('collapsed')) {
+        // Open
         sidebar.classList.remove('collapsed');
-        overlay.classList.remove('hidden');
+        layout.classList.add('sidebar-open');
     } else {
+        // Close
         sidebar.classList.add('collapsed');
-        overlay.classList.add('hidden');
+        layout.classList.remove('sidebar-open');
     }
 }
 
@@ -61,33 +63,35 @@ function navigateToDomain(domain) {
 
 function navigateToPart(newPassageId) {
     sidebarPassageId = newPassageId;
-    // Keep user in current domain, just switch part
     navigateToDomain(currentDomain || 'lesson');
 }
 
 async function loadSidebarParts(passageId) {
     const partsContainer = document.getElementById('sidebar-parts-list');
     if (!partsContainer) return;
-    
+
     const partsStr = passageId.split('_');
     if (partsStr.length < 2) {
         partsContainer.innerHTML = '<div class="sidebar-loader">Invalid passage ID</div>';
         return;
     }
-    
+
     const hskLevelCode = partsStr[0]; // e.g. H1
-    const lessonNum = partsStr[1];
-    
-    const hskMap = {'H1': 'HSK1', 'H2': 'HSK2', 'H3': 'HSK3', 'H4': 'HSK4', 'H5': 'HSK5', 'H6': 'HSK6', 'H79': 'HSK7-9'};
+    const lessonNum    = partsStr[1];
+
+    const hskMap = {
+        'H1': 'HSK1', 'H2': 'HSK2', 'H3': 'HSK3',
+        'H4': 'HSK4', 'H5': 'HSK5', 'H6': 'HSK6', 'H79': 'HSK7-9'
+    };
     const hskLevel = hskMap[hskLevelCode] || hskLevelCode;
 
     try {
-        const res = await fetch(`/api/lesson/passages?hsk_level=${hskLevel}`);
+        const res  = await fetch(`/api/lesson/passages?hsk_level=${hskLevel}`);
         const data = await res.json();
-        
+
         let lessonPassages = data.passages.filter(p => {
-             const pParts = p.passage_id.split('_');
-             return pParts.length >= 2 && pParts[1] === lessonNum;
+            const pParts = p.passage_id.split('_');
+            return pParts.length >= 2 && pParts[1] === lessonNum;
         });
 
         // Hardcode exception for H1_1
@@ -109,15 +113,15 @@ async function loadSidebarParts(passageId) {
         }
 
         partsContainer.innerHTML = lessonPassages.map(p => {
-            const pParts = p.passage_id.split('_');
+            const pParts  = p.passage_id.split('_');
             const partNum = pParts.length > 2 ? pParts[2] : '1';
             const isActive = p.passage_id === passageId;
-            const title = p.title || `Part ${partNum}`;
+            const title    = p.title || `Part ${partNum}`;
             return `<button class="sidebar-part-btn ${isActive ? 'active' : ''}" onclick="navigateToPart('${p.passage_id}')">${title}</button>`;
         }).join('');
-        
+
     } catch (e) {
-        console.error("Sidebar parts load failed", e);
+        console.error('Sidebar parts load failed', e);
         partsContainer.innerHTML = '<div class="sidebar-loader">Failed to load parts.</div>';
     }
 }

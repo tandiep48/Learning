@@ -78,6 +78,52 @@ h1, h2 {
     margin-bottom: 20px;
 }
 
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 20px;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+}
+
+.grammar-topbar .breadcrumb {
+    margin-bottom: 0;
+}
+
+.breadcrumb-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.breadcrumb-item a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    transition: background 0.2s, color 0.2s;
+}
+
+.breadcrumb-item a:hover {
+    background: rgba(87, 104, 86, 0.1);
+    color: var(--primary-hover);
+}
+
+.breadcrumb-item.active {
+    color: var(--text-main);
+    font-weight: 600;
+    padding: 3px 8px;
+}
+
+.breadcrumb-sep {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    user-select: none;
+}
+
 .subtitle {
     text-align: center;
     color: var(--text-muted);
@@ -122,7 +168,16 @@ h1, h2 {
 }
 
 .btn.warning {
-    border-left: 4px solid var(--warning);
+    background: var(--warning);
+    color: #ffffff;
+    border: none;
+    text-align: center;
+    align-items: center;
+    justify-content: center;
+}
+.btn.warning:hover {
+    background: #d97706;
+    color: #ffffff;
 }
 .btn.danger {
     border-left: 4px solid var(--danger);
@@ -425,6 +480,7 @@ body.with-site-nav {
     justify-content: initial;
     padding: 0;
 }
+
 
 body.with-site-nav > .app-container,
 body.with-site-nav > .recommend-container,

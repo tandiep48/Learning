@@ -1,16 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
-<!DOCTYPE html>
-<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vocab Learning - {{ hsk_level }}</title>
-    <link rel="stylesheet" href="/static/shared/styles.css">
+    <link rel="stylesheet" href="/static/shared/styles.css?v=5">
     <link rel="stylesheet" href="/static/shared/vocab_table.css?v=8">
     <link rel="stylesheet" href="/static/shared/passage_picker.css?v=6">
     <link rel="stylesheet" href="/static/vocab_learning/vocab_learning.css?v=11">
-    <link rel="stylesheet" href="/static/shared/sidebar.css">
+    <link rel="stylesheet" href="/static/shared/sidebar.css?v=5">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
 </head>
@@ -86,7 +84,9 @@
 
         <div id="screen-summary" style="display:none;">
             <div class="vl-summary-topbar word-summary-topbar">
-                <h2 id="word-summary-title">Word Summary</h2>
+                <div>
+                    <div id="vocab-breadcrumb"></div>
+                </div>
             </div>
 
             <div class="vocab-content-card summary-content-card vocab-table-theme">
@@ -106,7 +106,8 @@
                 </button>
             </div>
         </div>
-    </div>
+    </div><!-- /.page-main -->
+</div><!-- /.page-layout -->
 
     <div id="stroke-modal-overlay" class="stroke-modal-overlay" onclick="closeStrokeModalIfBackground(event)">
         <div class="stroke-modal" role="dialog" aria-modal="true" aria-labelledby="stroke-modal-word">
@@ -146,6 +147,6 @@
     <script src="/static/shared/passage_picker.js?v=8"></script>
     <script src="/static/shared/passage_label.js"></script>
     <script src="/static/vocab_learning/vocab_learning.js?v=9"></script>
-    <script src="/static/shared/sidebar.js"></script>
+    <script src="/static/shared/sidebar.js?v=5"></script>
 </body>
 </html>

@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reading Practice - {{ hsk_level }}</title>
-    <link rel="stylesheet" href="/static/shared/styles.css">
-    <link rel="stylesheet" href="/static/shared/passage_picker.css?v=6">
-    <link rel="stylesheet" href="/static/shared/vocab_table.css?v=7">
-    <link rel="stylesheet" href="/static/vocab_learning/vocab_learning.css?v=10">
-    <link rel="stylesheet" href="/static/reading/reading.css?v=11">
-    <link rel="stylesheet" href="/static/shared/sidebar.css">
+    <link rel="stylesheet" href="/static/shared/styles.css?v=5">
+    <link rel="stylesheet" href="/static/shared/passage_picker.css?v=999">
+    <link rel="stylesheet" href="/static/shared/vocab_table.css?v=999">
+    <link rel="stylesheet" href="/static/vocab_learning/vocab_learning.css?v=999">
+    <link rel="stylesheet" href="/static/reading/reading.css?v=999">
+    <link rel="stylesheet" href="/static/shared/sidebar.css?v=5">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 <body class="with-site-nav">
@@ -35,7 +35,7 @@
                 </div>
             </div>
 
-            <h2 id="reading-title" class="reading-title">Passage Title</h2>
+            <div id="reading-breadcrumb"></div>
             <div id="reading-content" class="reading-content"><!-- Content injected via JS --></div>
 
             <div class="finish-bar">
@@ -45,7 +45,9 @@
 
         <div id="screen-lesson-summary" class="screen">
             <div class="vl-summary-topbar lesson-summary-topbar">
-                <h2 id="lesson-learner-title">Lesson Summary</h2>
+                <div>
+                    <div id="lesson-learner-breadcrumb"></div>
+                </div>
             </div>
 
             <div class="vocab-content-card lesson-summary-content-card">
@@ -117,6 +119,8 @@
             </div>
         </div>
     </div>
+    </div><!-- /.page-main -->
+</div><!-- /.page-layout -->
 
     <div id="vocab-panel-overlay" class="vocab-panel-overlay" onclick="closeVocabIfBackground(event)">
         <div class="vocab-panel vocab-table-theme" role="dialog" aria-modal="true" aria-label="Lesson vocabulary">
@@ -174,7 +178,7 @@
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
     <script src="/static/shared/passage_picker.js?v=7"></script>
     <script src="/static/shared/passage_label.js"></script>
-    <script src="/static/reading/reading.js?v=21"></script>
-    <script src="/static/shared/sidebar.js"></script>
+    <script src="/static/reading/reading.js?v=999"></script>
+    <script src="/static/shared/sidebar.js?v=999"></script>
 </body>
 </html>
