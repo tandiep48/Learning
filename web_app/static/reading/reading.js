@@ -86,7 +86,7 @@ async function loadPassage(passage_id) {
 }
 
 function renderPassage() {
-    document.getElementById('reading-title').innerText = currentPassage.passage_id;
+    if (window.buildBreadcrumb) window.buildBreadcrumb('reading-breadcrumb', currentPassage.passage_id);
 
     const contentDiv = document.getElementById('reading-content');
     contentDiv.innerHTML = '';
@@ -371,11 +371,10 @@ function getLessonAudioSrc(line) {
 
 // ── Lesson Summary ────────────────────────────────────
 function renderLessonSummary() {
-    const title = document.getElementById('lesson-learner-title');
     const preview = document.getElementById('lesson-learner-preview');
-    if (title) {
-        title.textContent = window.formatPassageLabel?.(currentPassage?.passage_id, 'Lesson Summary') || 'Lesson Summary';
-    }
+    
+    if (window.buildBreadcrumb) window.buildBreadcrumb('lesson-learner-breadcrumb', currentPassage?.passage_id);
+
     if (!preview) return;
 
     const lines = getLessonLines();

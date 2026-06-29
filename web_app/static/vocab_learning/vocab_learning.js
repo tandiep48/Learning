@@ -542,11 +542,9 @@ function updateLessonSummaryNavigation() {
 }
 
 function updateWordSummaryTitle() {
-    const title = document.getElementById('word-summary-title');
-    if (!title) return;
-    title.textContent = lessonMeta?.passage_id
-        ? window.formatPassageLabel?.(lessonMeta.passage_id, 'Word Summary') || 'Word Summary'
-        : 'Word Summary';
+    if (window.buildBreadcrumb) {
+        window.buildBreadcrumb('vocab-breadcrumb', lessonMeta?.passage_id);
+    }
 }
 
 document.addEventListener('keydown', (e) => {
