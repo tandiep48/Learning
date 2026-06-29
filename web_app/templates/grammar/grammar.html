@@ -22,9 +22,12 @@
             </section>
 
             <section id="screen-grammar" class="screen">
-                <div class="grammar-toolbar">
+                <div class="grammar-topbar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div id="grammar-breadcrumb" style="margin-bottom: 0;"></div>
+                    <button class="btn primary grammar-finish-btn" onclick="goBackToPartSelection()" style="padding: 8px 16px; min-height: auto; flex-direction: row;">
+                        Finish
+                    </button>
                 </div>
-                <h1 id="grammar-title">Grammar</h1>
                 <div id="grammar-body" class="grammar-body"></div>
             </section>
         </div>
