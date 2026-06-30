@@ -371,6 +371,21 @@ body {
     color: var(--text-muted);
     letter-spacing: 0.06em;
 }
+.t5ri-images-row {
+    gap: 12px;
+    align-items: flex-start;
+}
+.t5ri-img-col {
+    min-width: 112px;
+}
+.t5ri-img {
+    width: 112px;
+    height: 96px;
+    object-fit: cover;
+}
+.t5ri-img-label {
+    color: var(--text-main);
+}
 .t5l-instruction {
     font-size: 0.82rem;
     color: var(--text-muted);
@@ -466,6 +481,26 @@ body {
 }
 
 /* ── Type 6 Interactive Blanks ── */
+@media (max-width: 640px) {
+    .t5ri-img-col {
+        min-width: 92px;
+    }
+
+    .t5ri-img {
+        width: 92px;
+        height: 78px;
+    }
+
+    .t5ri-sentence-row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .t5ri-sentence-row .t5l-opt-part {
+        justify-content: flex-start;
+    }
+}
+
 .blank-gap {
     display: inline-block;
     min-width: 80px;
