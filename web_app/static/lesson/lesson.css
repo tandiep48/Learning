@@ -22,6 +22,11 @@
     user-select: none;
     transition: transform 0.1s;
 }
+.lesson-trainer-page #reorder-area .chip,
+.lesson-trainer-page #reorder-area .chip .han-text {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff;
+}
 .chip:hover {
     transform: scale(1.05);
     background: var(--primary-hover);

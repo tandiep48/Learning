@@ -290,27 +290,20 @@ const Picker = {
         if (!actionCard) return;
 
         const progress = this.progressSummary?.lessons?.[lessonNum];
-        const wordsPct = this._progressPct(progress?.learned_words, progress?.total_words);
-        const lessonPct = this._progressPct(progress?.lesson_learned, progress?.lesson_total);
         const canStartVocab = parts.length > 0;
         const canStartLesson = parts.length > 0;
-        const partCount = parts.length;
 
         actionCard.hidden = false;
         actionCard.innerHTML = `
             <div class="picker-lesson-action-header">
-                <div>
-                    <div class="picker-lesson-action-title">Full Lesson Trainer</div>
-                    <div class="picker-lesson-action-sub">${partCount} part${partCount !== 1 ? 's' : ''} in this lesson</div>
+                <div class="picker-lesson-progress">
+                    ${progress ? this._progressBar(progress.learned_words, progress.total_words, 'Words') : this._emptyProgressBar('Words')}
+                    ${progress ? this._progressBar(progress.lesson_learned, progress.lesson_total, 'Lesson', true) : this._emptyProgressBar('Lesson', true)}
                 </div>
                 <div class="picker-lesson-action-buttons">
                     <button type="button" class="picker-action-btn" data-action="vocab" ${canStartVocab ? '' : 'disabled'}>Vocab Trainer</button>
                     <button type="button" class="picker-action-btn" data-action="lesson" ${canStartLesson ? '' : 'disabled'}>Lesson Trainer</button>
                 </div>
-            </div>
-            <div class="picker-lesson-progress">
-                ${progress ? this._progressBar(progress.learned_words, progress.total_words, 'Words') : this._emptyProgressBar('Words')}
-                ${progress ? this._progressBar(progress.lesson_learned, progress.lesson_total, 'Lesson', true) : this._emptyProgressBar('Lesson', true)}
             </div>
         `;
 

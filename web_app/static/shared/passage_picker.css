@@ -6,8 +6,9 @@
     margin: 28px auto 0;
     max-width: 1080px;
 }
+
 .level-picker-card {
-    min-height: 260px;
+    min-height: 200px;
     background: #CBE2D4;
     border: 2px solid #afcfbd;
     border-radius: 16px;
@@ -20,11 +21,13 @@
     align-items: center;
     gap: 16px;
 }
+
 .level-picker-card:hover {
     background: #bddbc9;
     border-color: #93bda7;
     transform: translateY(-2px);
 }
+
 .level-icon {
     width: 168px;
     height: 168px;
@@ -39,12 +42,14 @@
     font-weight: 800;
     box-shadow: none;
 }
+
 .level-icon img {
     width: 100%;
     height: 100%;
     object-fit: contain;
     display: block;
 }
+
 .level-name {
     font-weight: 600;
     font-size: 1.35rem;
@@ -59,6 +64,7 @@
     gap: 16px;
     margin-top: 20px;
 }
+
 .lesson-card {
     background: #ffffff;
     border: 1px solid #e5e7eb;
@@ -71,17 +77,20 @@
     align-items: stretch;
     box-shadow: 0 2px 8px rgba(87, 104, 86, 0.06);
 }
+
 .lesson-card:hover {
     background: #fafafa;
     transform: translateY(-3px);
     box-shadow: 0 8px 24px rgba(87, 104, 86, 0.13);
 }
+
 .lesson-card-img-wrap {
     width: 140px;
     flex-shrink: 0;
     overflow: hidden;
     background: rgba(87, 104, 86, 0.05);
 }
+
 .lesson-card-img {
     width: 100%;
     height: 100%;
@@ -89,9 +98,11 @@
     display: block;
     transition: transform 0.3s ease;
 }
+
 .lesson-card:hover .lesson-card-img {
     transform: scale(1.04);
 }
+
 .lesson-card-body {
     padding: 12px 14px 14px;
     display: flex;
@@ -99,15 +110,18 @@
     gap: 6px;
     flex: 1;
 }
+
 .lesson-card-title {
     font-size: 1rem;
     font-weight: 700;
     color: var(--text-main);
 }
+
 .lesson-card-preview {
     font-size: 0.85rem;
     color: var(--text-muted);
 }
+
 .picker-progress-lines {
     display: flex;
     flex-direction: column;
@@ -116,10 +130,12 @@
     font-size: 0.8rem;
     line-height: 1.4;
 }
+
 .picker-progress-lines-centered {
     align-items: center;
     font-size: 0.8rem;
 }
+
 .lesson-card-count {
     margin-top: auto;
     align-self: flex-start;
@@ -152,6 +168,7 @@
         gap: 12px;
     }
 }
+
 @media (max-width: 400px) {
     .level-picker-grid {
         grid-template-columns: 1fr;
@@ -180,29 +197,15 @@
 
 .picker-lesson-action-header {
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px;
-    margin-bottom: 14px;
-}
-
-.picker-lesson-action-title {
-    color: #111111;
-    font-size: 1.05rem;
-    font-weight: 800;
-}
-
-.picker-lesson-action-sub {
-    color: #2b2b2b;
-    font-size: 0.88rem;
-    margin-top: 3px;
+    flex-direction: column;
+    gap: 14px;
 }
 
 .picker-lesson-action-buttons {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
+    width: 100%;
 }
 
 .picker-action-btn {
@@ -214,6 +217,7 @@
     font: inherit;
     font-weight: 800;
     padding: 10px 14px;
+    min-width: 0;
     transition: background 0.18s, border-color 0.18s, transform 0.18s;
 }
 
@@ -234,7 +238,7 @@
 .picker-lesson-progress {
     display: grid;
     gap: 8px;
-    max-width: 520px;
+    width: 100%;
 }
 
 .part-list {
@@ -281,6 +285,7 @@
     display: none;
     animation: fadeIn 0.3s ease;
 }
+
 .picker-screen.active {
     display: block;
 }
@@ -325,7 +330,7 @@
 .picker-progress-track {
     flex: 1;
     min-width: 0;
-    max-width: 180px;
+    max-width: 260px;
     height: 8px;
     overflow: hidden;
     border-radius: 999px;
@@ -369,6 +374,7 @@
 }
 
 @media (max-width: 700px) {
+
     .picker-lesson-action-header,
     .part-list-item {
         align-items: stretch;
@@ -377,6 +383,10 @@
 
     .picker-lesson-action-buttons {
         justify-content: stretch;
+    }
+
+    .picker-lesson-progress {
+        max-width: none;
     }
 
     .picker-action-btn {
@@ -416,6 +426,7 @@
     border-radius: 16px;
     width: 100%;
 }
+
 .picker-header-col1 {
     flex-shrink: 0;
     width: 280px;
@@ -423,11 +434,13 @@
     align-items: center;
     justify-content: center;
 }
+
 .picker-header-col1 img {
     width: 100%;
     height: auto;
     object-fit: contain;
 }
+
 .picker-header-col2 {
     flex: 1;
     display: flex;
@@ -436,23 +449,27 @@
     align-items: center;
     text-align: center;
 }
+
 .picker-header-col2 h2 {
     margin: 0;
     font-size: 2.2rem;
     font-weight: 800;
     color: #111111;
 }
+
 .picker-header-col2 p.subtitle {
     margin: 8px 0 0;
     font-size: 1.15rem;
     color: #333333;
 }
+
 .picker-toolbar-section {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 24px;
 }
+
 .picker-cards-section {
     width: 100%;
 }

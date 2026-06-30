@@ -2,7 +2,7 @@ let allRecommendations = [];
 let currentLevelTab    = 'all';
 let currentSkillTab    = 'all';
 let currentCategoryTab = 'all';
-let currentStatusTab   = 'all';
+let currentStatusTab   = 'Not start';
 let selectedMultiItems = [];
 
 const PAGE_SIZE = 10;
@@ -51,7 +51,8 @@ function renderRecommendations() {
         const matchLevel    = currentLevelTab    === 'all' || r.level == currentLevelTab;
         const matchSkill    = currentSkillTab    === 'all' || r.skill === currentSkillTab;
         const matchCategory = currentCategoryTab === 'all' || r.category === currentCategoryTab;
-        const matchStatus   = currentStatusTab   === 'all' || r.status === currentStatusTab;
+        const status        = r.status || 'Not start';
+        const matchStatus   = currentStatusTab   === 'all' || status === currentStatusTab;
         return matchLevel && matchSkill && matchCategory && matchStatus;
     });
 
@@ -154,19 +155,19 @@ function updateMultiSelectUI() {
     const countEl = document.getElementById('multi-select-count');
     if (selectedMultiItems.length > 0) {
         bar.classList.remove('hidden');
+        document.body.classList.add('has-multi-select');
         countEl.textContent = `${selectedMultiItems.length} item${selectedMultiItems.length > 1 ? 's' : ''} selected`;
     } else {
         bar.classList.add('hidden');
+        document.body.classList.remove('has-multi-select');
     }
 }
 
-function toggleMultiSelect(checkbox, recJson) {
-    const rec       = JSON.parse(decodeURIComponent(recJson));
-    const isChecked = checkbox.checked;
+function setMultiSelectForRec(rec, isChecked) {
     if (isChecked) {
         const exists = selectedMultiItems.some(i =>
             i.level === rec.level && i.lesson === rec.lesson &&
-            i.progress === rec.progress && i.category === rec.category
+            i.progress === rec.progress && i.category === (rec.category || 'practice')
         );
         if (!exists) {
             selectedMultiItems.push({
@@ -181,6 +182,11 @@ function toggleMultiSelect(checkbox, recJson) {
         );
     }
     updateMultiSelectUI();
+}
+
+function toggleMultiSelect(checkbox, recJson) {
+    const rec       = JSON.parse(decodeURIComponent(recJson));
+    setMultiSelectForRec(rec, checkbox.checked);
 }
 
 function startMultiRecommend() {
@@ -220,18 +226,15 @@ function buildCard(rec) {
         ? `<div class="rec-new-focus">New focus: ${recentWords.map(escapeHtml).join(', ')}</div>`
         : '';
 
-    const startUrl = `/practice/${rec.level}/${rec.lesson}/${encodeURIComponent(rec.progress)}?category=${rec.category || 'practice'}`;
-    const recJson  = encodeURIComponent(JSON.stringify({
-        level: rec.level, lesson: rec.lesson, progress: rec.progress, category: rec.category
-    }));
     const isSelected = selectedMultiItems.some(i =>
         i.level === rec.level && i.lesson === rec.lesson &&
         i.progress === rec.progress && i.category === (rec.category || 'practice')
     );
+    card.classList.toggle('selected', isSelected);
 
     card.innerHTML = `
         <div class="rec-card-header">
-            <input type="checkbox" class="rec-card-checkbox" ${isSelected ? 'checked' : ''} onchange="toggleMultiSelect(this, '${recJson}')">
+            <input type="checkbox" class="rec-card-checkbox" ${isSelected ? 'checked' : ''} aria-label="Select Lesson ${rec.lesson}">
             <span class="hsk-badge hsk-${rec.level}">HSK ${rec.level}</span>
             <span class="rec-card-title">Lesson ${rec.lesson}</span>
         </div>
@@ -243,13 +246,19 @@ function buildCard(rec) {
 
         <div class="rec-progress-label">${progressLabel(rec.progress)} &nbsp;·&nbsp; ${qCount} question${qCount !== 1 ? 's' : ''}</div>
         ${focusHtml}
-
-        <div class="rec-card-footer">
-            <button class="btn-start-practice" onclick="startFromRecommend('${startUrl}')" style="width: 100%; margin-top: 10px;">
-                <i class="fa-solid fa-play" aria-hidden="true"></i><span>Start</span>
-            </button>
-        </div>
     `;
+
+    const checkbox = card.querySelector('.rec-card-checkbox');
+    checkbox.addEventListener('click', event => event.stopPropagation());
+    checkbox.addEventListener('change', () => {
+        setMultiSelectForRec(rec, checkbox.checked);
+        card.classList.toggle('selected', checkbox.checked);
+    });
+    card.addEventListener('click', () => {
+        checkbox.checked = !checkbox.checked;
+        setMultiSelectForRec(rec, checkbox.checked);
+        card.classList.toggle('selected', checkbox.checked);
+    });
 
     return card;
 }
@@ -319,4 +328,5 @@ document.getElementById('filter-skill').addEventListener('change', onFilterChang
 document.getElementById('filter-category').addEventListener('change', onFilterChange);
 document.getElementById('filter-status').addEventListener('change', onFilterChange);
 
+document.getElementById('filter-status').value = currentStatusTab;
 fetchRecommendations();

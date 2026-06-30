@@ -1,34 +1,30 @@
 <!-- SCREEN: Level Picker -->
-<div id="picker-screen-level" class="picker-screen" data-hsk-images='{"HSK1": "{{ hsk_image_url(1) }}", "HSK2": "{{ hsk_image_url(2) }}", "HSK3": "{{ hsk_image_url(3) }}", "HSK4": "{{ hsk_image_url(4) }}", "HSK5": "{{ hsk_image_url(5) }}", "HSK6": "{{ hsk_image_url(6) }}"}'>
+<div id="picker-screen-level" class="picker-screen"
+    data-hsk-images='{"HSK1": "{{ hsk_image_url(1) }}", "HSK2": "{{ hsk_image_url(2) }}", "HSK3": "{{ hsk_image_url(3) }}", "HSK4": "{{ hsk_image_url(4) }}", "HSK5": "{{ hsk_image_url(5) }}", "HSK6": "{{ hsk_image_url(6) }}"}'>
     <div class="picker-top-link">
-        <a id="picker-back-link" href="/" style="color: var(--primary); text-decoration: none; font-weight: 600;">&larr; Back to Dashboard</a>
+        <a id="picker-back-link" href="/" style="color: var(--primary); text-decoration: none; font-weight: 600;">&larr;
+            Back to Dashboard</a>
     </div>
     <h1 id="picker-main-title">Select HSK Level</h1>
     <p class="subtitle">Choose a level to see its lessons</p>
     <div class="level-picker-grid">
         <div class="level-picker-card" onclick="Picker.showLessonPicker('HSK1')" style="background-color: #d9d9d8;">
             <div class="level-icon" aria-hidden="true"><img src="{{ hsk_image_url(1) }}" alt=""></div>
-            <div class="level-name">HSK 1</div>
         </div>
         <div class="level-picker-card" onclick="Picker.showLessonPicker('HSK2')" style="background-color: #d0f1d2;">
             <div class="level-icon" aria-hidden="true"><img src="{{ hsk_image_url(2) }}" alt=""></div>
-            <div class="level-name">HSK 2</div>
         </div>
         <div class="level-picker-card" onclick="Picker.showLessonPicker('HSK3')" style="background-color: #99d8e9;">
             <div class="level-icon" aria-hidden="true"><img src="{{ hsk_image_url(3) }}" alt=""></div>
-            <div class="level-name">HSK 3</div>
         </div>
         <div class="level-picker-card" onclick="Picker.showLessonPicker('HSK4')" style="background-color: #fce084;">
             <div class="level-icon" aria-hidden="true"><img src="{{ hsk_image_url(4) }}" alt=""></div>
-            <div class="level-name">HSK 4</div>
         </div>
         <div class="level-picker-card" onclick="Picker.showLessonPicker('HSK5')" style="background-color: #fcb86f;">
             <div class="level-icon" aria-hidden="true"><img src="{{ hsk_image_url(5) }}" alt=""></div>
-            <div class="level-name">HSK 5</div>
         </div>
         <div class="level-picker-card" onclick="Picker.showLessonPicker('HSK6')" style="background-color: #ee5550;">
             <div class="level-icon" aria-hidden="true"><img src="{{ hsk_image_url(6) }}" alt=""></div>
-            <div class="level-name">HSK 6</div>
         </div>
     </div>
 </div>
@@ -37,7 +33,8 @@
 <div id="picker-screen-lesson" class="picker-screen">
     <!-- Section 2: Toolbar (Moved above Header) -->
     <div class="picker-toolbar-section">
-        <button type="button" class="picker-back-button" onclick="Picker.showLevelPicker()">&larr; Back to Levels</button>
+        <button type="button" class="picker-back-button" onclick="Picker.showLevelPicker()">&larr; Back to
+            Levels</button>
     </div>
 
     <!-- Section 1: Header Banner -->
@@ -63,7 +60,8 @@
 <div id="picker-screen-part" class="picker-screen">
     <!-- Section 2: Toolbar (Moved above Header) -->
     <div class="picker-toolbar-section">
-        <button type="button" class="picker-back-button" onclick="Picker.showLessonPicker(Picker.currentHskLevel)">&larr; Back to Lessons</button>
+        <button type="button" class="picker-back-button"
+            onclick="Picker.showLessonPicker(Picker.currentHskLevel)">&larr; Back to Lessons</button>
     </div>
 
     <!-- Section 1: Header Banner -->
