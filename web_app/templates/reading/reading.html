@@ -1,17 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reading Practice - {{ hsk_level }}</title>
-    <link rel="stylesheet" href="/static/shared/styles.css?v=5">
-    <link rel="stylesheet" href="/static/shared/passage_picker.css?v=999">
-    <link rel="stylesheet" href="/static/shared/vocab_table.css?v=999">
-    <link rel="stylesheet" href="/static/vocab_learning/vocab_learning.css?v=999">
-    <link rel="stylesheet" href="/static/reading/reading.css?v=999">
-    <link rel="stylesheet" href="/static/shared/sidebar.css?v=5">
+    <link rel="stylesheet" href="/static/shared/styles.css?v=2">
+    <link rel="stylesheet" href="/static/shared/passage_picker.css?v=7">
+    <link rel="stylesheet" href="/static/shared/vocab_table.css?v=7">
+    <link rel="stylesheet" href="/static/vocab_learning/vocab_learning.css?v=10">
+    <link rel="stylesheet" href="/static/reading/reading.css?v=11">
+    <link rel="stylesheet" href="/static/shared/sidebar.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
+
 <body class="with-site-nav">
     {% include 'shared/site_nav.html' %}
     {% include 'shared/sidebar.html' %}
@@ -52,10 +54,10 @@
 
             <div class="vocab-content-card lesson-summary-content-card">
                 <div class="lesson-summary-toolbar">
-                    <button class="btn" id="lesson-toggle-pinyin-btn"
-                        onclick="toggleLessonSummaryPinyin()">Show Pinyin</button>
-                    <button class="btn" id="lesson-toggle-meaning-btn"
-                        onclick="toggleLessonSummaryMeaning()">Show Meaning</button>
+                    <button class="btn" id="lesson-toggle-pinyin-btn" onclick="toggleLessonSummaryPinyin()">Show
+                        Pinyin</button>
+                    <button class="btn" id="lesson-toggle-meaning-btn" onclick="toggleLessonSummaryMeaning()">Show
+                        Meaning</button>
                 </div>
 
                 <div id="lesson-learner-preview" class="lesson-learner-preview"></div>
@@ -120,7 +122,7 @@
         </div>
     </div>
     </div><!-- /.page-main -->
-</div><!-- /.page-layout -->
+    </div><!-- /.page-layout -->
 
     <div id="vocab-panel-overlay" class="vocab-panel-overlay" onclick="closeVocabIfBackground(event)">
         <div class="vocab-panel vocab-table-theme" role="dialog" aria-modal="true" aria-label="Lesson vocabulary">
@@ -176,9 +178,11 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
-    <script src="/static/shared/passage_picker.js?v=7"></script>
+    <script src="/static/shared/passage_picker.js?v=9"></script>
     <script src="/static/shared/passage_label.js"></script>
-    <script src="/static/reading/reading.js?v=999"></script>
-    <script src="/static/shared/sidebar.js?v=999"></script>
+    <script src="/static/shared/han_text.js?v=1"></script>
+    <script src="/static/reading/reading.js?v=22"></script>
+    <script src="/static/shared/sidebar.js"></script>
 </body>
+
 </html>
