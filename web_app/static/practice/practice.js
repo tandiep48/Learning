@@ -228,7 +228,7 @@ function renderGroup() {
         if (!isImgGroup) {
             renderType5ReadingMatchGroup(card, group);
         } else {
-            group.questions.forEach((q, idx) => card.appendChild(renderQuestion(q, idx)));
+            renderType5ReadingImageGroup(card, group);
         }
     } else if (type === 6) {
         renderType6Group(card, group);
@@ -248,6 +248,15 @@ function renderGroup() {
     document.getElementById('btn-check').disabled = true;
     document.getElementById('btn-check').textContent = 'Check';
     updateCheckButton();
+    applyPracticeHanText(group);
+}
+
+function applyPracticeHanText(group = groups[currentGroupIndex]) {
+    const card = document.getElementById('question-card');
+    const level = group?.questions?.[0]?.level || NUM;
+    if (window.HanText && card) {
+        window.HanText.apply(card, level);
+    }
 }
 
 // ── TYPE 2: Shared paragraph (listening=audio only) + sub-questions ─────
@@ -452,6 +461,76 @@ function renderType5ReadingMatchGroup(card, group) {
 
     card.appendChild(rowsContainer);
     card.appendChild(makeFeedback('t5r-group'));
+}
+
+// Type 5 reading image group: shared images once + per-sentence key buttons.
+function renderType5ReadingImageGroup(card, group) {
+    const q0 = group.questions[0];
+    const opts = q0.options || {};
+    const optKeys = Object.keys(opts);
+
+    const imgRow = document.createElement('div');
+    imgRow.className = 't5l-images-row t5ri-images-row';
+    Object.entries(opts).forEach(([key, filename]) => {
+        const col = document.createElement('div');
+        col.className = 't5l-img-col t5ri-img-col';
+
+        const img = document.createElement('img');
+        img.src = imageUrl(q0.level, filename, q0.category);
+        img.alt = key;
+        img.className = 't5l-img t5ri-img';
+
+        const lbl = document.createElement('div');
+        lbl.className = 't5l-img-label t5ri-img-label';
+        lbl.textContent = key;
+
+        col.appendChild(img);
+        col.appendChild(lbl);
+        imgRow.appendChild(col);
+    });
+    card.appendChild(imgRow);
+
+    const instr = document.createElement('p');
+    instr.className = 't5l-instruction';
+    instr.textContent = 'Choose the matching image for each sentence.';
+    card.appendChild(instr);
+
+    const rowsContainer = document.createElement('div');
+    rowsContainer.className = 't5l-rows';
+    rowsContainer.id = 't5ri-rows-container';
+
+    group.questions.forEach((q, idx) => {
+        const blockId = `q-${idx}`;
+        const row = document.createElement('div');
+        row.className = 't5l-audio-row t5ri-sentence-row';
+        row.id = `row-${blockId}`;
+
+        const sentPart = document.createElement('div');
+        sentPart.className = 't5r-sentence-part';
+        const sentEl = document.createElement('span');
+        sentEl.className = 't5r-sentence';
+        sentEl.textContent = q.content || '';
+        sentPart.appendChild(sentEl);
+
+        const optPart = document.createElement('div');
+        optPart.className = 't5l-opt-part';
+        optKeys.forEach(key => {
+            const btn = document.createElement('button');
+            btn.className = 't5l-key-btn';
+            btn.dataset.key = key;
+            btn.dataset.block = blockId;
+            btn.textContent = key;
+            btn.onclick = () => selectT5LKey(blockId, key, rowsContainer, group);
+            optPart.appendChild(btn);
+        });
+
+        row.appendChild(sentPart);
+        row.appendChild(optPart);
+        rowsContainer.appendChild(row);
+    });
+
+    card.appendChild(rowsContainer);
+    card.appendChild(makeFeedback('t5ri-group'));
 }
 
 function selectT5LKey(blockId, key, container, group) {
@@ -941,6 +1020,8 @@ function checkAnswers() {
     const q0opts = group.questions[0]?.options || {};
     const isT5RGroup = type === 5 && group.questions[0]?.skill !== 'listening' && group.questions.length > 1
         && !Object.values(q0opts).every(v => isImageFilename(String(v)));
+    const isT5RIGroup = type === 5 && group.questions[0]?.skill !== 'listening' && group.questions.length > 1
+        && Object.values(q0opts).every(v => isImageFilename(String(v)));
 
     if (isT5LGroup) {
         const fb = document.getElementById('feedback-t5l-group');
@@ -950,6 +1031,12 @@ function checkAnswers() {
         }
     } else if (isT5RGroup) {
         const fb = document.getElementById('feedback-t5r-group');
+        if (fb) {
+            fb.className = groupCorrect === group.questions.length ? 'p-feedback correct' : 'p-feedback wrong';
+            fb.textContent = `${groupCorrect} / ${group.questions.length} correct`;
+        }
+    } else if (isT5RIGroup) {
+        const fb = document.getElementById('feedback-t5ri-group');
         if (fb) {
             fb.className = groupCorrect === group.questions.length ? 'p-feedback correct' : 'p-feedback wrong';
             fb.textContent = `${groupCorrect} / ${group.questions.length} correct`;
@@ -982,6 +1069,7 @@ function checkAnswers() {
     document.getElementById('score-val').textContent = score;
     document.getElementById('btn-check').style.display  = 'none';
     document.getElementById('btn-next').style.display   = '';
+    applyPracticeHanText(group);
 }
 
 function highlightAnswer(block, q, blockId, chosen, correct, isCorrect) {
