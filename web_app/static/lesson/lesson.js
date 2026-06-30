@@ -189,6 +189,15 @@ function loadTask() {
         if (reorderSubmitBtn) reorderSubmitBtn.style.display = 'inline-flex';
         setupReorder(task);
     }
+
+    applyLessonHanText(task);
+}
+
+function applyLessonHanText(task) {
+    const container = document.getElementById('screen-training');
+    if (window.HanText && container) {
+        window.HanText.apply(container, task?.hsk_level);
+    }
 }
 
 function setupMultipleChoice(task) {
@@ -217,7 +226,7 @@ function setupReorder(task) {
 
     task.shuffled_tokens.forEach(token => {
         const chip = document.createElement('div');
-        chip.className = 'chip';
+        chip.className = 'chip lesson-reorder-chip';
         chip.innerText = token;
         chip.onclick = () => {
             if (chip.parentElement.id === 'reorder-source') {
@@ -335,6 +344,8 @@ async function checkAnswer(task, userAnswer, correctAnswer, element) {
             typingFeedback.style.display = 'block';
         }
     }
+
+    applyLessonHanText(task);
 
     const allBtns = document.querySelectorAll('#screen-training .btn');
     allBtns.forEach(b => {

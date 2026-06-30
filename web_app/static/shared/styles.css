@@ -31,6 +31,7 @@ body {
 }
 
 [lang="zh-CN"],
+.han-text,
 .chinese-word,
 .vl-hanzi,
 .hanzi-text,
@@ -43,6 +44,11 @@ body {
 .speaking-prompt,
 .speaking-reveal-hanzi {
     font-family: SimSun, 'Songti SC', 'Noto Serif CJK SC', serif;
+}
+
+.hsk-sized-han {
+    font-size: var(--han-content-size);
+    line-height: 1.45;
 }
 
 .app-container {

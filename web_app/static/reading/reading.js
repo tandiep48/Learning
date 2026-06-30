@@ -400,6 +400,14 @@ function renderLessonSummary() {
         </div>`;
     }).join('');
     updateLessonSummaryToggleText();
+    applyLessonLearnerHanText(preview);
+}
+
+function applyLessonLearnerHanText(container) {
+    const target = container || document.getElementById('screen-lesson-summary');
+    if (window.HanText && target) {
+        window.HanText.apply(target, currentPassage?.hsk_level);
+    }
 }
 
 function playPassageLineAudio(index) {
@@ -517,6 +525,7 @@ function renderLessonCard() {
     document.getElementById('lesson-card-prev').disabled = currentLessonLineIndex === 0;
     const nextBtn = document.getElementById('lesson-card-next');
     nextBtn.textContent = currentLessonLineIndex === lines.length - 1 ? 'Finish' : 'Next';
+    applyLessonLearnerHanText(document.getElementById('screen-lesson-card'));
 }
 
 function prevLessonCard() {
