@@ -6,6 +6,7 @@ let currentReorderTokens = [];
 let currentPassageId = null;
 let lessonWideTrainingMeta = null;
 let isLessonPartFlow = false;
+let answerSubmitted = false;
 
 // Fetch passages on load
 window.onload = async () => {
@@ -99,6 +100,7 @@ async function startSession(passage_id, passage_ids = null) {
         sessionData = data;
         currentTaskIndex = 0;
         missedTasks = [];
+        answerSubmitted = false;
 
         loadTask();
     } catch (e) {
@@ -117,6 +119,7 @@ function loadTask() {
 
     const task = sessionData.tasks[currentTaskIndex];
     const total = sessionData.tasks.length;
+    answerSubmitted = false;
 
     // Progress
     document.getElementById('progress-fill').style.width = `${(currentTaskIndex / total) * 100}%`;
@@ -140,6 +143,13 @@ function loadTask() {
     const typingInput = document.getElementById('typing-input');
     typingInput.value = '';
     typingInput.disabled = false;
+    typingInput.oninput = () => {
+        const activeTask = sessionData?.tasks?.[currentTaskIndex];
+        if (!activeTask || activeTask.type !== 'typing' || answerSubmitted) return;
+        if (typingInput.value.trim() === activeTask.correct_answer) {
+            submitTyping();
+        }
+    };
 
     const typingFeedback = document.getElementById('typing-feedback');
     typingFeedback.style.display = 'none';
@@ -229,6 +239,7 @@ function setupReorder(task) {
         chip.className = 'chip lesson-reorder-chip';
         chip.innerText = token;
         chip.onclick = () => {
+            if (answerSubmitted) return;
             if (chip.parentElement.id === 'reorder-source') {
                 targetContainer.appendChild(chip);
                 currentReorderTokens.push(token);
@@ -236,6 +247,9 @@ function setupReorder(task) {
                 sourceContainer.appendChild(chip);
                 const idx = currentReorderTokens.indexOf(token);
                 if (idx > -1) currentReorderTokens.splice(idx, 1);
+            }
+            if (currentReorderTokens.join('') === task.correct_answer) {
+                submitReorder();
             }
         };
         sourceContainer.appendChild(chip);
@@ -247,6 +261,38 @@ function playCurrentAudio() {
     if (audioEl.src) {
         audioEl.play().catch(e => console.warn("Audio playback failed:", e));
     }
+}
+
+function playCurrentAudioToEnd() {
+    const audioEl = document.getElementById('audio-player');
+    if (!audioEl?.src) {
+        return new Promise(resolve => setTimeout(resolve, 900));
+    }
+
+    return new Promise(resolve => {
+        let finished = false;
+        const fallbackMs = Number.isFinite(audioEl.duration) && audioEl.duration > 0
+            ? Math.min(Math.max((audioEl.duration + 0.5) * 1000, 1500), 12000)
+            : 5000;
+
+        const finish = () => {
+            if (finished) return;
+            finished = true;
+            audioEl.removeEventListener('ended', finish);
+            audioEl.removeEventListener('error', finish);
+            clearTimeout(fallbackTimer);
+            resolve();
+        };
+        const fallbackTimer = setTimeout(finish, fallbackMs);
+
+        audioEl.addEventListener('ended', finish, { once: true });
+        audioEl.addEventListener('error', finish, { once: true });
+        audioEl.currentTime = 0;
+        audioEl.play().catch(e => {
+            console.warn("Audio playback failed:", e);
+            finish();
+        });
+    });
 }
 
 function submitTyping() {
@@ -299,6 +345,8 @@ function skipTask() {
 }
 
 async function checkAnswer(task, userAnswer, correctAnswer, element) {
+    if (answerSubmitted) return;
+    answerSubmitted = true;
     const responseTime = Date.now() - taskStartTime;
     const isCorrect = (userAnswer === correctAnswer);
 
@@ -378,10 +426,16 @@ async function checkAnswer(task, userAnswer, correctAnswer, element) {
     }).catch(e => console.error("DB Log failed", e));
 
     if (isCorrect) {
-        setTimeout(() => {
+        if (task.type === "typing" || task.type === "reorder") {
+            await playCurrentAudioToEnd();
             resetTaskUI(element, isCorrect, task);
             nextTask();
-        }, 3000);
+        } else {
+            setTimeout(() => {
+                resetTaskUI(element, isCorrect, task);
+                nextTask();
+            }, 3000);
+        }
     } else {
         document.getElementById('wrong-answer-next').style.display = 'block';
     }

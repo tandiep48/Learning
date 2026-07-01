@@ -12,6 +12,9 @@
     border: 1px dashed rgba(87, 104, 86,0.2);
 }
 .chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: var(--primary);
     color: #ffffff;
     font-family: "SimSun", serif;
@@ -19,6 +22,10 @@
     border-radius: 20px;
     cursor: pointer;
     font-size: 20px;
+    line-height: 1;
+    min-width: 48px;
+    min-height: 48px;
+    text-align: center;
     user-select: none;
     transition: transform 0.1s;
 }
@@ -26,6 +33,15 @@
 .lesson-trainer-page #reorder-area .chip .han-text {
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff;
+}
+.lesson-trainer-page #reorder-area .lesson-reorder-chip {
+    font-size: var(--han-content-size, 20px);
+}
+.lesson-trainer-page #reorder-area .chip .han-text {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
 }
 .chip:hover {
     transform: scale(1.05);
