@@ -1,5 +1,5 @@
 (function () {
-    const HAN_RE = /([\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]+)/g;
+    const HAN_TEXT_RE = /([\u3000-\u303f\uff00-\uff65]*[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff][\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\u3000-\u303f\uff00-\uff65]*)/g;
     const SIZED_CLASS = 'hsk-sized-han';
     const HAN_CLASS = 'han-text';
     const WRAPPED_ATTR = 'data-han-text';
@@ -33,12 +33,12 @@
 
     function shouldSkipTextNode(node) {
         const parent = node.parentElement;
-        HAN_RE.lastIndex = 0;
-        if (!parent || !node.nodeValue || !HAN_RE.test(node.nodeValue)) {
-            HAN_RE.lastIndex = 0;
+        HAN_TEXT_RE.lastIndex = 0;
+        if (!parent || !node.nodeValue || !HAN_TEXT_RE.test(node.nodeValue)) {
+            HAN_TEXT_RE.lastIndex = 0;
             return true;
         }
-        HAN_RE.lastIndex = 0;
+        HAN_TEXT_RE.lastIndex = 0;
         return Boolean(parent.closest(SKIP_SELECTOR));
     }
 
@@ -47,7 +47,7 @@
         const fragment = document.createDocumentFragment();
         let lastIndex = 0;
 
-        text.replace(HAN_RE, (match, _group, offset) => {
+        text.replace(HAN_TEXT_RE, (match, _group, offset) => {
             if (offset > lastIndex) {
                 fragment.appendChild(document.createTextNode(text.slice(lastIndex, offset)));
             }
