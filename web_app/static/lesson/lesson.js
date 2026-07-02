@@ -74,6 +74,9 @@ async function startSession(passage_id, passage_ids = null) {
     } else if (passage_id === 'H1_1_2') {
         window.location.href = '/lesson/advanced-pinyin';
         return;
+    } else if (passage_id === 'H1_5_99') {
+        window.location.href = `/reading?passage_id=${encodeURIComponent(passage_id)}&mode=lesson-learner&flow=lesson-part`;
+        return;
     }
 
     currentPassageId = passage_id;

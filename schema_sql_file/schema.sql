@@ -208,6 +208,9 @@ CREATE TABLE IF NOT EXISTS grammar_context (
 ALTER TABLE users
 ADD COLUMN IF NOT EXISTS avatar_path TEXT;
 
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS hanzi_font TEXT DEFAULT 'Noto Sans';
+
 CREATE TABLE IF NOT EXISTS user_learning_state (
     user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     current_passage_id VARCHAR(255) NOT NULL,

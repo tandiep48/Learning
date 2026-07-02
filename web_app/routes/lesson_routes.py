@@ -20,6 +20,7 @@ from db import (
     insert_lesson_progress,
     mark_lesson_part_completed,
 )
+from number_part import NUMBER_PART_ID, is_number_part, number_vocab_rows
 
 lesson_bp = Blueprint('lesson', __name__, url_prefix='/api/lesson')
 
@@ -70,6 +71,13 @@ def complete_lesson_part():
 
 @lesson_bp.route('/passage/<passage_id>', methods=['GET'])
 def get_passage_detail(passage_id):
+    if is_number_part(passage_id):
+        return jsonify({"passage": {
+            "passage_id": NUMBER_PART_ID,
+            "hsk_level": "HSK1",
+            "lines": [],
+            "title": "Number",
+        }})
     conn = get_db_connection()
     passage = get_passage_content(conn, passage_id)
     conn.close()
@@ -79,6 +87,8 @@ def get_passage_detail(passage_id):
 
 @lesson_bp.route('/vocab/<passage_id>', methods=['GET'])
 def get_passage_vocab_api(passage_id):
+    if is_number_part(passage_id):
+        return jsonify({"passage_id": passage_id, "vocab": number_vocab_rows()})
     conn = get_db_connection()
     vocab = get_passage_vocab(conn, passage_id)
     conn.close()

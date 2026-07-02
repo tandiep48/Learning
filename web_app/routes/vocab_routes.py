@@ -27,6 +27,7 @@ from db import (
     get_vocab_lessons,
     get_passage_vocab
 )
+from number_part import is_number_part, number_vocab_rows
 
 
 vocab_bp = Blueprint('vocab', __name__, url_prefix='/api/vocab')
@@ -225,6 +226,9 @@ def build_vocab_tasks(subset_df):
 
     random.shuffle(tasks)
     return tasks
+
+def number_rows_dataframe():
+    return pd.DataFrame([normalize_vocab_row(row) for row in number_vocab_rows()])
 
 def get_records_for_words(words):
     if not words:
@@ -469,7 +473,7 @@ def preview_mode():
         words = get_hard_stroke_learned_words(db_conn, current_user.id)
     elif mode == "6":
         passage_id = data.get("passage_id")
-        passage_vocab = get_passage_vocab(db_conn, passage_id)
+        passage_vocab = number_vocab_rows() if is_number_part(passage_id) else get_passage_vocab(db_conn, passage_id)
         words = [w["cn"] for w in passage_vocab]
     else:
         db_conn.close()
@@ -482,9 +486,19 @@ def preview_mode():
         
     full_lesson_records = get_full_lesson_records()
     if full_lesson_records.empty:
+        if any(row["word"] in words for row in number_vocab_rows()):
+            word_list = [normalize_vocab_row(row) for row in number_vocab_rows() if row["word"] in words]
+            return jsonify({"words": word_list})
         return jsonify({"words": []})
         
     subset_df = full_lesson_records[full_lesson_records["word"].isin(words)].drop_duplicates("word").reset_index(drop=True)
+    missing_number_rows = [
+        normalize_vocab_row(row)
+        for row in number_vocab_rows()
+        if row["word"] in words and row["word"] not in set(subset_df["word"].tolist())
+    ]
+    if missing_number_rows:
+        subset_df = pd.concat([subset_df, pd.DataFrame(missing_number_rows)], ignore_index=True)
     word_list = subset_df.to_dict('records')
     return jsonify({"words": word_list})
 
@@ -521,6 +535,13 @@ def start_session():
             "tasks": tasks
         })
 
+    elif mode == "6" and is_number_part(data.get("passage_id")):
+        tasks = build_vocab_tasks(number_rows_dataframe())
+        return jsonify({
+            "session_id": int(time.time() * 1000),
+            "tasks": tasks
+        })
+
     else:
         db_conn = get_db_connection()
         if not db_conn:
@@ -536,7 +557,7 @@ def start_session():
             words = get_hard_stroke_learned_words(db_conn, current_user.id)
         elif mode == "6":
             passage_id = data.get("passage_id")
-            passage_vocab = get_passage_vocab(db_conn, passage_id)
+            passage_vocab = number_vocab_rows() if is_number_part(passage_id) else get_passage_vocab(db_conn, passage_id)
             words = [w["cn"] for w in passage_vocab]
         elif mode == "8":
             passage_ids = data.get("passage_ids") or []
@@ -547,7 +568,7 @@ def start_session():
             seen = set()
             words = []
             for passage_id in passage_ids:
-                passage_vocab = get_passage_vocab(db_conn, passage_id)
+                passage_vocab = number_vocab_rows() if is_number_part(passage_id) else get_passage_vocab(db_conn, passage_id)
                 for row in passage_vocab:
                     word = row.get("cn")
                     if word and word not in seen:
@@ -570,9 +591,19 @@ def start_session():
         
     full_lesson_records = get_full_lesson_records()
     if full_lesson_records.empty:
-        return jsonify({"error": "No lesson records available."}), 404
+        if any(row["word"] in subset_words for row in number_vocab_rows()):
+            full_lesson_records = number_rows_dataframe()
+        else:
+            return jsonify({"error": "No lesson records available."}), 404
 
     subset_df = full_lesson_records[full_lesson_records["word"].isin(subset_words)].drop_duplicates("word").reset_index(drop=True)
+    missing_number_rows = [
+        normalize_vocab_row(row)
+        for row in number_vocab_rows()
+        if row["word"] in subset_words and row["word"] not in set(subset_df["word"].tolist())
+    ]
+    if missing_number_rows:
+        subset_df = pd.concat([subset_df, pd.DataFrame(missing_number_rows)], ignore_index=True)
     tasks = build_vocab_tasks(subset_df)
     
     return jsonify({

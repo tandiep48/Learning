@@ -17,7 +17,7 @@
     justify-content: center;
     background: var(--primary);
     color: #ffffff;
-    font-family: "SimSun", serif;
+    font-family: var(--han-font-family, 'Noto Sans', Arial, Helvetica, sans-serif);
     padding: 8px 16px;
     border-radius: 20px;
     cursor: pointer;

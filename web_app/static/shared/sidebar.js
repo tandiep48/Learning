@@ -1,6 +1,12 @@
 // static/shared/sidebar.js
 let sidebarPassageId = null;
 let currentDomain = null; // 'lesson', 'vocab', 'grammar'
+var NUMBER_PART_ID = window.NUMBER_PART_ID || 'H1_5_99';
+window.NUMBER_PART_ID = NUMBER_PART_ID;
+
+function isNumberPart(passageId) {
+    return String(passageId || '') === NUMBER_PART_ID;
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     // Determine current domain from URL
@@ -99,9 +105,14 @@ async function loadSidebarParts(passageId) {
             lessonPassages = lessonPassages.filter(p => !p.passage_id.startsWith('H1_1_'));
             lessonPassages.push({ passage_id: 'H1_1_1', title: 'Pinyin' });
         }
+        if (hskLevel === 'HSK1' && lessonNum === '5' && !lessonPassages.some(p => p.passage_id === NUMBER_PART_ID)) {
+            lessonPassages.push({ passage_id: NUMBER_PART_ID, title: 'Number' });
+        }
 
         // Sort passages by part number
         lessonPassages.sort((a, b) => {
+            if (isNumberPart(a.passage_id)) return 1;
+            if (isNumberPart(b.passage_id)) return -1;
             const aPart = parseInt(a.passage_id.split('_')[2]) || 0;
             const bPart = parseInt(b.passage_id.split('_')[2]) || 0;
             return aPart - bPart;
@@ -116,7 +127,7 @@ async function loadSidebarParts(passageId) {
             const pParts  = p.passage_id.split('_');
             const partNum = pParts.length > 2 ? pParts[2] : '1';
             const isActive = p.passage_id === passageId;
-            const title    = p.title || `Part ${partNum}`;
+            const title    = p.title || (isNumberPart(p.passage_id) ? 'Number' : `Part ${partNum}`);
             return `<button class="sidebar-part-btn ${isActive ? 'active' : ''}" onclick="navigateToPart('${p.passage_id}')">${title}</button>`;
         }).join('');
 

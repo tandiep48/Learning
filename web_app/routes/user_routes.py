@@ -15,8 +15,10 @@ from db import (
     get_passage_vocab,
     get_profile_summary,
     get_recent_learning,
+    get_user_hanzi_font,
     set_recent_learning,
     update_user_avatar_path,
+    update_user_hanzi_font,
     update_user_password,
 )
 
@@ -30,6 +32,8 @@ user_bp = Blueprint('user', __name__)
 
 ALLOWED_AVATAR_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'gif'}
 MAX_AVATAR_BYTES = 3 * 1024 * 1024
+ALLOWED_HANZI_FONTS = {'SimSun', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Noto Sans'}
+DEFAULT_HANZI_FONT = 'Noto Sans'
 
 
 def avatar_url_from_path(avatar_path):
@@ -49,6 +53,7 @@ def serialize_current_user():
         "level": current_user.level,
         "avatar_path": getattr(current_user, 'avatar_path', None),
         "avatar_url": avatar_url_from_path(getattr(current_user, 'avatar_path', None)),
+        "hanzi_font": getattr(current_user, 'hanzi_font', None) or DEFAULT_HANZI_FONT,
     }
 
 
@@ -248,6 +253,41 @@ def recent_learning_set():
     if not ok:
         return jsonify({"error": "Could not save recent learning"}), 500
     return jsonify({"status": "success", "recent": {"passage_id": passage_id}})
+
+
+@user_bp.route('/api/user/hanzi-font', methods=['GET'])
+@login_required
+def hanzi_font_get():
+    conn = get_db_connection()
+    try:
+        font = get_user_hanzi_font(conn, current_user.id)
+    finally:
+        if conn:
+            conn.close()
+    current_user.hanzi_font = font or DEFAULT_HANZI_FONT
+    return jsonify({"hanzi_font": current_user.hanzi_font})
+
+
+@user_bp.route('/api/user/hanzi-font', methods=['POST'])
+@login_required
+def hanzi_font_set():
+    data = request.get_json(silent=True) or {}
+    font = str(data.get('hanzi_font') or '').strip()
+    if font not in ALLOWED_HANZI_FONTS:
+        return jsonify({"error": "Invalid Hanzi font."}), 400
+
+    conn = get_db_connection()
+    try:
+        ok = update_user_hanzi_font(conn, current_user.id, font)
+    finally:
+        if conn:
+            conn.close()
+
+    if not ok:
+        return jsonify({"error": "Could not save Hanzi font."}), 500
+
+    current_user.hanzi_font = font
+    return jsonify({"status": "success", "hanzi_font": font})
 
 
 @user_bp.route('/api/user/dashboard-current-lesson', methods=['GET'])

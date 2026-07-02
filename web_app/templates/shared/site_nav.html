@@ -19,6 +19,15 @@
                 {% endif %}
                 <span>{{ current_user.username }}</span>
             </a>
+            <label class="hanzi-font-control" for="hanzi-font-select" title="Hanzi font">
+                <span>Hanzi</span>
+                {% set current_hanzi_font = current_user.hanzi_font|default('Noto Sans', true) %}
+                <select id="hanzi-font-select" data-current-font="{{ current_hanzi_font }}">
+                    {% for font in ['SimSun', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Noto Sans'] %}
+                        <option value="{{ font }}" {% if current_hanzi_font == font %}selected{% endif %}>{{ font }}</option>
+                    {% endfor %}
+                </select>
+            </label>
             <a href="{{ url_for('auth.logout') }}">Logout</a>
         {% else %}
             <a href="{{ url_for('auth.login') }}">Login</a>
@@ -26,3 +35,6 @@
         {% endif %}
     </div>
 </header>
+{% if current_user.is_authenticated %}
+    <script src="/static/shared/han_font.js?v=1"></script>
+{% endif %}
