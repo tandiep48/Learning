@@ -16,6 +16,10 @@ let lessonSpeakingChunks = [];
 let lessonSpeakingTimer = null;
 let lessonSpeakingAttemptId = 0;
 const LESSON_SPEAKING_MAX_MS = 15000;
+var NUMBER_PART_ID = window.NUMBER_PART_ID || 'H1_5_99';
+window.NUMBER_PART_ID = NUMBER_PART_ID;
+const NUMBER_DIGITS = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+const NUMBER_PINYIN_DIGITS = ['', 'yi', 'er', 'san', 'si', 'wu', 'liu', 'qi', 'ba', 'jiu'];
 
 // ── Init ─────────────────────────────────────────────
 window.onload = async () => {
@@ -67,6 +71,17 @@ async function loadPassage(passage_id) {
     switchScreen('screen-loading');
     vocabLoaded = false;
     currentVocabList = [];
+    if (passage_id === NUMBER_PART_ID) {
+        currentPassage = {
+            passage_id: NUMBER_PART_ID,
+            hsk_level: 'HSK1',
+            title: 'Number',
+            lines: []
+        };
+        renderNumberLessonSummary();
+        switchScreen('screen-lesson-summary');
+        return;
+    }
     try {
         const res = await fetch(`/api/lesson/passage/${passage_id}`);
         const data = await res.json();
@@ -371,6 +386,9 @@ function getLessonAudioSrc(line) {
 
 // ── Lesson Summary ────────────────────────────────────
 function renderLessonSummary() {
+    document.querySelector('.lesson-summary-actions')?.removeAttribute('hidden');
+    const actionFooter = document.querySelector('.lesson-summary-actions');
+    if (actionFooter) actionFooter.style.display = '';
     const preview = document.getElementById('lesson-learner-preview');
     
     if (window.buildBreadcrumb) window.buildBreadcrumb('lesson-learner-breadcrumb', currentPassage?.passage_id);
@@ -401,6 +419,117 @@ function renderLessonSummary() {
     }).join('');
     updateLessonSummaryToggleText();
     applyLessonLearnerHanText(preview);
+}
+
+function numberHanzi(value) {
+    const n = Number(value);
+    if (n === 0) return '零';
+    if (n === 10) return '十';
+    if (n < 10) return NUMBER_DIGITS[n];
+    const tens = Math.floor(n / 10);
+    const ones = n % 10;
+    if (tens === 1) return ones ? `十${NUMBER_DIGITS[ones]}` : '十';
+    return `${NUMBER_DIGITS[tens]}十${ones ? NUMBER_DIGITS[ones] : ''}`;
+}
+
+function numberPinyin(value) {
+    const n = Number(value);
+    if (n === 0) return 'ling';
+    if (n === 10) return 'shi';
+    if (n < 10) return NUMBER_PINYIN_DIGITS[n];
+    const tens = Math.floor(n / 10);
+    const ones = n % 10;
+    if (tens === 1) return ones ? `shi${NUMBER_PINYIN_DIGITS[ones]}` : 'shi';
+    return `${NUMBER_PINYIN_DIGITS[tens]}shi${ones ? NUMBER_PINYIN_DIGITS[ones] : ''}`;
+}
+
+function numberAudioKey(value) {
+    const n = Number(value);
+    const fixed = {
+        0: 'ling_69',
+        1: 'yi_59',
+        2: 'er_60',
+        3: 'san_61',
+        4: 'si_62',
+        5: 'wu_63',
+        6: 'liu_64',
+        7: 'qi_65',
+        8: 'ba_66',
+        9: 'jiu_67',
+        10: 'shi_68'
+    };
+    if (fixed[n]) return fixed[n];
+    return `${numberPinyin(n)}_${17601 + n}`;
+}
+
+function renderNumberLessonSummary() {
+    const preview = document.getElementById('lesson-learner-preview');
+    if (window.buildBreadcrumb) window.buildBreadcrumb('lesson-learner-breadcrumb', NUMBER_PART_ID);
+    const actionFooter = document.querySelector('.lesson-summary-actions');
+    if (actionFooter) actionFooter.style.display = 'none';
+    if (!preview) return;
+
+    const headers = [10, 20, 30, 40, 50, 60, 70, 80, 90];
+    let html = `
+        <div class="number-summary-wrap">
+            <table class="number-summary-table">
+                <thead>
+                    <tr>
+                        <th class="number-corner"></th>
+                        ${headers.map(n => renderNumberCell(n, true)).join('')}
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    for (let ones = 1; ones <= 9; ones += 1) {
+        html += `<tr>${renderNumberCell(ones, true)}`;
+        headers.forEach(tens => {
+            html += renderNumberCell(tens + ones, false);
+        });
+        html += '</tr>';
+    }
+
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    preview.innerHTML = html;
+    updateLessonSummaryToggleText();
+    applyLessonLearnerHanText(preview);
+}
+
+function renderNumberCell(value, isHeader) {
+    const tag = isHeader ? 'th' : 'td';
+    const word = numberHanzi(value);
+    const pinyin = numberPinyin(value);
+    const audioKey = numberAudioKey(value);
+    return `
+        <${tag} class="number-summary-cell">
+            <button type="button" class="number-cell-button" onclick="playNumberCellAudio('${audioKey}', this)" title="Play ${word}" aria-label="Play ${word}">
+                <span class="hanzi-text number-cell-hanzi">${word}</span>
+                <span class="pinyin-text lesson-summary-pinyin ${lessonSummaryPinyinVisible ? 'show' : ''}">${pinyin}</span>
+                <span class="meaning-text lesson-summary-meaning ${lessonSummaryMeaningVisible ? 'show' : ''}">${value}</span>
+            </button>
+        </${tag}>`;
+}
+
+function playNumberCellAudio(audioKey, button) {
+    document.querySelectorAll('.number-cell-button').forEach(el => el.classList.remove('playing-highlight'));
+    button?.classList.add('playing-highlight');
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.onended = null;
+        currentAudio.onerror = null;
+    }
+    currentAudio = new Audio(`/audio/${audioKey}.mp3`);
+    currentAudio.onended = () => button?.classList.remove('playing-highlight');
+    currentAudio.onerror = () => button?.classList.remove('playing-highlight');
+    currentAudio.play().catch(e => {
+        button?.classList.remove('playing-highlight');
+        console.warn("Audio failed", e);
+    });
 }
 
 function applyLessonLearnerHanText(container) {
@@ -450,6 +579,11 @@ function backToPartPicker() {
 
 function showLessonSummary() {
     resetLessonSpeakingPractice(true);
+    if (currentPassage?.passage_id === NUMBER_PART_ID) {
+        renderNumberLessonSummary();
+        switchScreen('screen-lesson-summary');
+        return;
+    }
     renderLessonSummary();
     switchScreen('screen-lesson-summary');
 }
