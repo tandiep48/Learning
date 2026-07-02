@@ -1,6 +1,7 @@
 (function () {
     function formatPassageLabel(passageId, fallback = '') {
         const raw = String(passageId || '').trim();
+        if (raw === 'H1_5_99') return 'HSK 1 - Lesson 5 - Number';
         const parts = raw.split('_');
         if (parts.length >= 3) {
             const hsk = parts[0].replace(/^H/i, '');
@@ -25,6 +26,7 @@
         const hskNum    = hskCode.replace(/^H/i, '');           // e.g. 1
         const lessonNum = parts[1];                              // e.g. 2
         const partNum   = parts[2];                             // e.g. 1
+        const partLabel = raw === 'H1_5_99' ? 'Number' : `Part ${partNum}`;
 
         // Build URLs so each crumb navigates back to the right picker state
         const hskUrl    = `/learning`;
@@ -41,7 +43,7 @@
               <a href="${partUrl}" title="Select lesson">Lesson ${lessonNum}</a>
             </div>
             <span class="breadcrumb-sep">›</span>
-            <div class="breadcrumb-item active" aria-current="page">Part ${partNum}</div>
+            <div class="breadcrumb-item active" aria-current="page">${partLabel}</div>
           </nav>`;
     }
 
