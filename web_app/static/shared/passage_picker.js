@@ -44,6 +44,13 @@ const LESSON_COLORS = {
     "H6-8": "#e83d33", "H6-9": "#cf6565"
 };
 
+var NUMBER_PART_ID = window.NUMBER_PART_ID || 'H1_5_99';
+window.NUMBER_PART_ID = NUMBER_PART_ID;
+
+function isNumberPart(passageId) {
+    return String(passageId || '') === NUMBER_PART_ID;
+}
+
 const Picker = {
     currentHskLevel: null,
     groupedPassages: {},
@@ -125,6 +132,9 @@ const Picker = {
                 data.passages = data.passages.filter(p => !p.passage_id.startsWith('H1_1_'));
                 // Inject ONE hardcoded pinyin page so the lesson card appears
                 data.passages.push({ passage_id: 'H1_1_1', hsk_level: 'HSK1' });
+                if (!data.passages.some(p => p.passage_id === NUMBER_PART_ID)) {
+                    data.passages.push({ passage_id: NUMBER_PART_ID, hsk_level: 'HSK1', title: 'Number' });
+                }
             }
 
             // Group passages by lesson
@@ -249,7 +259,9 @@ const Picker = {
         parts.forEach(p => {
             // e.g. H1_10_3 => Part 3
             const pParts = p.passage_id.split('_');
-            const partName = pParts.length >= 3 ? `Part ${pParts[2]}` : p.passage_id;
+            const partName = isNumberPart(p.passage_id)
+                ? 'Number'
+                : (pParts.length >= 3 ? `Part ${pParts[2]}` : p.passage_id);
 
             const btn = document.createElement('div');
             btn.className = 'part-list-item';
@@ -291,7 +303,8 @@ const Picker = {
 
         const progress = this.progressSummary?.lessons?.[lessonNum];
         const canStartVocab = parts.length > 0;
-        const canStartLesson = parts.length > 0;
+        const lessonTrainerParts = parts.filter(p => !isNumberPart(p.passage_id));
+        const canStartLesson = lessonTrainerParts.length > 0;
 
         actionCard.hidden = false;
         actionCard.innerHTML = `
@@ -311,7 +324,7 @@ const Picker = {
             if (canStartVocab) this.startLessonWideVocabTrainer(lessonNum, parts);
         });
         actionCard.querySelector('[data-action="lesson"]')?.addEventListener('click', () => {
-            if (canStartLesson) this.startLessonWideLessonTrainer(lessonNum, parts);
+            if (canStartLesson) this.startLessonWideLessonTrainer(lessonNum, lessonTrainerParts);
         });
     },
 
@@ -370,6 +383,7 @@ const Picker = {
     },
 
     getPartNumber(passageId) {
+        if (isNumberPart(passageId)) return Number.MAX_SAFE_INTEGER - 1;
         const parts = String(passageId || '').split('_');
         const part = parts.length >= 3 ? Number(parts[2]) : Number.MAX_SAFE_INTEGER;
         return Number.isFinite(part) ? part : Number.MAX_SAFE_INTEGER;
