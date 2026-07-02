@@ -10,6 +10,7 @@
     --success: #10b981;
     --danger: #ef4444;
     --warning: #f59e0b;
+    --han-font-family: 'Noto Sans', Arial, Helvetica, sans-serif;
 }
 
 * {
@@ -43,7 +44,7 @@ body {
 .stroke-tab,
 .speaking-prompt,
 .speaking-reveal-hanzi {
-    font-family: SimSun, 'Songti SC', 'Noto Serif CJK SC', serif;
+    font-family: var(--han-font-family, 'Noto Sans', Arial, Helvetica, sans-serif);
 }
 
 .hsk-sized-han {
@@ -579,6 +580,29 @@ body.with-site-nav > .vl-container {
     display: inline-flex;
     align-items: center;
     gap: 8px;
+}
+
+.hanzi-font-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #ffffff;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.hanzi-font-control select {
+    max-width: 150px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.14);
+    color: #ffffff;
+    font: inherit;
+    padding: 7px 9px;
+}
+
+.hanzi-font-control option {
+    color: #111111;
 }
 
 .site-avatar,
