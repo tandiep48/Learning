@@ -117,6 +117,7 @@ function continueRecentLesson() {
 }
 
 function formatPassageContext(passageId) {
+    if (passageId === 'H1_5_99') return 'HSK1 - Lesson 5 - Number';
     const parts = String(passageId || '').split('_');
     const hsk = normalizeHskLevel(parts[0]) || parts[0] || 'HSK';
     const lesson = parts.length >= 2 ? `Lesson ${parts[1]}` : 'Lesson';
