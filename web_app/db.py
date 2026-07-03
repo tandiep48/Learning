@@ -1282,35 +1282,53 @@ def get_recommended_practices(conn, user_id, threshold=0.75):
             groups[key]['questions'].append(r)
             groups[key]['unit_ids'].add(r['unit_id'])
 
-        # 6. Find latest sessions to determine status
+        # 6. Find latest sessions to determine status per recommendation group.
         with conn.cursor() as cur:
             cur.execute("""
                 WITH session_results AS (
-                    SELECT hsk_level, lesson, session_id,
+                    SELECT
+                           COALESCE(pr.category, qb.category::text, 'practice') AS category,
+                           pr.hsk_level,
+                           pr.lesson,
+                           qb.progress,
+                           pr.session_id,
                            SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)::float / COUNT(*) AS pct,
-                           MAX(created_at) AS session_end
-                    FROM practice_record WHERE user_id = %s
-                    GROUP BY hsk_level, lesson, session_id
+                           MAX(pr.created_at) AS session_end
+                    FROM practice_record pr
+                    LEFT JOIN question_bank qb
+                      ON qb.level = pr.hsk_level
+                     AND qb.lesson::text = pr.lesson::text
+                     AND qb.no = pr.question_no
+                     AND qb.category::text = COALESCE(pr.category, 'practice')
+                    WHERE pr.user_id = %s
+                    GROUP BY COALESCE(pr.category, qb.category::text, 'practice'),
+                             pr.hsk_level, pr.lesson, qb.progress, pr.session_id
                 ),
                 latest AS (
-                    SELECT hsk_level, lesson, pct,
-                           ROW_NUMBER() OVER (PARTITION BY hsk_level, lesson ORDER BY session_end DESC) AS rn
+                    SELECT category, hsk_level, lesson, progress, pct,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY category, hsk_level, lesson, progress
+                               ORDER BY session_end DESC
+                           ) AS rn
                     FROM session_results
                 )
-                SELECT hsk_level::int, lesson::int, pct FROM latest WHERE rn = 1
+                SELECT category, hsk_level, lesson, progress, pct
+                FROM latest
+                WHERE rn = 1
             """, (user_id,))
             lesson_status = {}
             for r in cur.fetchall():
-                lvl, les, pct = int(r[0]), int(r[1]), r[2]
+                cat, lvl, les, prog, pct = r[0], r[1], r[2], r[3], r[4]
+                key = (cat, lvl, int(les) if str(les).isdigit() else les, prog)
                 if pct == 1.0:
-                    lesson_status[(lvl, les)] = "Finish and success"
+                    lesson_status[key] = "Finish and success"
                 else:
-                    lesson_status[(lvl, les)] = "Finish and fail"
+                    lesson_status[key] = "Finish and fail"
 
         # 7. Build results — one per progress group
         results = []
         for (category, level, lesson, progress), gdata in groups.items():
-            status = lesson_status.get((level, lesson), "Not start")
+            status = lesson_status.get((category, level, lesson, progress), "Not start")
             qs = gdata['questions']
             total = group_coverage[(category, level, lesson, progress)]['total_words']
             known = group_coverage[(category, level, lesson, progress)]['known_words']

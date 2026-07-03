@@ -111,8 +111,8 @@ async function loadSidebarParts(passageId) {
 
         // Sort passages by part number
         lessonPassages.sort((a, b) => {
-            if (isNumberPart(a.passage_id)) return 1;
-            if (isNumberPart(b.passage_id)) return -1;
+            if (isNumberPart(a.passage_id)) return -1;
+            if (isNumberPart(b.passage_id)) return 1;
             const aPart = parseInt(a.passage_id.split('_')[2]) || 0;
             const bPart = parseInt(b.passage_id.split('_')[2]) || 0;
             return aPart - bPart;

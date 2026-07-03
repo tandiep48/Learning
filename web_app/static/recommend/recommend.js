@@ -199,11 +199,12 @@ function startMultiRecommend() {
 // ── Card builder ───────────────────────────────────────────────────────────
 function progressLabel(progress) {
     if (!progress) return '—';
-    if (progress.includes('-')) {
-        const [a, b] = progress.split('-');
+    const text = String(progress);
+    if (text.includes('-')) {
+        const [a, b] = text.split('-');
         return `Questions ${a}–${b}`;
     }
-    return `Question ${progress}`;
+    return `Question ${text}`;
 }
 
 function buildCard(rec) {

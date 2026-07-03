@@ -15,6 +15,7 @@ let lessonSpeakingStream = null;
 let lessonSpeakingChunks = [];
 let lessonSpeakingTimer = null;
 let lessonSpeakingAttemptId = 0;
+let currentNumberPracticeRows = [];
 const LESSON_SPEAKING_MAX_MS = 15000;
 var NUMBER_PART_ID = window.NUMBER_PART_ID || 'H1_5_99';
 window.NUMBER_PART_ID = NUMBER_PART_ID;
@@ -388,7 +389,15 @@ function getLessonAudioSrc(line) {
 function renderLessonSummary() {
     document.querySelector('.lesson-summary-actions')?.removeAttribute('hidden');
     const actionFooter = document.querySelector('.lesson-summary-actions');
-    if (actionFooter) actionFooter.style.display = '';
+    if (actionFooter) {
+        actionFooter.style.display = '';
+        const learnButton = ensureLessonSummaryLearnButton(actionFooter);
+        const learnLabel = learnButton?.querySelector('span');
+        const trainLabel = actionFooter.querySelector('.vl-train-btn:not(.vl-learn-btn) span');
+        if (learnButton) learnButton.style.display = '';
+        if (learnLabel) learnLabel.textContent = 'Learn This Lesson';
+        if (trainLabel) trainLabel.textContent = 'Train This Lesson';
+    }
     const preview = document.getElementById('lesson-learner-preview');
     
     if (window.buildBreadcrumb) window.buildBreadcrumb('lesson-learner-breadcrumb', currentPassage?.passage_id);
@@ -466,8 +475,16 @@ function renderNumberLessonSummary() {
     const preview = document.getElementById('lesson-learner-preview');
     if (window.buildBreadcrumb) window.buildBreadcrumb('lesson-learner-breadcrumb', NUMBER_PART_ID);
     const actionFooter = document.querySelector('.lesson-summary-actions');
-    if (actionFooter) actionFooter.style.display = 'none';
+    if (actionFooter) {
+        actionFooter.style.display = '';
+        const learnButton = actionFooter.querySelector('.vl-learn-btn');
+        const trainLabel = actionFooter.querySelector('.vl-train-btn:not(.vl-learn-btn) span');
+        if (learnButton) learnButton.remove();
+        if (trainLabel) trainLabel.textContent = 'Train These Numbers';
+    }
     if (!preview) return;
+
+    currentNumberPracticeRows = buildNumberPracticeRows();
 
     const headers = [10, 20, 30, 40, 50, 60, 70, 80, 90];
     let html = `
@@ -498,6 +515,41 @@ function renderNumberLessonSummary() {
     preview.innerHTML = html;
     updateLessonSummaryToggleText();
     applyLessonLearnerHanText(preview);
+}
+
+function ensureLessonSummaryLearnButton(actionFooter) {
+    let learnButton = actionFooter.querySelector('.vl-learn-btn');
+    if (learnButton) return learnButton;
+
+    learnButton = document.createElement('button');
+    learnButton.className = 'vl-train-btn vl-learn-btn';
+    learnButton.setAttribute('onclick', 'startLessonCards()');
+    learnButton.innerHTML = `
+        <i class="fa-solid fa-graduation-cap" aria-hidden="true"></i>
+        <span>Learn This Lesson</span>
+    `;
+    actionFooter.prepend(learnButton);
+    return learnButton;
+}
+
+function buildNumberPracticeRows() {
+    const fixed = [44, 14, 41];
+    const pool = Array.from({ length: 100 }, (_, index) => index)
+        .filter(value => !fixed.includes(value));
+    for (let i = pool.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    return [...fixed, ...pool.slice(0, 7)]
+        .map(value => ({
+            word: numberHanzi(value),
+            cn: numberHanzi(value),
+            pinyin: numberPinyin(value),
+            meaning_vn: String(value),
+            meaning_en: String(value),
+            audio_key: numberAudioKey(value),
+            level: 'HSK1'
+        }));
 }
 
 function renderNumberCell(value, isHeader) {
@@ -619,6 +671,10 @@ function updateLessonSummaryToggleText() {
 
 // ── Lesson Cards ──────────────────────────────────────
 function startLessonCards() {
+    if (currentPassage?.passage_id === NUMBER_PART_ID) {
+        startNumberFlashcards();
+        return;
+    }
     currentLessonLineIndex = 0;
     renderLessonCard();
     switchScreen('screen-lesson-card');
@@ -861,9 +917,31 @@ function renderLessonSpeakingResult(data) {
 
 function goToLessonTrainer() {
     if (!currentPassage?.passage_id) return;
+    if (currentPassage.passage_id === NUMBER_PART_ID) {
+        startNumberTrainer();
+        return;
+    }
     const params = new URLSearchParams({ passage_id: currentPassage.passage_id });
     if (isLessonPartFlow) params.set('flow', 'lesson-part');
     window.location.href = `/lesson?${params.toString()}`;
+}
+
+function ensureNumberPracticeRows() {
+    if (!currentNumberPracticeRows.length) {
+        currentNumberPracticeRows = buildNumberPracticeRows();
+    }
+    return currentNumberPracticeRows;
+}
+
+function startNumberFlashcards() {
+    sessionStorage.setItem('selectedVocabFlashcards', JSON.stringify(ensureNumberPracticeRows()));
+    window.location.href = '/vocab-learning?source=number';
+}
+
+function startNumberTrainer() {
+    sessionStorage.setItem('selectedVocabTrainerWords', JSON.stringify(ensureNumberPracticeRows().map(row => row.word)));
+    sessionStorage.setItem('numberTrainerReturnPassageId', NUMBER_PART_ID);
+    window.location.href = '/vocab-training';
 }
 
 function goToWordSummary() {

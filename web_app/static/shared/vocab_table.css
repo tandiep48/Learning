@@ -122,8 +122,7 @@
 .vocab-table tbody tr:hover { background: rgba(87, 104, 86,0.03); }
 .vocab-table td { padding: 20px 18px; vertical-align: middle; }
 .vocab-cn {
-        font-size: 2rem;
-    font-weight: 700;
+    font-size: 2rem;
     color: var(--text-main);
     line-height: 1.35;
 }

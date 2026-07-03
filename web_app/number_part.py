@@ -131,9 +131,10 @@ def _arabic_number_for_word(word):
     return digits.get(tens, 0) * 10 + digits.get(ones, 0)
 
 
-def number_vocab_rows():
+def number_vocab_rows(include_all=False):
     rows = []
-    for word, _vocab_id, audio_key in NUMBER_ROWS[:11]:
+    source_rows = NUMBER_ROWS if include_all else NUMBER_ROWS[:11]
+    for word, _vocab_id, audio_key in source_rows:
         meaning = str(_arabic_number_for_word(word))
         rows.append({
             "word": word,
