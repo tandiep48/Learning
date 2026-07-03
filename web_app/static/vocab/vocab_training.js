@@ -5,6 +5,7 @@ let taskStartTime = 0;
 let currentTrainingPassageId = null;
 let lessonWideTrainingMeta = null;
 let isLessonPartFlow = false;
+let numberTrainerReturnPassageId = null;
 
 // ── Speaking state ───────────────────────────────────────────────────────────
 let speakingRecorder = null;
@@ -84,6 +85,8 @@ function readSelectedTrainerWords() {
     const raw = sessionStorage.getItem('selectedVocabTrainerWords');
     if (!raw) return [];
     sessionStorage.removeItem('selectedVocabTrainerWords');
+    numberTrainerReturnPassageId = sessionStorage.getItem('numberTrainerReturnPassageId');
+    sessionStorage.removeItem('numberTrainerReturnPassageId');
     try {
         const parsed = JSON.parse(raw);
         return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
@@ -111,8 +114,12 @@ function switchScreen(screenId) {
 
 function goHome() {
     resetSpeakingTask(true);
+    if (numberTrainerReturnPassageId) {
+        window.location.href = `/reading?passage_id=${encodeURIComponent(numberTrainerReturnPassageId)}&mode=lesson-learner&flow=lesson-part`;
+        return;
+    }
     if (lessonWideTrainingMeta?.passage_ids?.length) {
-        window.location.href = `/vocab-learning?passage_id=${encodeURIComponent(lessonWideTrainingMeta.passage_ids[0])}&flow=lesson-part`;
+        window.location.href = lessonWidePickerUrl(lessonWideTrainingMeta);
         return;
     }
     if (currentTrainingPassageId) {
@@ -121,6 +128,13 @@ function goHome() {
     }
     closeQuitModal();
     window.location.href = '/vocab';
+}
+
+function lessonWidePickerUrl(meta) {
+    const passageId = meta?.passage_ids?.[0] || '';
+    return passageId
+        ? `/learning?passage_id=${encodeURIComponent(passageId)}&show_parts=true`
+        : '/learning';
 }
 
 async function startSession(mode, extraParams = {}) {
@@ -588,6 +602,8 @@ function finishRound() {
     const total   = sessionData.tasks.length;
     const missed  = missedTasks.length;
     const correct = total - missed;
+    const progressFill = document.getElementById('progress-fill');
+    if (progressFill) progressFill.style.width = '100%';
 
     SuccessPopup.show({
         total,

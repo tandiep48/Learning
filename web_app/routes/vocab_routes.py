@@ -228,7 +228,7 @@ def build_vocab_tasks(subset_df):
     return tasks
 
 def number_rows_dataframe():
-    return pd.DataFrame([normalize_vocab_row(row) for row in number_vocab_rows()])
+    return pd.DataFrame([normalize_vocab_row(row) for row in number_vocab_rows(include_all=True)])
 
 def get_records_for_words(words):
     if not words:
@@ -247,6 +247,10 @@ def get_records_for_words(words):
             seen.add(word)
 
     subset_df = full_lesson_records[full_lesson_records["word"].isin(cleaned_words)].copy()
+    number_rows = [normalize_vocab_row(row) for row in number_vocab_rows(include_all=True)]
+    number_df = pd.DataFrame([row for row in number_rows if row["word"] in cleaned_words])
+    if not number_df.empty:
+        subset_df = pd.concat([subset_df, number_df], ignore_index=True).drop_duplicates("word")
     if subset_df.empty:
         return subset_df
 

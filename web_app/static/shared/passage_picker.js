@@ -383,7 +383,7 @@ const Picker = {
     },
 
     getPartNumber(passageId) {
-        if (isNumberPart(passageId)) return Number.MAX_SAFE_INTEGER - 1;
+        if (isNumberPart(passageId)) return 0;
         const parts = String(passageId || '').split('_');
         const part = parts.length >= 3 ? Number(parts[2]) : Number.MAX_SAFE_INTEGER;
         return Number.isFinite(part) ? part : Number.MAX_SAFE_INTEGER;

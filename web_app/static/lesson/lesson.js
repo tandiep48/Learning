@@ -50,6 +50,10 @@ function switchScreen(screenId) {
 }
 
 function goHome() {
+    if (lessonWideTrainingMeta?.passage_ids?.length) {
+        window.location.href = lessonWidePickerUrl(lessonWideTrainingMeta);
+        return;
+    }
     if (currentPassageId) {
         const params = new URLSearchParams({
             passage_id: currentPassageId,
@@ -65,6 +69,13 @@ function goHome() {
     currentTaskIndex = 0;
     missedTasks = [];
     closeQuitModal();
+}
+
+function lessonWidePickerUrl(meta) {
+    const passageId = meta?.passage_ids?.[0] || '';
+    return passageId
+        ? `/learning?passage_id=${encodeURIComponent(passageId)}&show_parts=true`
+        : '/learning';
 }
 
 async function startSession(passage_id, passage_ids = null) {
@@ -166,6 +177,8 @@ function loadTask() {
 
     // Audio setup
     const audioEl = document.getElementById('audio-player');
+    setCurrentAudioButtonPlaying(false);
+    if (audioEl) audioEl.pause();
     if (task.audio_key) {
         let hskLevel = task.hsk_level || 'HSK1';
         if (!hskLevel.startsWith('HSK')) {
@@ -182,7 +195,7 @@ function loadTask() {
         instructionEl.innerHTML = '<i class="fa-solid fa-headphones-simple" aria-hidden="true"></i><span>Listen and choose the correct translation:</span>';
         document.getElementById('audio-controls').style.display = 'block';
         if (task.audio_key) {
-            audioEl.play().catch(e => console.warn("Audio playback failed:", e));
+            playTrainerAudio(audioEl);
         }
         setupMultipleChoice(task);
     } else if (task.type === "meaning") {
@@ -261,9 +274,42 @@ function setupReorder(task) {
 
 function playCurrentAudio() {
     const audioEl = document.getElementById('audio-player');
-    if (audioEl.src) {
-        audioEl.play().catch(e => console.warn("Audio playback failed:", e));
+    if (!audioEl.src) return;
+    if (!audioEl.paused) {
+        audioEl.pause();
+        setCurrentAudioButtonPlaying(false);
+        return;
     }
+    audioEl.currentTime = 0;
+    playTrainerAudio(audioEl);
+}
+
+function setCurrentAudioButtonPlaying(playing) {
+    const button = document.getElementById('btn-current-audio');
+    const icon = button?.querySelector('.fa-solid');
+    if (!button || !icon) return;
+    icon.classList.toggle('fa-play', !playing);
+    icon.classList.toggle('fa-stop', playing);
+    icon.classList.toggle('play-icon', !playing);
+    button.title = playing ? 'Stop audio' : 'Play audio';
+    button.setAttribute('aria-label', button.title);
+}
+
+function wireCurrentAudioEvents(audioEl) {
+    if (!audioEl) return;
+    audioEl.onended = () => setCurrentAudioButtonPlaying(false);
+    audioEl.onerror = () => setCurrentAudioButtonPlaying(false);
+    audioEl.onpause = () => setCurrentAudioButtonPlaying(false);
+    audioEl.onplay = () => setCurrentAudioButtonPlaying(true);
+}
+
+function playTrainerAudio(audioEl) {
+    if (!audioEl?.src) return;
+    wireCurrentAudioEvents(audioEl);
+    audioEl.play().catch(e => {
+        setCurrentAudioButtonPlaying(false);
+        console.warn("Audio playback failed:", e);
+    });
 }
 
 function playCurrentAudioToEnd() {
@@ -482,6 +528,8 @@ function finishRound() {
     const total = sessionData.tasks.length;
     const missed = missedTasks.length;
     const correct = total - missed;
+    const progressFill = document.getElementById('progress-fill');
+    if (progressFill) progressFill.style.width = '100%';
 
     // Show the animated success popup
     SuccessPopup.show({
@@ -535,12 +583,16 @@ function _showLessonCompleteScreen() {
 }
 
 function markLessonPartComplete() {
-    if (!isLessonPartFlow || !currentPassageId) return;
-    fetch('/api/lesson/part-complete', {
+    const passageIds = lessonWideTrainingMeta?.passage_ids?.length
+        ? lessonWideTrainingMeta.passage_ids
+        : (isLessonPartFlow && currentPassageId ? [currentPassageId] : []);
+    if (!passageIds.length) return;
+
+    Promise.all(passageIds.map(passageId => fetch('/api/lesson/part-complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ passage_id: currentPassageId })
-    }).catch(e => console.error("Lesson part progress save failed", e));
+        body: JSON.stringify({ passage_id: passageId })
+    }))).catch(e => console.error("Lesson part progress save failed", e));
 }
 
 async function continueAfterLessonTraining() {
