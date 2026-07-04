@@ -16,9 +16,11 @@ from db import (
     get_profile_summary,
     get_recent_learning,
     get_user_hanzi_font,
+    get_user_hanzi_script,
     set_recent_learning,
     update_user_avatar_path,
     update_user_hanzi_font,
+    update_user_hanzi_script,
     update_user_password,
 )
 
@@ -34,6 +36,8 @@ ALLOWED_AVATAR_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'gif'}
 MAX_AVATAR_BYTES = 3 * 1024 * 1024
 ALLOWED_HANZI_FONTS = {'SimSun', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Noto Sans'}
 DEFAULT_HANZI_FONT = 'Noto Sans'
+ALLOWED_HANZI_SCRIPTS = {'simplified', 'traditional'}
+DEFAULT_HANZI_SCRIPT = 'simplified'
 
 
 def avatar_url_from_path(avatar_path):
@@ -54,6 +58,7 @@ def serialize_current_user():
         "avatar_path": getattr(current_user, 'avatar_path', None),
         "avatar_url": avatar_url_from_path(getattr(current_user, 'avatar_path', None)),
         "hanzi_font": getattr(current_user, 'hanzi_font', None) or DEFAULT_HANZI_FONT,
+        "hanzi_script": getattr(current_user, 'hanzi_script', None) or DEFAULT_HANZI_SCRIPT,
     }
 
 
@@ -288,6 +293,41 @@ def hanzi_font_set():
 
     current_user.hanzi_font = font
     return jsonify({"status": "success", "hanzi_font": font})
+
+
+@user_bp.route('/api/user/hanzi-script', methods=['GET'])
+@login_required
+def hanzi_script_get():
+    conn = get_db_connection()
+    try:
+        script = get_user_hanzi_script(conn, current_user.id)
+    finally:
+        if conn:
+            conn.close()
+    current_user.hanzi_script = script or DEFAULT_HANZI_SCRIPT
+    return jsonify({"hanzi_script": current_user.hanzi_script})
+
+
+@user_bp.route('/api/user/hanzi-script', methods=['POST'])
+@login_required
+def hanzi_script_set():
+    data = request.get_json(silent=True) or {}
+    script = str(data.get('hanzi_script') or '').strip()
+    if script not in ALLOWED_HANZI_SCRIPTS:
+        return jsonify({"error": "Invalid Hanzi script."}), 400
+
+    conn = get_db_connection()
+    try:
+        ok = update_user_hanzi_script(conn, current_user.id, script)
+    finally:
+        if conn:
+            conn.close()
+
+    if not ok:
+        return jsonify({"error": "Could not save Hanzi script."}), 500
+
+    current_user.hanzi_script = script
+    return jsonify({"status": "success", "hanzi_script": script})
 
 
 @user_bp.route('/api/user/dashboard-current-lesson', methods=['GET'])

@@ -5,15 +5,17 @@ from db import get_db_connection
 
 auth_bp = Blueprint('auth', __name__)
 DEFAULT_HANZI_FONT = 'Noto Sans'
+DEFAULT_HANZI_SCRIPT = 'simplified'
 
 class User(UserMixin):
-    def __init__(self, id, username, email, level, avatar_path=None, hanzi_font=None):
+    def __init__(self, id, username, email, level, avatar_path=None, hanzi_font=None, hanzi_script=None):
         self.id = id
         self.username = username
         self.email = email
         self.level = level
         self.avatar_path = avatar_path
         self.hanzi_font = hanzi_font or DEFAULT_HANZI_FONT
+        self.hanzi_script = hanzi_script or DEFAULT_HANZI_SCRIPT
 
 def get_user_by_username(username):
     conn = get_db_connection()
@@ -22,13 +24,13 @@ def get_user_by_username(username):
     try:
         with conn.cursor() as cur:
             try:
-                cur.execute("SELECT id, username, email, password, level, avatar_path, hanzi_font FROM users WHERE username = %s", (username,))
+                cur.execute("SELECT id, username, email, password, level, avatar_path, hanzi_font, hanzi_script FROM users WHERE username = %s", (username,))
             except Exception:
                 conn.rollback()
-                cur.execute("SELECT id, username, email, password, level, NULL AS avatar_path, %s AS hanzi_font FROM users WHERE username = %s", (DEFAULT_HANZI_FONT, username))
+                cur.execute("SELECT id, username, email, password, level, NULL AS avatar_path, %s AS hanzi_font, 'simplified' AS hanzi_script FROM users WHERE username = %s", (DEFAULT_HANZI_FONT, username))
             row = cur.fetchone()
             if row:
-                return {'id': row[0], 'username': row[1], 'email': row[2], 'password': row[3], 'level': row[4], 'avatar_path': row[5], 'hanzi_font': row[6] or DEFAULT_HANZI_FONT}
+                return {'id': row[0], 'username': row[1], 'email': row[2], 'password': row[3], 'level': row[4], 'avatar_path': row[5], 'hanzi_font': row[6] or DEFAULT_HANZI_FONT, 'hanzi_script': row[7] or DEFAULT_HANZI_SCRIPT}
     finally:
         conn.close()
     return None
@@ -40,13 +42,13 @@ def get_user_by_id(user_id):
     try:
         with conn.cursor() as cur:
             try:
-                cur.execute("SELECT id, username, email, password, level, avatar_path, hanzi_font FROM users WHERE id = %s", (user_id,))
+                cur.execute("SELECT id, username, email, password, level, avatar_path, hanzi_font, hanzi_script FROM users WHERE id = %s", (user_id,))
             except Exception:
                 conn.rollback()
-                cur.execute("SELECT id, username, email, password, level, NULL AS avatar_path, %s AS hanzi_font FROM users WHERE id = %s", (DEFAULT_HANZI_FONT, user_id))
+                cur.execute("SELECT id, username, email, password, level, NULL AS avatar_path, %s AS hanzi_font, 'simplified' AS hanzi_script FROM users WHERE id = %s", (DEFAULT_HANZI_FONT, user_id))
             row = cur.fetchone()
             if row:
-                return User(row[0], row[1], row[2], row[4], row[5], row[6] or DEFAULT_HANZI_FONT)
+                return User(row[0], row[1], row[2], row[4], row[5], row[6] or DEFAULT_HANZI_FONT, row[7] or DEFAULT_HANZI_SCRIPT)
     finally:
         conn.close()
     return None
@@ -62,7 +64,7 @@ def login():
         
         user_data = get_user_by_username(username)
         if user_data and check_password_hash(user_data['password'], password):
-            user = User(user_data['id'], user_data['username'], user_data['email'], user_data['level'], user_data.get('avatar_path'), user_data.get('hanzi_font'))
+            user = User(user_data['id'], user_data['username'], user_data['email'], user_data['level'], user_data.get('avatar_path'), user_data.get('hanzi_font'), user_data.get('hanzi_script'))
             login_user(user)
             return redirect(url_for('index'))
         else:

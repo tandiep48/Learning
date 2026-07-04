@@ -19,15 +19,20 @@
                 {% endif %}
                 <span>{{ current_user.username }}</span>
             </a>
-            <label class="hanzi-font-control" for="hanzi-font-select" title="Hanzi font">
+            <div class="hanzi-font-control">
                 <span>Hanzi</span>
+                {% set current_hanzi_script = current_user.hanzi_script|default('simplified', true) %}
+                <select id="hanzi-script-select" data-current-script="{{ current_hanzi_script }}" title="Script">
+                    <option value="simplified" {% if current_hanzi_script == 'simplified' %}selected{% endif %}>简体</option>
+                    <option value="traditional" {% if current_hanzi_script == 'traditional' %}selected{% endif %}>繁體</option>
+                </select>
                 {% set current_hanzi_font = current_user.hanzi_font|default('Noto Sans', true) %}
-                <select id="hanzi-font-select" data-current-font="{{ current_hanzi_font }}">
+                <select id="hanzi-font-select" data-current-font="{{ current_hanzi_font }}" title="Font">
                     {% for font in ['SimSun', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Noto Sans'] %}
                         <option value="{{ font }}" {% if current_hanzi_font == font %}selected{% endif %}>{{ font }}</option>
                     {% endfor %}
                 </select>
-            </label>
+            </div>
             <a href="{{ url_for('auth.logout') }}">Logout</a>
         {% else %}
             <a href="{{ url_for('auth.login') }}">Login</a>
@@ -36,5 +41,5 @@
     </div>
 </header>
 {% if current_user.is_authenticated %}
-    <script src="/static/shared/han_font.js?v=1"></script>
+    <script src="/static/shared/han_font.js?v=2"></script>
 {% endif %}

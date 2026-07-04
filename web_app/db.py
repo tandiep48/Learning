@@ -886,6 +886,47 @@ def update_user_hanzi_font(conn, user_id, hanzi_font):
         conn.rollback()
         return False
 
+def ensure_user_hanzi_script_column(conn):
+    if not conn:
+        return False
+    try:
+        with conn.cursor() as cur:
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS hanzi_script TEXT DEFAULT 'simplified'")
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Database ensure_user_hanzi_script_column failed: {e}")
+        conn.rollback()
+        return False
+
+def get_user_hanzi_script(conn, user_id):
+    if not conn:
+        return "simplified"
+    ensure_user_hanzi_script_column(conn)
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COALESCE(NULLIF(hanzi_script, ''), 'simplified') FROM users WHERE id = %s", (user_id,))
+            row = cur.fetchone()
+            return row[0] if row else "simplified"
+    except Exception as e:
+        print(f"Database get_user_hanzi_script failed: {e}")
+        conn.rollback()
+        return "simplified"
+
+def update_user_hanzi_script(conn, user_id, hanzi_script):
+    if not conn:
+        return False
+    ensure_user_hanzi_script_column(conn)
+    try:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE users SET hanzi_script = %s WHERE id = %s", (hanzi_script, user_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Database update_user_hanzi_script failed: {e}")
+        conn.rollback()
+        return False
+
 def update_user_password(conn, user_id, password_hash):
     if not conn:
         return False

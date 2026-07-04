@@ -55,7 +55,8 @@
             const span = document.createElement('span');
             span.className = shouldSize ? `${HAN_CLASS} ${SIZED_CLASS}` : HAN_CLASS;
             span.setAttribute(WRAPPED_ATTR, 'true');
-            span.textContent = match;
+            span.setAttribute('data-original', match);
+            span.textContent = window.HanziSettings?.convertText(match) ?? match;
             fragment.appendChild(span);
             lastIndex = offset + match.length;
             return match;
