@@ -3,7 +3,7 @@ import secrets
 from dotenv import load_dotenv
 from flask import Flask, render_template, redirect, url_for, request, send_from_directory
 from flask_cors import CORS
-from flask_login import LoginManager, login_required, login_user
+from flask_login import LoginManager, login_required
 from flask_socketio import SocketIO
 from routes.vocab_routes import vocab_bp
 from routes.lesson_routes import lesson_bp
@@ -23,38 +23,14 @@ app.secret_key = os.getenv('FLASK_SECRET_KEY', secrets.token_hex(32))
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode=os.getenv("SOCKETIO_ASYNC_MODE", "threading"))
 
-DEV_MODE = os.getenv('DEV_MODE', '').lower() in ('1', 'true', 'yes')
-
 # Setup Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'auth.login'
 
-class _DevUser:
-    id = 0
-    username = 'dev'
-    avatar_path = None
-    hanzi_font = 'Noto Sans'
-    hanzi_script = 'simplified'
-    is_authenticated = True
-    is_active = True
-    is_anonymous = False
-    def get_id(self): return '0'
-
-_DEV_USER = _DevUser()
-
 @login_manager.user_loader
 def load_user(user_id):
-    if DEV_MODE:
-        return _DEV_USER
     return get_user_by_id(user_id)
-
-if DEV_MODE:
-    @app.before_request
-    def auto_login_dev():
-        from flask_login import current_user
-        if not current_user.is_authenticated:
-            login_user(_DEV_USER)
 
 # Register Blueprints
 app.register_blueprint(vocab_bp)
