@@ -845,23 +845,9 @@ def update_user_avatar_path(conn, user_id, avatar_path):
         conn.rollback()
         return False
 
-def ensure_user_hanzi_font_column(conn):
-    if not conn:
-        return False
-    try:
-        with conn.cursor() as cur:
-            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS hanzi_font TEXT DEFAULT 'Noto Sans'")
-        conn.commit()
-        return True
-    except Exception as e:
-        print(f"Database ensure_user_hanzi_font_column failed: {e}")
-        conn.rollback()
-        return False
-
 def get_user_hanzi_font(conn, user_id):
     if not conn:
         return "Noto Sans"
-    ensure_user_hanzi_font_column(conn)
     try:
         with conn.cursor() as cur:
             cur.execute("SELECT COALESCE(NULLIF(hanzi_font, ''), 'Noto Sans') FROM users WHERE id = %s", (user_id,))
@@ -875,7 +861,6 @@ def get_user_hanzi_font(conn, user_id):
 def update_user_hanzi_font(conn, user_id, hanzi_font):
     if not conn:
         return False
-    ensure_user_hanzi_font_column(conn)
     try:
         with conn.cursor() as cur:
             cur.execute("UPDATE users SET hanzi_font = %s WHERE id = %s", (hanzi_font, user_id))
@@ -886,23 +871,9 @@ def update_user_hanzi_font(conn, user_id, hanzi_font):
         conn.rollback()
         return False
 
-def ensure_user_hanzi_script_column(conn):
-    if not conn:
-        return False
-    try:
-        with conn.cursor() as cur:
-            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS hanzi_script TEXT DEFAULT 'simplified'")
-        conn.commit()
-        return True
-    except Exception as e:
-        print(f"Database ensure_user_hanzi_script_column failed: {e}")
-        conn.rollback()
-        return False
-
 def get_user_hanzi_script(conn, user_id):
     if not conn:
         return "simplified"
-    ensure_user_hanzi_script_column(conn)
     try:
         with conn.cursor() as cur:
             cur.execute("SELECT COALESCE(NULLIF(hanzi_script, ''), 'simplified') FROM users WHERE id = %s", (user_id,))
@@ -916,7 +887,6 @@ def get_user_hanzi_script(conn, user_id):
 def update_user_hanzi_script(conn, user_id, hanzi_script):
     if not conn:
         return False
-    ensure_user_hanzi_script_column(conn)
     try:
         with conn.cursor() as cur:
             cur.execute("UPDATE users SET hanzi_script = %s WHERE id = %s", (hanzi_script, user_id))

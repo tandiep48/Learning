@@ -368,3 +368,6 @@ ALTER TABLE practice_record
 ADD COLUMN IF NOT EXISTS category VARCHAR(20) DEFAULT 'practice';
 
 ALTER TABLE grammar_context ALTER COLUMN content_json TYPE json;
+
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS hanzi_script TEXT DEFAULT 'simplified';
