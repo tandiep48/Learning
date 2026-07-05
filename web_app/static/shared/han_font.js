@@ -3,10 +3,13 @@
     const ALLOWED_FONTS = new Set(['SimSun', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Noto Sans']);
     const DEFAULT_SCRIPT = 'simplified';
     const OPENCC_CDN = 'https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js';
+    const HAN_CHAR_RE = /[㐀-䶿一-鿿豈-﫿]/;
+    const SKIP_SELECTOR = 'script,style,textarea,input,select,[data-han-skip]';
 
     let _converter = null;
     let _openccLoading = false;
     let _openccCallbacks = [];
+    const _originals = new WeakMap();
 
     function fontStack(font) {
         const chosen = ALLOWED_FONTS.has(font) ? font : DEFAULT_FONT;
@@ -24,10 +27,48 @@
         return _converter ? _converter(text) : text;
     }
 
+    function originalTextOf(node) {
+        const parent = node.parentElement;
+        if (parent && parent.hasAttribute('data-original')) {
+            return parent.getAttribute('data-original');
+        }
+        if (!_originals.has(node)) _originals.set(node, node.nodeValue);
+        return _originals.get(node);
+    }
+
+    function convertTextNode(node) {
+        if (!node.nodeValue || !HAN_CHAR_RE.test(node.nodeValue)) return;
+        const parent = node.parentElement;
+        if (!parent || parent.closest(SKIP_SELECTOR)) return;
+        const next = convertText(originalTextOf(node));
+        if (node.nodeValue !== next) node.nodeValue = next;
+    }
+
+    function convertAllIn(root) {
+        if (!root) return;
+        if (root.nodeType === Node.TEXT_NODE) {
+            convertTextNode(root);
+            return;
+        }
+        if (root.nodeType !== Node.ELEMENT_NODE) return;
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        while (walker.nextNode()) convertTextNode(walker.currentNode);
+    }
+
     function applyScriptToPage() {
-        document.querySelectorAll('.han-text[data-original]').forEach(span => {
-            span.textContent = convertText(span.getAttribute('data-original'));
-        });
+        convertAllIn(document.body);
+    }
+
+    function restoreOriginals(root) {
+        if (!root || root.nodeType !== Node.ELEMENT_NODE) return;
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        while (walker.nextNode()) {
+            const node = walker.currentNode;
+            const original = _originals.get(node);
+            if (original !== undefined && node.nodeValue !== original) {
+                node.nodeValue = original;
+            }
+        }
     }
 
     function loadOpenCC(callback) {
@@ -71,13 +112,7 @@
             if (!_converter) return;
             for (const mut of mutations) {
                 for (const node of mut.addedNodes) {
-                    if (node.nodeType !== 1) continue;
-                    const targets = node.matches?.('.han-text[data-original]')
-                        ? [node]
-                        : Array.from(node.querySelectorAll?.('.han-text[data-original]') || []);
-                    targets.forEach(span => {
-                        span.textContent = convertText(span.getAttribute('data-original'));
-                    });
+                    convertAllIn(node);
                 }
             }
         });
@@ -139,5 +174,5 @@
     });
 
     window.HanziFont = { applyFont };
-    window.HanziSettings = { applyFont, applyScript, convertText };
+    window.HanziSettings = { applyFont, applyScript, convertText, restoreOriginals };
 })();

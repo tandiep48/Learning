@@ -27,7 +27,7 @@
 
     function unwrapExisting(container) {
         container.querySelectorAll(`[${WRAPPED_ATTR}]`).forEach(span => {
-            span.replaceWith(document.createTextNode(span.textContent || ''));
+            span.replaceWith(document.createTextNode(span.getAttribute('data-original') || span.textContent || ''));
         });
     }
 
@@ -80,6 +80,7 @@
         }
 
         unwrapExisting(container);
+        window.HanziSettings?.restoreOriginals?.(container);
 
         const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
             acceptNode(node) {
