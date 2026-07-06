@@ -13,7 +13,7 @@
 
     function fontStack(font) {
         const chosen = ALLOWED_FONTS.has(font) ? font : DEFAULT_FONT;
-        return `'${chosen}', 'Noto Sans', Arial, Helvetica, sans-serif`;
+        return `Roboto, '${chosen}', 'Noto Sans', Helvetica, sans-serif`;
     }
 
     function applyFont(font) {
