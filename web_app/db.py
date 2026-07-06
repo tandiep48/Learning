@@ -897,6 +897,32 @@ def update_user_hanzi_script(conn, user_id, hanzi_script):
         conn.rollback()
         return False
 
+def get_user_ui_language(conn, user_id):
+    if not conn:
+        return "en"
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COALESCE(NULLIF(ui_language, ''), 'en') FROM users WHERE id = %s", (user_id,))
+            row = cur.fetchone()
+            return row[0] if row else "en"
+    except Exception as e:
+        print(f"Database get_user_ui_language failed: {e}")
+        conn.rollback()
+        return "en"
+
+def update_user_ui_language(conn, user_id, ui_language):
+    if not conn:
+        return False
+    try:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE users SET ui_language = %s WHERE id = %s", (ui_language, user_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Database update_user_ui_language failed: {e}")
+        conn.rollback()
+        return False
+
 def update_user_password(conn, user_id, password_hash):
     if not conn:
         return False
