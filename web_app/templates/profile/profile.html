@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ current_lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profile</title>
+    <title>{{ t('profile.page_title') }}</title>
     <link rel="stylesheet" href="/static/shared/styles.css?v=7">
     <link rel="stylesheet" href="/static/profile/profile.css">
 </head>
@@ -11,8 +11,8 @@
     {% include 'shared/site_nav.html' %}
     <main class="app-container profile-container">
         <div class="profile-topbar">
-            <a href="/" class="profile-link">&larr; Dashboard</a>
-            <a href="/learning" class="profile-link">Learning</a>
+            <a href="/" class="profile-link">&larr; {{ t('profile.dashboard') }}</a>
+            <a href="/learning" class="profile-link">{{ t('nav.learning') }}</a>
         </div>
 
         <section class="profile-header">
@@ -25,7 +25,7 @@
                 <p>{{ current_user.email }}</p>
                 <form id="avatar-form" class="avatar-form" enctype="multipart/form-data">
                     <input id="avatar-input" name="avatar" type="file" accept="image/png,image/jpeg,image/webp,image/gif">
-                    <button class="btn primary avatar-submit" type="submit">Upload Avatar</button>
+                    <button class="btn primary avatar-submit" type="submit">{{ t('profile.upload_avatar') }}</button>
                 </form>
                 <div id="avatar-message" class="profile-message"></div>
             </div>
@@ -33,36 +33,36 @@
 
         <section class="profile-stats-grid">
             <div class="profile-stat">
-                <span class="profile-stat-label">Vocab Time</span>
+                <span class="profile-stat-label">{{ t('profile.vocab_time') }}</span>
                 <strong id="stat-vocab-time">0m</strong>
             </div>
             <div class="profile-stat">
-                <span class="profile-stat-label">Lesson Time</span>
+                <span class="profile-stat-label">{{ t('profile.lesson_time') }}</span>
                 <strong id="stat-lesson-time">0m</strong>
             </div>
             <div class="profile-stat">
-                <span class="profile-stat-label">Practice Time</span>
+                <span class="profile-stat-label">{{ t('profile.practice_time') }}</span>
                 <strong id="stat-practice-time">0m</strong>
             </div>
             <div class="profile-stat">
-                <span class="profile-stat-label">Exam Time</span>
+                <span class="profile-stat-label">{{ t('profile.exam_time') }}</span>
                 <strong id="stat-exam-time">0m</strong>
             </div>
         </section>
 
         <section class="profile-section">
-            <h2>Time Breakdown</h2>
+            <h2>{{ t('profile.time_breakdown') }}</h2>
             <div class="profile-breakdown-grid">
                 <div>
-                    <h3>Vocabulary</h3>
+                    <h3>{{ t('nav.vocabulary') }}</h3>
                     <div id="vocab-breakdown" class="profile-list compact"></div>
                 </div>
                 <div>
-                    <h3>Lesson</h3>
+                    <h3>{{ t('profile.lesson') }}</h3>
                     <div id="lesson-breakdown" class="profile-list compact"></div>
                 </div>
                 <div>
-                    <h3>Practice / Exam</h3>
+                    <h3>{{ t('profile.practice_exam') }}</h3>
                     <div id="practice-breakdown" class="profile-list compact"></div>
                 </div>
             </div>
@@ -70,29 +70,29 @@
 
         <section class="profile-section">
             <div class="profile-section-heading">
-                <h2>Learned Vocabulary</h2>
-                <span id="learned-count" class="profile-count">0 words</span>
+                <h2>{{ t('profile.learned_vocabulary') }}</h2>
+                <span id="learned-count" class="profile-count">{{ t('dashboard.word_count', count=0) }}</span>
             </div>
             <div id="learned-vocab-list" class="profile-vocab-list"></div>
             <div id="learned-pagination" class="profile-pagination" style="display:none;">
-                <button class="btn secondary" id="learned-prev-btn" type="button">Prev</button>
-                <span id="learned-page-status">Page 1 / 1</span>
-                <button class="btn secondary" id="learned-next-btn" type="button">Next</button>
+                <button class="btn secondary" id="learned-prev-btn" type="button">{{ t('reading.prev') }}</button>
+                <span id="learned-page-status">{{ t('vocab.page_status', current=1, total=1) }}</span>
+                <button class="btn secondary" id="learned-next-btn" type="button">{{ t('reading.next') }}</button>
             </div>
         </section>
 
         <section class="profile-section">
-            <h2>Change Password</h2>
+            <h2>{{ t('profile.change_password') }}</h2>
             <form id="password-form" class="password-form">
                 <div class="form-group">
-                    <label for="password-username">Username</label>
+                    <label for="password-username">{{ t('auth.username_label') }}</label>
                     <input id="password-username" name="username" type="text" autocomplete="username" required>
                 </div>
                 <div class="form-group">
-                    <label for="new-password">New Password</label>
+                    <label for="new-password">{{ t('profile.new_password_label') }}</label>
                     <input id="new-password" name="new_password" type="password" autocomplete="new-password" required>
                 </div>
-                <button class="btn primary password-submit" type="submit">Change Password</button>
+                <button class="btn primary password-submit" type="submit">{{ t('profile.change_password') }}</button>
             </form>
             <div id="password-message" class="profile-message"></div>
             <div id="learned-vocab-list" class="profile-vocab-table-wrap"></div>

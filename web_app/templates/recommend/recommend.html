@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ current_lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Recommended Lessons</title>
+    <title>{{ t('recommend.page_title') }}</title>
     <link rel="stylesheet" href="/static/shared/styles.css?v=7">
     <link rel="stylesheet" href="/static/recommend/recommend.css?v=4">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -11,21 +11,21 @@
 <body class="with-site-nav">
     {% include 'shared/site_nav.html' %}
     <div class="recommend-container">
-        <a href="/" class="page-back">← Back to Dashboard</a>
+        <a href="/" class="page-back">← {{ t('picker.back_to_dashboard') }}</a>
 
         <div class="page-header">
             <h1 class="page-title">
                 <i class="fa-solid fa-compass" aria-hidden="true"></i>
-                <span>Recommended Lessons</span>
+                <span>{{ t('recommend.page_title') }}</span>
             </h1>
         </div>
 
         <div class="filters-bar">
             <div class="filter-group">
-                <label class="filter-label" for="filter-level">Level</label>
+                <label class="filter-label" for="filter-level">{{ t('recommend.level') }}</label>
                 <div class="select-wrapper">
                     <select id="filter-level" class="filter-select">
-                        <option value="all">All Levels</option>
+                        <option value="all">{{ t('recommend.all_levels') }}</option>
                         <option value="1">HSK 1</option>
                         <option value="2">HSK 2</option>
                         <option value="3">HSK 3</option>
@@ -38,37 +38,37 @@
             </div>
 
             <div class="filter-group">
-                <label class="filter-label" for="filter-skill">Skill</label>
+                <label class="filter-label" for="filter-skill">{{ t('recommend.skill') }}</label>
                 <div class="select-wrapper">
                     <select id="filter-skill" class="filter-select">
-                        <option value="all">All Skills</option>
-                        <option value="listening">Listening</option>
-                        <option value="reading">Reading</option>
+                        <option value="all">{{ t('recommend.all_skills') }}</option>
+                        <option value="listening">{{ t('recommend.listening') }}</option>
+                        <option value="reading">{{ t('recommend.reading') }}</option>
                     </select>
                     <i class="fa-solid fa-chevron-down select-icon" aria-hidden="true"></i>
                 </div>
             </div>
 
             <div class="filter-group">
-                <label class="filter-label" for="filter-category">Category</label>
+                <label class="filter-label" for="filter-category">{{ t('recommend.category') }}</label>
                 <div class="select-wrapper">
                     <select id="filter-category" class="filter-select">
-                        <option value="all">All Categories</option>
-                        <option value="practice">Practice</option>
-                        <option value="exam">Exam</option>
+                        <option value="all">{{ t('recommend.all_categories') }}</option>
+                        <option value="practice">{{ t('dashboard.exercise') }}</option>
+                        <option value="exam">{{ t('dashboard.exam') }}</option>
                     </select>
                     <i class="fa-solid fa-chevron-down select-icon" aria-hidden="true"></i>
                 </div>
             </div>
 
             <div class="filter-group">
-                <label class="filter-label" for="filter-status">Status</label>
+                <label class="filter-label" for="filter-status">{{ t('recommend.status') }}</label>
                 <div class="select-wrapper">
                     <select id="filter-status" class="filter-select">
-                        <option value="all">All Statuses</option>
-                        <option value="Not start" selected>Not start</option>
-                        <option value="Finish and success">Finish and success</option>
-                        <option value="Finish and fail">Finish and fail</option>
+                        <option value="all">{{ t('recommend.all_statuses') }}</option>
+                        <option value="Not start" selected>{{ t('recommend.status_not_start') }}</option>
+                        <option value="Finish and success">{{ t('recommend.status_finish_success') }}</option>
+                        <option value="Finish and fail">{{ t('recommend.status_finish_fail') }}</option>
                     </select>
                     <i class="fa-solid fa-chevron-down select-icon" aria-hidden="true"></i>
                 </div>
@@ -81,8 +81,8 @@
                 <div class="loading-dots">
                     <span></span><span></span><span></span>
                 </div>
-                <div class="state-title" style="margin-top:16px;">Finding recommendations…</div>
-                <div class="state-sub">Analysing your vocabulary progress.</div>
+                <div class="state-title" style="margin-top:16px;">{{ t('recommend.finding') }}</div>
+                <div class="state-sub">{{ t('recommend.analysing') }}</div>
             </div>
         </div>
 
@@ -92,10 +92,10 @@
 
     <!-- Sticky Multi-select Bar -->
     <div id="multi-select-bar" class="multi-select-bar hidden">
-        <span id="multi-select-count">0 items selected</span>
+        <span id="multi-select-count">{{ t('recommend.items_selected', count=0) }}</span>
         <button id="btn-start-multi" class="btn-start-practice" onclick="startMultiRecommend()">
             <i class="fa-solid fa-play" aria-hidden="true"></i>
-            <span>Start Selected</span>
+            <span>{{ t('recommend.start_selected') }}</span>
         </button>
     </div>
 
