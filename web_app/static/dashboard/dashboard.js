@@ -7,7 +7,7 @@ let dashboardVocabOrder = ['unsure', 'unlearn', 'recent'];
 let dashboardVocabIndex = 0;
 
 async function loadHomeDashboard() {
-    setDashboardState('Loading your lesson dashboard...', true);
+    setDashboardState(t('dashboard.loading'), true);
     try {
         // Fetch lesson data and global stats in parallel
         const [lessonRes, statsRes, vocabRes] = await Promise.all([
@@ -23,7 +23,7 @@ async function loadHomeDashboard() {
         }
 
         const lessonData = await lessonRes.json();
-        if (!lessonRes.ok) throw new Error(lessonData.error || 'Failed to load dashboard.');
+        if (!lessonRes.ok) throw new Error(lessonData.error || t('dashboard.load_failed'));
         if (!lessonData.has_recent) {
             showNoRecentState();
             return;
@@ -45,7 +45,7 @@ async function loadHomeDashboard() {
         }
 
     } catch (err) {
-        setDashboardState(err.message || 'Failed to load dashboard.', false);
+        setDashboardState(err.message || t('dashboard.load_failed'), false);
     }
 }
 
@@ -55,7 +55,10 @@ function renderHomeDashboard(data) {
 
     const lesson = data.lesson || {};
     document.getElementById('home-lesson-title').textContent = `${lesson.hsk_level || 'HSK'} - Lesson ${lesson.lesson || ''}`;
-    document.getElementById('home-lesson-subtitle').textContent = `Current part: Part ${lesson.part || '-'} - ${lesson.passage_ids?.length || 1} part${lesson.passage_ids?.length === 1 ? '' : 's'} in this lesson`;
+    document.getElementById('home-lesson-subtitle').textContent = t('dashboard.current_part', {
+        part: lesson.part || '-',
+        count: lesson.passage_ids?.length || 1,
+    });
     document.getElementById('home-continue-link').href = `/learning?passage_id=${encodeURIComponent(lesson.passage_id || '')}`;
 }
 
@@ -86,12 +89,12 @@ function renderVocab(vocab) {
     const viewAllRow = document.getElementById('home-vocab-view-all');
     const viewAllLink = document.getElementById('home-vocab-view-all-link');
 
-    if (title) title.textContent = vocab.title || 'Vocabulary';
-    count.textContent = `${vocab.total || 0} word${vocab.total === 1 ? '' : 's'}`;
+    if (title) title.textContent = vocab.title || t('dashboard.vocabulary_kicker');
+    count.textContent = t('dashboard.word_count', { count: vocab.total || 0 });
     if (viewAllLink) viewAllLink.href = `/vocab?mode=${encodeURIComponent(vocab.mode || 'standard')}`;
 
     if (!rows.length) {
-        state.textContent = `No ${String(vocab.title || 'vocabulary').toLowerCase()} found.`;
+        state.textContent = t('dashboard.no_x_found', { title: (vocab.title || t('dashboard.vocabulary_kicker')).toLowerCase() });
         state.style.display = 'block';
         wrap.style.display = 'none';
         if (viewAllRow) viewAllRow.style.display = 'block';
@@ -103,9 +106,9 @@ function renderVocab(vocab) {
     table.innerHTML = `
         <thead>
             <tr>
-                <th>Character</th>
-                <th>Pinyin</th>
-                <th>Meaning (VN)</th>
+                <th>${t('dashboard.table_character')}</th>
+                <th>${t('dashboard.table_pinyin')}</th>
+                <th>${t('dashboard.table_meaning_vn')}</th>
             </tr>
         </thead>
         <tbody>
@@ -163,10 +166,10 @@ function showNoRecentState() {
     document.getElementById('dashboard-state').style.display = 'grid';
     document.getElementById('dashboard-state').innerHTML = `
         <div class="dashboard-empty-state">
-            <span class="dashboard-kicker">Current Lesson</span>
-            <h1>Choose a lesson to begin</h1>
-            <p>Your Home dashboard will appear after you select a learning lesson.</p>
-            <a class="btn primary dashboard-action-link" href="/learning">Open Learning</a>
+            <span class="dashboard-kicker">${t('dashboard.current_lesson')}</span>
+            <h1>${t('dashboard.no_lesson_title')}</h1>
+            <p>${t('dashboard.no_lesson_body')}</p>
+            <a class="btn primary dashboard-action-link" href="/learning">${t('dashboard.open_learning')}</a>
         </div>
     `;
 }
@@ -176,10 +179,10 @@ function showSignedOutState() {
     document.getElementById('dashboard-state').style.display = 'grid';
     document.getElementById('dashboard-state').innerHTML = `
         <div class="dashboard-empty-state">
-            <span class="dashboard-kicker">Learning Dashboard</span>
-            <h1>Sign in to continue</h1>
-            <p>Your current lesson, vocabulary, exercises, and progress are saved to your account.</p>
-            <a class="btn primary dashboard-action-link" href="/login">Login</a>
+            <span class="dashboard-kicker">${t('nav.brand')}</span>
+            <h1>${t('dashboard.signed_out_title')}</h1>
+            <p>${t('dashboard.signed_out_body')}</p>
+            <a class="btn primary dashboard-action-link" href="/login">${t('nav.login')}</a>
         </div>
     `;
 }

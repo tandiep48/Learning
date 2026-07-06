@@ -15,7 +15,7 @@ window.onload = async () => {
 
     Picker.init((passage) => {
         startSession(passage.passage_id);
-    }, "Lesson Practice", !params.get('passage_id'));
+    }, t('lesson.picker_title'), !params.get('passage_id'));
 
     const lessonWideLesson = readLessonWideLessonTrainer();
     if (lessonWideLesson?.passage_ids?.length) {
@@ -106,7 +106,7 @@ async function startSession(passage_id, passage_ids = null) {
         const data = await response.json();
 
         if (!response.ok) {
-            alert(data.error || "Failed to start session.");
+            alert(data.error || t('lesson.failed_start_session'));
             goHome();
             return;
         }
@@ -118,7 +118,7 @@ async function startSession(passage_id, passage_ids = null) {
 
         loadTask();
     } catch (e) {
-        alert("Error connecting to server.");
+        alert(t('lesson.error_connecting'));
         goHome();
     }
 }
@@ -137,7 +137,7 @@ function loadTask() {
 
     // Progress
     document.getElementById('progress-fill').style.width = `${(currentTaskIndex / total) * 100}%`;
-    document.getElementById('task-counter').innerText = `Task ${currentTaskIndex + 1}/${total}`;
+    document.getElementById('task-counter').innerText = t('trainer.task_counter', { current: currentTaskIndex + 1, total });
 
     // Reset all areas
     document.getElementById('word-display').style.display = 'none';
@@ -291,7 +291,7 @@ function setCurrentAudioButtonPlaying(playing) {
     icon.classList.toggle('fa-play', !playing);
     icon.classList.toggle('fa-stop', playing);
     icon.classList.toggle('play-icon', !playing);
-    button.title = playing ? 'Stop audio' : 'Play audio';
+    button.title = playing ? t('lesson.stop_audio') : t('lesson.play_audio');
     button.setAttribute('aria-label', button.title);
 }
 
@@ -535,7 +535,7 @@ function finishRound() {
     SuccessPopup.show({
         total,
         correct,
-        continueLabel: 'View Results',
+        continueLabel: t('lesson.view_results'),
         onContinue: () => _showLessonCompleteScreen(),
         onRetry: missed > 0 ? () => retryMissed() : null,
         onHome: () => goHome(),
@@ -560,13 +560,13 @@ function _buildLessonCompleteScreen() {
         const list = document.getElementById('recap-list');
         list.innerHTML = '';
 
-        missedTasks.forEach(t => {
+        missedTasks.forEach(task => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td><strong>${t.type}</strong></td>
-                <td>${t.content || 'Audio'}</td>
-                <td style="color:var(--danger)">${t.user_answer}</td>
-                <td style="color:var(--success); font-weight:bold;">${t.correct_answer}</td>
+                <td><strong>${task.type}</strong></td>
+                <td>${task.content || t('lesson.audio_fallback')}</td>
+                <td style="color:var(--danger)">${task.user_answer}</td>
+                <td style="color:var(--success); font-weight:bold;">${task.correct_answer}</td>
             `;
             list.appendChild(tr);
         });

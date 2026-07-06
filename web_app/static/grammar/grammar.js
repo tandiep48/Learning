@@ -49,7 +49,7 @@ async function loadGrammar(passageId) {
     const learningLink = document.getElementById('grammar-learning-link');
     if (learningLink) {
         learningLink.href = `/learning?passage_id=${encodeURIComponent(passageId)}`;
-        learningLink.textContent = isLessonPartFlow ? 'Finish' : 'Learning';
+        learningLink.textContent = isLessonPartFlow ? t('grammar.finish') : t('nav.learning');
     }
     switchScreen('screen-loading');
 
@@ -64,13 +64,13 @@ async function loadGrammar(passageId) {
             renderGrammar(sortedGrammar, document.getElementById('grammar-body'));
         } else {
             document.getElementById('grammar-body').innerHTML =
-                '<div style="padding:20px;text-align:center;color:#666;">No grammar rules for this passage.</div>';
+                `<div style="padding:20px;text-align:center;color:#666;">${t('grammar.no_rules')}</div>`;
         }
 
         switchScreen('screen-grammar');
     } catch (e) {
         document.getElementById('grammar-body').innerHTML =
-            '<div style="color:red;padding:20px;">Error loading grammar.</div>';
+            `<div style="color:red;padding:20px;">${t('grammar.error_loading')}</div>`;
         switchScreen('screen-grammar');
     }
 }

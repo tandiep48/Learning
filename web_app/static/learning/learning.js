@@ -117,11 +117,11 @@ function continueRecentLesson() {
 }
 
 function formatPassageContext(passageId) {
-    if (passageId === 'H1_5_99') return 'HSK1 - Lesson 5 - Number';
+    if (passageId === 'H1_5_99') return `HSK1 - ${t('picker.lesson_prefix')} 5 - ${t('picker.number_part')}`;
     const parts = String(passageId || '').split('_');
     const hsk = normalizeHskLevel(parts[0]) || parts[0] || 'HSK';
-    const lesson = parts.length >= 2 ? `Lesson ${parts[1]}` : 'Lesson';
-    const part = parts.length >= 3 ? `Part ${parts[2]}` : passageId;
+    const lesson = parts.length >= 2 ? `${t('picker.lesson_prefix')} ${parts[1]}` : t('picker.lesson_prefix');
+    const part = parts.length >= 3 ? `${t('picker.part_prefix')} ${parts[2]}` : passageId;
     return `${hsk} - ${lesson} - ${part}`;
 }
 

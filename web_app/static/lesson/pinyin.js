@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const pinyin = element.innerText.trim();
         if (!pinyin) return;
         
-        const detail = pronunciationMap[pinyin] || ("Pronunciation for " + pinyin);
+        const detail = pronunciationMap[pinyin] || t('pinyin.pronunciation_for', { syllable: pinyin });
         tooltip.innerText = detail;
         tooltip.classList.add('visible');
         
