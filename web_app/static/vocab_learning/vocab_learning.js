@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     isLessonPartFlow = params.get('flow') === 'lesson-part';
     Picker.init((passage) => {
         startLesson(passage);
-    }, "Vocab Learning", !selectedFlashcards && !autoPassageId);
+    }, t('vocab_learning.picker_title'), !selectedFlashcards && !autoPassageId);
 
     if (selectedFlashcards) {
         startSelectedFlashcards(selectedFlashcards);
@@ -111,7 +111,7 @@ async function startLesson(passage) {
         const data = await res.json();
 
         if (!res.ok || data.error) {
-            alert(data.error || 'Failed to load words.');
+            alert(data.error || t('vocab_learning.failed_load_words'));
             backToLessons();
             return;
         }
@@ -128,7 +128,7 @@ async function startLesson(passage) {
         }
 
         if (words.length === 0) {
-            alert('No words found for this lesson.');
+            alert(t('vocab_learning.no_words_found'));
             backToLessons();
             return;
         }
@@ -144,7 +144,7 @@ async function startLesson(passage) {
 
     } catch (e) {
         console.error('Failed to load Word Summary:', e);
-        alert('Error connecting to server.');
+        alert(t('lesson.error_connecting'));
         backToLessons();
     }
 }
@@ -248,7 +248,7 @@ async function startSpeakingRecording() {
     if (!word || !word.word) return;
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
-        showSpeakingMessage('Your browser does not support audio recording.', true);
+        showSpeakingMessage(t('vocab_trainer.no_audio_support'), true);
         return;
     }
 
@@ -271,12 +271,12 @@ async function startSpeakingRecording() {
 
         speakingRecorder.start();
         setSpeakingButtonState('recording');
-        showSpeakingMessage('Recording... say the word clearly.');
+        showSpeakingMessage(t('vocab_trainer.recording_status'));
         speakingTimer = setTimeout(stopSpeakingRecording, SPEAKING_MAX_MS);
     } catch (e) {
         console.error(e);
         resetSpeakingPractice(false);
-        showSpeakingMessage('Microphone access was blocked. Please allow microphone permission and try again.', true);
+        showSpeakingMessage(t('reading.mic_blocked'), true);
     }
 }
 
@@ -297,7 +297,7 @@ function stopSpeakingRecording() {
     }
     if (speakingRecorder && speakingRecorder.state === 'recording') {
         setSpeakingButtonState('scoring');
-        showSpeakingMessage('Scoring your pronunciation...');
+        showSpeakingMessage(t('reading.scoring_pronunciation'));
         speakingRecorder.stop();
     }
     stopSpeakingStream();
@@ -316,7 +316,7 @@ async function submitSpeakingRecording(attemptId, targetWord, mimeType) {
 
     if (!speakingChunks.length) {
         setSpeakingButtonState('idle');
-        showSpeakingMessage('No audio was recorded. Please try again.', true);
+        showSpeakingMessage(t('vocab_trainer.no_audio_recorded'), true);
         return;
     }
 
@@ -338,7 +338,7 @@ async function submitSpeakingRecording(attemptId, targetWord, mimeType) {
         setSpeakingButtonState('idle');
 
         if (!response.ok || data.error) {
-            showSpeakingMessage(data.error || 'Could not score this recording. Please try again.', true);
+            showSpeakingMessage(data.error || t('reading.score_failed_sentence'), true);
             return;
         }
 
@@ -347,7 +347,7 @@ async function submitSpeakingRecording(attemptId, targetWord, mimeType) {
         console.error(e);
         if (attemptId !== speakingAttemptId) return;
         setSpeakingButtonState('idle');
-        showSpeakingMessage('Could not connect to the speaking scorer. Please try again.', true);
+        showSpeakingMessage(t('reading.scorer_connect_failed'), true);
     }
 }
 
@@ -384,11 +384,11 @@ function setSpeakingButtonState(state) {
     button.classList.toggle('recording', state === 'recording');
     button.disabled = state === 'scoring';
     if (state === 'recording') {
-        button.textContent = 'Stop';
+        button.textContent = t('vocab_trainer.stop');
     } else if (state === 'scoring') {
-        button.textContent = 'Scoring...';
+        button.textContent = t('vocab_trainer.scoring');
     } else {
-        button.textContent = 'Speak';
+        button.textContent = t('vocab_trainer.speak');
     }
 }
 
@@ -414,17 +414,17 @@ function renderSpeakingResult(data) {
     const result = document.getElementById('vl-speaking-result');
     if (panel) panel.style.display = 'block';
     if (status) {
-        status.textContent = data.message || (data.is_correct ? 'Nice pronunciation.' : 'Try again.');
+        status.textContent = data.message || (data.is_correct ? t('reading.nice_pronunciation') : t('reading.try_again'));
         status.style.color = data.is_correct ? 'var(--success)' : 'var(--danger)';
     }
     if (!result) return;
 
     result.className = `vl-speaking-result ${data.is_correct ? 'success' : 'retry'}`;
     result.innerHTML = `
-        <div class="speaking-row"><span class="speaking-label">Score</span><strong>${escapeHtml(data.score)} / 100</strong></div>
-        <div class="speaking-row"><span class="speaking-label">Heard</span><span>${escapeHtml(data.recognized_text || '-')}</span></div>
-        <div class="speaking-row"><span class="speaking-label">Expected pinyin</span><span>${escapeHtml(data.expected_pinyin || '-')}</span></div>
-        <div class="speaking-row"><span class="speaking-label">Heard pinyin</span><span>${escapeHtml(data.recognized_pinyin || '-')}</span></div>
+        <div class="speaking-row"><span class="speaking-label">${t('reading.score_label')}</span><strong>${escapeHtml(data.score)} / 100</strong></div>
+        <div class="speaking-row"><span class="speaking-label">${t('reading.heard_label')}</span><span>${escapeHtml(data.recognized_text || '-')}</span></div>
+        <div class="speaking-row"><span class="speaking-label">${t('reading.expected_pinyin_label')}</span><span>${escapeHtml(data.expected_pinyin || '-')}</span></div>
+        <div class="speaking-row"><span class="speaking-label">${t('reading.heard_pinyin_label')}</span><span>${escapeHtml(data.recognized_pinyin || '-')}</span></div>
     `;
     result.style.display = 'block';
 }
@@ -595,16 +595,16 @@ function renderVocabTable() {
                 <tr>
                     <th class="vocab-tools-col">
                         <button type="button" onclick="event.stopPropagation(); playAllVocabAudio()"
-                            id="vl-summary-play-all-btn" class="vocab-header-icon-btn" title="Play all vocabulary audio"
-                            aria-label="Play all vocabulary audio"><i class="fa-solid fa-play" aria-hidden="true"></i></button>
+                            id="vl-summary-play-all-btn" class="vocab-header-icon-btn" title="${t('reading.play_all_vocab_audio')}"
+                            aria-label="${t('reading.play_all_vocab_audio')}"><i class="fa-solid fa-play" aria-hidden="true"></i></button>
                         <button type="button" onclick="event.stopPropagation(); shuffleVocab()"
-                            class="vocab-header-icon-btn" title="Shuffle vocabulary"
-                            aria-label="Shuffle vocabulary"><i class="fa-solid fa-shuffle" aria-hidden="true"></i></button>
+                            class="vocab-header-icon-btn" title="${t('reading.shuffle_vocab_audio')}"
+                            aria-label="${t('reading.shuffle_vocab_audio')}"><i class="fa-solid fa-shuffle" aria-hidden="true"></i></button>
                     </th>
-                    <th class="vocab-no-col">No</th>
-                    <th>${renderSummaryColumnHeader('cn', 'CHARACTER', tableId)}</th>
-                    <th>${renderSummaryColumnHeader('py', 'PINYIN', tableId)}</th>
-                    <th>${renderSummaryColumnHeader('vn', 'MEANING (VN)', tableId)}</th>
+                    <th class="vocab-no-col">${t('vocab.no_column')}</th>
+                    <th>${renderSummaryColumnHeader('cn', t('dashboard.table_character').toUpperCase(), tableId)}</th>
+                    <th>${renderSummaryColumnHeader('py', t('dashboard.table_pinyin').toUpperCase(), tableId)}</th>
+                    <th>${renderSummaryColumnHeader('vn', t('dashboard.table_meaning_vn').toUpperCase(), tableId)}</th>
                 </tr>
             </thead>
             <tbody>
@@ -613,11 +613,11 @@ function renderVocabTable() {
     tableVocabList.forEach((v, index) => {
         const word = v.word || '';
         const audioBtn = v.audio_key
-            ? `<button type="button" class="vocab-audio-btn" onclick="playSingleVocabAudio('${escapeAttr(v.audio_key)}', ${escapeJsArg(word)}, this)" title="Play word audio" aria-label="Play audio for ${escapeAttr(v.word || 'word')}"><i class="fa-solid fa-play play-icon" aria-hidden="true"></i></button>`
-            : '<span class="vocab-no-audio" title="No audio available">-</span>';
+            ? `<button type="button" class="vocab-audio-btn" onclick="playSingleVocabAudio('${escapeAttr(v.audio_key)}', ${escapeJsArg(word)}, this)" title="${t('reading.play_word_audio')}" aria-label="${escapeAttr(t('reading.play_audio_for', { word: v.word || 'word' }))}"><i class="fa-solid fa-play play-icon" aria-hidden="true"></i></button>`
+            : `<span class="vocab-no-audio" title="${t('reading.no_audio_available')}">-</span>`;
         const hasChineseChars = /[\u4e00-\u9fff]/.test(v.word || '');
         const strokeBtn = hasChineseChars
-            ? `<button type="button" class="vocab-stroke-row-btn" onclick="openStrokeModalForWord('${escapeAttr(v.word)}', '${escapeAttr(v.pinyin || '')}')" title="Show stroke order" aria-label="Show stroke order for ${escapeAttr(v.word)}"><i class="fa-solid fa-pen-nib" aria-hidden="true"></i></button>`
+            ? `<button type="button" class="vocab-stroke-row-btn" onclick="openStrokeModalForWord('${escapeAttr(v.word)}', '${escapeAttr(v.pinyin || '')}')" title="${t('vocab_learning.show_stroke_order_aria')}" aria-label="${t('vocab_learning.show_stroke_order_aria')}"><i class="fa-solid fa-pen-nib" aria-hidden="true"></i></button>`
             : '';
         html += `
             <tr id="vl-tr-${index}" data-audio="${escapeAttr(v.audio_key || '')}">
@@ -656,7 +656,7 @@ function renderSummaryColumnHeader(colType, label, tableId) {
     const isHidden = summaryHiddenColumns.has(colType);
     return `
         <span class="vocab-column-header-label">${escapeHtml(label)}</span>
-        <button type="button" class="vocab-column-toggle" data-summary-col="${colType}" onclick="event.stopPropagation(); toggleVocabColumn('${colType}', '${tableId}')" title="${isHidden ? 'Show' : 'Hide'} ${escapeAttr(label)}" aria-label="${isHidden ? 'Show' : 'Hide'} ${escapeAttr(label)}">
+        <button type="button" class="vocab-column-toggle" data-summary-col="${colType}" onclick="event.stopPropagation(); toggleVocabColumn('${colType}', '${tableId}')" title="${isHidden ? t('vocab.show') : t('vocab.hide')} ${escapeAttr(label)}" aria-label="${isHidden ? t('vocab.show') : t('vocab.hide')} ${escapeAttr(label)}">
             <i class="fa-solid ${isHidden ? 'fa-eye' : 'fa-eye-slash'}" aria-hidden="true"></i>
         </button>
     `;
@@ -699,7 +699,7 @@ function updateSummaryColumnToggleIcon(colType) {
     const isHidden = summaryHiddenColumns.has(colType);
     icon?.classList.toggle('fa-eye', isHidden);
     icon?.classList.toggle('fa-eye-slash', !isHidden);
-    button.title = `${isHidden ? 'Show' : 'Hide'} column`;
+    button.title = `${isHidden ? t('vocab.show') : t('vocab.hide')} ${t('vocab.column_label')}`;
     button.setAttribute('aria-label', button.title);
 }
 
