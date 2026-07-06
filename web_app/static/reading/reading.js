@@ -31,7 +31,7 @@ window.onload = async () => {
 
     Picker.init((passage) => {
         loadPassage(passage.passage_id);
-    }, isLessonLearnerMode ? "Lesson Learning" : "Reading Lesson", !autoPassage);
+    }, isLessonLearnerMode ? t('reading.lesson_learning_title') : t('reading.reading_lesson_title'), !autoPassage);
 
     const lessonTypingInput = document.getElementById('lesson-card-typing-input');
     if (lessonTypingInput) {
@@ -86,7 +86,7 @@ async function loadPassage(passage_id) {
     try {
         const res = await fetch(`/api/lesson/passage/${passage_id}`);
         const data = await res.json();
-        if (!res.ok) { alert(data.error || "Failed to load passage."); goHome(); return; }
+        if (!res.ok) { alert(data.error || t('reading.failed_load_passage')); goHome(); return; }
         currentPassage = data.passage;
         if (isLessonLearnerMode) {
             renderLessonSummary();
@@ -96,7 +96,7 @@ async function loadPassage(passage_id) {
             switchScreen('screen-reading');
         }
     } catch (e) {
-        alert("Error connecting to server.");
+        alert(t('lesson.error_connecting'));
         goHome();
     }
 }
@@ -115,7 +115,7 @@ function renderPassage() {
         if (line.audio_key) {
             const hskLevel = currentPassage.hsk_level || 'H1';
             const src = `/lesson_audio/${hskLevel}/${line.audio_key}.mp3`;
-            audioHTML = `<button class="audio-btn" onclick="playAudio('${src}')" title="Play Audio" aria-label="Play Audio"><i class="fa-solid fa-volume-high" aria-hidden="true"></i></button>`;
+            audioHTML = `<button class="audio-btn" onclick="playAudio('${src}')" title="${t('reading.play_audio')}" aria-label="${t('reading.play_audio')}"><i class="fa-solid fa-volume-high" aria-hidden="true"></i></button>`;
         }
 
         const pinyinClass = pinyinVisible ? 'pinyin-text show' : 'pinyin-text';
@@ -161,7 +161,7 @@ function toggleMeaning() {
 function updatePinyinBtnText() {
     const btn = document.getElementById('toggle-pinyin-btn');
     if (btn) {
-        btn.innerText = pinyinVisible ? "Hide Pinyin" : "Show Pinyin";
+        btn.innerText = pinyinVisible ? t('reading.hide_pinyin') : t('reading.show_pinyin');
         btn.classList.toggle('primary', pinyinVisible);
     }
 }
@@ -169,7 +169,7 @@ function updatePinyinBtnText() {
 function updateMeaningBtnText() {
     const btn = document.getElementById('toggle-meaning-btn');
     if (btn) {
-        btn.innerText = meaningVisible ? "Hide Meaning" : "Show Meaning";
+        btn.innerText = meaningVisible ? t('reading.hide_meaning') : t('reading.show_meaning');
         btn.classList.toggle('primary', meaningVisible);
     }
 }
@@ -197,7 +197,7 @@ async function openVocabPanel() {
     if (vocabLoaded) return;
 
     const body = document.getElementById('vocab-panel-body');
-    body.innerHTML = '<div class="vocab-loading">Loading vocabulary…</div>';
+    body.innerHTML = `<div class="vocab-loading">${t('dashboard.loading_vocabulary')}</div>`;
 
     try {
         const res = await fetch(`/api/lesson/vocab/${currentPassage.passage_id}`);
@@ -206,7 +206,7 @@ async function openVocabPanel() {
         currentVocabList = data.vocab || [];
         renderVocabTable(currentVocabList);
     } catch (e) {
-        body.innerHTML = '<div class="vocab-empty">Failed to load vocabulary.</div>';
+        body.innerHTML = `<div class="vocab-empty">${t('reading.failed_load_vocabulary')}</div>`;
     }
 }
 
@@ -222,7 +222,7 @@ function renderVocabTable(vocab) {
     const body = document.getElementById('vocab-panel-body');
 
     if (!vocab.length) {
-        body.innerHTML = '<div class="vocab-empty">No vocabulary linked to this passage.</div>';
+        body.innerHTML = `<div class="vocab-empty">${t('reading.no_vocab_linked')}</div>`;
         return;
     }
 
@@ -233,17 +233,17 @@ function renderVocabTable(vocab) {
             <tr>
                 <th class="vocab-tools-col">
                     <button type="button" class="vocab-header-icon-btn" onclick="playAllVocabAudio()"
-                        title="Play all vocabulary audio" aria-label="Play all vocabulary audio">
+                        title="${t('reading.play_all_vocab_audio')}" aria-label="${t('reading.play_all_vocab_audio')}">
                         <i class="fa-solid fa-play" aria-hidden="true"></i>
                     </button>
                     <button type="button" class="vocab-header-icon-btn" onclick="shuffleVocab()"
-                        title="Shuffle vocabulary" aria-label="Shuffle vocabulary">
+                        title="${t('reading.shuffle_vocab_audio')}" aria-label="${t('reading.shuffle_vocab_audio')}">
                         <i class="fa-solid fa-shuffle" aria-hidden="true"></i>
                     </button>
                 </th>
-                <th onclick="toggleVocabColumn('cn')">CHARACTER</th>
-                <th onclick="toggleVocabColumn('py')">PINYIN</th>
-                <th onclick="toggleVocabColumn('vn')">MEANING (VN)</th>
+                <th onclick="toggleVocabColumn('cn')">${t('dashboard.table_character').toUpperCase()}</th>
+                <th onclick="toggleVocabColumn('py')">${t('dashboard.table_pinyin').toUpperCase()}</th>
+                <th onclick="toggleVocabColumn('vn')">${t('dashboard.table_meaning_vn').toUpperCase()}</th>
             </tr>
         </thead>
         <tbody id="vocab-tbody"></tbody>`;
@@ -254,7 +254,7 @@ function renderVocabTable(vocab) {
         const tr = document.createElement('tr');
         tr.id = `reading-vocab-tr-${index}`;
         const audioCell = w.audio_key
-            ? `<button type="button" class="vocab-audio-btn" onclick="playVocabAudio('${escapeAttr(w.audio_key)}')" title="Play word audio" aria-label="Play audio for ${escapeAttr(w.word || w.cn || 'word')}"><i class="fa-solid fa-volume-high" aria-hidden="true"></i></button>`
+            ? `<button type="button" class="vocab-audio-btn" onclick="playVocabAudio('${escapeAttr(w.audio_key)}')" title="${t('reading.play_word_audio')}" aria-label="${escapeAttr(t('reading.play_audio_for', { word: w.word || w.cn || 'word' }))}"><i class="fa-solid fa-volume-high" aria-hidden="true"></i></button>`
             : '<span class="vocab-no-audio">-</span>';
         tr.innerHTML = `
             <td class="vocab-tools-cell">${audioCell}</td>
@@ -359,14 +359,14 @@ async function openReadingFlashcards() {
         })).filter(w => w.word);
 
         if (!selectedRows.length) {
-            alert('No vocabulary linked to this passage.');
+            alert(t('reading.no_vocab_linked'));
             return;
         }
 
         sessionStorage.setItem('selectedVocabFlashcards', JSON.stringify(selectedRows));
         window.location.href = '/vocab-learning?source=reading';
     } catch (e) {
-        alert('Failed to open flash cards.');
+        alert(t('reading.failed_open_flashcards'));
     }
 }
 
@@ -395,8 +395,8 @@ function renderLessonSummary() {
         const learnLabel = learnButton?.querySelector('span');
         const trainLabel = actionFooter.querySelector('.vl-train-btn:not(.vl-learn-btn) span');
         if (learnButton) learnButton.style.display = '';
-        if (learnLabel) learnLabel.textContent = 'Learn This Lesson';
-        if (trainLabel) trainLabel.textContent = 'Train This Lesson';
+        if (learnLabel) learnLabel.textContent = t('reading.learn_this_lesson');
+        if (trainLabel) trainLabel.textContent = t('reading.train_this_lesson');
     }
     const preview = document.getElementById('lesson-learner-preview');
     
@@ -406,16 +406,17 @@ function renderLessonSummary() {
 
     const lines = getLessonLines();
     if (!lines.length) {
-        preview.innerHTML = '<div class="lesson-learner-empty">No passage lines found for this lesson part.</div>';
+        preview.innerHTML = `<div class="lesson-learner-empty">${t('reading.no_lines_found')}</div>`;
         return;
     }
 
     prefetchTokens(lines);
     preview.innerHTML = lines.map((line, index) => {
         const audioSrc = getLessonAudioSrc(line);
+        const lineLabel = escapeAttr(t('reading.play_passage_line', { n: index + 1 }));
         const audioBtn = audioSrc
-            ? `<button type="button" class="lesson-passage-audio-btn" onclick="playPassageLineAudio(${index})" title="Play passage line ${index + 1}" aria-label="Play passage line ${index + 1}"><i class="fa-solid fa-volume-high" aria-hidden="true"></i></button>`
-            : `<span class="lesson-passage-audio-btn lesson-passage-audio-empty" title="No audio available"></span>`;
+            ? `<button type="button" class="lesson-passage-audio-btn" onclick="playPassageLineAudio(${index})" title="${lineLabel}" aria-label="${lineLabel}"><i class="fa-solid fa-volume-high" aria-hidden="true"></i></button>`
+            : `<span class="lesson-passage-audio-btn lesson-passage-audio-empty" title="${t('reading.no_audio_available')}"></span>`;
         return `
         <div class="lesson-preview-line" id="lesson-preview-line-${index}">
             ${audioBtn}
@@ -480,7 +481,7 @@ function renderNumberLessonSummary() {
         const learnButton = actionFooter.querySelector('.vl-learn-btn');
         const trainLabel = actionFooter.querySelector('.vl-train-btn:not(.vl-learn-btn) span');
         if (learnButton) learnButton.remove();
-        if (trainLabel) trainLabel.textContent = 'Train These Numbers';
+        if (trainLabel) trainLabel.textContent = t('reading.train_these_numbers');
     }
     if (!preview) return;
 
@@ -660,11 +661,11 @@ function updateLessonSummaryToggleText() {
     const pinyinBtn = document.getElementById('lesson-toggle-pinyin-btn');
     const meaningBtn = document.getElementById('lesson-toggle-meaning-btn');
     if (pinyinBtn) {
-        pinyinBtn.textContent = lessonSummaryPinyinVisible ? 'Hide Pinyin' : 'Show Pinyin';
+        pinyinBtn.textContent = lessonSummaryPinyinVisible ? t('reading.hide_pinyin') : t('reading.show_pinyin');
         pinyinBtn.classList.toggle('primary', lessonSummaryPinyinVisible);
     }
     if (meaningBtn) {
-        meaningBtn.textContent = lessonSummaryMeaningVisible ? 'Hide Meaning' : 'Show Meaning';
+        meaningBtn.textContent = lessonSummaryMeaningVisible ? t('reading.hide_meaning') : t('reading.show_meaning');
         meaningBtn.classList.toggle('primary', lessonSummaryMeaningVisible);
     }
 }
@@ -714,7 +715,7 @@ function renderLessonCard() {
 
     document.getElementById('lesson-card-prev').disabled = currentLessonLineIndex === 0;
     const nextBtn = document.getElementById('lesson-card-next');
-    nextBtn.textContent = currentLessonLineIndex === lines.length - 1 ? 'Finish' : 'Next';
+    nextBtn.textContent = currentLessonLineIndex === lines.length - 1 ? t('grammar.finish') : t('reading.next');
     applyLessonLearnerHanText(document.getElementById('screen-lesson-card'));
 }
 
@@ -752,7 +753,7 @@ async function toggleLessonSpeakingPractice() {
     const line = getCurrentLessonLine();
     if (!line?.content) return;
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
-        showLessonSpeakingMessage('Your browser does not support audio recording.', true);
+        showLessonSpeakingMessage(t('vocab_trainer.no_audio_support'), true);
         return;
     }
 
@@ -776,12 +777,12 @@ async function toggleLessonSpeakingPractice() {
         );
         lessonSpeakingRecorder.start();
         setLessonSpeakingButtonState('recording');
-        showLessonSpeakingMessage('Recording... say the sentence clearly.');
+        showLessonSpeakingMessage(t('reading.recording_sentence_status'));
         lessonSpeakingTimer = setTimeout(stopLessonSpeakingRecording, LESSON_SPEAKING_MAX_MS);
     } catch (error) {
         console.error(error);
         resetLessonSpeakingPractice(false);
-        showLessonSpeakingMessage('Microphone access was blocked. Allow microphone permission and try again.', true);
+        showLessonSpeakingMessage(t('reading.mic_blocked'), true);
     }
 }
 
@@ -801,7 +802,7 @@ function stopLessonSpeakingRecording() {
     }
     if (lessonSpeakingRecorder?.state === 'recording') {
         setLessonSpeakingButtonState('scoring');
-        showLessonSpeakingMessage('Scoring your pronunciation...');
+        showLessonSpeakingMessage(t('reading.scoring_pronunciation'));
         lessonSpeakingRecorder.stop();
     }
     stopLessonSpeakingStream();
@@ -818,7 +819,7 @@ async function submitLessonSpeakingRecording(attemptId, targetSentence, mimeType
     if (attemptId !== lessonSpeakingAttemptId) return;
     if (!lessonSpeakingChunks.length) {
         setLessonSpeakingButtonState('idle');
-        showLessonSpeakingMessage('No audio was recorded. Please try again.', true);
+        showLessonSpeakingMessage(t('vocab_trainer.no_audio_recorded'), true);
         return;
     }
 
@@ -834,7 +835,7 @@ async function submitLessonSpeakingRecording(attemptId, targetSentence, mimeType
         if (attemptId !== lessonSpeakingAttemptId) return;
         setLessonSpeakingButtonState('idle');
         if (!response.ok || data.error) {
-            showLessonSpeakingMessage(data.error || 'Could not score this recording. Please try again.', true);
+            showLessonSpeakingMessage(data.error || t('reading.score_failed_sentence'), true);
             return;
         }
         renderLessonSpeakingResult(data);
@@ -842,7 +843,7 @@ async function submitLessonSpeakingRecording(attemptId, targetSentence, mimeType
         console.error(error);
         if (attemptId !== lessonSpeakingAttemptId) return;
         setLessonSpeakingButtonState('idle');
-        showLessonSpeakingMessage('Could not connect to the speaking scorer. Please try again.', true);
+        showLessonSpeakingMessage(t('reading.scorer_connect_failed'), true);
     }
 }
 
@@ -877,7 +878,7 @@ function setLessonSpeakingButtonState(state) {
     button.classList.toggle('recording', state === 'recording');
     button.disabled = state === 'scoring';
     const label = button.querySelector('span');
-    if (label) label.textContent = state === 'recording' ? 'Stop' : state === 'scoring' ? 'Scoring...' : 'Speak';
+    if (label) label.textContent = state === 'recording' ? t('vocab_trainer.stop') : state === 'scoring' ? t('vocab_trainer.scoring') : t('vocab_trainer.speak');
 }
 
 function showLessonSpeakingMessage(message, isError = false) {
@@ -901,16 +902,16 @@ function renderLessonSpeakingResult(data) {
     const result = document.getElementById('lesson-speaking-result');
     if (panel) panel.style.display = 'block';
     if (status) {
-        status.textContent = data.message || (data.is_correct ? 'Nice pronunciation.' : 'Try again.');
+        status.textContent = data.message || (data.is_correct ? t('reading.nice_pronunciation') : t('reading.try_again'));
         status.style.color = data.is_correct ? 'var(--success)' : 'var(--danger)';
     }
     if (!result) return;
     result.className = `vl-speaking-result ${data.is_correct ? 'success' : 'retry'}`;
     result.innerHTML = `
-        <div class="speaking-row"><span class="speaking-label">Score</span><strong>${escapeHtml(data.score)} / 100</strong></div>
-        <div class="speaking-row"><span class="speaking-label">Heard</span><span>${escapeHtml(data.recognized_text || '-')}</span></div>
-        <div class="speaking-row"><span class="speaking-label">Expected pinyin</span><span>${escapeHtml(data.expected_pinyin || '-')}</span></div>
-        <div class="speaking-row"><span class="speaking-label">Heard pinyin</span><span>${escapeHtml(data.recognized_pinyin || '-')}</span></div>
+        <div class="speaking-row"><span class="speaking-label">${t('reading.score_label')}</span><strong>${escapeHtml(data.score)} / 100</strong></div>
+        <div class="speaking-row"><span class="speaking-label">${t('reading.heard_label')}</span><span>${escapeHtml(data.recognized_text || '-')}</span></div>
+        <div class="speaking-row"><span class="speaking-label">${t('reading.expected_pinyin_label')}</span><span>${escapeHtml(data.expected_pinyin || '-')}</span></div>
+        <div class="speaking-row"><span class="speaking-label">${t('reading.heard_pinyin_label')}</span><span>${escapeHtml(data.recognized_pinyin || '-')}</span></div>
     `;
     result.style.display = 'block';
 }

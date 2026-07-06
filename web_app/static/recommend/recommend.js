@@ -17,7 +17,7 @@ async function fetchRecommendations() {
         const data = await res.json();
 
         if (!res.ok) {
-            showError(container, data.error || 'Failed to load recommendations.');
+            showError(container, data.error || t('recommend.failed_load'));
             return;
         }
 
@@ -37,7 +37,7 @@ async function fetchRecommendations() {
         renderRecommendations();
 
     } catch (e) {
-        showError(container, 'Could not connect to the server.');
+        showError(container, t('recommend.connect_failed'));
     }
 }
 
@@ -75,7 +75,7 @@ function renderRecommendations() {
 
     const countEl = document.createElement('p');
     countEl.className = 'results-count';
-    countEl.innerHTML = `Found <strong>${filtered.length}</strong> question group${filtered.length > 1 ? 's' : ''} ready to practice.`;
+    countEl.innerHTML = t('recommend.groups_found', { count: `<strong>${filtered.length}</strong>` });
     container.appendChild(countEl);
 
     const grid = document.createElement('div');
@@ -156,7 +156,7 @@ function updateMultiSelectUI() {
     if (selectedMultiItems.length > 0) {
         bar.classList.remove('hidden');
         document.body.classList.add('has-multi-select');
-        countEl.textContent = `${selectedMultiItems.length} item${selectedMultiItems.length > 1 ? 's' : ''} selected`;
+        countEl.textContent = t('recommend.items_selected', { count: selectedMultiItems.length });
     } else {
         bar.classList.add('hidden');
         document.body.classList.remove('has-multi-select');
@@ -202,9 +202,9 @@ function progressLabel(progress) {
     const text = String(progress);
     if (text.includes('-')) {
         const [a, b] = text.split('-');
-        return `Questions ${a}–${b}`;
+        return t('recommend.questions_range', { a, b });
     }
-    return `Question ${text}`;
+    return t('recommend.question_single', { n: text });
 }
 
 function buildCard(rec) {
@@ -216,15 +216,15 @@ function buildCard(rec) {
     const skillIcon     = rec.skill === 'listening'
         ? '<i class="fa-solid fa-headphones-simple" aria-hidden="true"></i>'
         : '<i class="fa-solid fa-book-open" aria-hidden="true"></i>';
-    const skillLabel    = rec.skill ? rec.skill.charAt(0).toUpperCase() + rec.skill.slice(1) : '';
+    const skillLabel    = rec.skill === 'listening' ? t('recommend.listening') : rec.skill === 'reading' ? t('recommend.reading') : '';
     const qCount        = rec.questions ? rec.questions.length : 0;
     const categoryLabel = rec.category === 'exam'
-        ? '<i class="fa-solid fa-file-lines" aria-hidden="true"></i><span>Exam</span>'
-        : '<i class="fa-solid fa-list-check" aria-hidden="true"></i><span>Practice</span>';
+        ? `<i class="fa-solid fa-file-lines" aria-hidden="true"></i><span>${t('dashboard.exam')}</span>`
+        : `<i class="fa-solid fa-list-check" aria-hidden="true"></i><span>${t('dashboard.exercise')}</span>`;
     const categoryClass = rec.category === 'exam' ? 'badge-exam' : 'badge-practice';
     const recentWords   = Array.isArray(rec.recent_matched_words) ? rec.recent_matched_words.slice(0, 6) : [];
     const focusHtml     = recentWords.length
-        ? `<div class="rec-new-focus">New focus: ${recentWords.map(escapeHtml).join(', ')}</div>`
+        ? `<div class="rec-new-focus">${t('recommend.new_focus', { words: recentWords.map(escapeHtml).join(', ') })}</div>`
         : '';
 
     const isSelected = selectedMultiItems.some(i =>
@@ -233,19 +233,26 @@ function buildCard(rec) {
     );
     card.classList.toggle('selected', isSelected);
 
+    const statusLabels = {
+        'Not start': t('recommend.status_not_start'),
+        'Finish and success': t('recommend.status_finish_success'),
+        'Finish and fail': t('recommend.status_finish_fail'),
+    };
+    const statusText = statusLabels[rec.status] || statusLabels['Not start'];
+
     card.innerHTML = `
         <div class="rec-card-header">
-            <input type="checkbox" class="rec-card-checkbox" ${isSelected ? 'checked' : ''} aria-label="Select Lesson ${rec.lesson}">
+            <input type="checkbox" class="rec-card-checkbox" ${isSelected ? 'checked' : ''} aria-label="${t('recommend.select_lesson_aria', { n: rec.lesson })}">
             <span class="hsk-badge hsk-${rec.level}">HSK ${rec.level}</span>
-            <span class="rec-card-title">Lesson ${rec.lesson}</span>
+            <span class="rec-card-title">${t('picker.lesson_prefix')} ${rec.lesson}</span>
         </div>
         <div class="rec-card-meta" style="display: flex; align-items: center; gap: 10px; margin-top: -6px;">
             <span class="rec-card-skill">${skillIcon} ${skillLabel}</span>
             <span class="category-badge ${categoryClass}" style="margin-left: 0;">${categoryLabel}</span>
-            <span class="status-badge" style="font-size: 0.8em; margin-left: auto; color: var(--text-muted);">${rec.status || 'Not start'}</span>
+            <span class="status-badge" style="font-size: 0.8em; margin-left: auto; color: var(--text-muted);">${statusText}</span>
         </div>
 
-        <div class="rec-progress-label">${progressLabel(rec.progress)} &nbsp;·&nbsp; ${qCount} question${qCount !== 1 ? 's' : ''}</div>
+        <div class="rec-progress-label">${progressLabel(rec.progress)} &nbsp;·&nbsp; ${t('recommend.question_count', { count: qCount })}</div>
         ${focusHtml}
     `;
 
