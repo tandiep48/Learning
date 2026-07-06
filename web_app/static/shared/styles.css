@@ -605,6 +605,40 @@ body.with-site-nav > .vl-container {
     color: #111111;
 }
 
+.ui-language-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #ffffff;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.ui-language-control select {
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.14);
+    color: #ffffff;
+    font: inherit;
+    padding: 7px 9px;
+    cursor: pointer;
+}
+
+.ui-language-control option {
+    color: #111111;
+}
+
+.ui-language-control a {
+    color: rgba(255, 255, 255, 0.65);
+    text-decoration: none;
+    font-size: 0.78rem;
+}
+
+.ui-language-control a.active {
+    color: #ffffff;
+    text-decoration: underline;
+}
+
 .site-avatar,
 .site-avatar-fallback {
     width: 28px;
