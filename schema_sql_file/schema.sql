@@ -369,5 +369,8 @@ ADD COLUMN IF NOT EXISTS category VARCHAR(20) DEFAULT 'practice';
 
 ALTER TABLE grammar_context ALTER COLUMN content_json TYPE json;
 
-ALTER TABLE users
-ADD COLUMN IF NOT EXISTS hanzi_script TEXT DEFAULT 'simplified';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS hanzi_font TEXT DEFAULT 'Noto Sans';
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS hanzi_script TEXT DEFAULT 'simplified';
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS ui_language TEXT DEFAULT 'en';
