@@ -97,9 +97,9 @@ const Picker = {
 
     async showLessonPicker(hskLevel) {
         this.currentHskLevel = hskLevel;
-        document.getElementById('picker-lesson-title').innerText = `Select Lesson`;
+        document.getElementById('picker-lesson-title').innerText = t('picker.select_lesson');
         document.getElementById('picker-lesson-sub').innerText = hskLevel;
-        document.getElementById('picker-lesson-list').innerHTML = '<div class="loader" style="margin: 20px auto;"></div><p style="text-align:center;color:var(--text-muted);">Loading lessons...</p>';
+        document.getElementById('picker-lesson-list').innerHTML = `<div class="loader" style="margin: 20px auto;"></div><p style="text-align:center;color:var(--text-muted);">${t('picker.loading_lessons')}</p>`;
 
         const levelScreen = document.getElementById('picker-screen-level');
         if (levelScreen && levelScreen.dataset.hskImages) {
@@ -152,7 +152,7 @@ const Picker = {
 
         } catch (e) {
             console.error(e);
-            document.getElementById('picker-lesson-list').innerHTML = `<p style="color:var(--danger); text-align:center;">Failed to load lessons.</p>`;
+            document.getElementById('picker-lesson-list').innerHTML = `<p style="color:var(--danger); text-align:center;">${t('picker.failed_load_lessons')}</p>`;
         }
     },
 
@@ -179,36 +179,36 @@ const Picker = {
         });
 
         if (lessons.length === 0) {
-            container.innerHTML = '<p style="color:var(--text-muted); text-align:center;">No lessons found for this level.</p>';
+            container.innerHTML = `<p style="color:var(--text-muted); text-align:center;">${t('picker.no_lessons_found')}</p>`;
             return;
         }
 
-        document.getElementById('picker-lesson-sub').innerText = `${lessons.length} lesson${lessons.length !== 1 ? 's' : ''} available`;
+        document.getElementById('picker-lesson-sub').innerText = t('picker.lessons_available', { count: lessons.length });
 
         lessons.forEach(lessonNum => {
             const card = document.createElement('div');
             card.className = 'lesson-card';
 
             const count = this.groupedPassages[lessonNum].length;
-            const prefix = lessonNum === 'Other' ? '' : 'Lesson ';
+            const prefix = lessonNum === 'Other' ? '' : `${t('picker.lesson_prefix')} `;
             const progress = this.progressSummary?.lessons?.[lessonNum];
 
             const isPinyinLesson = this.currentHskLevel === 'HSK1' && lessonNum === '1';
-            const countLabel = isPinyinLesson ? 'Pinyin Guide' : `${count} part${count !== 1 ? 's' : ''}`;
+            const countLabel = isPinyinLesson ? t('picker.pinyin_guide') : t('picker.parts_count', { count });
 
             const hskKey = (this.currentHskLevel || '').replace('HSK', 'H');
             const imgPath = `/lesson-image/${hskKey}/${hskKey.toLowerCase()}-lesson-${lessonNum}.png`;
 
             const progressHtml = progress
                 ? `<div class="picker-progress-lines">
-                    ${this._progressBar(progress.learned_words, progress.total_words, 'Words')}
-                    ${this._progressBar(progress.lesson_learned, progress.lesson_total, 'Lesson', true)}
+                    ${this._progressBar(progress.learned_words, progress.total_words, t('picker.words_label'))}
+                    ${this._progressBar(progress.lesson_learned, progress.lesson_total, t('picker.lesson_progress_label'), true)}
                    </div>`
                 : '';
 
             card.innerHTML = `
                 <div class="lesson-card-img-wrap">
-                    <img class="lesson-card-img" src="${imgPath}" alt="Lesson ${lessonNum}" loading="lazy"
+                    <img class="lesson-card-img" src="${imgPath}" alt="${this.escapeHtml(prefix + lessonNum)}" loading="lazy"
                          onerror="this.parentElement.style.display='none'">
                 </div>
                 <div class="lesson-card-body">
@@ -230,8 +230,8 @@ const Picker = {
     },
 
     showPartPicker(lessonNum) {
-        const prefix = lessonNum === 'Other' ? 'Other Passages' : `Lesson ${lessonNum}`;
-        document.getElementById('picker-part-title').innerText = `Select Part`;
+        const prefix = lessonNum === 'Other' ? t('picker.other_passages') : `${t('picker.lesson_prefix')} ${lessonNum}`;
+        document.getElementById('picker-part-title').innerText = t('picker.select_part');
         
         const subtitleEl = document.querySelector('#part-picker-header .subtitle');
         if (subtitleEl) subtitleEl.innerText = `${this.currentHskLevel} — ${prefix}`;
@@ -260,8 +260,8 @@ const Picker = {
             // e.g. H1_10_3 => Part 3
             const pParts = p.passage_id.split('_');
             const partName = isNumberPart(p.passage_id)
-                ? 'Number'
-                : (pParts.length >= 3 ? `Part ${pParts[2]}` : p.passage_id);
+                ? t('picker.number_part')
+                : (pParts.length >= 3 ? `${t('picker.part_prefix')} ${pParts[2]}` : p.passage_id);
 
             const btn = document.createElement('div');
             btn.className = 'part-list-item';
@@ -269,8 +269,8 @@ const Picker = {
             const progress = this.progressSummary?.parts?.[p.passage_id];
             const progressHtml = progress
                 ? `<div class="picker-progress-lines picker-progress-lines-centered">
-                    ${this._progressBar(progress.learned_words, progress.total_words, 'Words')}
-                    ${this._progressBar(progress.lesson_learned, progress.lesson_total, 'Lesson', true)}
+                    ${this._progressBar(progress.learned_words, progress.total_words, t('picker.words_label'))}
+                    ${this._progressBar(progress.lesson_learned, progress.lesson_total, t('picker.lesson_progress_label'), true)}
                    </div>`
                 : '';
 
@@ -310,12 +310,12 @@ const Picker = {
         actionCard.innerHTML = `
             <div class="picker-lesson-action-header">
                 <div class="picker-lesson-progress">
-                    ${progress ? this._progressBar(progress.learned_words, progress.total_words, 'Words') : this._emptyProgressBar('Words')}
-                    ${progress ? this._progressBar(progress.lesson_learned, progress.lesson_total, 'Lesson', true) : this._emptyProgressBar('Lesson', true)}
+                    ${progress ? this._progressBar(progress.learned_words, progress.total_words, t('picker.words_label')) : this._emptyProgressBar(t('picker.words_label'))}
+                    ${progress ? this._progressBar(progress.lesson_learned, progress.lesson_total, t('picker.lesson_progress_label'), true) : this._emptyProgressBar(t('picker.lesson_progress_label'), true)}
                 </div>
                 <div class="picker-lesson-action-buttons">
-                    <button type="button" class="picker-action-btn" data-action="vocab" ${canStartVocab ? '' : 'disabled'}>Vocab Trainer</button>
-                    <button type="button" class="picker-action-btn" data-action="lesson" ${canStartLesson ? '' : 'disabled'}>Lesson Trainer</button>
+                    <button type="button" class="picker-action-btn" data-action="vocab" ${canStartVocab ? '' : 'disabled'}>${t('picker.vocab_trainer_btn')}</button>
+                    <button type="button" class="picker-action-btn" data-action="lesson" ${canStartLesson ? '' : 'disabled'}>${t('picker.lesson_trainer_btn')}</button>
                 </div>
             </div>
         `;

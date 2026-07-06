@@ -103,10 +103,10 @@ async function loadSidebarParts(passageId) {
         // Hardcode exception for H1_1
         if (hskLevel === 'HSK1' && lessonNum === '1') {
             lessonPassages = lessonPassages.filter(p => !p.passage_id.startsWith('H1_1_'));
-            lessonPassages.push({ passage_id: 'H1_1_1', title: 'Pinyin' });
+            lessonPassages.push({ passage_id: 'H1_1_1', title: t('sidebar.pinyin_title') });
         }
         if (hskLevel === 'HSK1' && lessonNum === '5' && !lessonPassages.some(p => p.passage_id === NUMBER_PART_ID)) {
-            lessonPassages.push({ passage_id: NUMBER_PART_ID, title: 'Number' });
+            lessonPassages.push({ passage_id: NUMBER_PART_ID, title: t('picker.number_part') });
         }
 
         // Sort passages by part number
@@ -119,7 +119,7 @@ async function loadSidebarParts(passageId) {
         });
 
         if (lessonPassages.length === 0) {
-            partsContainer.innerHTML = '<div class="sidebar-loader">No parts found.</div>';
+            partsContainer.innerHTML = `<div class="sidebar-loader">${t('sidebar.no_parts_found')}</div>`;
             return;
         }
 
@@ -127,12 +127,12 @@ async function loadSidebarParts(passageId) {
             const pParts  = p.passage_id.split('_');
             const partNum = pParts.length > 2 ? pParts[2] : '1';
             const isActive = p.passage_id === passageId;
-            const title    = p.title || (isNumberPart(p.passage_id) ? 'Number' : `Part ${partNum}`);
+            const title    = p.title || (isNumberPart(p.passage_id) ? t('picker.number_part') : `${t('picker.part_prefix')} ${partNum}`);
             return `<button class="sidebar-part-btn ${isActive ? 'active' : ''}" onclick="navigateToPart('${p.passage_id}')">${title}</button>`;
         }).join('');
 
     } catch (e) {
         console.error('Sidebar parts load failed', e);
-        partsContainer.innerHTML = '<div class="sidebar-loader">Failed to load parts.</div>';
+        partsContainer.innerHTML = `<div class="sidebar-loader">${t('sidebar.failed_load_parts')}</div>`;
     }
 }
