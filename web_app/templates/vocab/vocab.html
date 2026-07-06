@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ current_lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vocabulary Selection</title>
+    <title>{{ t('vocab.page_title') }}</title>
     <link rel="stylesheet" href="/static/shared/styles.css?v=7">
     <link rel="stylesheet" href="/static/shared/vocab_table.css?v=9">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -15,25 +15,25 @@
     <div class="app-container">
         <div id="screen-menu" class="screen active">
             <div class="vocab-top-link">
-                <a href="/">&larr; Back to Dashboard</a>
+                <a href="/">&larr; {{ t('picker.back_to_dashboard') }}</a>
             </div>
 
             <div class="vocab-content-card">
                 <div class="vocab-table-header">
                     <div class="vocab-mode-select-wrap">
-                        <label for="mode-select" class="vocab-mode-label">Mode</label>
+                        <label for="mode-select" class="vocab-mode-label">{{ t('vocab.mode_label') }}</label>
                         <select id="mode-select" class="vocab-mode-select" onchange="setTableMode(this.value)">
-                            <option value="free">Free</option>
-                            <option value="standard" selected>Standard</option>
-                            <option value="unsure">Unsure</option>
-                            <option value="unlearn">Unlearn</option>
-                            <option value="recent">Recent Learned</option>
+                            <option value="free">{{ t('vocab.mode_free') }}</option>
+                            <option value="standard" selected>{{ t('vocab.mode_standard') }}</option>
+                            <option value="unsure">{{ t('vocab.mode_unsure') }}</option>
+                            <option value="unlearn">{{ t('vocab.mode_unlearn') }}</option>
+                            <option value="recent">{{ t('vocab.mode_recent') }}</option>
                         </select>
                     </div>
                     <div class="vocab-action-buttons">
-                        <button class="btn action-outline" onclick="clearSelection()">Clear Selection</button>
-                        <button id="btn-flashcards" class="btn action-secondary" onclick="openSelectedFlashcards()" disabled>Flash Cards</button>
-                        <button id="btn-start-selected" class="btn action-primary" onclick="startSelectedTraining()" disabled>Start Training</button>
+                        <button class="btn action-outline" onclick="clearSelection()">{{ t('vocab.clear_selection') }}</button>
+                        <button id="btn-flashcards" class="btn action-secondary" onclick="openSelectedFlashcards()" disabled>{{ t('reading.flash_cards') }}</button>
+                        <button id="btn-start-selected" class="btn action-primary" onclick="startSelectedTraining()" disabled>{{ t('vocab.start_training') }}</button>
                     </div>
                 </div>
 
@@ -44,20 +44,20 @@
                             type="text"
                             id="vocab-search-input"
                             class="vocab-search-input"
-                            placeholder="Search by character, pinyin or meaning…"
+                            placeholder="{{ t('vocab.search_placeholder') }}"
                             oninput="handleSearchInput()"
                             autocomplete="off"
                             spellcheck="false"
                         >
-                        <button class="vocab-search-clear" id="vocab-search-clear" onclick="clearSearch()" style="display:none;" aria-label="Clear search">&#x2715;</button>
+                        <button class="vocab-search-clear" id="vocab-search-clear" onclick="clearSearch()" style="display:none;" aria-label="{{ t('vocab.clear_search_aria') }}">&#x2715;</button>
                     </div>
                 </div>
 
                 <div class="vocab-filter-bar">
                     <div class="form-group hsk-filter">
-                        <label for="filter-hsk">HSK</label>
+                        <label for="filter-hsk">{{ t('vocab.hsk_label') }}</label>
                         <select id="filter-hsk" onchange="handleHskChange()">
-                            <option value="">Select HSK</option>
+                            <option value="">{{ t('vocab.select_hsk') }}</option>
                             <option value="HSK1">HSK 1</option>
                             <option value="HSK2">HSK 2</option>
                             <option value="HSK3">HSK 3</option>
@@ -67,19 +67,19 @@
                         </select>
                     </div>
                     <div class="form-group standard-filter">
-                        <label for="filter-lesson">Lesson</label>
+                        <label for="filter-lesson">{{ t('picker.lesson_prefix') }}</label>
                         <select id="filter-lesson" onchange="handleLessonChange()" disabled>
-                            <option value="">Select lesson</option>
+                            <option value="">{{ t('vocab.select_lesson_option') }}</option>
                         </select>
                     </div>
                     <div class="form-group standard-filter">
-                        <label for="filter-part">Part</label>
+                        <label for="filter-part">{{ t('picker.part_prefix') }}</label>
                         <select id="filter-part" onchange="handlePartChange()" disabled>
-                            <option value="">Select part</option>
+                            <option value="">{{ t('vocab.select_part_option') }}</option>
                         </select>
                     </div>
                     <div class="form-group page-size-filter">
-                        <label for="filter-page-size">Rows</label>
+                        <label for="filter-page-size">{{ t('vocab.rows_label') }}</label>
                         <select id="filter-page-size" onchange="changePageSize()">
                             <option value="10">10</option>
                             <option value="20" selected>20</option>
@@ -88,13 +88,13 @@
                     </div>
                 </div>
 
-                <div id="vocab-table-state" class="vocab-table-state">Choose filters to load vocabulary.</div>
+                <div id="vocab-table-state" class="vocab-table-state">{{ t('vocab.state_choose_filters') }}</div>
                 <div id="vocab-table-wrap" class="vocab-table-wrap" style="display:none;"></div>
 
                 <div id="vocab-pagination" class="vocab-pagination" style="display:none;">
-                    <button class="btn secondary" id="page-prev-btn" onclick="changePage(-1)">Prev</button>
-                    <span id="page-status">Page 1 / 1</span>
-                    <button class="btn secondary" id="page-next-btn" onclick="changePage(1)">Next</button>
+                    <button class="btn secondary" id="page-prev-btn" onclick="changePage(-1)">{{ t('reading.prev') }}</button>
+                    <span id="page-status">{{ t('vocab.page_status', current=1, total=1) }}</span>
+                    <button class="btn secondary" id="page-next-btn" onclick="changePage(1)">{{ t('reading.next') }}</button>
                 </div>
             </div>
         </div>
@@ -120,11 +120,11 @@
             </div>
             <!-- Controls -->
             <div class="stroke-controls">
-                <button class="stroke-btn" onclick="vocabStrokeAnimate()">&#9654; Animate</button>
-                <button class="stroke-btn" onclick="vocabStrokeQuiz()">&#9999; Practice</button>
-                <button class="stroke-btn secondary" onclick="vocabStrokeReset()">&#8635; Reset</button>
+                <button class="stroke-btn" onclick="vocabStrokeAnimate()">&#9654; {{ t('widgets.animate') }}</button>
+                <button class="stroke-btn" onclick="vocabStrokeQuiz()">&#9999; {{ t('widgets.practice') }}</button>
+                <button class="stroke-btn secondary" onclick="vocabStrokeReset()">&#8635; {{ t('widgets.reset') }}</button>
             </div>
-            <p class="stroke-hint">Click on a character tab above to switch &middot; Animate shows stroke order step by step</p>
+            <p class="stroke-hint">{{ t('vocab.stroke_hint') }}</p>
         </div>
     </div>
 </body>

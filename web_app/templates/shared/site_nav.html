@@ -1,12 +1,12 @@
 <header class="site-header">
-    <a class="site-brand" href="/">Learning Dashboard</a>
+    <a class="site-brand" href="/">{{ t('nav.brand') }}</a>
     <nav class="site-nav" aria-label="Primary navigation">
-        <a href="/vocab">Vocabulary</a>
-        <a href="/learning">Learning</a>
-        <a href="/recommend">Recommend</a>
-        <a href="/practice?category=practice">Exercise</a>
-        <a href="/practice?category=exam">Exam</a>
-        <a href="/learn-together">Learn Together</a>
+        <a href="/vocab">{{ t('nav.vocabulary') }}</a>
+        <a href="/learning">{{ t('nav.learning') }}</a>
+        <a href="/recommend">{{ t('nav.recommend') }}</a>
+        <a href="/practice?category=practice">{{ t('nav.exercise') }}</a>
+        <a href="/practice?category=exam">{{ t('nav.exam') }}</a>
+        <a href="/learn-together">{{ t('nav.learn_together') }}</a>
     </nav>
     <div class="site-auth">
         {% if current_user.is_authenticated %}
@@ -20,7 +20,7 @@
                 <span>{{ current_user.username }}</span>
             </a>
             <div class="hanzi-font-control">
-                <span>Hanzi</span>
+                <span>{{ t('nav.hanzi_label') }}</span>
                 {% set current_hanzi_script = current_user.hanzi_script|default('simplified', true) %}
                 <select id="hanzi-script-select" data-current-script="{{ current_hanzi_script }}" title="Script">
                     <option value="simplified" {% if current_hanzi_script == 'simplified' %}selected{% endif %}>简体</option>
@@ -33,13 +33,31 @@
                     {% endfor %}
                 </select>
             </div>
-            <a href="{{ url_for('auth.logout') }}">Logout</a>
+            <div class="ui-language-control">
+                <span>{{ t('nav.language_label') }}</span>
+                {% set current_ui_language = current_user.ui_language|default('en', true) %}
+                <select id="ui-language-select" data-current-lang="{{ current_ui_language }}" title="Language">
+                    <option value="en" {% if current_ui_language == 'en' %}selected{% endif %}>EN</option>
+                    <option value="vi" {% if current_ui_language == 'vi' %}selected{% endif %}>VI</option>
+                </select>
+            </div>
+            <a href="{{ url_for('auth.logout') }}">{{ t('nav.logout') }}</a>
         {% else %}
-            <a href="{{ url_for('auth.login') }}">Login</a>
-            <a href="{{ url_for('auth.register') }}">Register</a>
+            <div class="ui-language-control">
+                <a href="{{ url_for('set_ui_language', lang='en') }}" class="{{ 'active' if current_lang == 'en' }}">EN</a>
+                <a href="{{ url_for('set_ui_language', lang='vi') }}" class="{{ 'active' if current_lang == 'vi' }}">VI</a>
+            </div>
+            <a href="{{ url_for('auth.login') }}">{{ t('nav.login') }}</a>
+            <a href="{{ url_for('auth.register') }}">{{ t('nav.register') }}</a>
         {% endif %}
     </div>
 </header>
+<script>
+    window.translations = {{ translations_json|tojson }};
+    window.currentLang = "{{ current_lang }}";
+</script>
+<script src="/static/shared/i18n.js?v=1"></script>
 {% if current_user.is_authenticated %}
     <script src="/static/shared/han_font.js?v=3"></script>
+    <script src="/static/shared/lang_toggle.js?v=1"></script>
 {% endif %}

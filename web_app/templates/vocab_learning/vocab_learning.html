@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ current_lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vocab Learning - {{ hsk_level }}</title>
+    <title>{{ t('vocab_learning.page_title', hsk_level=hsk_level) }}</title>
     <link rel="stylesheet" href="/static/shared/styles.css?v=7">
     <link rel="stylesheet" href="/static/shared/vocab_table.css?v=9">
     <link rel="stylesheet" href="/static/shared/passage_picker.css?v=7">
@@ -21,7 +21,7 @@
         <div id="screen-loading" style="display:none;">
             <div class="vl-loading">
                 <div class="loader"></div>
-                <p>Loading words...</p>
+                <p>{{ t('vocab_learning.loading_words') }}</p>
             </div>
         </div>
 
@@ -40,46 +40,46 @@
                 <div id="vl-meaning" class="vl-meaning"></div>
 
                 <div class="vl-typing-container">
-                    <input type="text" id="vl-typing-input" lang="zh-CN" placeholder="Type character here..."
+                    <input type="text" id="vl-typing-input" lang="zh-CN" placeholder="{{ t('vocab_learning.typing_placeholder') }}"
                         autocomplete="off" class="vl-input">
                 </div>
 
                 <div class="vl-card-controls">
                     <button id="btn-audio" class="vl-audio-btn" onclick="playAudio()">
                         <i class="fa-solid fa-volume-high" aria-hidden="true"></i>
-                        <span>Play Audio</span>
+                        <span>{{ t('reading.play_audio') }}</span>
                     </button>
                     <button id="btn-speak" class="vl-speak-btn" onclick="toggleSpeakingPractice()">
                         <i class="fa-solid fa-microphone" aria-hidden="true"></i>
-                        <span>Speak</span>
+                        <span>{{ t('vocab_trainer.speak') }}</span>
                     </button>
                     <button id="btn-stroke" class="vl-stroke-btn" onclick="openStrokeModal()">
                         <i class="fa-solid fa-pen-nib" aria-hidden="true"></i>
-                        <span>Stroke Order</span>
+                        <span>{{ t('vocab_learning.stroke_order') }}</span>
                     </button>
                 </div>
 
                 <div id="vl-speaking-panel" class="vl-speaking-panel" style="display:none;">
-                    <div id="vl-speaking-status" class="vl-speaking-status">Press Speak and say the word clearly.</div>
+                    <div id="vl-speaking-status" class="vl-speaking-status">{{ t('vocab_learning.speaking_status') }}</div>
                     <div id="vl-speaking-result" class="vl-speaking-result" style="display:none;"></div>
                 </div>
                 <audio id="vl-audio"></audio>
             </div>
 
             <div class="vl-nav-row">
-                <button id="btn-prev" class="vl-nav-btn" onclick="prevWord()" title="Previous">&larr; Prev</button>
+                <button id="btn-prev" class="vl-nav-btn" onclick="prevWord()" title="Previous">&larr; {{ t('reading.prev') }}</button>
                 <button class="vl-train-btn" onclick="showVocabSummary()">
                     <i class="fa-solid fa-table-list" aria-hidden="true"></i>
-                    <span>Summary</span>
+                    <span>{{ t('reading.summary') }}</span>
                 </button>
-                <button class="vl-train-btn" onclick="shuffleLearningWords()" title="Shuffle words">
+                <button class="vl-train-btn" onclick="shuffleLearningWords()" title="{{ t('vocab_learning.shuffle_words_title') }}">
                     <i class="fa-solid fa-shuffle" aria-hidden="true"></i>
-                    <span>Shuffle</span>
+                    <span>{{ t('vocab_learning.shuffle') }}</span>
                 </button>
-                <button id="btn-next" class="vl-nav-btn" onclick="nextWord()" title="Next">Next &rarr;</button>
+                <button id="btn-next" class="vl-nav-btn" onclick="nextWord()" title="Next">{{ t('reading.next') }} &rarr;</button>
             </div>
 
-            <p class="vl-keyboard-tip">Tip: Use arrow keys to navigate. Press Space to replay audio.</p>
+            <p class="vl-keyboard-tip">{{ t('vocab_learning.keyboard_tip') }}</p>
         </div>
 
         <div id="screen-summary" style="display:none;">
@@ -98,11 +98,11 @@
             <div class="vl-summary-footer">
                 <button class="vl-train-btn vl-learn-btn" onclick="startLearningCards()">
                     <i class="fa-solid fa-graduation-cap" aria-hidden="true"></i>
-                    <span>Learn These Words</span>
+                    <span>{{ t('vocab_learning.learn_these_words') }}</span>
                 </button>
                 <button class="vl-train-btn" onclick="goToTrainer()">
                     <i class="fa-solid fa-dumbbell" aria-hidden="true"></i>
-                    <span>Train These Vocab</span>
+                    <span>{{ t('vocab_learning.train_these_vocab') }}</span>
                 </button>
             </div>
         </div>
@@ -116,7 +116,7 @@
                     <div id="stroke-modal-word" class="stroke-modal-word"></div>
                     <div id="stroke-modal-pinyin" class="stroke-modal-pinyin"></div>
                 </div>
-                <button class="stroke-modal-close" onclick="closeStrokeModal()" aria-label="Close stroke order">
+                <button class="stroke-modal-close" onclick="closeStrokeModal()" aria-label="{{ t('vocab_learning.close_stroke_order_aria') }}">
                     <i class="fa-solid fa-xmark" aria-hidden="true"></i>
                 </button>
             </div>
@@ -129,18 +129,18 @@
             <div class="stroke-controls">
                 <button class="stroke-btn" onclick="strokeAnimate()">
                     <i class="fa-solid fa-play" aria-hidden="true"></i>
-                    <span>Animate</span>
+                    <span>{{ t('widgets.animate') }}</span>
                 </button>
                 <button class="stroke-btn" onclick="strokeQuiz()">
                     <i class="fa-solid fa-pen" aria-hidden="true"></i>
-                    <span>Practice</span>
+                    <span>{{ t('widgets.practice') }}</span>
                 </button>
                 <button class="stroke-btn secondary" onclick="strokeReset()">
                     <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
-                    <span>Reset</span>
+                    <span>{{ t('widgets.reset') }}</span>
                 </button>
             </div>
-            <p class="stroke-hint">Choose a character tab to switch. Animate shows each stroke in order.</p>
+            <p class="stroke-hint">{{ t('vocab_learning.stroke_hint_words') }}</p>
         </div>
     </div>
 

@@ -2,8 +2,8 @@
 <div class="page-layout sidebar-open" id="page-layout">
     <aside id="universal-sidebar" class="universal-sidebar">
         <div class="sidebar-header">
-            <h3>Navigation</h3>
-            <button class="sidebar-close-btn" onclick="toggleSidebar()" aria-label="Close Sidebar">
+            <h3>{{ t('sidebar.navigation') }}</h3>
+            <button class="sidebar-close-btn" onclick="toggleSidebar()" aria-label="{{ t('sidebar.close_sidebar_aria') }}">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
@@ -11,33 +11,33 @@
         <div class="sidebar-content">
             <div class="sidebar-section">
                 <button class="sidebar-btn sidebar-back-btn" onclick="goBackToPartPicker()">
-                    <i class="fa-solid fa-arrow-left"></i> Part Selection
+                    <i class="fa-solid fa-arrow-left"></i> {{ t('sidebar.part_selection') }}
                 </button>
             </div>
 
             <div class="sidebar-section">
-                <h4 class="sidebar-section-title">Current Part</h4>
+                <h4 class="sidebar-section-title">{{ t('sidebar.current_part') }}</h4>
                 <button class="sidebar-btn" id="sidebar-nav-vocab" onclick="navigateToDomain('vocab')">
-                    <i class="fa-solid fa-list"></i> Word Summary
+                    <i class="fa-solid fa-list"></i> {{ t('sidebar.word_summary') }}
                 </button>
                 <button class="sidebar-btn" id="sidebar-nav-lesson" onclick="navigateToDomain('lesson')">
-                    <i class="fa-solid fa-book-open"></i> Lesson Summary
+                    <i class="fa-solid fa-book-open"></i> {{ t('vocab_trainer.lesson_summary') }}
                 </button>
                 <button class="sidebar-btn" id="sidebar-nav-grammar" onclick="navigateToDomain('grammar')">
-                    <i class="fa-solid fa-spell-check"></i> Grammar
+                    <i class="fa-solid fa-spell-check"></i> {{ t('grammar.page_title') }}
                 </button>
             </div>
 
             <div class="sidebar-section">
-                <h4 class="sidebar-section-title">Lesson Parts</h4>
+                <h4 class="sidebar-section-title">{{ t('sidebar.lesson_parts') }}</h4>
                 <div id="sidebar-parts-list" class="sidebar-parts-list">
-                    <div class="sidebar-loader">Loading...</div>
+                    <div class="sidebar-loader">{{ t('widgets.loading') }}</div>
                 </div>
             </div>
         </div>
     </aside>
 
     <div class="page-main" id="page-main">
-        <button id="sidebar-toggle-btn" class="sidebar-toggle-btn" onclick="toggleSidebar()" aria-label="Open Sidebar">
+        <button id="sidebar-toggle-btn" class="sidebar-toggle-btn" onclick="toggleSidebar()" aria-label="{{ t('sidebar.open_sidebar_aria') }}">
             <i class="fa-solid fa-bars"></i>
         </button>
