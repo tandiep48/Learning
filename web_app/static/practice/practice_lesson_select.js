@@ -7,24 +7,24 @@ async function fetchLessons() {
         const data = await res.json();
         
         if (!res.ok) {
-            document.getElementById('lesson-grid').innerHTML = `<p style="color:red">Error: ${data.error}</p>`;
+            document.getElementById('lesson-grid').innerHTML = `<p style="color:red">${t('practice_select.error_prefix', { error: data.error })}</p>`;
             return;
         }
-        
+
         const grid = document.getElementById('lesson-grid');
         grid.innerHTML = '';
-        
+
         if (!data.lessons || data.lessons.length === 0) {
-            grid.innerHTML = '<p>No lessons found.</p>';
+            grid.innerHTML = `<p>${t('practice_select.no_lessons_found')}</p>`;
             return;
         }
-        
+
         data.lessons.forEach(lesson => {
             const card = document.createElement('a');
             card.href = `/practice/${num}/${lesson}?category=${encodeURIComponent(category)}`;
             card.className = 'lesson-card';
             card.innerHTML = `
-                <div class="lesson-label">Lesson ${lesson}</div>
+                <div class="lesson-label">${t('picker.lesson_prefix')} ${lesson}</div>
             `;
             // Set referrer so practice.js can build the correct Back button
             card.addEventListener('click', () => {
@@ -33,7 +33,7 @@ async function fetchLessons() {
             grid.appendChild(card);
         });
     } catch (e) {
-        document.getElementById('lesson-grid').innerHTML = '<p style="color:red">Failed to connect to server.</p>';
+        document.getElementById('lesson-grid').innerHTML = `<p style="color:red">${t('practice_select.failed_connect')}</p>`;
     }
 }
 
@@ -44,7 +44,7 @@ function applyReferrer() {
     if (!backLink) return;
     if (referrer === 'recommend') {
         backLink.href = '/recommend';
-        backLink.textContent = '← Back to Recommendations';
+        backLink.textContent = `← ${t('practice_select.back_to_recommendations')}`;
     }
     // Don't clear here — keep it so the lesson card click can override
 }

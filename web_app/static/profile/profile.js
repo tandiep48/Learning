@@ -32,12 +32,12 @@ async function loadLearnedWords(page = 1) {
         });
         const res = await fetch(`/api/user/learned-vocab?${params.toString()}`);
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to load learned vocabulary.');
+        if (!res.ok) throw new Error(data.error || t('profile.failed_load_learned_vocab'));
         renderLearnedWords(data);
     } catch (e) {
         const list = document.getElementById('learned-vocab-list');
         if (list) {
-            list.innerHTML = `<div class="profile-list-row"><span>${escapeHtml(e.message || 'Failed to load learned vocabulary.')}</span></div>`;
+            list.innerHTML = `<div class="profile-list-row"><span>${escapeHtml(e.message || t('profile.failed_load_learned_vocab'))}</span></div>`;
         }
     }
 }
@@ -46,10 +46,10 @@ async function loadProfileSummary() {
     try {
         const res = await fetch('/api/user/profile-summary');
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to load profile.');
+        if (!res.ok) throw new Error(data.error || t('profile.failed_load_profile'));
         renderProfile(data);
     } catch (e) {
-        setAvatarMessage(e.message || 'Failed to load profile.', 'error');
+        setAvatarMessage(e.message || t('profile.failed_load_profile'), 'error');
     }
 }
 
@@ -84,7 +84,7 @@ function renderBreakdown(id, rows, labelFn) {
     const container = document.getElementById(id);
     if (!container) return;
     if (!rows.length) {
-        container.innerHTML = '<div class="profile-list-row"><span>No time yet</span><strong>0m</strong></div>';
+        container.innerHTML = `<div class="profile-list-row"><span>${t('profile.no_time_yet')}</span><strong>0m</strong></div>`;
         return;
     }
     container.innerHTML = rows.map(row => `
@@ -108,9 +108,9 @@ function renderLearnedWords(data) {
     learnedTotalPages = data.total_pages || 1;
     const total = data.total || 0;
 
-    count.textContent = `${total} word${total === 1 ? '' : 's'}`;
+    count.textContent = t('dashboard.word_count', { count: total });
     if (!words.length) {
-        list.innerHTML = '<div class="profile-list-row"><span>No mastered vocabulary yet.</span></div>';
+        list.innerHTML = `<div class="profile-list-row"><span>${t('profile.no_mastered_vocab')}</span></div>`;
         if (pagination) pagination.style.display = 'none';
         return;
     }
@@ -122,7 +122,7 @@ function renderLearnedWords(data) {
     `).join('');
 
     if (pagination) pagination.style.display = total > learnedPageSize ? 'flex' : 'none';
-    if (status) status.textContent = `Page ${learnedPage} / ${learnedTotalPages}`;
+    if (status) status.textContent = t('vocab.page_status', { current: learnedPage, total: learnedTotalPages });
     if (prev) prev.disabled = learnedPage <= 1;
     if (next) next.disabled = learnedPage >= learnedTotalPages;
 }
@@ -131,12 +131,12 @@ async function uploadAvatar(e) {
     e.preventDefault();
     const input = document.getElementById('avatar-input');
     if (!input.files.length) {
-        setAvatarMessage('Choose an avatar file first.', 'error');
+        setAvatarMessage(t('profile.choose_avatar_first'), 'error');
         return;
     }
     const formData = new FormData();
     formData.append('avatar', input.files[0]);
-    setAvatarMessage('Uploading...', '');
+    setAvatarMessage(t('profile.uploading'), '');
 
     try {
         const res = await fetch('/api/user/avatar', {
@@ -144,12 +144,12 @@ async function uploadAvatar(e) {
             body: formData
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Upload failed.');
+        if (!res.ok) throw new Error(data.error || t('profile.upload_failed'));
         renderAvatar(data.avatar_url);
-        setAvatarMessage('Avatar updated.', 'success');
+        setAvatarMessage(t('profile.avatar_updated'), 'success');
         input.value = '';
     } catch (err) {
-        setAvatarMessage(err.message || 'Upload failed.', 'error');
+        setAvatarMessage(err.message || t('profile.upload_failed'), 'error');
     }
 }
 
@@ -159,11 +159,11 @@ async function changePassword(e) {
     const newPassword = document.getElementById('new-password').value;
 
     if (!username || !newPassword) {
-        setPasswordMessage('Username and new password are required.', 'error');
+        setPasswordMessage(t('profile.username_new_password_required'), 'error');
         return;
     }
 
-    setPasswordMessage('Updating password...', '');
+    setPasswordMessage(t('profile.updating_password'), '');
     try {
         const res = await fetch('/api/user/change-password', {
             method: 'POST',
@@ -171,11 +171,11 @@ async function changePassword(e) {
             body: JSON.stringify({ username, new_password: newPassword })
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Could not update password.');
+        if (!res.ok) throw new Error(data.error || t('profile.could_not_update_password'));
         document.getElementById('new-password').value = '';
-        setPasswordMessage('Password updated.', 'success');
+        setPasswordMessage(t('profile.password_updated'), 'success');
     } catch (err) {
-        setPasswordMessage(err.message || 'Could not update password.', 'error');
+        setPasswordMessage(err.message || t('profile.could_not_update_password'), 'error');
     }
 }
 
@@ -203,9 +203,9 @@ function formatDuration(ms) {
 }
 
 function formatDate(value) {
-    if (!value) return 'Date unknown';
+    if (!value) return t('profile.date_unknown');
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return 'Date unknown';
+    if (Number.isNaN(date.getTime())) return t('profile.date_unknown');
     return date.toLocaleDateString();
 }
 

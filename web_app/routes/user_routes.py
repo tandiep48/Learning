@@ -7,6 +7,7 @@ from flask_login import current_user, login_required
 from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
 
+from service.i18n_service import t
 from db import (
     get_db_connection,
     get_mastered_words_page,
@@ -16,9 +17,13 @@ from db import (
     get_profile_summary,
     get_recent_learning,
     get_user_hanzi_font,
+    get_user_hanzi_script,
+    get_user_ui_language,
     set_recent_learning,
     update_user_avatar_path,
     update_user_hanzi_font,
+    update_user_hanzi_script,
+    update_user_ui_language,
     update_user_password,
 )
 
@@ -34,6 +39,10 @@ ALLOWED_AVATAR_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'gif'}
 MAX_AVATAR_BYTES = 3 * 1024 * 1024
 ALLOWED_HANZI_FONTS = {'SimSun', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Noto Sans'}
 DEFAULT_HANZI_FONT = 'Noto Sans'
+ALLOWED_HANZI_SCRIPTS = {'simplified', 'traditional'}
+DEFAULT_HANZI_SCRIPT = 'simplified'
+ALLOWED_UI_LANGUAGES = {'en', 'vi'}
+DEFAULT_UI_LANGUAGE = 'en'
 
 
 def avatar_url_from_path(avatar_path):
@@ -54,6 +63,8 @@ def serialize_current_user():
         "avatar_path": getattr(current_user, 'avatar_path', None),
         "avatar_url": avatar_url_from_path(getattr(current_user, 'avatar_path', None)),
         "hanzi_font": getattr(current_user, 'hanzi_font', None) or DEFAULT_HANZI_FONT,
+        "hanzi_script": getattr(current_user, 'hanzi_script', None) or DEFAULT_HANZI_SCRIPT,
+        "ui_language": getattr(current_user, 'ui_language', None) or DEFAULT_UI_LANGUAGE,
     }
 
 
@@ -197,21 +208,21 @@ def dashboard_vocab_buckets():
         buckets = {
             "unsure": {
                 "key": "unsure",
-                "title": "Unsure Words",
+                "title": t('dashboard.bucket_unsure'),
                 "mode": "unsure",
                 "total": len(unsure_words),
                 "rows": dashboard_rows_for_words(conn, unsure_words, limit),
             },
             "unlearn": {
                 "key": "unlearn",
-                "title": "Unlearned Words",
+                "title": t('dashboard.bucket_unlearned'),
                 "mode": "unlearn",
                 "total": len(unlearned_words),
                 "rows": dashboard_rows_for_words(conn, unlearned_words, limit),
             },
             "recent": {
                 "key": "recent",
-                "title": "Recent Learned Words",
+                "title": t('dashboard.bucket_recent'),
                 "mode": "recent",
                 "total": recent.get("total", 0),
                 "rows": [normalize_dashboard_vocab_row(row) for row in recent.get("rows", [])],
@@ -288,6 +299,76 @@ def hanzi_font_set():
 
     current_user.hanzi_font = font
     return jsonify({"status": "success", "hanzi_font": font})
+
+
+@user_bp.route('/api/user/hanzi-script', methods=['GET'])
+@login_required
+def hanzi_script_get():
+    conn = get_db_connection()
+    try:
+        script = get_user_hanzi_script(conn, current_user.id)
+    finally:
+        if conn:
+            conn.close()
+    current_user.hanzi_script = script or DEFAULT_HANZI_SCRIPT
+    return jsonify({"hanzi_script": current_user.hanzi_script})
+
+
+@user_bp.route('/api/user/hanzi-script', methods=['POST'])
+@login_required
+def hanzi_script_set():
+    data = request.get_json(silent=True) or {}
+    script = str(data.get('hanzi_script') or '').strip()
+    if script not in ALLOWED_HANZI_SCRIPTS:
+        return jsonify({"error": "Invalid Hanzi script."}), 400
+
+    conn = get_db_connection()
+    try:
+        ok = update_user_hanzi_script(conn, current_user.id, script)
+    finally:
+        if conn:
+            conn.close()
+
+    if not ok:
+        return jsonify({"error": "Could not save Hanzi script."}), 500
+
+    current_user.hanzi_script = script
+    return jsonify({"status": "success", "hanzi_script": script})
+
+
+@user_bp.route('/api/user/ui-language', methods=['GET'])
+@login_required
+def ui_language_get():
+    conn = get_db_connection()
+    try:
+        lang = get_user_ui_language(conn, current_user.id)
+    finally:
+        if conn:
+            conn.close()
+    current_user.ui_language = lang or DEFAULT_UI_LANGUAGE
+    return jsonify({"ui_language": current_user.ui_language})
+
+
+@user_bp.route('/api/user/ui-language', methods=['POST'])
+@login_required
+def ui_language_set():
+    data = request.get_json(silent=True) or {}
+    lang = str(data.get('ui_language') or '').strip()
+    if lang not in ALLOWED_UI_LANGUAGES:
+        return jsonify({"error": "Invalid UI language."}), 400
+
+    conn = get_db_connection()
+    try:
+        ok = update_user_ui_language(conn, current_user.id, lang)
+    finally:
+        if conn:
+            conn.close()
+
+    if not ok:
+        return jsonify({"error": "Could not save UI language."}), 500
+
+    current_user.ui_language = lang
+    return jsonify({"status": "success", "ui_language": lang})
 
 
 @user_bp.route('/api/user/dashboard-current-lesson', methods=['GET'])

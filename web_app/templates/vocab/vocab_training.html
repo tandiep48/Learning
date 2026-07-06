@@ -1,15 +1,15 @@
 {% extends 'shared/trainer_base.html' %}
 
-{% block title %}Vocabulary Training{% endblock %}
+{% block title %}{{ t('vocab_trainer.page_title') }}{% endblock %}
 
-{% block loading_text %}Fetching words...{% endblock %}
+{% block loading_text %}{{ t('vocab_trainer.loading') }}{% endblock %}
 
 {% block task_components %}
                 <div id="word-display" class="chinese-word" style="display:none;"></div>
 
                 <div id="audio-controls" style="display:none;" class="audio-controls">
                     <button id="btn-current-audio" class="btn-audio" onclick="playCurrentAudio()"
-                        aria-label="Play audio" title="Play audio">
+                        aria-label="{{ t('lesson.play_audio') }}" title="{{ t('lesson.play_audio') }}">
                         <i class="fa-solid fa-play play-icon" aria-hidden="true"></i>
                     </button>
                     <audio id="audio-player"></audio>
@@ -19,7 +19,7 @@
                 <div id="mc-feedback" class="task-feedback" style="display:none;"></div>
 
                 <div id="typing-area" class="typing-container" style="display:none;">
-                    <input type="text" id="typing-input" lang="zh-CN" placeholder="Type the word here..."
+                    <input type="text" id="typing-input" lang="zh-CN" placeholder="{{ t('vocab_trainer.type_word_placeholder') }}"
                         autocomplete="off">
                     <div id="typing-feedback" class="task-feedback" style="display:none;"></div>
                 </div>
@@ -29,7 +29,7 @@
                     <div id="speaking-prompt" class="speaking-prompt"></div>
                     <button id="btn-speak-task" class="btn-speak-task" onclick="toggleSpeakingTask()">
                         <i class="fa-solid fa-microphone" aria-hidden="true"></i>
-                        <span id="speak-task-label">Speak</span>
+                        <span id="speak-task-label">{{ t('vocab_trainer.speak') }}</span>
                     </button>
                     <div id="speaking-task-status" class="speaking-task-status"></div>
                     <!-- Revealed after answer (right or wrong) -->
@@ -42,36 +42,36 @@
 
 {% block submit_buttons %}
                     <button id="typing-submit-btn" class="btn primary" onclick="submitTyping()"
-                        style="display:none;">Submit</button>
+                        style="display:none;">{{ t('lesson.submit') }}</button>
 {% endblock %}
 
 {% block screen_complete %}
             <div class="nav-buttons training-complete-actions training-complete-top-actions">
-                <button class="btn primary" onclick="goHome()">Back to Vocabulary</button>
+                <button class="btn primary" onclick="goHome()">{{ t('vocab_trainer.back_to_vocabulary') }}</button>
                 <button class="btn primary" id="btn-start-lesson" style="display:none;" onclick="startLearnLesson()">
                     <i class="fa-solid fa-book-open" aria-hidden="true"></i>
-                    <span>Lesson Summary</span>
+                    <span>{{ t('vocab_trainer.lesson_summary') }}</span>
                 </button>
             </div>
 
-            <h2 id="training-complete-title" class="training-complete-title">These are the words that you got it wrong and need to re-learned</h2>
+            <h2 id="training-complete-title" class="training-complete-title">{{ t('vocab_trainer.recap_title') }}</h2>
 
             <div class="training-complete-table-wrap">
                 <table class="training-complete-table">
                     <thead>
                         <tr>
-                            <th>Character</th>
-                            <th>Pinyin</th>
-                            <th>Meaning (VN)</th>
+                            <th>{{ t('dashboard.table_character') }}</th>
+                            <th>{{ t('dashboard.table_pinyin') }}</th>
+                            <th>{{ t('dashboard.table_meaning_vn') }}</th>
                         </tr>
                     </thead>
                     <tbody id="recap-table-body"></tbody>
                 </table>
-                <div id="perfect-area" class="training-empty-state">No missed words this round.</div>
+                <div id="perfect-area" class="training-empty-state">{{ t('vocab_trainer.perfect') }}</div>
             </div>
 
             <div class="nav-buttons training-complete-actions">
-                <button class="btn primary" id="btn-retry" onclick="retryMissed()">Retry Missed</button>
+                <button class="btn primary" id="btn-retry" onclick="retryMissed()">{{ t('lesson.retry_missed') }}</button>
             </div>
 {% endblock %}
 

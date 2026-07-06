@@ -1,4 +1,3 @@
-
 .chip-container {
     display: flex;
     flex-wrap: wrap;
@@ -9,15 +8,16 @@
     padding: 10px;
     background: #ffffff;
     border-radius: 8px;
-    border: 1px dashed rgba(87, 104, 86,0.2);
+    border: 1px dashed rgba(87, 104, 86, 0.2);
 }
+
 .chip {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     background: var(--primary);
     color: #ffffff;
-    font-family: var(--han-font-family, 'Noto Sans', Arial, Helvetica, sans-serif);
+    font-family: var(--han-font-family, Roboto, 'Noto Sans', Helvetica, sans-serif);
     padding: 8px 16px;
     border-radius: 20px;
     cursor: pointer;
@@ -29,38 +29,46 @@
     user-select: none;
     transition: transform 0.1s;
 }
+
 .lesson-trainer-page #reorder-area .chip,
 .lesson-trainer-page #reorder-area .chip .han-text {
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff;
 }
+
 .lesson-trainer-page #reorder-area .lesson-reorder-chip {
     font-size: var(--han-content-size, 20px);
 }
+
 .lesson-trainer-page #reorder-area .chip .han-text {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     line-height: 1;
 }
+
 .chip:hover {
     transform: scale(1.05);
     background: var(--primary-hover);
 }
+
 .passage-list {
     max-height: 500px;
     overflow-y: auto;
     padding-right: 10px;
 }
+
 .passage-section {
     margin-bottom: 20px;
 }
+
 .passage-section h3 {
     margin-bottom: 10px;
     color: var(--primary);
-    border-bottom: 1px solid rgba(87, 104, 86,0.1);
+    border-bottom: 1px solid rgba(87, 104, 86, 0.1);
     padding-bottom: 5px;
 }
+
 .passage-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -77,14 +85,25 @@
     align-items: center;
     justify-content: center;
 }
+
 .quit-modal-overlay.open {
     display: flex;
     animation: fadeIn 0.15s ease;
 }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
 .quit-modal {
     background: #CBE2D4;
-    border: 1px solid rgba(87, 104, 86,0.12);
+    border: 1px solid rgba(87, 104, 86, 0.12);
     border-radius: 20px;
     padding: 36px 32px;
     max-width: 380px;
@@ -93,10 +112,37 @@
     box-shadow: 0 20px 60px rgba(87, 104, 86, 0.18);
     animation: slideUp 0.2s ease;
 }
-@keyframes slideUp { from { transform: translateY(16px); opacity:0; } to { transform: none; opacity:1; } }
-.quit-modal h3 { font-size: 1.3rem; color: var(--text-main); margin-bottom: 10px; }
-.quit-modal p  { font-size: 0.95rem; color: var(--text-muted); margin-bottom: 26px; line-height: 1.5; }
-.quit-modal-btns { display: flex; gap: 12px; justify-content: center; }
+
+@keyframes slideUp {
+    from {
+        transform: translateY(16px);
+        opacity: 0;
+    }
+
+    to {
+        transform: none;
+        opacity: 1;
+    }
+}
+
+.quit-modal h3 {
+    font-size: 1.3rem;
+    color: var(--text-main);
+    margin-bottom: 10px;
+}
+
+.quit-modal p {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    margin-bottom: 26px;
+    line-height: 1.5;
+}
+
+.quit-modal-btns {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
 
 .instruction {
     display: inline-flex;
@@ -147,5 +193,3 @@
     font-size: 2rem;
     margin-bottom: 12px;
 }
-
-

@@ -21,25 +21,120 @@ let blankState  = {};      // { blockId: { blankIdx: optKey } }  for type 6
 let activeBlank = {};      // { blockId: blankIdx|null }         for type 6
 
 const audioEl = document.getElementById('audio-player');
+let activeAudioControl = null;
+let activeAudioSrc = '';
 
 // ── Helpers ─────────────────────────────────────────────────
 
 function stopAudio() {
     audioEl.pause();
     audioEl.removeAttribute('src');
-    document.querySelectorAll('.p-audio-btn').forEach(b => b.classList.remove('playing'));
+    audioEl.onended = null;
+    audioEl.onerror = null;
+    audioEl.onpause = null;
+    activeAudioControl = null;
+    activeAudioSrc = '';
+    resetAllAudioControls();
 }
 
-function playAudio(key, btnEl, level, category) {
-    stopAudio();
+function audioSrc(key, level, category) {
     const cat = category || window.practiceCategory || 'practice';
     const lvl = level || NUM || 1;
-    audioEl.src = `https://storage.googleapis.com/chinese-learning-audio-assets/question_bank/${cat}/${cat}-${lvl}/${key}.mp3`;
-    audioEl.play().catch(() => {});
-    if (btnEl) {
-        btnEl.classList.add('playing');
-        audioEl.onended = () => btnEl.classList.remove('playing');
+    return `https://storage.googleapis.com/chinese-learning-audio-assets/question_bank/${cat}/${cat}-${lvl}/${key}.mp3`;
+}
+
+function resetAudioControl(control) {
+    if (!control) return;
+    const btn = control.querySelector('.p-audio-play-btn');
+    const icon = btn?.querySelector('.fa-solid');
+    control.classList.remove('playing');
+    if (icon) {
+        icon.classList.add('fa-play');
+        icon.classList.remove('fa-pause');
     }
+    if (btn) {
+        btn.title = t('lesson.play_audio');
+        btn.setAttribute('aria-label', t('lesson.play_audio'));
+    }
+}
+
+function setAudioControlPlaying(control) {
+    const btn = control?.querySelector('.p-audio-play-btn');
+    const icon = btn?.querySelector('.fa-solid');
+    if (!control || !btn || !icon) return;
+    control.classList.add('playing');
+    icon.classList.remove('fa-play');
+    icon.classList.add('fa-pause');
+    btn.title = t('lesson.pause_audio');
+    btn.setAttribute('aria-label', t('lesson.pause_audio'));
+}
+
+function resetAllAudioControls() {
+    document.querySelectorAll('.p-audio-control').forEach(resetAudioControl);
+}
+
+function loadAudioForControl(control, src) {
+    if (activeAudioControl && activeAudioControl !== control) {
+        resetAudioControl(activeAudioControl);
+    }
+    activeAudioControl = control;
+    activeAudioSrc = src;
+    if (audioEl.src !== src) {
+        audioEl.src = src;
+    }
+    audioEl.onended = () => {
+        resetAudioControl(control);
+        activeAudioControl = null;
+        activeAudioSrc = '';
+    };
+    audioEl.onerror = audioEl.onended;
+    audioEl.onpause = () => {
+        if (activeAudioControl === control && audioEl.currentTime === 0) {
+            resetAudioControl(control);
+        }
+    };
+}
+
+function playAudio(key, control, level, category) {
+    const src = audioSrc(key, level, category);
+    const isSamePausedAudio = activeAudioControl === control && audioEl.paused && activeAudioSrc === src;
+    if (activeAudioControl === control && !audioEl.paused) {
+        audioEl.pause();
+        resetAudioControl(control);
+        return;
+    }
+
+    if (activeAudioControl && activeAudioControl !== control) {
+        audioEl.pause();
+    }
+
+    loadAudioForControl(control, src);
+    if (!isSamePausedAudio) {
+        audioEl.currentTime = 0;
+    }
+    audioEl.play().then(() => {
+        setAudioControlPlaying(control);
+    }).catch(() => {
+        resetAudioControl(control);
+    });
+}
+
+function seekAudio(key, control, level, category, deltaSeconds) {
+    const src = audioSrc(key, level, category);
+    if (activeAudioSrc !== src || activeAudioControl !== control) {
+        if (activeAudioControl && activeAudioControl !== control) {
+            audioEl.pause();
+            resetAudioControl(activeAudioControl);
+        }
+        loadAudioForControl(control, src);
+    }
+
+    const current = Number.isFinite(audioEl.currentTime) ? audioEl.currentTime : 0;
+    const duration = Number.isFinite(audioEl.duration) ? audioEl.duration : null;
+    const next = current + deltaSeconds;
+    audioEl.currentTime = duration === null
+        ? Math.max(0, next)
+        : Math.max(0, Math.min(duration, next));
 }
 
 function showScreen(id) {
@@ -89,11 +184,38 @@ function isImageFilename(val) {
 }
 
 function makeAudioBtn(key, label, level, category) {
-    const btn = document.createElement('button');
-    btn.className = 'p-audio-btn';
-    btn.innerHTML = `<i class="fa-solid fa-play" aria-hidden="true"></i><span>${label || 'Play Audio'}</span>`;
-    btn.onclick = () => playAudio(key, btn, level, category);
-    return btn;
+    const control = document.createElement('div');
+    control.className = 'p-audio-control';
+
+    const backBtn = document.createElement('button');
+    backBtn.type = 'button';
+    backBtn.className = 'p-audio-seek-btn';
+    backBtn.title = t('practice.back_5_seconds');
+    backBtn.setAttribute('aria-label', t('practice.back_5_seconds'));
+    backBtn.innerHTML = '<span class="p-seek-icon"><i class="fa-solid fa-rotate-left" aria-hidden="true"></i><span>5</span></span>';
+    backBtn.onclick = () => seekAudio(key, control, level, category, -5);
+
+    const playBtn = document.createElement('button');
+    playBtn.type = 'button';
+    playBtn.className = 'p-audio-btn p-audio-play-btn';
+    playBtn.title = t('lesson.play_audio');
+    const labelText = label || t('lesson.audio_fallback');
+    playBtn.setAttribute('aria-label', t('practice.play_label', { label: labelText }));
+    playBtn.innerHTML = '<i class="fa-solid fa-play" aria-hidden="true"></i>';
+    playBtn.onclick = () => playAudio(key, control, level, category);
+
+    const forwardBtn = document.createElement('button');
+    forwardBtn.type = 'button';
+    forwardBtn.className = 'p-audio-seek-btn';
+    forwardBtn.title = t('practice.forward_5_seconds');
+    forwardBtn.setAttribute('aria-label', t('practice.forward_5_seconds'));
+    forwardBtn.innerHTML = '<span class="p-seek-icon"><i class="fa-solid fa-rotate-right" aria-hidden="true"></i><span>5</span></span>';
+    forwardBtn.onclick = () => seekAudio(key, control, level, category, 5);
+
+    control.appendChild(backBtn);
+    control.appendChild(playBtn);
+    control.appendChild(forwardBtn);
+    return control;
 }
 
 // ── Init ────────────────────────────────────────────────────
@@ -108,18 +230,18 @@ async function init() {
     if (backBtn) {
         if (referrer === 'recommend') {
             backBtn.href = '/recommend';
-            backBtn.title = 'Back to Recommendations';
+            backBtn.title = t('practice_select.back_to_recommendations');
         } else if (referrer && referrer.startsWith('exam-')) {
             const lvl = referrer.split('-')[1];
             backBtn.href = `/practice/${lvl}?category=exam`;
-            backBtn.title = `Back to HSK ${lvl} Exam`;
+            backBtn.title = t('practice.back_to_hsk_exam', { level: lvl });
         } else if (referrer && referrer.startsWith('practice-')) {
             const lvl = referrer.split('-')[1];
             backBtn.href = `/practice/${lvl}`;
-            backBtn.title = `Back to HSK ${lvl} Lessons`;
+            backBtn.title = t('practice.back_to_hsk_lessons', { level: lvl });
         } else {
             backBtn.href = '/practice';
-            backBtn.title = 'Back to Practice';
+            backBtn.title = t('practice.back_to_practice');
         }
 
         const resultBackBtn = document.getElementById('result-back-btn');
@@ -137,7 +259,7 @@ async function init() {
             // Multi-select mode
             const rawQueue = sessionStorage.getItem('multi_practice_queue');
             if (!rawQueue) {
-                alert('No practice items selected.');
+                alert(t('practice.no_items_selected'));
                 window.location.href = '/recommend';
                 return;
             }
@@ -179,7 +301,7 @@ async function init() {
         renderGroup();
         showScreen('screen-practice');
     } catch (e) {
-        alert('Could not load practice data.');
+        alert(t('practice.load_failed'));
     }
 }
 
@@ -204,8 +326,8 @@ function renderGroup() {
     const skill = group.questions[0]?.skill || 'listening';
     const skillTag = document.getElementById('skill-tag');
     skillTag.innerHTML = skill === 'listening'
-        ? '<i class="fa-solid fa-headphones-simple" aria-hidden="true"></i><span>Listening</span>'
-        : '<i class="fa-solid fa-book-open" aria-hidden="true"></i><span>Reading</span>';
+        ? `<i class="fa-solid fa-headphones-simple" aria-hidden="true"></i><span>${t('recommend.listening')}</span>`
+        : `<i class="fa-solid fa-book-open" aria-hidden="true"></i><span>${t('recommend.reading')}</span>`;
     skillTag.className = `p-skill-tag ${skill}`;
 
     // Card
@@ -236,7 +358,7 @@ function renderGroup() {
         if (group.questions.length > 1) {
             const hdr = document.createElement('div');
             hdr.className = 'p-group-header';
-            hdr.textContent = `Questions ${group.progress}`;
+            hdr.textContent = t('practice.questions_group', { progress: group.progress });
             card.appendChild(hdr);
         }
         group.questions.forEach((q, idx) => card.appendChild(renderQuestion(q, idx)));
@@ -246,7 +368,7 @@ function renderGroup() {
     document.getElementById('btn-check').style.display = '';
     document.getElementById('btn-next').style.display  = 'none';
     document.getElementById('btn-check').disabled = true;
-    document.getElementById('btn-check').textContent = 'Check';
+    document.getElementById('btn-check').textContent = t('practice.check');
     updateCheckButton();
     applyPracticeHanText(group);
 }
@@ -268,7 +390,7 @@ function renderType2Group(card, group) {
     if (isListening) {
         // Only show audio for the passage – no text
         if (passage?.audio_key?.length) {
-            card.appendChild(makeAudioBtn(passage.audio_key[0], 'Play Passage', passage.level, passage.category));
+            card.appendChild(makeAudioBtn(passage.audio_key[0], t('practice.play_passage'), passage.level, passage.category));
         }
     } else {
         // Reading: show content
@@ -291,7 +413,7 @@ function renderType2Group(card, group) {
             // Don't show question text; only show per-question audio for follow-up
             const keyIdx = idx === 0 && q.audio_key?.length === 2 ? 1 : 0;
             if (q.audio_key?.length) {
-                block.appendChild(makeAudioBtn(q.audio_key[keyIdx], `Question ${idx + 1}`, q.level, q.category));
+                block.appendChild(makeAudioBtn(q.audio_key[keyIdx], t('recommend.question_single', { n: idx + 1 }), q.level, q.category));
             }
         } else {
             // Reading: show question text
@@ -340,7 +462,7 @@ function renderType5ListeningGroup(card, group) {
 
         const instr = document.createElement('p');
         instr.className = 't5l-instruction';
-        instr.textContent = 'Nghe hội thoại và chọn hình ảnh phù hợp.';
+        instr.textContent = t('practice.choose_image_for_audio');
         card.appendChild(instr);
     }
 
@@ -360,8 +482,12 @@ function renderType5ListeningGroup(card, group) {
         // Audio button
         const audioPart = document.createElement('div');
         audioPart.className = 't5l-audio-part';
+        const rowNumber = document.createElement('span');
+        rowNumber.className = 't5l-row-number';
+        rowNumber.textContent = idx + 1;
+        audioPart.appendChild(rowNumber);
         if (q.audio_key?.length) {
-            const btn = makeAudioBtn(q.audio_key[0], `Audio ${idx + 1}`, q.level, q.category);
+            const btn = makeAudioBtn(q.audio_key[0], t('practice.audio_numbered', { n: idx + 1 }), q.level, q.category);
             audioPart.appendChild(btn);
         }
 
@@ -419,7 +545,7 @@ function renderType5ReadingMatchGroup(card, group) {
     // 2. Instruction + shared key buttons (shown once)
     const instr = document.createElement('p');
     instr.className = 't5l-instruction';
-    instr.textContent = 'Chọn đáp án phù hợp với từng câu bên dưới.';
+    instr.textContent = t('practice.choose_answer_per_sentence');
     card.appendChild(instr);
 
     // 3. Sentence rows – each question is one row
@@ -492,7 +618,7 @@ function renderType5ReadingImageGroup(card, group) {
 
     const instr = document.createElement('p');
     instr.className = 't5l-instruction';
-    instr.textContent = 'Choose the matching image for each sentence.';
+    instr.textContent = t('practice.choose_image_per_sentence');
     card.appendChild(instr);
 
     const rowsContainer = document.createElement('div');
@@ -569,7 +695,7 @@ function renderType6Group(card, group) {
     const passage = group.questions.find(q => q.content);
 
     if (isListening && passage?.audio_key?.length) {
-        card.appendChild(makeAudioBtn(passage.audio_key[0], 'Play Passage', passage.level, passage.category));
+        card.appendChild(makeAudioBtn(passage.audio_key[0], t('practice.play_passage'), passage.level, passage.category));
     }
 
     // Collect all option keys – they're shared across all blanks in the group
@@ -607,7 +733,7 @@ function renderType6Group(card, group) {
 
     const label = document.createElement('div');
     label.className = 'p-group-header';
-    label.textContent = 'Choose from options:';
+    label.textContent = t('practice.choose_from_options');
     sharedOptsEl.appendChild(label);
 
     const optsWrap = document.createElement('div');
@@ -783,7 +909,7 @@ function renderType1(block, q, blockId, skill) {
         btn.className = 'tf-btn';
         btn.dataset.key = key;
         btn.dataset.block = blockId;
-        const label = (val === true || val === 'True') ? 'True' : (val === false || val === 'False') ? 'False' : `${key}: ${val}`;
+        const label = (val === true || val === 'True') ? t('practice.true_label') : (val === false || val === 'False') ? t('practice.false_label') : `${key}: ${val}`;
         btn.textContent = label;
         btn.onclick = () => {
             tfWrap.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('selected'));
@@ -830,7 +956,7 @@ function renderType4(block, q, blockId) {
 
     const ansLabel = document.createElement('div');
     ansLabel.className = 'reorder-label';
-    ansLabel.textContent = 'Your order (click to place):';
+    ansLabel.textContent = t('practice.your_order');
     area.appendChild(ansLabel);
 
     const ansZone = document.createElement('div');
@@ -840,7 +966,7 @@ function renderType4(block, q, blockId) {
 
     const poolLabel = document.createElement('div');
     poolLabel.className = 'reorder-label';
-    poolLabel.textContent = 'Sentences (click to add):';
+    poolLabel.textContent = t('practice.sentences_click_add');
     area.appendChild(poolLabel);
 
     const poolZone = document.createElement('div');
@@ -887,6 +1013,7 @@ function renderType5Images(block, q, blockId, skill) {
     }
     const grid = document.createElement('div');
     grid.className = 'img-options-grid';
+    if (skill === 'listening') grid.classList.add('listening-img-options-grid');
     Object.entries(q.options).forEach(([key, filename]) => {
         const cell = document.createElement('div');
         cell.className = 'img-option';
@@ -1006,10 +1133,10 @@ function checkAnswers() {
         if (isCorrect) {
             groupCorrect++;
             if (block) block.classList.add('correct');
-            if (fb) { fb.className = 'p-feedback correct'; fb.textContent = 'Correct!'; }
+            if (fb) { fb.className = 'p-feedback correct'; fb.textContent = t('practice.correct_exclaim'); }
         } else {
             if (block) block.classList.add('wrong');
-            if (fb)    { fb.className = 'p-feedback wrong'; fb.textContent = `Correct answer: ${correct}`; }
+            if (fb)    { fb.className = 'p-feedback wrong'; fb.textContent = t('practice.correct_answer_colon', { answer: correct }); }
         }
 
         highlightAnswer(block, q, blockId, chosen, correct, isCorrect);
@@ -1027,19 +1154,19 @@ function checkAnswers() {
         const fb = document.getElementById('feedback-t5l-group');
         if (fb) {
             fb.className = groupCorrect === group.questions.length ? 'p-feedback correct' : 'p-feedback wrong';
-            fb.textContent = `${groupCorrect} / ${group.questions.length} correct`;
+            fb.textContent = t('practice.score_correct', { correct: groupCorrect, total: group.questions.length });
         }
     } else if (isT5RGroup) {
         const fb = document.getElementById('feedback-t5r-group');
         if (fb) {
             fb.className = groupCorrect === group.questions.length ? 'p-feedback correct' : 'p-feedback wrong';
-            fb.textContent = `${groupCorrect} / ${group.questions.length} correct`;
+            fb.textContent = t('practice.score_correct', { correct: groupCorrect, total: group.questions.length });
         }
     } else if (isT5RIGroup) {
         const fb = document.getElementById('feedback-t5ri-group');
         if (fb) {
             fb.className = groupCorrect === group.questions.length ? 'p-feedback correct' : 'p-feedback wrong';
-            fb.textContent = `${groupCorrect} / ${group.questions.length} correct`;
+            fb.textContent = t('practice.score_correct', { correct: groupCorrect, total: group.questions.length });
         }
     }
 
@@ -1090,7 +1217,7 @@ function highlightAnswer(block, q, blockId, chosen, correct, isCorrect) {
         const fb = document.getElementById(`feedback-${blockId}`);
         if (!isCorrect && fb) {
             const correctNames = correct.split('').map(k => `${k}: ${q.options[k] || k}`).join(' → ');
-            fb.textContent = `Correct order: ${correct}`;
+            fb.textContent = t('practice.correct_order', { order: correct });
         }
         block.querySelectorAll('.chip').forEach(chip => {
             chip.classList.add(isCorrect ? 'correct-chip' : 'wrong-chip');
@@ -1121,7 +1248,7 @@ async function nextGroup() {
     if (currentGroupIndex >= groups.length) {
         // Submit answers
         document.getElementById('btn-next').disabled = true;
-        document.getElementById('btn-next').textContent = 'Submitting...';
+        document.getElementById('btn-next').textContent = t('practice.submitting');
         
         try {
             await fetch('/api/practice/submit', {

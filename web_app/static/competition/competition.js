@@ -10,7 +10,7 @@ let availableQuestionSets = [];
 
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof io !== 'function') {
-        showSetupError('Could not load the live room connection. Refresh the page and try again.');
+        showSetupError(t('competition.connect_failed'));
         return;
     }
 
@@ -31,11 +31,11 @@ document.addEventListener('DOMContentLoaded', () => {
 function bindSocketEvents() {
     socket.on('connect', () => showSetupError(''));
     socket.on('connect_error', () => {
-        showSetupError('Could not connect to the live room server. Restart the app and refresh this page.');
+        showSetupError(t('competition.server_connect_failed'));
     });
 
     socket.on('competition_error', payload => {
-        alert(payload?.error || 'Competition error');
+        alert(payload?.error || t('competition.error_fallback'));
     });
 
     socket.on('joined_room', payload => {
@@ -71,8 +71,8 @@ function bindSocketEvents() {
             feedback.className = 'answer-feedback wrong';
         } else {
             feedback.textContent = payload.is_correct
-                ? `Correct +${payload.points} points`
-                : 'Wrong +0 points';
+                ? t('competition.correct_points', { n: payload.points })
+                : t('competition.wrong_points');
             feedback.className = `answer-feedback ${payload.is_correct ? 'correct' : 'wrong'}`;
             document.getElementById('submit-answer-btn').style.display = 'none';
             document.getElementById('next-question-btn').style.display = '';
@@ -116,17 +116,17 @@ async function loadQuestionSets() {
     availableQuestionSets = [];
     showSetupError('');
     levelSelect.disabled = true;
-    levelSelect.innerHTML = '<option value="">Loading...</option>';
+    levelSelect.innerHTML = `<option value="">${t('competition.loading')}</option>`;
     lessonSelect.disabled = true;
-    lessonSelect.innerHTML = '<option value="">Select Lesson</option>';
+    lessonSelect.innerHTML = `<option value="">${t('competition.select_lesson')}</option>`;
 
     try {
         const res = await fetch(`/api/competition/question-sets?category=${encodeURIComponent(category)}`);
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to load question sets');
+        if (!res.ok) throw new Error(data.error || t('competition.failed_load_sets'));
         availableQuestionSets = data.sets || [];
         const levels = [...new Set(availableQuestionSets.map(set => String(set.level)))].sort(numericSort);
-        levelSelect.innerHTML = '<option value="">Select HSK</option>';
+        levelSelect.innerHTML = `<option value="">${t('vocab.select_hsk')}</option>`;
         levels.forEach(level => {
             const option = document.createElement('option');
             option.value = level;
@@ -135,10 +135,10 @@ async function loadQuestionSets() {
         });
         levelSelect.disabled = levels.length === 0;
         if (!levels.length) {
-            levelSelect.innerHTML = '<option value="">No HSK sets found</option>';
+            levelSelect.innerHTML = `<option value="">${t('competition.no_hsk_sets_found')}</option>`;
         }
     } catch (e) {
-        levelSelect.innerHTML = '<option value="">Failed to load</option>';
+        levelSelect.innerHTML = `<option value="">${t('competition.failed_to_load')}</option>`;
         showSetupError(e.message);
     }
 }
@@ -167,7 +167,7 @@ async function createRoom() {
     const level = document.getElementById('create-level')?.value;
     const lesson = document.getElementById('create-lesson')?.value;
     if (!level || !lesson) {
-        showSetupError('Select an HSK level and lesson first.');
+        showSetupError(t('competition.select_hsk_lesson_first'));
         return;
     }
     showSetupError('');
@@ -186,7 +186,7 @@ async function createRoom() {
     });
     const data = await res.json();
     if (!res.ok) {
-        alert(data.error || 'Could not create room');
+        alert(data.error || t('competition.could_not_create_room'));
         return;
     }
     socket.emit('join_room', { room_code: data.room.room_code });
@@ -209,10 +209,10 @@ function leaveRoom() {
 function renderRoom(room) {
     document.getElementById('room-code-display').textContent = room.room_code;
     document.getElementById('room-summary').innerHTML = `
-        <div><strong>${escapeHtml(room.category === 'exam' ? 'Exam' : 'Exercise')}</strong></div>
-        <div>HSK ${escapeHtml(room.level)} - Lesson ${escapeHtml(room.lesson)}</div>
-        <div>${escapeHtml(room.members?.length || 0)} / ${escapeHtml(room.max_users)} users</div>
-        <div>Timer: ${escapeHtml(room.section_timeout_minutes)} minutes per section</div>
+        <div><strong>${escapeHtml(room.category === 'exam' ? t('dashboard.exam') : t('dashboard.exercise'))}</strong></div>
+        <div>HSK ${escapeHtml(room.level)} - ${t('picker.lesson_prefix')} ${escapeHtml(room.lesson)}</div>
+        <div>${escapeHtml(t('competition.users_count', { count: room.members?.length || 0, max: room.max_users }))}</div>
+        <div>${escapeHtml(t('competition.timer_per_section', { n: room.section_timeout_minutes }))}</div>
     `;
 
     const members = document.getElementById('member-list');
@@ -237,7 +237,7 @@ function appendChat(message) {
     if (!chat) return;
     const row = document.createElement('div');
     row.className = 'chat-message';
-    row.innerHTML = `<strong>${escapeHtml(message.username || 'User')}</strong><span>${escapeHtml(message.message || '')}</span>`;
+    row.innerHTML = `<strong>${escapeHtml(message.username || t('competition.user_fallback'))}</strong><span>${escapeHtml(message.message || '')}</span>`;
     chat.appendChild(row);
     chat.scrollTop = chat.scrollHeight;
 }
@@ -264,7 +264,7 @@ function renderQuestion() {
     currentAnswer = "";
     questionStartMs = Date.now();
 
-    document.getElementById('section-label').textContent = titleCase(currentSession.current_section);
+    document.getElementById('section-label').textContent = sectionLabel(currentSession.current_section);
     document.getElementById('question-counter').textContent = `${currentQuestionIndex + 1} / ${currentQuestions.length}`;
     document.getElementById('submit-answer-btn').style.display = '';
     document.getElementById('submit-answer-btn').disabled = false;
@@ -277,7 +277,7 @@ function renderQuestion() {
 
     let html = '';
     if (audioKeys.length) {
-        html += `<button class="btn secondary" onclick="playCompetitionAudio('${escapeAttr(audioKeys[0])}')">Play Audio</button>`;
+        html += `<button class="btn secondary" onclick="playCompetitionAudio('${escapeAttr(audioKeys[0])}')">${t('reading.play_audio')}</button>`;
     }
     if (question.content) {
         html += `<div class="competition-content">${escapeHtml(question.content)}</div>`;
@@ -305,7 +305,7 @@ function renderQuestion() {
         });
         html += '</div>';
     } else {
-        html += '<input class="competition-text-answer" id="competition-text-answer" type="text" placeholder="Type your answer" autocomplete="off">';
+        html += `<input class="competition-text-answer" id="competition-text-answer" type="text" placeholder="${t('competition.type_your_answer')}" autocomplete="off">`;
     }
     html += '<div id="answer-feedback" class="answer-feedback"></div>';
     card.innerHTML = html;
@@ -346,15 +346,15 @@ function finishSection() {
         session_id: currentSession.id,
         section: currentSession.current_section
     });
-    document.getElementById('waiting-title').textContent = `${titleCase(currentSession.current_section)} Complete`;
-    document.getElementById('waiting-subtitle').textContent = 'Waiting for the next section.';
+    document.getElementById('waiting-title').textContent = t('competition.section_complete', { section: sectionLabel(currentSession.current_section) });
+    document.getElementById('waiting-subtitle').textContent = t('competition.waiting_subtitle');
     renderScoreList('waiting-scores', currentSession.scores || []);
     showScreen('screen-waiting');
 }
 
 function updateLiveScore(scores) {
     const mine = scores.find(score => Number(score.user_id) === Number(window.currentUser.id));
-    document.getElementById('live-score').textContent = `${mine?.total_points || 0} pts`;
+    document.getElementById('live-score').textContent = t('competition.points', { n: mine?.total_points || 0 });
 }
 
 function renderScoreList(targetId, scores) {
@@ -429,13 +429,13 @@ function isImageFilename(value) {
 }
 
 function progressLabel(progress) {
-    if (!progress) return 'Questions';
+    if (!progress) return t('competition.questions_label');
     const text = String(progress);
     if (text.includes('-')) {
         const [a, b] = text.split('-');
-        return `Questions ${a}-${b}`;
+        return t('recommend.questions_range', { a, b });
     }
-    return `Question ${text}`;
+    return t('recommend.question_single', { n: text });
 }
 
 function numericSort(a, b) {
@@ -455,6 +455,12 @@ function showSetupError(message) {
 function titleCase(value) {
     const text = String(value || '');
     return text ? text.charAt(0).toUpperCase() + text.slice(1) : '';
+}
+
+function sectionLabel(value) {
+    if (value === 'listening') return t('recommend.listening');
+    if (value === 'reading') return t('recommend.reading');
+    return titleCase(value);
 }
 
 function escapeHtml(value) {

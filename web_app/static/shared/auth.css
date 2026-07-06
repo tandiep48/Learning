@@ -70,3 +70,17 @@ button.btn-success:hover {
 .flash-messages.success {
     color: green;
 }
+.auth-lang-switch {
+    text-align: right;
+    margin-bottom: 10px;
+}
+.auth-lang-switch a {
+    color: #999;
+    text-decoration: none;
+    font-size: 13px;
+    margin-left: 8px;
+}
+.auth-lang-switch a.active {
+    color: #007bff;
+    font-weight: bold;
+}

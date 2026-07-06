@@ -27,7 +27,7 @@
 
     function unwrapExisting(container) {
         container.querySelectorAll(`[${WRAPPED_ATTR}]`).forEach(span => {
-            span.replaceWith(document.createTextNode(span.textContent || ''));
+            span.replaceWith(document.createTextNode(span.getAttribute('data-original') || span.textContent || ''));
         });
     }
 
@@ -55,7 +55,8 @@
             const span = document.createElement('span');
             span.className = shouldSize ? `${HAN_CLASS} ${SIZED_CLASS}` : HAN_CLASS;
             span.setAttribute(WRAPPED_ATTR, 'true');
-            span.textContent = match;
+            span.setAttribute('data-original', match);
+            span.textContent = window.HanziSettings?.convertText(match) ?? match;
             fragment.appendChild(span);
             lastIndex = offset + match.length;
             return match;
@@ -79,6 +80,7 @@
         }
 
         unwrapExisting(container);
+        window.HanziSettings?.restoreOriginals?.(container);
 
         const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
             acceptNode(node) {

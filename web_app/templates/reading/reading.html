@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ current_lang }}">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reading Practice - {{ hsk_level }}</title>
-    <link rel="stylesheet" href="/static/shared/styles.css?v=6">
+    <title>{{ t('reading.page_title', hsk_level=hsk_level) }}</title>
+    <link rel="stylesheet" href="/static/shared/styles.css?v=7">
     <link rel="stylesheet" href="/static/shared/passage_picker.css?v=7">
     <link rel="stylesheet" href="/static/shared/vocab_table.css?v=9">
     <link rel="stylesheet" href="/static/vocab_learning/vocab_learning.css?v=10">
@@ -22,17 +22,17 @@
 
         <div id="screen-loading" class="screen">
             <div class="loader"></div>
-            <p>Loading passage...</p>
+            <p>{{ t('reading.loading_passage') }}</p>
         </div>
 
         <div id="screen-reading" class="screen">
             <div class="toolbar">
                 <div class="toolbar-right">
-                    <button class="btn" id="toggle-pinyin-btn" onclick="togglePinyin()">Show Pinyin</button>
-                    <button class="btn" id="toggle-meaning-btn" onclick="toggleMeaning()">Show Meaning</button>
+                    <button class="btn" id="toggle-pinyin-btn" onclick="togglePinyin()">{{ t('reading.show_pinyin') }}</button>
+                    <button class="btn" id="toggle-meaning-btn" onclick="toggleMeaning()">{{ t('reading.show_meaning') }}</button>
                     <button class="btn" id="show-vocab-btn" onclick="openVocabPanel()">
                         <i class="fa-solid fa-table-list" aria-hidden="true"></i>
-                        <span>Vocab</span>
+                        <span>{{ t('reading.vocab_btn') }}</span>
                     </button>
                 </div>
             </div>
@@ -41,7 +41,7 @@
             <div id="reading-content" class="reading-content"><!-- Content injected via JS --></div>
 
             <div class="finish-bar">
-                <button class="btn primary" onclick="startLessonPractice()">Flash Cards</button>
+                <button class="btn primary" onclick="startLessonPractice()">{{ t('reading.flash_cards') }}</button>
             </div>
         </div>
 
@@ -54,10 +54,8 @@
 
             <div class="vocab-content-card lesson-summary-content-card">
                 <div class="lesson-summary-toolbar">
-                    <button class="btn" id="lesson-toggle-pinyin-btn" onclick="toggleLessonSummaryPinyin()">Show
-                        Pinyin</button>
-                    <button class="btn" id="lesson-toggle-meaning-btn" onclick="toggleLessonSummaryMeaning()">Show
-                        Meaning</button>
+                    <button class="btn" id="lesson-toggle-pinyin-btn" onclick="toggleLessonSummaryPinyin()">{{ t('reading.show_pinyin') }}</button>
+                    <button class="btn" id="lesson-toggle-meaning-btn" onclick="toggleLessonSummaryMeaning()">{{ t('reading.show_meaning') }}</button>
                 </div>
 
                 <div id="lesson-learner-preview" class="lesson-learner-preview"></div>
@@ -66,18 +64,18 @@
             <div class="vl-summary-footer lesson-summary-actions">
                 <button class="vl-train-btn vl-learn-btn" onclick="startLessonCards()">
                     <i class="fa-solid fa-graduation-cap" aria-hidden="true"></i>
-                    <span>Learn This Lesson</span>
+                    <span>{{ t('reading.learn_this_lesson') }}</span>
                 </button>
                 <button class="vl-train-btn" onclick="goToLessonTrainer()">
                     <i class="fa-solid fa-dumbbell" aria-hidden="true"></i>
-                    <span>Train This Lesson</span>
+                    <span>{{ t('reading.train_this_lesson') }}</span>
                 </button>
             </div>
         </div>
 
         <div id="screen-lesson-card" class="screen">
             <div class="toolbar lesson-card-toolbar">
-                <button class="btn secondary" onclick="showLessonSummary()">&larr; Summary</button>
+                <button class="btn secondary" onclick="showLessonSummary()">&larr; {{ t('reading.summary') }}</button>
                 <span id="lesson-card-counter" class="vl-counter"></span>
             </div>
             <div class="vl-progress-bar lesson-card-progress">
@@ -91,23 +89,23 @@
 
                 <div class="vl-typing-container">
                     <input type="text" id="lesson-card-typing-input" lang="zh-CN"
-                        placeholder="Type the sentence here..." autocomplete="off" class="vl-input">
+                        placeholder="{{ t('lesson.typing_placeholder') }}" autocomplete="off" class="vl-input">
                 </div>
 
                 <div class="lesson-card-controls">
                     <button id="lesson-card-audio-btn" class="vl-audio-btn" onclick="playLessonCardAudio()">
                         <i class="fa-solid fa-volume-high" aria-hidden="true"></i>
-                        <span>Play Audio</span>
+                        <span>{{ t('reading.play_audio') }}</span>
                     </button>
                     <button id="lesson-card-speak-btn" class="vl-speak-btn" onclick="toggleLessonSpeakingPractice()">
                         <i class="fa-solid fa-microphone" aria-hidden="true"></i>
-                        <span>Speak</span>
+                        <span>{{ t('vocab_trainer.speak') }}</span>
                     </button>
                 </div>
 
                 <div id="lesson-speaking-panel" class="vl-speaking-panel" style="display:none;">
                     <div id="lesson-speaking-status" class="vl-speaking-status">
-                        Press Speak and say the sentence clearly.
+                        {{ t('reading.speaking_status') }}
                     </div>
                     <div id="lesson-speaking-result" class="vl-speaking-result" style="display:none;"></div>
                 </div>
@@ -115,9 +113,9 @@
             </div>
 
             <div class="vl-nav-row lesson-card-nav">
-                <button id="lesson-card-prev" class="vl-nav-btn" onclick="prevLessonCard()">Prev</button>
-                <button class="vl-train-btn" onclick="showLessonSummary()">Summary</button>
-                <button id="lesson-card-next" class="vl-nav-btn" onclick="nextLessonCard()">Next</button>
+                <button id="lesson-card-prev" class="vl-nav-btn" onclick="prevLessonCard()">{{ t('reading.prev') }}</button>
+                <button class="vl-train-btn" onclick="showLessonSummary()">{{ t('reading.summary') }}</button>
+                <button id="lesson-card-next" class="vl-nav-btn" onclick="nextLessonCard()">{{ t('reading.next') }}</button>
             </div>
         </div>
     </div>
@@ -125,14 +123,14 @@
     </div><!-- /.page-layout -->
 
     <div id="vocab-panel-overlay" class="vocab-panel-overlay" onclick="closeVocabIfBackground(event)">
-        <div class="vocab-panel vocab-table-theme" role="dialog" aria-modal="true" aria-label="Lesson vocabulary">
+        <div class="vocab-panel vocab-table-theme" role="dialog" aria-modal="true" aria-label="{{ t('widgets.vocab_panel_aria') }}">
             <button class="vocab-close-btn vocab-panel-floating-close" onclick="closeVocabPanel()"
-                aria-label="Close vocabulary">
+                aria-label="{{ t('widgets.close_vocab_aria') }}">
                 <i class="fa-solid fa-xmark" aria-hidden="true"></i>
             </button>
             <div class="vocab-panel-body">
                 <div id="vocab-panel-body" class="vocab-table-wrap">
-                    <div class="vocab-loading">Loading...</div>
+                    <div class="vocab-loading">{{ t('widgets.loading') }}</div>
                 </div>
             </div>
         </div>
@@ -140,7 +138,7 @@
 
     <div id="word-popup-overlay" class="word-popup-overlay" onclick="closeWordPopup()">
         <div class="word-popup" onclick="event.stopPropagation()">
-            <button class="word-popup-close" onclick="closeWordPopup()" aria-label="Close">
+            <button class="word-popup-close" onclick="closeWordPopup()" aria-label="{{ t('widgets.close') }}">
                 <i class="fa-solid fa-xmark"></i>
             </button>
             <div id="word-popup-hanzi" class="word-popup-hanzi"></div>
@@ -150,11 +148,11 @@
             <div class="word-popup-actions">
                 <button id="word-popup-audio-btn" class="word-popup-btn" onclick="playWordPopupAudio()">
                     <i class="fa-solid fa-volume-high"></i>
-                    <span>Listen</span>
+                    <span>{{ t('widgets.listen') }}</span>
                 </button>
                 <button id="word-popup-stroke-btn" class="word-popup-btn" onclick="toggleWordStroke()">
                     <i class="fa-solid fa-pen-nib"></i>
-                    <span>Stroke</span>
+                    <span>{{ t('widgets.stroke') }}</span>
                 </button>
             </div>
             <div id="word-popup-stroke-area" class="word-popup-stroke-area" style="display:none;">
@@ -164,13 +162,13 @@
                 </div>
                 <div class="stroke-controls">
                     <button class="stroke-btn" onclick="wordStrokeAnimate()">
-                        <i class="fa-solid fa-play"></i> Animate
+                        <i class="fa-solid fa-play"></i> {{ t('widgets.animate') }}
                     </button>
                     <button class="stroke-btn" onclick="wordStrokeQuiz()">
-                        <i class="fa-solid fa-pen"></i> Practice
+                        <i class="fa-solid fa-pen"></i> {{ t('widgets.practice') }}
                     </button>
                     <button class="stroke-btn secondary" onclick="wordStrokeReset()">
-                        <i class="fa-solid fa-rotate-left"></i> Reset
+                        <i class="fa-solid fa-rotate-left"></i> {{ t('widgets.reset') }}
                     </button>
                 </div>
             </div>
@@ -180,7 +178,7 @@
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
     <script src="/static/shared/passage_picker.js?v=11"></script>
     <script src="/static/shared/passage_label.js"></script>
-    <script src="/static/shared/han_text.js?v=1"></script>
+    <script src="/static/shared/han_text.js?v=2"></script>
     <script src="/static/reading/reading.js?v=27"></script>
     <script src="/static/shared/sidebar.js?v=7"></script>
 </body>

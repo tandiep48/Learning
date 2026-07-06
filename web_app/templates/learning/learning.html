@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ current_lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Learning</title>
-    <link rel="stylesheet" href="/static/shared/styles.css?v=6">
+    <title>{{ t('nav.learning') }}</title>
+    <link rel="stylesheet" href="/static/shared/styles.css?v=7">
     <link rel="stylesheet" href="/static/shared/passage_picker.css?v=7">
     <link rel="stylesheet" href="/static/learning/learning.css?v=3">
 </head>
@@ -13,10 +13,10 @@
     <div class="learning-container">
         <section id="learning-recent-panel" class="learning-recent-panel" style="display:none;">
             <div>
-                <h2>Recent Lesson</h2>
-                <p id="learning-recent-context" class="subtitle">Continue where you left off.</p>
+                <h2>{{ t('learning.recent_lesson') }}</h2>
+                <p id="learning-recent-context" class="subtitle">{{ t('dashboard.continue_subtitle') }}</p>
             </div>
-            <button class="btn primary learning-continue-btn" onclick="continueRecentLesson()">Continue</button>
+            <button class="btn primary learning-continue-btn" onclick="continueRecentLesson()">{{ t('lesson.continue') }}</button>
         </section>
 
         {% include 'shared/passage_picker.html' %}

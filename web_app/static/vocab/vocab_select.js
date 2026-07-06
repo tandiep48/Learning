@@ -51,13 +51,13 @@ function setTableMode(mode) {
         el.style.display = mode === 'standard' ? '' : 'none';
     });
 
-    resetSelect('filter-hsk', 'Select HSK');
-    resetSelect('filter-lesson', 'Select lesson', true);
-    resetSelect('filter-part', 'Select part', true);
+    resetSelect('filter-hsk', t('vocab.select_hsk'));
+    resetSelect('filter-lesson', t('vocab.select_lesson_option'), true);
+    resetSelect('filter-part', t('vocab.select_part_option'), true);
     if (isHistoryMode()) {
         loadVocabTable();
     } else {
-        clearTable('Choose filters to load vocabulary.');
+        clearTable(t('vocab.state_choose_filters'));
     }
 }
 
@@ -84,12 +84,12 @@ function resetSelect(id, label, disabled = false) {
 async function handleHskChange() {
     currentPage = 1;
     currentPassageId = null;
-    resetSelect('filter-lesson', 'Select lesson', true);
-    resetSelect('filter-part', 'Select part', true);
+    resetSelect('filter-lesson', t('vocab.select_lesson_option'), true);
+    resetSelect('filter-part', t('vocab.select_part_option'), true);
 
     const hskLevel = document.getElementById('filter-hsk').value;
     if (!hskLevel) {
-        clearTable('Choose filters to load vocabulary.');
+        clearTable(t('vocab.state_choose_filters'));
         return;
     }
 
@@ -102,7 +102,7 @@ async function handleHskChange() {
 }
 
 async function loadStandardLessons(hskLevel) {
-    setTableState('Loading lessons...');
+    setTableState(t('picker.loading_lessons'));
     try {
         const res = await fetch(`/api/lesson/passages?hsk_level=${encodeURIComponent(hskLevel)}`);
         const data = await res.json();
@@ -117,18 +117,18 @@ async function loadStandardLessons(hskLevel) {
         });
 
         const lessonSelect = document.getElementById('filter-lesson');
-        resetSelect('filter-lesson', 'Select lesson');
+        resetSelect('filter-lesson', t('vocab.select_lesson_option'));
         Object.keys(groupedPassages).sort(numericSort).forEach(lesson => {
             const option = document.createElement('option');
             option.value = lesson;
-            option.textContent = lesson === 'Other' ? 'Other' : `Lesson ${lesson}`;
+            option.textContent = lesson === 'Other' ? t('vocab.other_label') : `${t('picker.lesson_prefix')} ${lesson}`;
             lessonSelect.appendChild(option);
         });
         lessonSelect.disabled = Object.keys(groupedPassages).length === 0;
-        clearTable(Object.keys(groupedPassages).length ? 'Choose a lesson and part.' : 'No lessons found.');
+        clearTable(Object.keys(groupedPassages).length ? t('vocab.choose_lesson_and_part') : t('vocab.no_lessons_found'));
     } catch (e) {
         console.error(e);
-        clearTable('Failed to load lessons.');
+        clearTable(t('picker.failed_load_lessons'));
     }
 }
 
@@ -143,23 +143,23 @@ function handleLessonChange() {
     currentPassageId = null;
     const lesson = document.getElementById('filter-lesson').value;
     const partSelect = document.getElementById('filter-part');
-    resetSelect('filter-part', 'Select part');
+    resetSelect('filter-part', t('vocab.select_part_option'));
 
     if (!lesson || !groupedPassages[lesson]) {
         partSelect.disabled = true;
-        clearTable('Choose a lesson and part.');
+        clearTable(t('vocab.choose_lesson_and_part'));
         return;
     }
 
     groupedPassages[lesson].sort((a, b) => Number(a.part) - Number(b.part)).forEach(passage => {
         const option = document.createElement('option');
         option.value = passage.part;
-        option.textContent = `Part ${passage.part}`;
+        option.textContent = `${t('picker.part_prefix')} ${passage.part}`;
         option.dataset.passageId = passage.passage_id;
         partSelect.appendChild(option);
     });
     partSelect.disabled = false;
-    clearTable('Choose a part.');
+    clearTable(t('vocab.choose_a_part'));
 }
 
 async function handlePartChange() {
@@ -179,11 +179,11 @@ async function loadVocabTable() {
     const part = document.getElementById('filter-part').value;
 
     if (!isHistoryMode() && (!hskLevel || (tableMode === 'standard' && (!lesson || !part)))) {
-        clearTable(tableMode === 'standard' ? 'Choose HSK, lesson, and part.' : 'Choose HSK to load vocabulary.');
+        clearTable(tableMode === 'standard' ? t('vocab.choose_hsk_lesson_part') : t('vocab.choose_hsk_only'));
         return;
     }
 
-    setTableState('Loading vocabulary...');
+    setTableState(t('dashboard.loading_vocabulary'));
     const params = new URLSearchParams({
         mode: tableMode,
         hsk_level: hskLevel,
@@ -202,7 +202,7 @@ async function loadVocabTable() {
         const res = await fetch(url);
         const data = await res.json();
         if (!res.ok || data.error) {
-            clearTable(data.error || 'Failed to load vocabulary.');
+            clearTable(data.error || t('reading.failed_load_vocabulary'));
             return;
         }
 
@@ -214,7 +214,7 @@ async function loadVocabTable() {
         renderPagination(data.total || 0);
     } catch (e) {
         console.error(e);
-        clearTable('Failed to load vocabulary.');
+        clearTable(t('reading.failed_load_vocabulary'));
     }
 }
 
@@ -242,7 +242,7 @@ function renderVocabTable(rows) {
     const state = document.getElementById('vocab-table-state');
     const wrap = document.getElementById('vocab-table-wrap');
     if (!rows.length) {
-        clearTable('No vocabulary found.');
+        clearTable(t('vocab.no_vocab_found'));
         return;
     }
 
@@ -254,21 +254,21 @@ function renderVocabTable(rows) {
     table.innerHTML = `
         <thead>
             <tr>
-                <th class="vocab-no-col">No</th>
+                <th class="vocab-no-col">${t('vocab.no_column')}</th>
                 <th class="vocab-select-col">
-                    <input type="checkbox" id="select-page-checkbox" onchange="togglePageSelection(this.checked)" title="Select visible rows">
+                    <input type="checkbox" id="select-page-checkbox" onchange="togglePageSelection(this.checked)" title="${t('vocab.select_visible_rows_aria')}">
                 </th>
                 <th class="vocab-tools-col">
-                    <button class="vocab-header-icon-btn" id="table-play-all-btn" onclick="event.stopPropagation(); playAllTableAudio()" title="Play all visible" aria-label="Play all visible">
+                    <button class="vocab-header-icon-btn" id="table-play-all-btn" onclick="event.stopPropagation(); playAllTableAudio()" title="${t('vocab.play_all_visible_aria')}" aria-label="${t('vocab.play_all_visible_aria')}">
                         <i class="fa-solid fa-play play-icon" aria-hidden="true"></i>
                     </button>
-                    <button class="vocab-header-icon-btn" onclick="event.stopPropagation(); shuffleVisibleRows()" title="Shuffle visible" aria-label="Shuffle visible">
+                    <button class="vocab-header-icon-btn" onclick="event.stopPropagation(); shuffleVisibleRows()" title="${t('vocab.shuffle_visible_aria')}" aria-label="${t('vocab.shuffle_visible_aria')}">
                         <i class="fa-solid fa-shuffle" aria-hidden="true"></i>
                     </button>
                 </th>
-                <th>${renderColumnHeader('cn', 'Character', 'trainer-vocab-table')}</th>
-                <th>${renderColumnHeader('py', 'Pinyin', 'trainer-vocab-table')}</th>
-                <th>${renderColumnHeader('vn', 'Meaning (VN)', 'trainer-vocab-table')}</th>
+                <th>${renderColumnHeader('cn', t('dashboard.table_character'), 'trainer-vocab-table')}</th>
+                <th>${renderColumnHeader('py', t('dashboard.table_pinyin'), 'trainer-vocab-table')}</th>
+                <th>${renderColumnHeader('vn', t('dashboard.table_meaning_vn'), 'trainer-vocab-table')}</th>
             </tr>
         </thead>
         <tbody></tbody>
@@ -282,11 +282,11 @@ function renderVocabTable(rows) {
         tr.classList.toggle('row-vocab-hidden', hiddenRows.has(word));
         const checked = selectedWords.has(word) ? 'checked' : '';
         const audioCell = row.audio_key
-            ? `<button class="vocab-audio-btn" onclick="playTableAudio('${escapeAttr(row.audio_key)}', ${escapeJsArg(word)}, this)" title="Play audio" aria-label="Play audio"><i class="fa-solid fa-play play-icon" aria-hidden="true"></i></button>`
+            ? `<button class="vocab-audio-btn" onclick="playTableAudio('${escapeAttr(row.audio_key)}', ${escapeJsArg(word)}, this)" title="${t('lesson.play_audio')}" aria-label="${t('lesson.play_audio')}"><i class="fa-solid fa-play play-icon" aria-hidden="true"></i></button>`
             : '<span class="vocab-no-audio">-</span>';
         const pinyin = escapeAttr(row.pinyin || '');
         const writeBtn = /[\u4e00-\u9fff]/.test(word)
-            ? `<button class="vocab-stroke-row-btn" onclick="openVocabStrokeModal(${escapeJsArg(word)}, '${pinyin}')" title="Write character" aria-label="Write character"><i class="fa-solid fa-pen-nib" aria-hidden="true"></i></button>`
+            ? `<button class="vocab-stroke-row-btn" onclick="openVocabStrokeModal(${escapeJsArg(word)}, '${pinyin}')" title="${t('vocab.write_character_aria')}" aria-label="${t('vocab.write_character_aria')}"><i class="fa-solid fa-pen-nib" aria-hidden="true"></i></button>`
             : '';
         tr.innerHTML = `
             <td class="vocab-no-cell">${index + 1}</td>
@@ -315,7 +315,7 @@ function renderPagination(total) {
     const prev = document.getElementById('page-prev-btn');
     const next = document.getElementById('page-next-btn');
     pagination.style.display = total > 0 ? 'flex' : 'none';
-    status.textContent = `Page ${currentPage} / ${totalPages} (${total} words)`;
+    status.textContent = t('vocab.page_status_with_count', { current: currentPage, total: totalPages, count: total });
     prev.disabled = currentPage <= 1;
     next.disabled = currentPage >= totalPages;
 }
@@ -379,7 +379,7 @@ function getSelectedWordRows() {
 function startSelectedTraining() {
     const selected = getSelectedWordRows();
     if (!selected.length) {
-        alert('Select at least one word first.');
+        alert(t('vocab.select_at_least_one'));
         return;
     }
     sessionStorage.setItem('selectedVocabTrainerWords', JSON.stringify(selected.map(row => row.word)));
@@ -389,7 +389,7 @@ function startSelectedTraining() {
 function openSelectedFlashcards() {
     const selected = getSelectedWordRows();
     if (!selected.length) {
-        alert('Select at least one word first.');
+        alert(t('vocab.select_at_least_one'));
         return;
     }
     sessionStorage.setItem('selectedVocabFlashcards', JSON.stringify(selected));
@@ -400,7 +400,7 @@ function renderColumnHeader(colType, label, tableId) {
     const isHidden = hiddenColumns.has(colType);
     return `
         <span class="vocab-column-header-label">${escapeHtml(label)}</span>
-        <button type="button" class="vocab-column-toggle" data-col="${colType}" onclick="event.stopPropagation(); toggleVocabColumn('${colType}', '${tableId}')" title="${isHidden ? 'Show' : 'Hide'} ${escapeAttr(label)}" aria-label="${isHidden ? 'Show' : 'Hide'} ${escapeAttr(label)}">
+        <button type="button" class="vocab-column-toggle" data-col="${colType}" onclick="event.stopPropagation(); toggleVocabColumn('${colType}', '${tableId}')" title="${isHidden ? t('vocab.show') : t('vocab.hide')} ${escapeAttr(label)}" aria-label="${isHidden ? t('vocab.show') : t('vocab.hide')} ${escapeAttr(label)}">
             <i class="fa-solid ${isHidden ? 'fa-eye' : 'fa-eye-slash'}" aria-hidden="true"></i>
         </button>
     `;
@@ -443,7 +443,7 @@ function updateColumnToggleIcon(colType) {
     const isHidden = hiddenColumns.has(colType);
     icon?.classList.toggle('fa-eye', isHidden);
     icon?.classList.toggle('fa-eye-slash', !isHidden);
-    button.title = `${isHidden ? 'Show' : 'Hide'} column`;
+    button.title = `${isHidden ? t('vocab.show') : t('vocab.hide')} ${t('vocab.column_label')}`;
     button.setAttribute('aria-label', button.title);
 }
 
@@ -619,7 +619,7 @@ function openVocabStrokeModal(word, pinyin) {
     // Split word into individual Chinese characters
     vocabStrokeChars = [...word].filter(c => /[\u4e00-\u9fff]/.test(c));
     if (vocabStrokeChars.length === 0) {
-        alert('No Chinese characters found for this word.');
+        alert(t('vocab.no_chars_found'));
         return;
     }
 
@@ -744,7 +744,7 @@ function handleSearchInput() {
 }
 
 async function runVocabSearch(query) {
-    setTableState('Searching…');
+    setTableState(t('vocab.searching'));
     const params = new URLSearchParams({
         q: query,
         page: String(currentPage),
@@ -754,7 +754,7 @@ async function runVocabSearch(query) {
         const res = await fetch(`/api/vocab/search?${params.toString()}`);
         const data = await res.json();
         if (!res.ok || data.error) {
-            clearTable(data.error || 'Search failed.');
+            clearTable(data.error || t('vocab.search_failed'));
             return;
         }
         currentRows = data.rows || [];
@@ -762,10 +762,10 @@ async function runVocabSearch(query) {
         totalPages = data.total_pages || 1;
         renderVocabTable(currentRows);
         renderPagination(data.total || 0);
-        if (!currentRows.length) clearTable(`No results for "${query}".`);
+        if (!currentRows.length) clearTable(t('vocab.no_results_for', { query }));
     } catch (e) {
         console.error(e);
-        clearTable('Search failed.');
+        clearTable(t('vocab.search_failed'));
     }
 }
 
@@ -790,6 +790,6 @@ function clearSearch() {
 function exitSearchMode() {
     searchMode = false;
     currentPage = 1;
-    clearTable('Choose filters to load vocabulary.');
+    clearTable(t('vocab.state_choose_filters'));
 }
 

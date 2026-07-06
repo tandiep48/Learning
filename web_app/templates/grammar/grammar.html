@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ current_lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grammar</title>
-    <link rel="stylesheet" href="/static/shared/styles.css?v=6">
+    <title>{{ t('grammar.page_title') }}</title>
+    <link rel="stylesheet" href="/static/shared/styles.css?v=7">
     <link rel="stylesheet" href="/static/shared/passage_picker.css?v=999">
     <link rel="stylesheet" href="/static/grammar/grammar.css?v=999">
     <link rel="stylesheet" href="/static/shared/sidebar.css?v=5">
@@ -18,14 +18,14 @@
 
             <section id="screen-loading" class="screen">
                 <div class="loader"></div>
-                <p>Loading grammar...</p>
+                <p>{{ t('grammar.loading') }}</p>
             </section>
 
             <section id="screen-grammar" class="screen">
                 <div class="grammar-topbar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <div id="grammar-breadcrumb" style="margin-bottom: 0;"></div>
                     <button class="btn primary grammar-finish-btn" onclick="goBackToPartSelection()" style="padding: 8px 16px; min-height: auto; flex-direction: row;">
-                        Finish
+                        {{ t('grammar.finish') }}
                     </button>
                 </div>
                 <div id="grammar-body" class="grammar-body"></div>
