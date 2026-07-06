@@ -1,9 +1,9 @@
 import os
 import secrets
 from dotenv import load_dotenv
-from flask import Flask, render_template, redirect, url_for, request, send_from_directory
+from flask import Flask, render_template, redirect, url_for, request, send_from_directory, session
 from flask_cors import CORS
-from flask_login import LoginManager, login_required
+from flask_login import LoginManager, login_required, current_user
 from flask_socketio import SocketIO
 from routes.vocab_routes import vocab_bp
 from routes.lesson_routes import lesson_bp
@@ -14,6 +14,8 @@ from routes.user_routes import user_bp
 from routes.vocab_crud_routes import vocab_crud_bp
 from routes.passage_crud_routes import passage_crud_bp
 from competition_socket import init_competition_socket
+from service.i18n_service import get_current_lang, get_translations, t as i18n_t, SUPPORTED_LANGUAGES
+from db import get_db_connection, update_user_ui_language
 
 load_dotenv()
 
@@ -61,6 +63,26 @@ def inject_avatar_helpers():
         return f"{GCS_BUCKET_URL.rstrip('/')}/hsk_images/hsk{level_num}.png"
 
     return {"avatar_url": avatar_url, "hsk_image_url": hsk_image_url}
+
+@app.context_processor
+def inject_i18n_helpers():
+    lang = get_current_lang()
+    return {"t": i18n_t, "current_lang": lang, "translations_json": get_translations(lang)}
+
+@app.route('/set-ui-language/<lang>')
+def set_ui_language(lang):
+    """Guest-facing language switch: no login required, persists to DB if already logged in."""
+    if lang in SUPPORTED_LANGUAGES:
+        session['ui_language'] = lang
+        if current_user.is_authenticated:
+            conn = get_db_connection()
+            try:
+                update_user_ui_language(conn, current_user.id, lang)
+            finally:
+                if conn:
+                    conn.close()
+            current_user.ui_language = lang
+    return redirect(request.referrer or url_for('index'))
 
 @app.route('/')
 def index():
