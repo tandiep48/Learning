@@ -1,6 +1,6 @@
 {% extends 'shared/trainer_base.html' %}
 
-{% block title %}Lesson Practice - {{ hsk_level }}{% endblock %}
+{% block title %}{{ t('lesson.page_title', hsk_level=hsk_level) }}{% endblock %}
 
 {% block extra_css %}
     <link rel="stylesheet" href="/static/shared/passage_picker.css?v=7">
@@ -19,7 +19,7 @@
 
 {% block loading_class %}{% endblock %}
 
-{% block loading_text %}Generating lesson tasks...{% endblock %}
+{% block loading_text %}{{ t('lesson.generating_tasks') }}{% endblock %}
 
 {% block task_components %}
                 <div id="word-display" class="chinese-word" style="display:none; font-size: 40px; line-height: 1.4;">
@@ -36,7 +36,7 @@
                 <div id="mc-area" class="mc-grid" style="display:none;"></div>
 
                 <div id="typing-area" class="typing-container" style="display:none;">
-                    <input type="text" id="typing-input" lang="zh-CN" placeholder="Type the sentence here..."
+                    <input type="text" id="typing-input" lang="zh-CN" placeholder="{{ t('lesson.typing_placeholder') }}"
                         autocomplete="off">
                     <div id="typing-feedback"
                         style="display:none; margin-top: 10px; margin-bottom: 15px; text-align: center; font-size: 22px; padding: 10px; border-radius: 8px; background: rgba(87, 104, 86, 0.08); width: 100%; box-sizing: border-box;">
@@ -44,10 +44,10 @@
                 </div>
 
                 <div id="reorder-area" style="display:none; width: 100%;">
-                    <p style="color: var(--text-muted); margin-bottom: 5px; text-align:left;">Your Sentence:</p>
+                    <p style="color: var(--text-muted); margin-bottom: 5px; text-align:left;">{{ t('lesson.your_sentence') }}</p>
                     <div id="reorder-target" class="chip-container"></div>
 
-                    <p style="color: var(--text-muted); margin-bottom: 5px; text-align:left;">Available Words:</p>
+                    <p style="color: var(--text-muted); margin-bottom: 5px; text-align:left;">{{ t('lesson.available_words') }}</p>
                     <div id="reorder-source" class="chip-container" style="border: none; background: transparent;">
                     </div>
 
@@ -59,52 +59,51 @@
 
 {% block submit_buttons %}
                     <button id="typing-submit-btn" class="btn primary" onclick="submitTyping()"
-                        style="display:none;">Submit</button>
+                        style="display:none;">{{ t('lesson.submit') }}</button>
                     <button id="reorder-submit-btn" class="btn primary" onclick="submitReorder()"
-                        style="display:none;">Submit Sentence</button>
+                        style="display:none;">{{ t('lesson.submit_sentence') }}</button>
 {% endblock %}
 
 {% block post_task_actions %}
                 <div id="wrong-answer-next" style="display:none; margin-top: 20px; text-align: center;">
                     <button class="btn warning" onclick="nextTaskManual()"
-                        style="width: 100%; padding: 15px; font-size: 18px; color: white; justify-content: center;">Next
-                        Question &rarr;</button>
+                        style="width: 100%; padding: 15px; font-size: 18px; color: white; justify-content: center;">{{ t('lesson.next_question') }}</button>
                 </div>
 {% endblock %}
 
 {% block screen_complete %}
             <div class="nav-buttons training-complete-actions training-complete-top-actions">
-                <button class="btn primary" onclick="goHome()">Back to Menu</button>
+                <button class="btn primary" onclick="goHome()">{{ t('lesson.back_to_menu') }}</button>
                 <button class="btn primary lesson-flow-continue" style="display:none;"
-                    onclick="continueAfterLessonTraining()">Continue</button>
+                    onclick="continueAfterLessonTraining()">{{ t('lesson.continue') }}</button>
             </div>
 
             <div class="lesson-complete-icon" aria-hidden="true">
                 <i class="fa-solid fa-circle-check"></i>
             </div>
-            <h1 style="text-align: center; margin-bottom: 5px;">Lesson Complete!</h1>
-            <p style="text-align: center; color: var(--text-muted); margin-bottom: 24px;">You have successfully finished this practice.</p>
+            <h1 style="text-align: center; margin-bottom: 5px;">{{ t('lesson.complete_title') }}</h1>
+            <p style="text-align: center; color: var(--text-muted); margin-bottom: 24px;">{{ t('lesson.complete_body') }}</p>
 
-            <h2 id="training-complete-title" class="training-complete-title" style="display:none;">Missed Tasks Recap</h2>
+            <h2 id="training-complete-title" class="training-complete-title" style="display:none;">{{ t('lesson.recap_title') }}</h2>
 
             <div class="training-complete-table-wrap" id="recap-table-wrap" style="display:none;">
                 <table class="training-complete-table">
                     <thead>
                         <tr>
-                            <th>Task Type</th>
-                            <th>Question</th>
-                            <th>Your Answer</th>
-                            <th>Correct Answer</th>
+                            <th>{{ t('lesson.table_task_type') }}</th>
+                            <th>{{ t('lesson.table_question') }}</th>
+                            <th>{{ t('lesson.table_your_answer') }}</th>
+                            <th>{{ t('lesson.table_correct_answer') }}</th>
                         </tr>
                     </thead>
                     <tbody id="recap-list"></tbody>
                 </table>
             </div>
 
-            <div id="perfect-area" class="training-empty-state" style="display:none;">No missed tasks this round. Excellent work!</div>
+            <div id="perfect-area" class="training-empty-state" style="display:none;">{{ t('lesson.perfect') }}</div>
 
             <div class="nav-buttons training-complete-actions" id="recap-actions" style="display:none;">
-                <button class="btn primary" id="btn-retry" onclick="retryMissed()">Retry Missed</button>
+                <button class="btn primary" id="btn-retry" onclick="retryMissed()">{{ t('lesson.retry_missed') }}</button>
             </div>
 {% endblock %}
 

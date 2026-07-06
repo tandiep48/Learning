@@ -1,27 +1,27 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ current_lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Practice - Select Book</title>
+    <title>{{ t('practice_select.page_title') }}</title>
     <link rel="stylesheet" href="/static/shared/styles.css?v=7">
     <link rel="stylesheet" href="/static/practice/practice_select.css?v=3">
 </head>
 <body class="with-site-nav">
     {% include 'shared/site_nav.html' %}
     {% set current_category = category if category is defined else 'practice' %}
-    {% set category_label = 'Exam' if current_category == 'exam' else 'Exercise' %}
+    {% set category_label = t('dashboard.exam') if current_category == 'exam' else t('dashboard.exercise') %}
     <div class="practice-select-container">
-        <a href="/" class="page-back">&larr; Back to Dashboard</a>
+        <a href="/" class="page-back">&larr; {{ t('picker.back_to_dashboard') }}</a>
         <h1 class="page-title">{{ category_label }}</h1>
-        <p class="page-subtitle">Choose an HSK set to begin your {{ category_label|lower }} session.</p>
+        <p class="page-subtitle">{{ t('practice_select.choose_hsk_subtitle', category=category_label|lower) }}</p>
         <div class="practice-grid">
             {% for number in range(1, 7) %}
             <a href="/practice/{{ number }}?category={{ current_category }}" class="practice-card">
                 <div class="card-icon">{{ number }}</div>
                 <div class="card-label">{{ category_label }} {{ number }}</div>
                 <div class="hsk-badge">HSK {{ number }}</div>
-                <div class="card-sub">Listening &amp; Reading</div>
+                <div class="card-sub">{{ t('practice_select.listening_reading') }}</div>
             </a>
             {% endfor %}
         </div>

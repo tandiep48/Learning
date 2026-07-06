@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ current_lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Practice {{ number }}</title>
+    <title>{{ t('practice.page_title', number=number) }}</title>
     <script>
         window.practiceNumber = {{ number if number is defined else 'null' }};
         window.lessonId = "{{ lesson_id if lesson_id is defined else '' }}";
@@ -12,7 +12,7 @@
         window.multiMode = {{ 'true' if multi_mode else 'false' }};
     </script>
     <link rel="stylesheet" href="/static/shared/styles.css?v=7">
-    <link rel="stylesheet" href="/static/practice/practice.css?v=4">
+    <link rel="stylesheet" href="/static/practice/practice.css?v=7">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 <body class="with-site-nav practice-page">
@@ -22,7 +22,7 @@
         <!-- LOADING -->
         <div class="p-screen active" id="screen-loading">
             <div class="loading-spinner"></div>
-            <p style="color:var(--text-muted); margin-top:16px;">Loading practice…</p>
+            <p style="color:var(--text-muted); margin-top:16px;">{{ t('practice.loading') }}</p>
         </div>
 
         <!-- MAIN PRACTICE -->
@@ -43,7 +43,7 @@
             </div>
 
             <!-- Skill Tag -->
-            <div class="p-skill-tag" id="skill-tag">Listening</div>
+            <div class="p-skill-tag" id="skill-tag">{{ t('recommend.listening') }}</div>
 
             <!-- Question Card Area -->
             <div class="p-card" id="question-card">
@@ -53,10 +53,10 @@
             <!-- Bottom Nav -->
             <div class="p-nav">
                 <button class="p-btn p-btn-check" id="btn-check" onclick="checkAnswers()" disabled>
-                    Check
+                    {{ t('practice.check') }}
                 </button>
                 <button class="p-btn p-btn-next" id="btn-next" onclick="nextGroup()" style="display:none">
-                    Next →
+                    {{ t('reading.next') }} →
                 </button>
             </div>
         </div>
@@ -67,18 +67,18 @@
                 <div class="result-emoji" id="result-emoji">
                     <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
                 </div>
-                <h1 class="result-title">Practice Complete!</h1>
-                <p class="result-sub">Practice Set <span id="result-number"></span></p>
+                <h1 class="result-title">{{ t('practice.complete_title') }}</h1>
+                <p class="result-sub">{{ t('practice.set_label') }} <span id="result-number"></span></p>
                 <div class="result-score-box">
                     <div class="result-score-num" id="result-score">0 / 0</div>
-                    <div class="result-score-label">Correct answers</div>
+                    <div class="result-score-label">{{ t('practice.correct_answers') }}</div>
                 </div>
                 <div class="result-actions">
                     <a href="/practice" id="result-back-btn" class="p-btn p-btn-check" style="text-decoration:none; text-align:center;">
-                        ← Back to Practice
+                        ← {{ t('practice.back_to_practice') }}
                     </a>
                     <button class="p-btn p-btn-next" onclick="location.reload()">
-                        Retry
+                        {{ t('practice.retry') }}
                     </button>
                 </div>
             </div>
@@ -88,6 +88,6 @@
 
     <audio id="audio-player" preload="auto"></audio>
     <script src="/static/shared/han_text.js?v=2"></script>
-    <script src="/static/practice/practice.js?v=5"></script>
+    <script src="/static/practice/practice.js?v=8"></script>
 </body>
 </html>

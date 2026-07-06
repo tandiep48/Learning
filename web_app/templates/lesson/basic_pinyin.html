@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ current_lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Basic Pinyin</title>
+    <title>{{ t('pinyin.basic_page_title') }}</title>
     <link rel="stylesheet" href="/static/shared/styles.css?v=7">
     <link rel="stylesheet" href="/static/lesson/pinyin.css?v=4">
 </head>
@@ -12,15 +12,15 @@
     <div class="app-container lesson-container">
         <div class="container mt-3">
             <div style="margin-bottom: 20px;">
-                <a href="/learning" style="color: var(--primary); text-decoration: none; font-weight: 600;">&larr; Back to Select Lesson</a>
+                <a href="/learning" style="color: var(--primary); text-decoration: none; font-weight: 600;">&larr; {{ t('pinyin.back_to_lesson_select') }}</a>
             </div>
 
 
   <div class="d-flex flex-column justify-content-center align-items-center my-4">
-    <h2 class="text-h2 text-center mb-2">HSK 1 - Lesson 1</h2>
+    <h2 class="text-h2 text-center mb-2">{{ t('pinyin.lesson_heading') }}</h2>
     <nav class="pinyin-toggle">
-      <a href="/lesson/basic-pinyin" class="active">Basic</a> /
-      <a href="/lesson/advanced-pinyin">Advanced</a>
+      <a href="/lesson/basic-pinyin" class="active">{{ t('pinyin.basic') }}</a> /
+      <a href="/lesson/advanced-pinyin">{{ t('pinyin.advanced') }}</a>
     </nav>
   </div>
 
@@ -28,8 +28,8 @@
     <table id="pinyin-0" class="tg" style="border-collapse: unset; border-radius: 2rem">
       <thead>
         <tr>
-          <th class="tg-46ru font-big" colspan="4">Initials</th>
-          <th class="tg-46ru font-big" colspan="4">Finals</th>
+          <th class="tg-46ru font-big" colspan="4">{{ t('pinyin.initials') }}</th>
+          <th class="tg-46ru font-big" colspan="4">{{ t('pinyin.finals') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -316,7 +316,7 @@
           <td class="tg-0pky" onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"></td>
         </tr>
         <tr>
-          <td class="tg-46ru font-big" colspan="4">Tones</td>
+          <td class="tg-46ru font-big" colspan="4">{{ t('pinyin.tones') }}</td>
           <td
             class="tg-0pky"
             onmouseover="showPronunciation(this, event)" onmouseout="hidePronunciation()"
