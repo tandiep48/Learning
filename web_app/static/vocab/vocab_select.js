@@ -268,7 +268,7 @@ function renderVocabTable(rows) {
                         <i class="fa-solid fa-play play-icon" aria-hidden="true"></i>
                     </button>
                     <button class="vocab-header-icon-btn" id="table-stroke-all-btn" onclick="event.stopPropagation(); strokeOrderAll()" title="${t('vocab.stroke_all_aria')}" aria-label="${t('vocab.stroke_all_aria')}">
-                        <i class="fa-solid fa-marker" aria-hidden="true"></i>
+                        <i class="fa-solid fa-paintbrush" aria-hidden="true"></i>
                     </button>
                 </th>
                 <th>${renderColumnHeader('cn', t('dashboard.table_character'), 'trainer-vocab-table')}</th>
@@ -291,7 +291,7 @@ function renderVocabTable(rows) {
             : '<span class="vocab-no-audio">-</span>';
         const pinyin = escapeAttr(row.pinyin || '');
         const writeBtn = /[\u4e00-\u9fff]/.test(word)
-            ? `<button class="vocab-stroke-row-btn" onclick="openVocabStrokeModal(${escapeJsArg(word)}, '${pinyin}')" title="${t('vocab.write_character_aria')}" aria-label="${t('vocab.write_character_aria')}"><i class="fa-solid fa-marker" aria-hidden="true"></i></button>`
+            ? `<button class="vocab-stroke-row-btn" onclick="openVocabStrokeModal(${escapeJsArg(word)}, '${pinyin}')" title="${t('vocab.write_character_aria')}" aria-label="${t('vocab.write_character_aria')}"><i class="fa-solid fa-paintbrush" aria-hidden="true"></i></button>`
             : '';
         tr.innerHTML = `
             <td class="vocab-no-cell">${index + 1}</td>

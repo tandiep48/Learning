@@ -599,7 +599,7 @@ function renderVocabTable() {
                             aria-label="${t('reading.play_all_vocab_audio')}"><i class="fa-solid fa-play" aria-hidden="true"></i></button>
                         <button type="button" onclick="event.stopPropagation(); strokeOrderAllSummary()"
                             id="vl-summary-stroke-all-btn" class="vocab-header-icon-btn" title="${t('vocab.stroke_all_aria')}"
-                            aria-label="${t('vocab.stroke_all_aria')}"><i class="fa-solid fa-marker" aria-hidden="true"></i></button>
+                            aria-label="${t('vocab.stroke_all_aria')}"><i class="fa-solid fa-paintbrush" aria-hidden="true"></i></button>
                     </th>
                     <th class="vocab-no-col">
                         <button type="button" onclick="event.stopPropagation(); shuffleVocab()"
@@ -622,7 +622,7 @@ function renderVocabTable() {
             : `<span class="vocab-no-audio" title="${t('reading.no_audio_available')}">-</span>`;
         const hasChineseChars = /[\u4e00-\u9fff]/.test(v.word || '');
         const strokeBtn = hasChineseChars
-            ? `<button type="button" class="vocab-stroke-row-btn" onclick="openStrokeModalForWord('${escapeAttr(v.word)}', '${escapeAttr(v.pinyin || '')}')" title="${t('vocab_learning.show_stroke_order_aria')}" aria-label="${t('vocab_learning.show_stroke_order_aria')}"><i class="fa-solid fa-marker" aria-hidden="true"></i></button>`
+            ? `<button type="button" class="vocab-stroke-row-btn" onclick="openStrokeModalForWord('${escapeAttr(v.word)}', '${escapeAttr(v.pinyin || '')}')" title="${t('vocab_learning.show_stroke_order_aria')}" aria-label="${t('vocab_learning.show_stroke_order_aria')}"><i class="fa-solid fa-paintbrush" aria-hidden="true"></i></button>`
             : '';
         html += `
             <tr id="vl-tr-${index}" data-audio="${escapeAttr(v.audio_key || '')}">
