@@ -236,6 +236,19 @@
     font-weight: 700;
 }
 
+/* "No." header also hosts the shuffle button */
+.vocab-no-col {
+    width: 92px;
+    white-space: nowrap;
+}
+.vocab-no-col .vocab-header-icon-btn {
+    margin-right: 6px;
+    vertical-align: middle;
+}
+.vocab-no-label {
+    vertical-align: middle;
+}
+
 .vocab-tools-cell {
     text-align: center;
     white-space: nowrap;

@@ -597,11 +597,16 @@ function renderVocabTable() {
                         <button type="button" onclick="event.stopPropagation(); playAllVocabAudio()"
                             id="vl-summary-play-all-btn" class="vocab-header-icon-btn" title="${t('reading.play_all_vocab_audio')}"
                             aria-label="${t('reading.play_all_vocab_audio')}"><i class="fa-solid fa-play" aria-hidden="true"></i></button>
+                        <button type="button" onclick="event.stopPropagation(); strokeOrderAllSummary()"
+                            id="vl-summary-stroke-all-btn" class="vocab-header-icon-btn" title="${t('vocab.stroke_all_aria')}"
+                            aria-label="${t('vocab.stroke_all_aria')}"><i class="fa-solid fa-marker" aria-hidden="true"></i></button>
+                    </th>
+                    <th class="vocab-no-col">
                         <button type="button" onclick="event.stopPropagation(); shuffleVocab()"
                             class="vocab-header-icon-btn" title="${t('reading.shuffle_vocab_audio')}"
                             aria-label="${t('reading.shuffle_vocab_audio')}"><i class="fa-solid fa-shuffle" aria-hidden="true"></i></button>
+                        <span class="vocab-no-label">${t('vocab.no_column')}</span>
                     </th>
-                    <th class="vocab-no-col">${t('vocab.no_column')}</th>
                     <th>${renderSummaryColumnHeader('cn', t('dashboard.table_character').toUpperCase(), tableId)}</th>
                     <th>${renderSummaryColumnHeader('py', t('dashboard.table_pinyin').toUpperCase(), tableId)}</th>
                     <th>${renderSummaryColumnHeader('vn', t('dashboard.table_meaning_vn').toUpperCase(), tableId)}</th>
@@ -613,11 +618,11 @@ function renderVocabTable() {
     tableVocabList.forEach((v, index) => {
         const word = v.word || '';
         const audioBtn = v.audio_key
-            ? `<button type="button" class="vocab-audio-btn" onclick="playSingleVocabAudio('${escapeAttr(v.audio_key)}', ${escapeJsArg(word)}, this)" title="${t('reading.play_word_audio')}" aria-label="${escapeAttr(t('reading.play_audio_for', { word: v.word || 'word' }))}"><i class="fa-solid fa-play play-icon" aria-hidden="true"></i></button>`
+            ? `<button type="button" class="vocab-audio-btn" onclick="playSingleVocabAudio('${escapeAttr(v.audio_key)}', ${escapeJsArg(word)}, this)" title="${t('reading.play_word_audio')}" aria-label="${escapeAttr(t('reading.play_audio_for', { word: v.word || 'word' }))}"><i class="fa-solid fa-volume-high" aria-hidden="true"></i></button>`
             : `<span class="vocab-no-audio" title="${t('reading.no_audio_available')}">-</span>`;
         const hasChineseChars = /[\u4e00-\u9fff]/.test(v.word || '');
         const strokeBtn = hasChineseChars
-            ? `<button type="button" class="vocab-stroke-row-btn" onclick="openStrokeModalForWord('${escapeAttr(v.word)}', '${escapeAttr(v.pinyin || '')}')" title="${t('vocab_learning.show_stroke_order_aria')}" aria-label="${t('vocab_learning.show_stroke_order_aria')}"><i class="fa-solid fa-pen-nib" aria-hidden="true"></i></button>`
+            ? `<button type="button" class="vocab-stroke-row-btn" onclick="openStrokeModalForWord('${escapeAttr(v.word)}', '${escapeAttr(v.pinyin || '')}')" title="${t('vocab_learning.show_stroke_order_aria')}" aria-label="${t('vocab_learning.show_stroke_order_aria')}"><i class="fa-solid fa-marker" aria-hidden="true"></i></button>`
             : '';
         html += `
             <tr id="vl-tr-${index}" data-audio="${escapeAttr(v.audio_key || '')}">
@@ -759,9 +764,12 @@ function shuffleVocab() {
 function setSummaryAudioButtonPlaying(button, playing) {
     const icon = button?.querySelector('.fa-solid');
     if (!icon) return;
-    icon.classList.toggle('fa-play', !playing);
+    // Row buttons show a speaker icon at rest; the header "play all" button shows a play icon.
+    const isRowButton = button.classList.contains('vocab-audio-btn');
+    const restIcon = isRowButton ? 'fa-volume-high' : 'fa-play';
+    icon.classList.toggle(restIcon, !playing);
     icon.classList.toggle('fa-pause', playing);
-    icon.classList.toggle('play-icon', !playing);
+    icon.classList.toggle('play-icon', !playing && !isRowButton);
 }
 
 function resetSummaryAudioButtons() {
@@ -862,6 +870,7 @@ let strokeQuizMode = false;
 // Open stroke modal for a specific word/pinyin (used from summary table rows)
 function openStrokeModalForWord(word, pinyin) {
     if (!word) return;
+    stopStrokeOrderAllSummary();
     strokeChars = [...word].filter(c => /[\u4e00-\u9fff]/.test(c));
     if (strokeChars.length === 0) return;
 
@@ -888,6 +897,7 @@ function openStrokeModalForWord(word, pinyin) {
 function openStrokeModal() {
     const word = words[currentIndex];
     if (!word || !word.word) return;
+    stopStrokeOrderAllSummary();
 
     // Split word into individual Chinese characters
     strokeChars = [...word.word].filter(c => /[\u4e00-\u9fff]/.test(c));
@@ -997,6 +1007,7 @@ function strokeReset() {
 }
 
 function closeStrokeModal() {
+    stopStrokeOrderAllSummary();
     document.getElementById('stroke-modal-overlay').classList.remove('open');
     strokeWriter = null;
     // Clear canvas to release memory
@@ -1006,4 +1017,87 @@ function closeStrokeModal() {
 
 function closeStrokeModalIfBackground(e) {
     if (e.target.id === 'stroke-modal-overlay') closeStrokeModal();
+}
+
+// ─── Stroke Order: All Words in Summary ──────────────────────────────────────
+
+let strokeAllQueue = [];
+let strokeAllIndex = 0;
+let strokeAllActive = false;
+
+function strokeOrderAllSummary() {
+    // Build a flat queue of every Chinese character across the summary rows.
+    strokeAllQueue = [];
+    (tableVocabList || []).forEach(v => {
+        const word = v.word || '';
+        const pinyin = v.pinyin || '';
+        [...word].filter(c => /[一-鿿]/.test(c)).forEach(ch => strokeAllQueue.push({ ch, word, pinyin }));
+    });
+    if (!strokeAllQueue.length) return;
+
+    strokeAllIndex = 0;
+    strokeAllActive = true;
+    document.getElementById('stroke-char-tabs').style.display = 'none';
+    document.getElementById('stroke-modal-overlay').classList.add('open');
+    renderStrokeAllChar();
+}
+
+function renderStrokeAllChar() {
+    if (!strokeAllActive) return;
+    const item = strokeAllQueue[strokeAllIndex];
+    if (!item) { strokeAllActive = false; return; }
+
+    // Keep the single-char controls (Animate/Reset) pointing at the current character.
+    strokeChars = [item.ch];
+    strokeCharIndex = 0;
+
+    document.getElementById('stroke-modal-word').textContent = item.word;
+    document.getElementById('stroke-modal-pinyin').textContent =
+        `${item.pinyin ? item.pinyin + ' · ' : ''}${strokeAllIndex + 1}/${strokeAllQueue.length}`;
+
+    const container = document.getElementById('stroke-canvas-container');
+    container.innerHTML = '';
+
+    if (!window.HanziWriter) {
+        container.innerHTML = '<div class="vocab-empty">Stroke order is temporarily unavailable.</div>';
+        strokeAllActive = false;
+        return;
+    }
+
+    const target = document.createElement('div');
+    target.id = 'stroke-svg-target';
+    container.appendChild(target);
+
+    const size = Math.min(280, window.innerWidth - 80);
+    strokeWriter = HanziWriter.create('stroke-svg-target', item.ch, {
+        width: size,
+        height: size,
+        padding: 16,
+        strokeColor: '#e2e8f0',
+        radicalColor: '#738a72',
+        outlineColor: 'rgba(255,255,255,0.08)',
+        drawingColor: '#576856',
+        drawingWidth: 4,
+        showOutline: true,
+        showCharacter: false,
+        delayBetweenStrokes: 300,
+    });
+
+    strokeWriter.animateCharacter({
+        onComplete: () => {
+            if (!strokeAllActive) return;
+            setTimeout(() => {
+                if (!strokeAllActive) return;
+                strokeAllIndex++;
+                if (strokeAllIndex < strokeAllQueue.length) renderStrokeAllChar();
+                else strokeAllActive = false;
+            }, 600);
+        }
+    });
+}
+
+function stopStrokeOrderAllSummary() {
+    strokeAllActive = false;
+    strokeAllQueue = [];
+    strokeAllIndex = 0;
 }

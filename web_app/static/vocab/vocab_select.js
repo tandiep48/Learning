@@ -254,7 +254,12 @@ function renderVocabTable(rows) {
     table.innerHTML = `
         <thead>
             <tr>
-                <th class="vocab-no-col">${t('vocab.no_column')}</th>
+                <th class="vocab-no-col">
+                    <button class="vocab-header-icon-btn" onclick="event.stopPropagation(); shuffleVisibleRows()" title="${t('vocab.shuffle_visible_aria')}" aria-label="${t('vocab.shuffle_visible_aria')}">
+                        <i class="fa-solid fa-shuffle" aria-hidden="true"></i>
+                    </button>
+                    <span class="vocab-no-label">${t('vocab.no_column')}</span>
+                </th>
                 <th class="vocab-select-col">
                     <input type="checkbox" id="select-page-checkbox" onchange="togglePageSelection(this.checked)" title="${t('vocab.select_visible_rows_aria')}">
                 </th>
@@ -262,8 +267,8 @@ function renderVocabTable(rows) {
                     <button class="vocab-header-icon-btn" id="table-play-all-btn" onclick="event.stopPropagation(); playAllTableAudio()" title="${t('vocab.play_all_visible_aria')}" aria-label="${t('vocab.play_all_visible_aria')}">
                         <i class="fa-solid fa-play play-icon" aria-hidden="true"></i>
                     </button>
-                    <button class="vocab-header-icon-btn" onclick="event.stopPropagation(); shuffleVisibleRows()" title="${t('vocab.shuffle_visible_aria')}" aria-label="${t('vocab.shuffle_visible_aria')}">
-                        <i class="fa-solid fa-shuffle" aria-hidden="true"></i>
+                    <button class="vocab-header-icon-btn" id="table-stroke-all-btn" onclick="event.stopPropagation(); strokeOrderAll()" title="${t('vocab.stroke_all_aria')}" aria-label="${t('vocab.stroke_all_aria')}">
+                        <i class="fa-solid fa-marker" aria-hidden="true"></i>
                     </button>
                 </th>
                 <th>${renderColumnHeader('cn', t('dashboard.table_character'), 'trainer-vocab-table')}</th>
@@ -282,11 +287,11 @@ function renderVocabTable(rows) {
         tr.classList.toggle('row-vocab-hidden', hiddenRows.has(word));
         const checked = selectedWords.has(word) ? 'checked' : '';
         const audioCell = row.audio_key
-            ? `<button class="vocab-audio-btn" onclick="playTableAudio('${escapeAttr(row.audio_key)}', ${escapeJsArg(word)}, this)" title="${t('lesson.play_audio')}" aria-label="${t('lesson.play_audio')}"><i class="fa-solid fa-play play-icon" aria-hidden="true"></i></button>`
+            ? `<button class="vocab-audio-btn" onclick="playTableAudio('${escapeAttr(row.audio_key)}', ${escapeJsArg(word)}, this)" title="${t('lesson.play_audio')}" aria-label="${t('lesson.play_audio')}"><i class="fa-solid fa-volume-high" aria-hidden="true"></i></button>`
             : '<span class="vocab-no-audio">-</span>';
         const pinyin = escapeAttr(row.pinyin || '');
         const writeBtn = /[\u4e00-\u9fff]/.test(word)
-            ? `<button class="vocab-stroke-row-btn" onclick="openVocabStrokeModal(${escapeJsArg(word)}, '${pinyin}')" title="${t('vocab.write_character_aria')}" aria-label="${t('vocab.write_character_aria')}"><i class="fa-solid fa-pen-nib" aria-hidden="true"></i></button>`
+            ? `<button class="vocab-stroke-row-btn" onclick="openVocabStrokeModal(${escapeJsArg(word)}, '${pinyin}')" title="${t('vocab.write_character_aria')}" aria-label="${t('vocab.write_character_aria')}"><i class="fa-solid fa-marker" aria-hidden="true"></i></button>`
             : '';
         tr.innerHTML = `
             <td class="vocab-no-cell">${index + 1}</td>
@@ -529,9 +534,12 @@ function shuffleVisibleRows() {
 function setAudioButtonPlaying(button, playing) {
     const icon = button?.querySelector('.fa-solid');
     if (!icon) return;
-    icon.classList.toggle('fa-play', !playing);
+    // Row buttons show a speaker icon at rest; the header "play all" button shows a play icon.
+    const isRowButton = button.classList.contains('vocab-audio-btn');
+    const restIcon = isRowButton ? 'fa-volume-high' : 'fa-play';
+    icon.classList.toggle(restIcon, !playing);
     icon.classList.toggle('fa-pause', playing);
-    icon.classList.toggle('play-icon', !playing);
+    icon.classList.toggle('play-icon', !playing && !isRowButton);
 }
 
 function resetTableAudioButtons() {
@@ -615,6 +623,7 @@ let vocabStrokeQuizMode = false;
 
 function openVocabStrokeModal(word, pinyin) {
     if (!word) return;
+    stopStrokeOrderAll();
 
     // Split word into individual Chinese characters
     vocabStrokeChars = [...word].filter(c => /[\u4e00-\u9fff]/.test(c));
@@ -712,6 +721,7 @@ function vocabStrokeReset() {
 }
 
 function closeVocabStrokeModal() {
+    stopStrokeOrderAll();
     document.getElementById('vocab-stroke-modal-overlay').classList.remove('open');
     vocabStrokeWriter = null;
     const container = document.getElementById('vocab-stroke-canvas-container');
@@ -720,6 +730,84 @@ function closeVocabStrokeModal() {
 
 function closeVocabStrokeModalIfBackground(e) {
     if (e.target.id === 'vocab-stroke-modal-overlay') closeVocabStrokeModal();
+}
+
+// ─── Stroke Order: All Words on Current Page ─────────────────────────────────
+
+let strokeAllQueue = [];
+let strokeAllIndex = 0;
+let strokeAllActive = false;
+
+function strokeOrderAll() {
+    // Build a flat queue of every Chinese character across the current page's rows.
+    strokeAllQueue = [];
+    currentRows.forEach(row => {
+        const word = row.word || row.cn || '';
+        const pinyin = row.pinyin || '';
+        [...word].filter(c => /[一-鿿]/.test(c)).forEach(ch => strokeAllQueue.push({ ch, word, pinyin }));
+    });
+    if (!strokeAllQueue.length) {
+        alert(t('vocab.no_chars_found'));
+        return;
+    }
+    strokeAllIndex = 0;
+    strokeAllActive = true;
+    document.getElementById('vocab-stroke-char-tabs').style.display = 'none';
+    document.getElementById('vocab-stroke-modal-overlay').classList.add('open');
+    renderStrokeAllChar();
+}
+
+function renderStrokeAllChar() {
+    if (!strokeAllActive) return;
+    const item = strokeAllQueue[strokeAllIndex];
+    if (!item) { strokeAllActive = false; return; }
+
+    // Keep the single-char controls (Animate/Reset) pointing at the current character.
+    vocabStrokeChars = [item.ch];
+    vocabStrokeCharIndex = 0;
+
+    document.getElementById('vocab-stroke-modal-word').textContent = item.word;
+    document.getElementById('vocab-stroke-modal-pinyin').textContent =
+        `${item.pinyin ? item.pinyin + ' · ' : ''}${strokeAllIndex + 1}/${strokeAllQueue.length}`;
+
+    const container = document.getElementById('vocab-stroke-canvas-container');
+    container.innerHTML = '';
+    const target = document.createElement('div');
+    target.id = 'vocab-stroke-svg-target';
+    container.appendChild(target);
+
+    const size = Math.min(280, window.innerWidth - 80);
+    vocabStrokeWriter = HanziWriter.create('vocab-stroke-svg-target', item.ch, {
+        width: size,
+        height: size,
+        padding: 16,
+        strokeColor: '#1a1a1a',
+        radicalColor: '#007a61',
+        outlineColor: 'rgba(0,0,0,0.08)',
+        drawingColor: '#007a61',
+        drawingWidth: 4,
+        showOutline: true,
+        showCharacter: false,
+        delayBetweenStrokes: 300,
+    });
+
+    vocabStrokeWriter.animateCharacter({
+        onComplete: () => {
+            if (!strokeAllActive) return;
+            setTimeout(() => {
+                if (!strokeAllActive) return;
+                strokeAllIndex++;
+                if (strokeAllIndex < strokeAllQueue.length) renderStrokeAllChar();
+                else strokeAllActive = false;
+            }, 600);
+        }
+    });
+}
+
+function stopStrokeOrderAll() {
+    strokeAllActive = false;
+    strokeAllQueue = [];
+    strokeAllIndex = 0;
 }
 
 // ─── Vocabulary Search ────────────────────────────────────────────────────────
