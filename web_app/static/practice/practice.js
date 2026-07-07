@@ -32,9 +32,47 @@ function stopAudio() {
     audioEl.onended = null;
     audioEl.onerror = null;
     audioEl.onpause = null;
+    audioEl.onloadedmetadata = null;
+    audioEl.ontimeupdate = null;
     activeAudioControl = null;
     activeAudioSrc = '';
     resetAllAudioControls();
+}
+
+function formatAudioTime(sec) {
+    if (!Number.isFinite(sec) || sec < 0) sec = 0;
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function getScrubberEls(control) {
+    return {
+        range: control?.querySelector('.p-audio-progress'),
+        elapsed: control?.querySelector('.p-audio-elapsed'),
+        duration: control?.querySelector('.p-audio-duration'),
+    };
+}
+
+function syncScrubberMeta(control) {
+    const { range, duration } = getScrubberEls(control);
+    const dur = Number.isFinite(audioEl.duration) ? audioEl.duration : 0;
+    if (range) range.max = String(Math.max(1, Math.floor(dur)));
+    if (duration) duration.textContent = formatAudioTime(dur);
+}
+
+function syncScrubberProgress(control) {
+    if (!control || control.classList.contains('scrubbing')) return;
+    const { range, elapsed } = getScrubberEls(control);
+    const cur = Number.isFinite(audioEl.currentTime) ? audioEl.currentTime : 0;
+    if (range) range.value = String(Math.floor(cur));
+    if (elapsed) elapsed.textContent = formatAudioTime(cur);
+}
+
+function resetScrubber(control) {
+    const { range, elapsed } = getScrubberEls(control);
+    if (range) range.value = '0';
+    if (elapsed) elapsed.textContent = formatAudioTime(0);
 }
 
 function audioSrc(key, level, category) {
@@ -50,12 +88,13 @@ function resetAudioControl(control) {
     control.classList.remove('playing');
     if (icon) {
         icon.classList.add('fa-play');
-        icon.classList.remove('fa-pause');
+        icon.classList.remove('fa-stop');
     }
     if (btn) {
         btn.title = t('lesson.play_audio');
         btn.setAttribute('aria-label', t('lesson.play_audio'));
     }
+    resetScrubber(control);
 }
 
 function setAudioControlPlaying(control) {
@@ -64,9 +103,9 @@ function setAudioControlPlaying(control) {
     if (!control || !btn || !icon) return;
     control.classList.add('playing');
     icon.classList.remove('fa-play');
-    icon.classList.add('fa-pause');
-    btn.title = t('lesson.pause_audio');
-    btn.setAttribute('aria-label', t('lesson.pause_audio'));
+    icon.classList.add('fa-stop');
+    btn.title = t('practice.stop_audio');
+    btn.setAttribute('aria-label', t('practice.stop_audio'));
 }
 
 function resetAllAudioControls() {
@@ -93,13 +132,21 @@ function loadAudioForControl(control, src) {
             resetAudioControl(control);
         }
     };
+    audioEl.onloadedmetadata = () => syncScrubberMeta(control);
+    audioEl.ontimeupdate = () => syncScrubberProgress(control);
+    if (Number.isFinite(audioEl.duration) && audioEl.duration > 0) {
+        syncScrubberMeta(control);
+        syncScrubberProgress(control);
+    }
 }
 
 function playAudio(key, control, level, category) {
     const src = audioSrc(key, level, category);
     const isSamePausedAudio = activeAudioControl === control && audioEl.paused && activeAudioSrc === src;
+    // Toggling the button while it plays acts as "stop": halt and rewind to the start.
     if (activeAudioControl === control && !audioEl.paused) {
         audioEl.pause();
+        audioEl.currentTime = 0;
         resetAudioControl(control);
         return;
     }
@@ -135,6 +182,24 @@ function seekAudio(key, control, level, category, deltaSeconds) {
     audioEl.currentTime = duration === null
         ? Math.max(0, next)
         : Math.max(0, Math.min(duration, next));
+    syncScrubberProgress(control);
+}
+
+// Absolute seek from the scrubber (seconds is the target position).
+function seekAudioTo(key, control, level, category, seconds) {
+    const src = audioSrc(key, level, category);
+    if (activeAudioSrc !== src || activeAudioControl !== control) {
+        if (activeAudioControl && activeAudioControl !== control) {
+            audioEl.pause();
+            resetAudioControl(activeAudioControl);
+        }
+        loadAudioForControl(control, src);
+    }
+    const duration = Number.isFinite(audioEl.duration) ? audioEl.duration : null;
+    audioEl.currentTime = duration === null
+        ? Math.max(0, seconds)
+        : Math.max(0, Math.min(duration, seconds));
+    syncScrubberProgress(control);
 }
 
 function showScreen(id) {
@@ -192,7 +257,7 @@ function makeAudioBtn(key, label, level, category) {
     backBtn.className = 'p-audio-seek-btn';
     backBtn.title = t('practice.back_5_seconds');
     backBtn.setAttribute('aria-label', t('practice.back_5_seconds'));
-    backBtn.innerHTML = '<span class="p-seek-icon"><i class="fa-solid fa-rotate-left" aria-hidden="true"></i><span>5</span></span>';
+    backBtn.innerHTML = '<i class="fa-solid fa-backward" aria-hidden="true"></i>';
     backBtn.onclick = () => seekAudio(key, control, level, category, -5);
 
     const playBtn = document.createElement('button');
@@ -209,12 +274,46 @@ function makeAudioBtn(key, label, level, category) {
     forwardBtn.className = 'p-audio-seek-btn';
     forwardBtn.title = t('practice.forward_5_seconds');
     forwardBtn.setAttribute('aria-label', t('practice.forward_5_seconds'));
-    forwardBtn.innerHTML = '<span class="p-seek-icon"><i class="fa-solid fa-rotate-right" aria-hidden="true"></i><span>5</span></span>';
+    forwardBtn.innerHTML = '<i class="fa-solid fa-forward" aria-hidden="true"></i>';
     forwardBtn.onclick = () => seekAudio(key, control, level, category, 5);
+
+    // Scrubber: elapsed time — draggable progress — total duration
+    const scrubber = document.createElement('div');
+    scrubber.className = 'p-audio-scrubber';
+
+    const elapsed = document.createElement('span');
+    elapsed.className = 'p-audio-time p-audio-elapsed';
+    elapsed.textContent = '0:00';
+
+    const range = document.createElement('input');
+    range.type = 'range';
+    range.className = 'p-audio-progress';
+    range.min = '0';
+    range.max = '1';
+    range.step = '1';
+    range.value = '0';
+    range.setAttribute('aria-label', t('practice.seek_slider'));
+    range.addEventListener('input', () => {
+        control.classList.add('scrubbing');
+        elapsed.textContent = formatAudioTime(Number(range.value));
+    });
+    range.addEventListener('change', () => {
+        seekAudioTo(key, control, level, category, Number(range.value));
+        control.classList.remove('scrubbing');
+    });
+
+    const duration = document.createElement('span');
+    duration.className = 'p-audio-time p-audio-duration';
+    duration.textContent = '0:00';
+
+    scrubber.appendChild(elapsed);
+    scrubber.appendChild(range);
+    scrubber.appendChild(duration);
 
     control.appendChild(backBtn);
     control.appendChild(playBtn);
     control.appendChild(forwardBtn);
+    control.appendChild(scrubber);
     return control;
 }
 

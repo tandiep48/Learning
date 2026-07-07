@@ -211,22 +211,36 @@ body {
     cursor: pointer;
     transition: all 0.2s;
 }
-.p-seek-icon {
-    position: relative;
-    width: 20px;
-    height: 20px;
+.p-audio-seek-btn .fa-solid {
+    font-size: 0.9rem;
+}
+
+/* Scrubber: elapsed — progress bar — duration */
+.p-audio-scrubber {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
+    gap: 8px;
+    min-width: 180px;
+    flex: 1 1 200px;
 }
-.p-seek-icon .fa-solid {
-    font-size: 1rem;
+.p-audio-time {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    min-width: 34px;
+    text-align: center;
 }
-.p-seek-icon span {
-    position: absolute;
-    font-size: 0.58rem;
-    font-weight: 800;
-    line-height: 1;
+.p-audio-progress {
+    flex: 1 1 auto;
+    width: 100%;
+    height: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    border-radius: 4px;
+    background: rgba(87, 104, 86, 0.18);
+    cursor: pointer;
+    accent-color: var(--primary);
 }
 .p-audio-btn:hover {
     background: rgba(87, 104, 86, 0.14);
@@ -243,7 +257,7 @@ body {
 .p-image {
     border-radius: 10px;
     max-width: 100%;
-    max-height: 320px;
+    max-height: 370px;
     object-fit: contain;
     margin: 0 auto;
     display: block;
@@ -339,14 +353,14 @@ body {
 .img-option.correct-ans { border-color: var(--success) !important; }
 .img-option.wrong-ans { border-color: var(--danger) !important; }
 .img-option.disabled { cursor: not-allowed; }
-.img-option img { 
-    width: 100%; 
-    height: 220px; 
-    object-fit: contain; 
-    display: block; 
+.img-option img {
+    width: 100%;
+    height: 270px;
+    object-fit: contain;
+    display: block;
 }
 .listening-img-options-grid .img-option img {
-    height: 320px;
+    height: 270px;
 }
 .img-option .img-label {
     position: absolute; top: 8px; left: 8px;
