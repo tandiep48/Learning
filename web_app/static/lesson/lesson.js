@@ -264,7 +264,7 @@ function setupReorder(task) {
                 const idx = currentReorderTokens.indexOf(token);
                 if (idx > -1) currentReorderTokens.splice(idx, 1);
             }
-            if (currentReorderTokens.join('') === task.correct_answer) {
+            if (answersMatch(currentReorderTokens.join(''), task.correct_answer)) {
                 submitReorder();
             }
         };
@@ -393,11 +393,36 @@ function skipTask() {
     nextTask();
 }
 
+// Reorder/typing answers can mix full-width & half-width punctuation, ideographic
+// punctuation (。、《》「」), and stray whitespace between tokens. Two answers that
+// look identical can therefore differ byte-for-byte, so we normalize both sides
+// before comparing: unify width via NFKC, fold CJK punctuation onto its ASCII
+// equivalent, then drop every space / zero-width character.
+const ANSWER_PUNCT_MAP = {
+    '、': ',', '。': '.', '｡': '.',
+    '【': '[', '】': ']', '《': '<', '》': '>',
+    '「': '"', '」': '"', '『': '"', '』': '"',
+    '“': '"', '”': '"', '‘': "'", '’': "'",
+    '～': '~', '—': '-', '–': '-', '‧': '', '·': '', '・': ''
+};
+
+function normalizeAnswer(value) {
+    if (value == null) return '';
+    return String(value)
+        .normalize('NFKC')
+        .replace(/[、。｡【】《》「」『』“”‘’～—–‧·・]/g, ch => ANSWER_PUNCT_MAP[ch] ?? ch)
+        .replace(/[\s\u200b\u200c\u200d\ufeff]/g, '');
+}
+
+function answersMatch(a, b) {
+    return normalizeAnswer(a) === normalizeAnswer(b);
+}
+
 async function checkAnswer(task, userAnswer, correctAnswer, element) {
     if (answerSubmitted) return;
     answerSubmitted = true;
     const responseTime = Date.now() - taskStartTime;
-    const isCorrect = (userAnswer === correctAnswer);
+    const isCorrect = answersMatch(userAnswer, correctAnswer);
 
     if (element) {
         element.style.transition = "background-color 0.3s, color 0.3s";
@@ -415,7 +440,7 @@ async function checkAnswer(task, userAnswer, correctAnswer, element) {
                 const textContent = btn.querySelector('.mc-btn-inner')
                     ? btn.querySelector('.mc-btn-inner').textContent.slice(1).trim()
                     : btn.innerText.slice(1).trim();
-                if (textContent === correctAnswer) {
+                if (answersMatch(textContent, correctAnswer)) {
                     btn.style.backgroundColor = "var(--success)";
                     btn.style.color = "white";
                     btn.style.borderColor = "var(--success)";
