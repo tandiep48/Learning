@@ -236,16 +236,12 @@
     font-weight: 700;
 }
 
-/* "No." header also hosts the shuffle button */
+/* "No." header hosts only the shuffle button (row numbers stay in the cells) */
 .vocab-no-col {
-    width: 92px;
     white-space: nowrap;
 }
 .vocab-no-col .vocab-header-icon-btn {
-    margin-right: 6px;
-    vertical-align: middle;
-}
-.vocab-no-label {
+    margin-right: 0;
     vertical-align: middle;
 }
 

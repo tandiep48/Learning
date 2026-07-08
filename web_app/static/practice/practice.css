@@ -135,6 +135,14 @@ body {
     text-transform: uppercase;
 }
 
+/* Wrapper that holds one group's rendered content (cached for navigation) */
+.p-group-card {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    width: 100%;
+}
+
 /* Individual question block */
 .p-question-block {
     background: #CBE2D4;
@@ -145,6 +153,18 @@ body {
     flex-direction: column;
     gap: 14px;
     transition: border-color 0.3s;
+}
+
+/* Sub-question number badge (multi-question groups) */
+.p-qnum {
+    align-self: flex-start;
+    background: var(--primary);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    padding: 2px 10px;
+    border-radius: 999px;
 }
 .p-question-block.correct { border-color: var(--success) !important; }
 .p-question-block.wrong { border-color: var(--danger) !important; }
@@ -680,6 +700,34 @@ body {
     border: 1px solid rgba(87, 104, 86,0.12);
 }
 .p-btn-next:hover { background: rgba(87, 104, 86,0.12); }
+
+/* Navigation (Prev / Next) — neutral, don't stretch as wide as Check */
+.p-btn-nav {
+    flex: 0 1 auto;
+    min-width: 104px;
+    background: rgba(87, 104, 86,0.07);
+    color: var(--text-main);
+    border: 1px solid rgba(87, 104, 86,0.12);
+}
+.p-btn-nav:hover { background: rgba(87, 104, 86,0.12); }
+
+/* Skip — muted, distinct so it isn't hit by accident */
+.p-btn-skip {
+    flex: 0 1 auto;
+    min-width: 92px;
+    background: #ffffff;
+    color: var(--text-muted);
+    border: 1px solid rgba(87, 104, 86,0.2);
+}
+.p-btn-skip:hover { background: rgba(87, 104, 86,0.06); color: var(--text-main); }
+
+/* Finish — primary submit action */
+.p-btn-finish {
+    background: var(--primary);
+    color: #fff;
+}
+.p-btn-finish:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-1px); }
+.p-btn-finish:disabled { opacity: 0.6; cursor: default; }
 
 /* Result Screen */
 .result-container {
