@@ -14,6 +14,11 @@ let sessionCounter = 1;
 let practiceSessionId = null;
 let groupStartTime = 0;
 
+// Per-group persistence for navigation (Prev/Next). Each entry:
+// { card, userAnswers, chipOrder, blankState, activeBlank, checked, startTime }
+// The rendered DOM node is cached so entered answers survive navigating away and back.
+let groupSaved = [];
+
 // Per-group state (reset each renderGroup)
 let userAnswers = {};      // { blockId: selectedKey }
 let chipOrder   = {};      // { blockId: [key, key, ...] } for type 4
@@ -396,6 +401,7 @@ async function init() {
         currentGroupIndex = 0;
         score = 0;
         sessionAnswers = [];
+        groupSaved = groups.map(() => null);
         practiceSessionId = sessionCounter++;
         renderGroup();
         showScreen('screen-practice');
@@ -408,17 +414,14 @@ async function init() {
 
 function renderGroup() {
     stopAudio();
-    const group = groups[currentGroupIndex];
-    groupStartTime = Date.now();
-    userAnswers = {};
-    chipOrder   = {};
-    blankState  = {};
-    activeBlank = {};
+    const idx = currentGroupIndex;
+    const group = groups[idx];
 
-    // Progress
-    const pct = Math.round((currentGroupIndex / groups.length) * 100);
+    // Progress reflects how many groups have been checked, not raw position.
+    const checkedCount = groups.filter((_, i) => groupSaved[i]?.checked).length;
+    const pct = Math.round((checkedCount / groups.length) * 100);
     document.getElementById('progress-fill').style.width = pct + '%';
-    document.getElementById('group-counter').textContent = `${currentGroupIndex + 1} / ${groups.length}`;
+    document.getElementById('group-counter').textContent = `${idx + 1} / ${groups.length}`;
     document.getElementById('score-val').textContent = score;
 
     // Skill tag
@@ -429,20 +432,53 @@ function renderGroup() {
         : `<i class="fa-solid fa-book-open" aria-hidden="true"></i><span>${t('recommend.reading')}</span>`;
     skillTag.className = `p-skill-tag ${skill}`;
 
-    // Card
-    const card = document.getElementById('question-card');
-    card.innerHTML = '';
+    const host = document.getElementById('question-card');
+    host.innerHTML = '';
 
+    let entry = groupSaved[idx];
+    if (entry && entry.card) {
+        // Reuse the cached DOM so previously entered answers (and any reveal) persist.
+        userAnswers = entry.userAnswers;
+        chipOrder   = entry.chipOrder;
+        blankState  = entry.blankState;
+        activeBlank = entry.activeBlank;
+        groupStartTime = entry.startTime;
+        host.appendChild(entry.card);
+    } else {
+        userAnswers = {};
+        chipOrder   = {};
+        blankState  = {};
+        activeBlank = {};
+        const card = document.createElement('div');
+        card.className = 'p-group-card';
+        buildGroupContent(card, group);
+        applyQuestionNumbers(card, group);
+        entry = {
+            card,
+            userAnswers, chipOrder, blankState, activeBlank,
+            checked: false,
+            startTime: Date.now(),
+        };
+        groupSaved[idx] = entry;
+        groupStartTime = entry.startTime;
+        host.appendChild(card);
+    }
+
+    updateNav();
+    applyPracticeHanText(group);
+}
+
+// Renders the question content for a group into `card`.
+function buildGroupContent(card, group) {
+    const skill = group.questions[0]?.skill || 'listening';
     const type  = group.questions[0]?.type;
     const isListening = skill === 'listening';
 
     if (type === 2) {
         renderType2Group(card, group);
     } else if (type === 5 && isListening && group.questions.length > 1) {
-        // Special layout: options shown once, per-question audio rows
         renderType5ListeningGroup(card, group);
     } else if (type === 5 && !isListening && group.questions.length > 1) {
-        // Check if it's a matching group (no blanks, no image options)
         const q0 = group.questions[0];
         const optVals = Object.values(q0.options || {});
         const isImgGroup = optVals.every(v => isImageFilename(String(v)));
@@ -462,14 +498,76 @@ function renderGroup() {
         }
         group.questions.forEach((q, idx) => card.appendChild(renderQuestion(q, idx)));
     }
+}
 
-    // Buttons
-    document.getElementById('btn-check').style.display = '';
-    document.getElementById('btn-next').style.display  = 'none';
-    document.getElementById('btn-check').disabled = true;
-    document.getElementById('btn-check').textContent = t('practice.check');
-    updateCheckButton();
-    applyPracticeHanText(group);
+// Number each sub-question when a group holds more than one.
+// Group layouts that already number their rows (type 5 audio/sentence rows) are skipped.
+function applyQuestionNumbers(card, group) {
+    if (group.questions.length <= 1) return;
+    const blocks = card.querySelectorAll('.p-question-block');
+    blocks.forEach((block, i) => {
+        if (block.querySelector('.p-qnum')) return;
+        const badge = document.createElement('span');
+        badge.className = 'p-qnum';
+        badge.textContent = t('practice.question_number', { n: i + 1 });
+        block.insertBefore(badge, block.firstChild);
+    });
+}
+
+// ── Navigation state helpers ─────────────────────────────────────
+function firstUncheckedBefore(idx) {
+    for (let i = idx - 1; i >= 0; i--) if (!groupSaved[i]?.checked) return i;
+    return -1;
+}
+function firstUncheckedAfter(idx) {
+    for (let i = idx + 1; i < groups.length; i++) if (!groupSaved[i]?.checked) return i;
+    return -1;
+}
+function allGroupsChecked() {
+    return groups.every((_, i) => groupSaved[i]?.checked);
+}
+function setNavBtn(id, visible) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = visible ? '' : 'none';
+}
+
+function updateNav() {
+    const idx = currentGroupIndex;
+    const checked = !!groupSaved[idx]?.checked;
+    const everyChecked = allGroupsChecked();
+
+    setNavBtn('btn-prev', firstUncheckedBefore(idx) !== -1);
+    setNavBtn('btn-skip', !checked);
+    setNavBtn('btn-check', !checked);
+    setNavBtn('btn-finish', everyChecked);
+    setNavBtn('btn-next', !everyChecked && firstUncheckedAfter(idx) !== -1);
+
+    const checkBtn = document.getElementById('btn-check');
+    if (checkBtn && !checked) checkBtn.textContent = t('practice.check');
+    if (!checked) updateCheckButton();
+
+    const checkedCount = groups.filter((_, i) => groupSaved[i]?.checked).length;
+    document.getElementById('progress-fill').style.width =
+        Math.round((checkedCount / groups.length) * 100) + '%';
+}
+
+function goPrevGroup() {
+    const i = firstUncheckedBefore(currentGroupIndex);
+    if (i !== -1) { currentGroupIndex = i; renderGroup(); }
+}
+function goNextGroup() {
+    const i = firstUncheckedAfter(currentGroupIndex);
+    if (i !== -1) { currentGroupIndex = i; renderGroup(); }
+}
+
+// Reveal-then-skip: discard partial answers so the group is marked incorrect,
+// reveal the correct answers, lock it, then let the user move on.
+function skipGroup() {
+    const entry = groupSaved[currentGroupIndex];
+    if (!entry || entry.checked) return;
+    userAnswers = {};
+    entry.userAnswers = userAnswers;
+    checkAnswers();
 }
 
 function applyPracticeHanText(group = groups[currentGroupIndex]) {
@@ -1217,6 +1315,8 @@ function updateCheckButton() {
 }
 
 function checkAnswers() {
+    const entry = groupSaved[currentGroupIndex];
+    if (entry && entry.checked) return;   // score each group only once
     const group = groups[currentGroupIndex];
     const type  = group.questions[0]?.type;
     let groupCorrect = 0;
@@ -1293,8 +1393,8 @@ function checkAnswers() {
 
     score += groupCorrect;
     document.getElementById('score-val').textContent = score;
-    document.getElementById('btn-check').style.display  = 'none';
-    document.getElementById('btn-next').style.display   = '';
+    if (entry) entry.checked = true;
+    updateNav();
     applyPracticeHanText(group);
 }
 
@@ -1339,42 +1439,41 @@ function highlightAnswer(block, q, blockId, chosen, correct, isCorrect) {
     }
 }
 
-// ── Navigation ─────────────────────────────────────────────────
+// ── Finish / Submit ─────────────────────────────────────────────
 
-async function nextGroup() {
-    stopAudio();
-    currentGroupIndex++;
-    if (currentGroupIndex >= groups.length) {
-        // Submit answers
-        document.getElementById('btn-next').disabled = true;
-        document.getElementById('btn-next').textContent = t('practice.submitting');
-        
-        try {
-            await fetch('/api/practice/submit', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    session_id: practiceSessionId,
-                    hsk_level: NUM,
-                    lesson: window.lessonId,
-                    answers: sessionAnswers
-                })
-            });
-        } catch (e) {
-            console.error("Failed to submit practice progress", e);
-        }
-
-        // Show result
-        document.getElementById('result-number').textContent = NUM;
-        document.getElementById('result-score').textContent  = `${score} / ${totalQuestions}`;
-        const pct = totalQuestions > 0 ? score / totalQuestions : 0;
-        const resultIcon = document.getElementById('result-emoji');
-        const resultIconName = pct >= 0.9 ? 'fa-trophy' : pct >= 0.7 ? 'fa-circle-check' : pct >= 0.5 ? 'fa-chart-line' : 'fa-rotate-right';
-        resultIcon.innerHTML = `<i class="fa-solid ${resultIconName}" aria-hidden="true"></i>`;
-        showScreen('screen-result');
-    } else {
-        renderGroup();
+async function finishPractice() {
+    if (!allGroupsChecked()) {
+        // Safety: jump to the first still-unchecked group instead of submitting early.
+        const i = firstUncheckedAfter(-1);
+        if (i !== -1) { currentGroupIndex = i; renderGroup(); }
+        return;
     }
+    stopAudio();
+    const finishBtn = document.getElementById('btn-finish');
+    if (finishBtn) { finishBtn.disabled = true; finishBtn.textContent = t('practice.submitting'); }
+
+    try {
+        await fetch('/api/practice/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                session_id: practiceSessionId,
+                hsk_level: NUM,
+                lesson: window.lessonId,
+                answers: sessionAnswers
+            })
+        });
+    } catch (e) {
+        console.error("Failed to submit practice progress", e);
+    }
+
+    document.getElementById('result-number').textContent = NUM;
+    document.getElementById('result-score').textContent  = `${score} / ${totalQuestions}`;
+    const pct = totalQuestions > 0 ? score / totalQuestions : 0;
+    const resultIcon = document.getElementById('result-emoji');
+    const resultIconName = pct >= 0.9 ? 'fa-trophy' : pct >= 0.7 ? 'fa-circle-check' : pct >= 0.5 ? 'fa-chart-line' : 'fa-rotate-right';
+    resultIcon.innerHTML = `<i class="fa-solid ${resultIconName}" aria-hidden="true"></i>`;
+    showScreen('screen-result');
 }
 
 // ── Boot ────────────────────────────────────────────────────────

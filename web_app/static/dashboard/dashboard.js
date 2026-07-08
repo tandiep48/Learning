@@ -1,19 +1,22 @@
 document.addEventListener('DOMContentLoaded', () => {
+    dashboardRecommendationSelection = RecommendCards.createSelection({
+        onChange: updateDashboardRecommendationActions,
+    });
+    document.getElementById('dashboard-start-selected')?.addEventListener('click', () => {
+        dashboardRecommendationSelection.startSelected('dashboard');
+    });
     loadHomeDashboard();
 });
 
-let dashboardVocabBuckets = {};
-let dashboardVocabOrder = ['unsure', 'unlearn', 'recent'];
-let dashboardVocabIndex = 0;
+let dashboardRecommendationSelection;
 
 async function loadHomeDashboard() {
     setDashboardState(t('dashboard.loading'), true);
     try {
-        // Fetch lesson data and global stats in parallel
-        const [lessonRes, statsRes, vocabRes] = await Promise.all([
-            fetch(`/api/user/dashboard-current-lesson?page=1&page_size=5`),
-            fetch(`/api/user/global-stats`),
-            fetch(`/api/user/dashboard-vocab-buckets`)
+        const [lessonRes, statsRes, recommendRes] = await Promise.all([
+            fetch('/api/user/dashboard-current-lesson?page=1&page_size=5'),
+            fetch('/api/user/global-stats'),
+            fetch('/api/practice/recommend?limit=4&status=Not%20start'),
         ]);
 
         const lessonContentType = lessonRes.headers.get('content-type') || '';
@@ -29,21 +32,13 @@ async function loadHomeDashboard() {
             return;
         }
 
-        // Render lesson content
         renderHomeDashboard(lessonData);
-        if (vocabRes.ok) {
-            const vocabData = await vocabRes.json();
-            renderDashboardVocabBuckets(vocabData);
-        } else {
-            renderVocab(lessonData.vocab || {});
-        }
+        renderDashboardRecommendations(recommendRes);
 
-        // Render global stats (non-blocking — silently ignore errors)
         if (statsRes.ok) {
             const statsData = await statsRes.json();
             renderGlobalStats(statsData);
         }
-
     } catch (err) {
         setDashboardState(err.message || t('dashboard.load_failed'), false);
     }
@@ -62,83 +57,58 @@ function renderHomeDashboard(data) {
     document.getElementById('home-continue-link').href = `/learning?passage_id=${encodeURIComponent(lesson.passage_id || '')}`;
 }
 
-function renderDashboardVocabBuckets(data) {
-    dashboardVocabBuckets = data.buckets || {};
-    dashboardVocabOrder = (data.order || dashboardVocabOrder).filter(key => dashboardVocabBuckets[key]);
-    dashboardVocabIndex = 0;
-    renderActiveDashboardVocab();
-}
+async function renderDashboardRecommendations(response) {
+    const state = document.getElementById('dashboard-recommend-state');
+    const grid = document.getElementById('dashboard-recommend-grid');
 
-function showDashboardVocabBucket(delta) {
-    if (!dashboardVocabOrder.length) return;
-    dashboardVocabIndex = (dashboardVocabIndex + delta + dashboardVocabOrder.length) % dashboardVocabOrder.length;
-    renderActiveDashboardVocab();
-}
+    try {
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || t('dashboard.recommend_error'));
+        }
 
-function renderActiveDashboardVocab() {
-    const key = dashboardVocabOrder[dashboardVocabIndex];
-    renderVocab(dashboardVocabBuckets[key] || {});
-}
+        const data = await response.json();
+        const recommendations = (data.recommendations || []).slice(0, 4);
 
-function renderVocab(vocab) {
-    const rows = vocab.rows || [];
-    const title = document.getElementById('home-vocab-title');
-    const count = document.getElementById('home-vocab-count');
-    const state = document.getElementById('home-vocab-state');
-    const wrap = document.getElementById('home-vocab-table-wrap');
-    const viewAllRow = document.getElementById('home-vocab-view-all');
-    const viewAllLink = document.getElementById('home-vocab-view-all-link');
+        grid.innerHTML = '';
+        if (!recommendations.length) {
+            state.textContent = t('dashboard.recommend_empty');
+            state.style.display = 'block';
+            grid.style.display = 'none';
+            updateDashboardRecommendationActions();
+            return;
+        }
 
-    if (title) title.textContent = vocab.title || t('dashboard.vocabulary_kicker');
-    count.textContent = t('dashboard.word_count', { count: vocab.total || 0 });
-    if (viewAllLink) viewAllLink.href = `/vocab?mode=${encodeURIComponent(vocab.mode || 'standard')}`;
-
-    if (!rows.length) {
-        state.textContent = t('dashboard.no_x_found', { title: (vocab.title || t('dashboard.vocabulary_kicker')).toLowerCase() });
+        recommendations.forEach(rec => {
+            grid.appendChild(dashboardRecommendationSelection.buildCard(rec));
+        });
+        state.style.display = 'none';
+        grid.style.display = 'grid';
+        updateDashboardRecommendationActions();
+    } catch (err) {
+        state.textContent = err.message || t('dashboard.recommend_error');
         state.style.display = 'block';
-        wrap.style.display = 'none';
-        if (viewAllRow) viewAllRow.style.display = 'block';
-        return;
+        grid.style.display = 'none';
+        updateDashboardRecommendationActions();
     }
+}
 
-    const table = document.createElement('table');
-    table.className = 'vocab-table home-vocab-table';
-    table.innerHTML = `
-        <thead>
-            <tr>
-                <th>${t('dashboard.table_character')}</th>
-                <th>${t('dashboard.table_pinyin')}</th>
-                <th>${t('dashboard.table_meaning_vn')}</th>
-            </tr>
-        </thead>
-        <tbody>
-            ${rows.map(row => `
-                <tr>
-                    <td class="vocab-cn clickable-cell" onclick="this.classList.toggle('hidden-cell')">${escapeHtml(row.word || row.cn || '')}</td>
-                    <td class="vocab-pinyin clickable-cell" onclick="this.classList.toggle('hidden-cell')">${escapeHtml(row.pinyin || '')}</td>
-                    <td class="vocab-meaning-vn clickable-cell" onclick="this.classList.toggle('hidden-cell')">${escapeHtml(row.meaning_vn || row.meaning_en || '')}</td>
-                </tr>
-            `).join('')}
-        </tbody>
-    `;
-
-    wrap.innerHTML = '';
-    wrap.appendChild(table);
-    wrap.style.display = 'block';
-    state.style.display = 'none';
-    if (viewAllRow) viewAllRow.style.display = 'block';
+function updateDashboardRecommendationActions() {
+    const actions = document.getElementById('dashboard-recommend-actions');
+    const selected = document.getElementById('dashboard-recommend-selected');
+    const count = dashboardRecommendationSelection?.getSelectedCount() || 0;
+    if (selected) selected.textContent = t('recommend.items_selected', { count });
+    if (actions) actions.classList.toggle('is-visible', count > 0);
 }
 
 function renderGlobalStats(data) {
     const buckets = data.buckets || {};
 
-    // Hero totals
     const totalTimeEl = document.getElementById('stat-total-time');
     const totalWordsEl = document.getElementById('stat-total-words');
     if (totalTimeEl) totalTimeEl.textContent = data.total_time_label || '0s';
     if (totalWordsEl) totalWordsEl.textContent = (data.total_words || 0).toLocaleString();
 
-    // Bucket cards
     setBucketCard('exercise', buckets.exercise);
     setBucketCard('exam', buckets.exam);
     setBucketCard('lesson', buckets.lesson_trainer);
