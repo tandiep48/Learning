@@ -28,6 +28,7 @@ class VocabRepository:
         page: int = 1,
         page_size: int = 20,
         hsk_level: Optional[str] = None,
+        search: Optional[str] = None,
     ) -> tuple[list[Vocabulary], int]:
         """
         Return a paginated list of vocabulary entries and the total count.
@@ -36,6 +37,8 @@ class VocabRepository:
             page:      1-indexed page number.
             page_size: Number of items per page (max 100).
             hsk_level: Optional filter (e.g. "HSK1").
+            search:    Optional case-insensitive match on the `cn` (Chinese word)
+                       or `pinyin` columns.
 
         Returns:
             (items, total_count)
@@ -43,6 +46,11 @@ class VocabRepository:
         query = self.session.query(Vocabulary)
         if hsk_level:
             query = query.filter(Vocabulary.hsk_level == hsk_level)
+        if search:
+            pattern = f"%{search}%"
+            query = query.filter(
+                Vocabulary.cn.ilike(pattern) | Vocabulary.pinyin.ilike(pattern)
+            )
 
         total = query.count()
         items = (

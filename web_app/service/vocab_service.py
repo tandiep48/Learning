@@ -46,6 +46,7 @@ def list_vocab(
     page: int = 1,
     page_size: int = 20,
     hsk_level: str | None = None,
+    search: str | None = None,
 ) -> dict:
     """
     Return a paginated list of vocabulary entries.
@@ -65,7 +66,12 @@ def list_vocab(
     session = SessionLocal()
     try:
         repo = VocabRepository(session)
-        items, total = repo.get_all(page=page, page_size=page_size, hsk_level=hsk_level or None)
+        items, total = repo.get_all(
+            page=page,
+            page_size=page_size,
+            hsk_level=hsk_level or None,
+            search=(search or "").strip() or None,
+        )
         total_pages = max(1, (total + page_size - 1) // page_size)
         return {
             "items": [v.to_dict() for v in items],
