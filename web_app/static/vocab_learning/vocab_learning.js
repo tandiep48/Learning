@@ -605,7 +605,6 @@ function renderVocabTable() {
                         <button type="button" onclick="event.stopPropagation(); shuffleVocab()"
                             class="vocab-header-icon-btn" title="${t('reading.shuffle_vocab_audio')}"
                             aria-label="${t('reading.shuffle_vocab_audio')}"><i class="fa-solid fa-shuffle" aria-hidden="true"></i></button>
-                        <span class="vocab-no-label">${t('vocab.no_column')}</span>
                     </th>
                     <th>${renderSummaryColumnHeader('cn', t('dashboard.table_character').toUpperCase(), tableId)}</th>
                     <th>${renderSummaryColumnHeader('py', t('dashboard.table_pinyin').toUpperCase(), tableId)}</th>
