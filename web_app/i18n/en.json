@@ -70,7 +70,13 @@
         "bucket_recent": "Recent Learned Words",
         "table_character": "Character",
         "table_pinyin": "Pinyin",
-        "table_meaning_vn": "Meaning (VN)"
+        "table_meaning_vn": "Meaning (VN)",
+        "recommend_kicker": "Recommended",
+        "recommend_title": "Ready to Practice",
+        "recommend_loading": "Loading recommended practice...",
+        "recommend_empty": "No new recommendations yet. Keep learning vocabulary to unlock more practice.",
+        "recommend_error": "Could not load recommendations.",
+        "recommend_see_more": "See more"
     },
     "trainer": {
         "default_title": "Training",
@@ -455,6 +461,10 @@
         "correct_answer_colon": "Correct answer: {answer}",
         "score_correct": "{correct} / {total} correct",
         "correct_order": "Correct order: {order}",
-        "submitting": "Submitting..."
+        "submitting": "Submitting...",
+        "previous": "Previous",
+        "skip": "Skip",
+        "finish": "Finish",
+        "question_number": "Question {n}"
     }
 }

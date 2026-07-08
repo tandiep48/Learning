@@ -70,7 +70,13 @@
         "bucket_recent": "Từ Mới Học Gần Đây",
         "table_character": "Chữ Hán",
         "table_pinyin": "Pinyin",
-        "table_meaning_vn": "Nghĩa (Tiếng Việt)"
+        "table_meaning_vn": "Nghĩa (Tiếng Việt)",
+        "recommend_kicker": "Đề Xuất",
+        "recommend_title": "Sẵn Sàng Luyện Tập",
+        "recommend_loading": "Đang tải bài luyện tập đề xuất...",
+        "recommend_empty": "Chưa có đề xuất mới. Hãy tiếp tục học từ vựng để mở thêm bài luyện tập.",
+        "recommend_error": "Không thể tải đề xuất.",
+        "recommend_see_more": "Xem thêm"
     },
     "trainer": {
         "default_title": "Luyện Tập",
@@ -455,6 +461,10 @@
         "correct_answer_colon": "Đáp án đúng: {answer}",
         "score_correct": "{correct} / {total} đúng",
         "correct_order": "Thứ tự đúng: {order}",
-        "submitting": "Đang nộp bài..."
+        "submitting": "Đang nộp bài...",
+        "previous": "Câu trước",
+        "skip": "Bỏ qua",
+        "finish": "Hoàn thành",
+        "question_number": "Câu {n}"
     }
 }
