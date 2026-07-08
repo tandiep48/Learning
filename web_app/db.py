@@ -1052,8 +1052,10 @@ def get_learned_words(conn, user_id):
 
 def get_mastered_words_with_recency(conn, user_id):
     """
-    Returns mastered words with the timestamp of the latest mastered learning day.
-    Uses the same 3-mode round-1 mastery rule as get_learned_words().
+    Returns mastered words with the timestamp of the latest mastered learning day
+    (word + learned_at only). Uses the same 3-mode round-1 mastery rule as
+    get_learned_words(). Kept lightweight — no vocabulary join — since callers only
+    need the word and its recency; per-word details come from get_mastered_words_page().
     """
     if not conn:
         return []
@@ -1079,26 +1081,14 @@ def get_mastered_words_with_recency(conn, user_id):
             ROW_NUMBER() OVER (PARTITION BY word ORDER BY attempt_date DESC) AS rn
         FROM daily_attempts
     )
-    SELECT ls.word, ls.learned_at, v.pinyin, v.meaning_vn, v.meaning_en, v.hsk_level
+    SELECT ls.word, ls.learned_at
     FROM latest_status ls
-    LEFT JOIN vocabulary v ON ls.word = v.cn
     WHERE ls.rn = 1 AND ls.successful_modes = 3;
     """
     try:
         with conn.cursor() as cur:
             cur.execute(query, (user_id,))
-            rows = cur.fetchall()
-            return [
-                {
-                    "word": row[0],
-                    "learned_at": row[1],
-                    "pinyin": row[2] or "",
-                    "meaning_vn": row[3] or "",
-                    "meaning_en": row[4] or "",
-                    "hsk_level": row[5] or ""
-                }
-                for row in rows
-            ]
+            return [{"word": row[0], "learned_at": row[1]} for row in cur.fetchall()]
     except Exception as e:
         print(f"⚠️ Database query failed (get_mastered_words_with_recency): {e}")
         return []
@@ -1230,7 +1220,13 @@ def greedy_rank_recommendations(results):
 
     return ranked
 
-def get_recommended_practices(conn, user_id, threshold=0.75):
+# Recommendations only consider groups that contain at least one of the user's most
+# recently mastered words. This keeps the coverage computation bounded (and fast) as a
+# user's vocabulary grows, instead of scanning the whole question bank every call.
+RECOMMEND_RECENT_WORD_LIMIT = 80
+
+
+def get_recommended_practices(conn, user_id, threshold=0.75, limit=None, status_filter=None):
     """
     Returns practice progress groups the user is ready for.
     Uses question_bank + learning_units + vocab_records — NO CSV loading.
@@ -1246,7 +1242,7 @@ def get_recommended_practices(conn, user_id, threshold=0.75):
         return []
 
     try:
-        # 1. Get mastered words (3-mode logic) — from vocab_records only
+        # 1. Get mastered words (3-mode logic) — word + learned_at only (no vocabulary join)
         mastered_rows = get_mastered_words_with_recency(conn, user_id)
         if not mastered_rows:
             return []
@@ -1260,7 +1256,32 @@ def get_recommended_practices(conn, user_id, threshold=0.75):
         recent_window_size = min(10, max(3, len(sorted_mastered) // 3 or 1))
         recent_words = {row["word"] for row in sorted_mastered[:recent_window_size]}
 
-        # 2. Compute coverage per progress group — includes both practice and exam
+        # Recency-scoped candidate words: the most recently mastered words drive which
+        # groups we bother scoring. Keeps the coverage query bounded as vocab grows.
+        candidate_words = [row["word"] for row in sorted_mastered[:RECOMMEND_RECENT_WORD_LIMIT]]
+        if not candidate_words:
+            return []
+
+        # 2a. Shortlist candidate groups: only those that contain a recent word, then take
+        #     every unit in those groups (coverage still needs the full group word set).
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT DISTINCT qb.unit_id
+                FROM question_bank qb
+                WHERE qb.category IN ('practice', 'exam')
+                  AND (qb.category, qb.level, qb.lesson, qb.progress) IN (
+                        SELECT DISTINCT qb2.category, qb2.level, qb2.lesson, qb2.progress
+                        FROM learning_units lu
+                        JOIN question_bank qb2 ON lu.unit_id = qb2.unit_id
+                        WHERE qb2.category IN ('practice', 'exam')
+                          AND lu.unique_word = ANY(%s)
+                  )
+            """, (candidate_words,))
+            candidate_unit_ids = [row[0] for row in cur.fetchall()]
+        if not candidate_unit_ids:
+            return []
+
+        # 2b. Compute coverage only for those candidate units (bounded set).
         coverage_sql = """
             SELECT
                 qb.category, qb.level, qb.lesson, qb.progress,
@@ -1270,11 +1291,12 @@ def get_recommended_practices(conn, user_id, threshold=0.75):
             FROM learning_units lu
             JOIN question_bank qb ON lu.unit_id = qb.unit_id
             WHERE qb.category IN ('practice', 'exam')
+              AND qb.unit_id = ANY(%s)
             GROUP BY qb.category, qb.level, qb.lesson, qb.progress
             HAVING COUNT(DISTINCT lu.unique_word) > 0
         """
         with conn.cursor() as cur:
-            cur.execute(coverage_sql, (list(mastered),))
+            cur.execute(coverage_sql, (list(mastered), candidate_unit_ids))
             group_coverage = {
                 (row[0], row[1], row[2], row[3]): {
                     'total_words': row[4],
@@ -1291,35 +1313,11 @@ def get_recommended_practices(conn, user_id, threshold=0.75):
         if not ready_keys:
             return []
 
-        # 4. Fetch all questions for ready groups
-        where_clauses = []
-        params = []
-        for cat, lvl, les, prog in ready_keys:
-            where_clauses.append("(category = %s AND level = %s AND lesson = %s AND progress = %s)")
-            params.extend([cat, lvl, les, prog])
-        
-        questions_sql = f"""
-            SELECT level, lesson, progress, skill, type, unit_id,
-                   no, content, question, answer, audio_key, image, options, category
-            FROM question_bank
-            WHERE {' OR '.join(where_clauses)}
-            ORDER BY level, lesson, no
-        """
-        with conn.cursor() as cur:
-            cur.execute(questions_sql, params)
-            cols = ['level', 'lesson', 'progress', 'skill', 'type', 'unit_id',
-                    'no', 'content', 'question', 'answer', 'audio_key', 'image', 'options', 'category']
-            rows = [dict(zip(cols, r)) for r in cur.fetchall()]
-
-        # 5. Group by (category, level, lesson, progress)
-        from collections import defaultdict
-        groups = defaultdict(lambda: {'questions': [], 'unit_ids': set()})
-        for r in rows:
-            key = (r['category'], r['level'], r['lesson'], r['progress'])
-            groups[key]['questions'].append(r)
-            groups[key]['unit_ids'].add(r['unit_id'])
-
-        # 6. Find latest sessions to determine status per recommendation group.
+        # 4. Find latest sessions to determine status per recommendation group.
+        #    Bound the scan to the ready groups' lessons so we don't join the user's
+        #    entire practice history on every call.
+        ready_levels = list({k[1] for k in ready_keys})
+        ready_lessons = list({str(k[2]) for k in ready_keys})
         with conn.cursor() as cur:
             cur.execute("""
                 WITH session_results AS (
@@ -1338,6 +1336,8 @@ def get_recommended_practices(conn, user_id, threshold=0.75):
                      AND qb.no = pr.question_no
                      AND qb.category::text = COALESCE(pr.category, 'practice')
                     WHERE pr.user_id = %s
+                      AND pr.hsk_level = ANY(%s)
+                      AND pr.lesson = ANY(%s)
                     GROUP BY COALESCE(pr.category, qb.category::text, 'practice'),
                              pr.hsk_level, pr.lesson, qb.progress, pr.session_id
                 ),
@@ -1352,7 +1352,7 @@ def get_recommended_practices(conn, user_id, threshold=0.75):
                 SELECT category, hsk_level, lesson, progress, pct
                 FROM latest
                 WHERE rn = 1
-            """, (user_id,))
+            """, (user_id, ready_levels, ready_lessons))
             lesson_status = {}
             for r in cur.fetchall():
                 cat, lvl, les, prog, pct = r[0], r[1], r[2], r[3], r[4]
@@ -1362,11 +1362,12 @@ def get_recommended_practices(conn, user_id, threshold=0.75):
                 else:
                     lesson_status[key] = "Finish and fail"
 
-        # 7. Build results — one per progress group
-        results = []
-        for (category, level, lesson, progress), gdata in groups.items():
+        # 5. Build lightweight summaries before fetching question payloads.
+        summaries = []
+        for category, level, lesson, progress in ready_keys:
             status = lesson_status.get((category, level, lesson, progress), "Not start")
-            qs = gdata['questions']
+            if status_filter and status != status_filter:
+                continue
             total = group_coverage[(category, level, lesson, progress)]['total_words']
             known = group_coverage[(category, level, lesson, progress)]['known_words']
             coverage = group_coverage[(category, level, lesson, progress)]['coverage']
@@ -1383,19 +1384,12 @@ def get_recommended_practices(conn, user_id, threshold=0.75):
             )
             recent_score = sum(1 for word in matched_words if word in recent_words)
             
-            first = qs[0]
-            # Derive skill via majority vote — avoids NULL first-row mislabelling
-            skills = [q.get('skill') for q in qs if q.get('skill')]
-            skill = max(set(skills), key=skills.count) if skills else 'listening'
-            results.append({
+            summaries.append({
                 'level':        level,
                 'lesson':       lesson,
                 'progress':     progress,
-                'skill':        skill,
-                'type':         first.get('type'),
                 'category':     category,
                 'status':       status,
-                'unit_ids':     sorted(gdata['unit_ids']),
                 'total_words':  total,
                 'known_words':  known,
                 'coverage':     round(coverage, 4),
@@ -1405,10 +1399,54 @@ def get_recommended_practices(conn, user_id, threshold=0.75):
                 'newest_learned_at': newest_learned_at.isoformat() if newest_learned_at else None,
                 'newest_learned_sort': newest_learned_at.timestamp() if newest_learned_at else 0,
                 'recent_score': recent_score,
-                'questions':    qs,
             })
 
-        results = greedy_rank_recommendations(results)
+        ranked_summaries = greedy_rank_recommendations(summaries)
+        if limit:
+            ranked_summaries = ranked_summaries[:limit]
+        if not ranked_summaries:
+            return []
+
+        where_clauses = []
+        params = []
+        for item in ranked_summaries:
+            where_clauses.append("(category = %s AND level = %s AND lesson = %s AND progress = %s)")
+            params.extend([item['category'], item['level'], item['lesson'], item['progress']])
+
+        questions_sql = f"""
+            SELECT level, lesson, progress, skill, type, unit_id,
+                   no, content, question, answer, audio_key, image, options, category
+            FROM question_bank
+            WHERE {' OR '.join(where_clauses)}
+            ORDER BY level, lesson, progress, no
+        """
+        with conn.cursor() as cur:
+            cur.execute(questions_sql, params)
+            cols = ['level', 'lesson', 'progress', 'skill', 'type', 'unit_id',
+                    'no', 'content', 'question', 'answer', 'audio_key', 'image', 'options', 'category']
+            rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+
+        from collections import defaultdict
+        questions_by_key = defaultdict(lambda: {'questions': [], 'unit_ids': set()})
+        for row in rows:
+            key = (row['category'], row['level'], row['lesson'], row['progress'])
+            questions_by_key[key]['questions'].append(row)
+            questions_by_key[key]['unit_ids'].add(row['unit_id'])
+
+        results = []
+        for item in ranked_summaries:
+            key = (item['category'], item['level'], item['lesson'], item['progress'])
+            qdata = questions_by_key.get(key)
+            if not qdata or not qdata['questions']:
+                continue
+            questions = qdata['questions']
+            skills = [q.get('skill') for q in questions if q.get('skill')]
+            item['skill'] = max(set(skills), key=skills.count) if skills else 'listening'
+            item['type'] = questions[0].get('type')
+            item['unit_ids'] = sorted(qdata['unit_ids'])
+            item['questions'] = questions
+            results.append(item)
+
         for item in results:
             item.pop('newest_learned_sort', None)
         return results
