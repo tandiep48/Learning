@@ -51,7 +51,8 @@ def list_vocab_endpoint():
         return _error("'page' and 'page_size' must be integers.", 400)
 
     hsk_level = request.args.get("hsk_level") or None
-    result = list_vocab(page=page, page_size=page_size, hsk_level=hsk_level)
+    search = request.args.get("search") or None
+    result = list_vocab(page=page, page_size=page_size, hsk_level=hsk_level, search=search)
     return jsonify(result), 200
 
 

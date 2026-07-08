@@ -111,6 +111,8 @@ CREATE INDEX IF NOT EXISTS idx_user_learning_userid ON vocab_records(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_learning_session ON vocab_records(session_id);
 CREATE INDEX IF NOT EXISTS idx_user_learning_user_word ON vocab_records(user_id, word);
 CREATE INDEX IF NOT EXISTS idx_vocab_records_user_word_updated ON vocab_records(user_id, word, updated_at);
+-- Speeds up mastery lookup for recommendations (filters user_id + round_num + mode)
+CREATE INDEX IF NOT EXISTS idx_vocab_records_user_round_mode ON vocab_records(user_id, round_num, mode);
 
 CREATE TABLE IF NOT EXISTS practice_record (
     id SERIAL PRIMARY KEY,

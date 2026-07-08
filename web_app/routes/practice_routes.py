@@ -257,13 +257,31 @@ def get_recommendations():
     """Return ranked practice progress groups the user is ready for (coverage >= 0.75).
     Data comes entirely from question_bank + learning_units + vocab_records.
     """
+    allowed_statuses = {"Not start", "Finish and success", "Finish and fail"}
+    status_filter = request.args.get('status')
+    if status_filter not in allowed_statuses:
+        status_filter = None
+
+    limit = None
+    try:
+        requested_limit = int(request.args.get('limit', 0))
+        if requested_limit > 0:
+            limit = min(requested_limit, 50)
+    except (TypeError, ValueError):
+        limit = None
     
     db_conn = get_db_connection()
     if not db_conn:
         return jsonify({'error': 'Database unavailable'}), 503
 
     try:
-        groups = get_recommended_practices(db_conn, current_user.id, threshold=0.75)
+        groups = get_recommended_practices(
+            db_conn,
+            current_user.id,
+            threshold=0.75,
+            limit=limit,
+            status_filter=status_filter,
+        )
     finally:
         db_conn.close()
 

@@ -25,7 +25,7 @@
     margin-top: 18px;
 }
 
-.trainer-task-actions > button {
+.trainer-task-actions>button {
     flex: 1 1 0;
     justify-content: center;
     min-width: 0;
@@ -123,7 +123,7 @@
 }
 
 .complete-word {
-        font-size: 1.2rem;
+    font-size: 1.2rem;
     font-weight: 700;
 }
 
@@ -135,7 +135,8 @@
 
 .training-complete-actions {
     margin-top: 24px;
-    justify-content: center;
+    justify-content: space-between;
+    gap: 20px;
 }
 
 .training-complete-top-actions {
@@ -273,9 +274,17 @@ body {
 }
 
 @keyframes speak-pulse {
-    0%   { box-shadow: 0 0 0 0 rgba(192, 57, 43, 0.55); }
-    70%  { box-shadow: 0 0 0 12px rgba(192, 57, 43, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(192, 57, 43, 0); }
+    0% {
+        box-shadow: 0 0 0 0 rgba(192, 57, 43, 0.55);
+    }
+
+    70% {
+        box-shadow: 0 0 0 12px rgba(192, 57, 43, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(192, 57, 43, 0);
+    }
 }
 
 .btn-speak-task:disabled {
@@ -305,8 +314,15 @@ body {
 }
 
 @keyframes reveal-fade-in {
-    from { opacity: 0; transform: translateY(6px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .speaking-reveal-hanzi {
@@ -373,11 +389,11 @@ body {
     display: flex;
     justify-content: space-evenly;
     align-items: center;
-    box-shadow: 0 -4px 20px rgba(0,0,0,0.03);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.03);
     z-index: 1000;
 }
 
-.trainer-bottom-bar > button {
+.trainer-bottom-bar>button {
     margin: 0;
     min-width: 160px;
     padding: 14px 24px;
@@ -395,6 +411,7 @@ body {
     justify-content: center;
     align-items: center;
 }
+
 .skip-bottom-btn:hover {
     background: #7c8f82;
 }
@@ -404,7 +421,8 @@ body {
         padding: 12px 15px;
         gap: 12px;
     }
-    .trainer-bottom-bar > button {
+
+    .trainer-bottom-bar>button {
         min-width: 120px;
         padding: 12px 16px;
         font-size: 1rem;

@@ -17,47 +17,21 @@
             </div>
         </section>
 
-        <section class="dashboard-two-column">
-            <div class="dashboard-panel vocab-panel-card">
-                <div class="dashboard-panel-heading">
-                    <div>
-                        <span class="dashboard-kicker">{{ t('dashboard.vocabulary_kicker') }}</span>
-                        <h2 id="home-vocab-title">{{ t('dashboard.bucket_unsure') }}</h2>
-                    </div>
-                    <div class="dashboard-vocab-controls">
-                        <button class="dashboard-icon-btn" onclick="showDashboardVocabBucket(-1)" title="Previous vocabulary table" aria-label="Previous vocabulary table">
-                            <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
-                        </button>
-                        <span id="home-vocab-count" class="dashboard-count">0 words</span>
-                        <button class="dashboard-icon-btn" onclick="showDashboardVocabBucket(1)" title="Next vocabulary table" aria-label="Next vocabulary table">
-                            <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
-                        </button>
-                    </div>
+        <section class="dashboard-panel dashboard-recommend-panel">
+            <div class="dashboard-panel-heading">
+                <div>
+                    <span class="dashboard-kicker">{{ t('dashboard.recommend_kicker') }}</span>
+                    <h2>{{ t('dashboard.recommend_title') }}</h2>
                 </div>
-                <div id="home-vocab-state" class="dashboard-empty">{{ t('dashboard.loading_vocabulary') }}</div>
-                <div id="home-vocab-table-wrap" class="home-vocab-table-wrap" style="display:none;"></div>
-                <div class="vocab-view-all-row" id="home-vocab-view-all" style="display:none;">
-                    <a id="home-vocab-view-all-link" href="/vocab" class="vocab-view-all-link">{{ t('dashboard.view_all_vocabulary') }}</a>
-                </div>
+                <a class="dashboard-see-more-link" href="/recommend">{{ t('dashboard.recommend_see_more') }}</a>
             </div>
-
-            <div class="dashboard-panel">
-                <div class="dashboard-panel-heading">
-                    <div>
-                        <span class="dashboard-kicker">{{ t('dashboard.exercise_exam_kicker') }}</span>
-                        <h2>{{ t('dashboard.lesson_activities') }}</h2>
-                    </div>
-                </div>
-                <div class="activity-columns">
-                    <a class="activity-nav-card exercise" href="/practice?category=practice">
-                        <span>{{ t('dashboard.exercise') }}</span>
-                        <strong>{{ t('dashboard.open_exercise_practice') }}</strong>
-                    </a>
-                    <a class="activity-nav-card exam" href="/practice?category=exam">
-                        <span>{{ t('dashboard.exam') }}</span>
-                        <strong>{{ t('dashboard.open_exam_practice') }}</strong>
-                    </a>
-                </div>
+            <div id="dashboard-recommend-state" class="dashboard-empty">{{ t('dashboard.recommend_loading') }}</div>
+            <div id="dashboard-recommend-grid" class="rec-grid dashboard-rec-grid" style="display:none;"></div>
+            <div id="dashboard-recommend-actions" class="dashboard-recommend-actions">
+                <span id="dashboard-recommend-selected">{{ t('recommend.items_selected', count=0) }}</span>
+                <button id="dashboard-start-selected" type="button" class="btn primary dashboard-start-selected">
+                    <span>{{ t('recommend.start_selected') }}</span>
+                </button>
             </div>
         </section>
 

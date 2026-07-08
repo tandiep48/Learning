@@ -258,7 +258,6 @@ function renderVocabTable(rows) {
                     <button class="vocab-header-icon-btn" onclick="event.stopPropagation(); shuffleVisibleRows()" title="${t('vocab.shuffle_visible_aria')}" aria-label="${t('vocab.shuffle_visible_aria')}">
                         <i class="fa-solid fa-shuffle" aria-hidden="true"></i>
                     </button>
-                    <span class="vocab-no-label">${t('vocab.no_column')}</span>
                 </th>
                 <th class="vocab-select-col">
                     <input type="checkbox" id="select-page-checkbox" onchange="togglePageSelection(this.checked)" title="${t('vocab.select_visible_rows_aria')}">

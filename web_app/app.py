@@ -13,6 +13,9 @@ from routes.auth_routes import auth_bp, get_user_by_id
 from routes.user_routes import user_bp
 from routes.vocab_crud_routes import vocab_crud_bp
 from routes.passage_crud_routes import passage_crud_bp
+from routes.passage_vocab_crud_routes import passage_vocab_crud_bp
+from routes.user_crud_routes import user_crud_bp
+from routes.question_crud_routes import question_crud_bp
 from competition_socket import init_competition_socket
 from service.i18n_service import get_current_lang, get_translations, t as i18n_t, SUPPORTED_LANGUAGES
 from db import get_db_connection, update_user_ui_language
@@ -43,6 +46,9 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(user_bp)
 app.register_blueprint(vocab_crud_bp)
 app.register_blueprint(passage_crud_bp)
+app.register_blueprint(passage_vocab_crud_bp)
+app.register_blueprint(user_crud_bp)
+app.register_blueprint(question_crud_bp)
 init_competition_socket(socketio)
 
 GCS_BUCKET_URL = os.getenv('GCS_BUCKET_URL', '')
