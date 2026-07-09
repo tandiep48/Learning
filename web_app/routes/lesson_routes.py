@@ -19,6 +19,7 @@ from db import (
     get_grammar_for_passage,
     insert_lesson_progress,
     mark_lesson_part_completed,
+    recompute_user_level,
 )
 from number_part import NUMBER_PART_ID, is_number_part, number_vocab_rows
 
@@ -65,7 +66,11 @@ def complete_lesson_part():
     try:
         if not mark_lesson_part_completed(conn, current_user.id, passage_id):
             return jsonify({"error": "Could not save lesson progress"}), 500
-        return jsonify({"status": "success", "passage_id": passage_id})
+        # Finishing a part may complete a lesson/level, so re-derive the HSK level.
+        new_level = recompute_user_level(conn, current_user.id)
+        if new_level:
+            current_user.level = new_level
+        return jsonify({"status": "success", "passage_id": passage_id, "level": new_level})
     finally:
         conn.close()
 

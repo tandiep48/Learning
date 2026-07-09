@@ -832,6 +832,85 @@ def get_lesson_picker_progress(conn, user_id, hsk_level):
         print(f"Database get_lesson_picker_progress failed: {e}")
         return {"lessons": {}, "parts": {}}
 
+
+def recompute_user_level(conn, user_id):
+    """
+    Derive and (if higher) persist the user's HSK level from their lesson-trainer
+    completion. Level only ever increases (cap HSK 6). Two ways to qualify, and we take
+    the highest:
+      - Completion: finished every lesson part at levels 1..L  -> ready for level L+1.
+      - Engagement: completed at least one full lesson (all its parts) at level H
+        -> they can do level H, so jump straight to H.
+    Passage ids look like H{level}_{lesson}_{part}. Returns the resulting level.
+    """
+    if not conn:
+        return None
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute(r"""
+                SELECT
+                    (regexp_replace(split_part(lp.passage_id, '_', 1), '\D', '', 'g'))::int AS lvl,
+                    split_part(lp.passage_id, '_', 2)                                       AS lesson,
+                    COUNT(*)                                                                AS total_parts,
+                    COUNT(ulp.passage_id)                                                   AS done_parts
+                FROM lesson_passages lp
+                LEFT JOIN user_lesson_part_progress ulp
+                       ON ulp.passage_id = lp.passage_id
+                      AND ulp.user_id = %s
+                      AND ulp.lesson_trainer_completed_at IS NOT NULL
+                WHERE lp.passage_id ~ '^H\d+_\d+_\d+$'
+                GROUP BY 1, 2
+            """, (user_id,))
+            rows = cur.fetchall()
+
+            cur.execute("SELECT level FROM users WHERE id = %s", (user_id,))
+            row = cur.fetchone()
+            current = int(row[0]) if row and row[0] else 1
+
+        # Per level: is every lesson complete, and is at least one lesson complete?
+        from collections import defaultdict
+        level_lessons = defaultdict(list)
+        for lvl, _lesson, total_parts, done_parts in rows:
+            if lvl and 1 <= lvl <= 6:
+                level_lessons[lvl].append((total_parts, done_parts))
+
+        level_fully_complete = {}
+        level_has_full_lesson = {}
+        for lvl in range(1, 7):
+            lessons = level_lessons.get(lvl, [])
+            level_fully_complete[lvl] = bool(lessons) and all(d == t for t, d in lessons)
+            level_has_full_lesson[lvl] = any(t > 0 and d == t for t, d in lessons)
+
+        # Completion: highest level such that all of 1..L are fully done -> ready for L+1.
+        completed_through = 0
+        for lvl in range(1, 7):
+            if level_fully_complete[lvl]:
+                completed_through = lvl
+            else:
+                break
+        completion_target = min(6, completed_through + 1) if completed_through >= 1 else 0
+
+        # Engagement: highest level with at least one fully completed lesson.
+        engagement_target = max(
+            (lvl for lvl in range(1, 7) if level_has_full_lesson[lvl]),
+            default=0,
+        )
+
+        target = max(current, completion_target, engagement_target)
+        target = min(6, max(1, target))
+
+        if target > current:
+            with conn.cursor() as cur:
+                cur.execute("UPDATE users SET level = %s WHERE id = %s", (target, user_id))
+            conn.commit()
+        return target
+    except Exception as e:
+        print(f"Database recompute_user_level failed: {e}")
+        conn.rollback()
+        return None
+
+
 def update_user_avatar_path(conn, user_id, avatar_path):
     if not conn:
         return False

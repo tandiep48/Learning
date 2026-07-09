@@ -16,6 +16,7 @@ from db import (
     get_passage_vocab,
     get_profile_summary,
     get_recent_learning,
+    recompute_user_level,
     get_user_hanzi_font,
     get_user_hanzi_script,
     get_user_ui_language,
@@ -164,6 +165,11 @@ def profile_page():
 def profile_summary():
     conn = get_db_connection()
     try:
+        # Backfill / refresh the stored HSK level from lesson-trainer progress on view,
+        # so existing users get an accurate level without needing a fresh completion.
+        new_level = recompute_user_level(conn, current_user.id)
+        if new_level:
+            current_user.level = new_level
         summary = get_profile_summary(conn, current_user.id)
     finally:
         if conn:
