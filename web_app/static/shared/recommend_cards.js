@@ -62,7 +62,9 @@
                 : rec.skill === 'reading'
                     ? t('recommend.reading')
                     : '';
-            const qCount = rec.questions ? rec.questions.length : 0;
+            const qCount = rec.question_count != null
+                ? rec.question_count
+                : (rec.questions ? rec.questions.length : 0);
             const categoryLabel = rec.category === 'exam'
                 ? `<i class="fa-solid fa-file-lines" aria-hidden="true"></i><span>${t('dashboard.exam')}</span>`
                 : `<i class="fa-solid fa-list-check" aria-hidden="true"></i><span>${t('dashboard.exercise')}</span>`;

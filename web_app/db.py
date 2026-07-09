@@ -1282,21 +1282,27 @@ def get_recommended_practices(conn, user_id, threshold=0.75, limit=None, status_
             return []
 
         # 2b. Compute coverage only for those candidate units (bounded set).
+        #     Dedupe each unit to its single group first, THEN join words — otherwise the
+        #     many-questions-per-unit rows multiply the word rows before the DISTINCT.
         coverage_sql = """
+            WITH unit_groups AS (
+                SELECT DISTINCT unit_id, category, level, lesson, progress
+                FROM question_bank
+                WHERE category IN ('practice', 'exam')
+                  AND unit_id = ANY(%s)
+            )
             SELECT
-                qb.category, qb.level, qb.lesson, qb.progress,
+                ug.category, ug.level, ug.lesson, ug.progress,
                 COUNT(DISTINCT lu.unique_word)                                              AS total_words,
                 COUNT(DISTINCT CASE WHEN lu.unique_word = ANY(%s) THEN lu.unique_word END)  AS known_words,
                 ARRAY_AGG(DISTINCT lu.unique_word)                                          AS group_words
-            FROM learning_units lu
-            JOIN question_bank qb ON lu.unit_id = qb.unit_id
-            WHERE qb.category IN ('practice', 'exam')
-              AND qb.unit_id = ANY(%s)
-            GROUP BY qb.category, qb.level, qb.lesson, qb.progress
+            FROM unit_groups ug
+            JOIN learning_units lu ON lu.unit_id = ug.unit_id
+            GROUP BY ug.category, ug.level, ug.lesson, ug.progress
             HAVING COUNT(DISTINCT lu.unique_word) > 0
         """
         with conn.cursor() as cur:
-            cur.execute(coverage_sql, (list(mastered), candidate_unit_ids))
+            cur.execute(coverage_sql, (candidate_unit_ids, list(mastered)))
             group_coverage = {
                 (row[0], row[1], row[2], row[3]): {
                     'total_words': row[4],
@@ -1407,53 +1413,137 @@ def get_recommended_practices(conn, user_id, threshold=0.75, limit=None, status_
         if not ranked_summaries:
             return []
 
+        # Fetch only lightweight per-group metadata (count + representative skill/type +
+        # unit ids). The full question payloads aren't needed here — the practice screen
+        # loads them on demand — so we avoid pulling every question's TEXT/JSONB columns.
         where_clauses = []
         params = []
         for item in ranked_summaries:
             where_clauses.append("(category = %s AND level = %s AND lesson = %s AND progress = %s)")
             params.extend([item['category'], item['level'], item['lesson'], item['progress']])
 
-        questions_sql = f"""
-            SELECT level, lesson, progress, skill, type, unit_id,
-                   no, content, question, answer, audio_key, image, options, category
+        meta_sql = f"""
+            SELECT category, level, lesson, progress,
+                   COUNT(*)                                AS question_count,
+                   MODE() WITHIN GROUP (ORDER BY skill)    AS skill,
+                   MIN(type)                               AS type,
+                   ARRAY_AGG(DISTINCT unit_id)             AS unit_ids
             FROM question_bank
             WHERE {' OR '.join(where_clauses)}
-            ORDER BY level, lesson, progress, no
+            GROUP BY category, level, lesson, progress
         """
         with conn.cursor() as cur:
-            cur.execute(questions_sql, params)
-            cols = ['level', 'lesson', 'progress', 'skill', 'type', 'unit_id',
-                    'no', 'content', 'question', 'answer', 'audio_key', 'image', 'options', 'category']
-            rows = [dict(zip(cols, r)) for r in cur.fetchall()]
-
-        from collections import defaultdict
-        questions_by_key = defaultdict(lambda: {'questions': [], 'unit_ids': set()})
-        for row in rows:
-            key = (row['category'], row['level'], row['lesson'], row['progress'])
-            questions_by_key[key]['questions'].append(row)
-            questions_by_key[key]['unit_ids'].add(row['unit_id'])
+            cur.execute(meta_sql, params)
+            meta_by_key = {
+                (r[0], r[1], r[2], r[3]): {
+                    'question_count': r[4],
+                    'skill':          r[5] or 'listening',
+                    'type':           r[6],
+                    'unit_ids':       sorted(r[7] or []),
+                }
+                for r in cur.fetchall()
+            }
 
         results = []
         for item in ranked_summaries:
             key = (item['category'], item['level'], item['lesson'], item['progress'])
-            qdata = questions_by_key.get(key)
-            if not qdata or not qdata['questions']:
+            meta = meta_by_key.get(key)
+            if not meta or not meta['question_count']:
                 continue
-            questions = qdata['questions']
-            skills = [q.get('skill') for q in questions if q.get('skill')]
-            item['skill'] = max(set(skills), key=skills.count) if skills else 'listening'
-            item['type'] = questions[0].get('type')
-            item['unit_ids'] = sorted(qdata['unit_ids'])
-            item['questions'] = questions
+            item['skill'] = meta['skill']
+            item['type'] = meta['type']
+            item['unit_ids'] = meta['unit_ids']
+            item['question_count'] = meta['question_count']
+            item.pop('newest_learned_sort', None)
             results.append(item)
 
-        for item in results:
-            item.pop('newest_learned_sort', None)
         return results
 
     except Exception as e:
         print(f"[WARN] get_recommended_practices failed: {e}")
         return []
+
+
+def get_practice_history_sessions(conn, user_id, limit=100):
+    """
+    List a user's past practice/exam sessions (newest first) for the review page.
+    One row per session_id, with score and the level(s)/lesson(s) it covered.
+    """
+    if not conn:
+        return []
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT session_id,
+                       MAX(created_at)                                   AS ended_at,
+                       COUNT(*)                                          AS total,
+                       SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)       AS correct,
+                       ARRAY_AGG(DISTINCT hsk_level)                     AS levels,
+                       ARRAY_AGG(DISTINCT lesson)                        AS lessons,
+                       ARRAY_AGG(DISTINCT COALESCE(category, 'practice')) AS categories
+                FROM practice_record
+                WHERE user_id = %s
+                GROUP BY session_id
+                ORDER BY ended_at DESC
+                LIMIT %s
+            """, (user_id, limit))
+            sessions = []
+            for row in cur.fetchall():
+                session_id, ended_at, total, correct, levels, lessons, categories = row
+                total = total or 0
+                correct = correct or 0
+                sessions.append({
+                    'session_id':   session_id,
+                    'ended_at':     ended_at.isoformat() if ended_at else None,
+                    'total':        total,
+                    'correct':      correct,
+                    'score_pct':    round(correct / total * 100, 1) if total else 0.0,
+                    'levels':       sorted([l for l in (levels or []) if l is not None]),
+                    'lessons':      sorted([str(l) for l in (lessons or []) if l is not None]),
+                    'categories':   [c for c in (categories or []) if c],
+                })
+            return sessions
+    except Exception as e:
+        print(f"[WARN] get_practice_history_sessions failed: {e}")
+        return []
+
+
+def get_practice_session_detail(conn, user_id, session_id):
+    """
+    Full detail for one of the user's sessions: every answered question joined back
+    to question_bank so the review page can show the prompt, options, correct answer
+    and the user's own answer. Scoped to user_id so users only see their own records.
+    """
+    if not conn:
+        return None
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT pr.hsk_level, pr.lesson, pr.question_no, pr.skill,
+                       pr.question_type, pr.user_answer, pr.is_correct, pr.created_at,
+                       COALESCE(pr.category, 'practice')                AS category,
+                       qb.content, qb.question, qb.answer, qb.audio_key,
+                       qb.image, qb.options, qb.progress
+                FROM practice_record pr
+                LEFT JOIN question_bank qb
+                  ON qb.level = pr.hsk_level
+                 AND qb.lesson::text = pr.lesson::text
+                 AND qb.no = pr.question_no
+                 AND qb.category::text = COALESCE(pr.category, 'practice')
+                WHERE pr.user_id = %s AND pr.session_id = %s
+                ORDER BY pr.hsk_level, pr.lesson, qb.progress, pr.question_no, pr.created_at
+            """, (user_id, session_id))
+            cols = ['level', 'lesson', 'no', 'skill', 'type', 'user_answer',
+                    'is_correct', 'answered_at', 'category', 'content', 'question',
+                    'answer', 'audio_key', 'image', 'options', 'progress']
+            rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+        return rows
+    except Exception as e:
+        print(f"[WARN] get_practice_session_detail failed: {e}")
+        return None
+
 
 def get_unlearned_words_from_db(conn, user_id):
 

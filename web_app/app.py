@@ -152,6 +152,11 @@ def practice_dashboard():
 def recommend_page():
     return render_template('recommend/recommend.html')
 
+@app.route('/review')
+@login_required
+def review_page():
+    return render_template('review/review.html')
+
 @app.route('/learn-together')
 @login_required
 def learn_together_page():

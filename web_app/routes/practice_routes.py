@@ -3,7 +3,10 @@ import sys
 import ast
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
-from db import get_db_connection, insert_practice_progress, get_recommended_practices
+from db import (
+    get_db_connection, insert_practice_progress, get_recommended_practices,
+    get_practice_history_sessions, get_practice_session_detail,
+)
 
 # sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -285,25 +288,10 @@ def get_recommendations():
     finally:
         db_conn.close()
 
-    # groups already contain full question data — just serialise options
+    # groups carry lightweight metadata only; the practice screen loads full questions
+    # on demand, so the card just needs the question count.
     results = []
     for g in groups:
-        qs = []
-        for q in g['questions']:
-            qs.append({
-                'no':       q['no'],
-                'skill':    q['skill'],
-                'type':     q['type'],
-                'content':  q['content'],
-                'question': q['question'],
-                'answer':   q['answer'],
-                'audio_key': parse_audio_key(q['audio_key']),
-                'image':    q['image'],
-                'options':  q['options'],   # already a dict from JSONB
-                'progress': q['progress'],
-                'unit_id':  q['unit_id'],
-                'category': q.get('category', 'practice'),
-            })
         results.append({
             'level':        g['level'],
             'lesson':       g['lesson'],
@@ -320,7 +308,7 @@ def get_recommendations():
             'newest_learned_at': g.get('newest_learned_at'),
             'recent_score': g.get('recent_score', 0),
             'status':       g.get('status', 'Not start'),
-            'questions':    qs,
+            'question_count': g.get('question_count', 0),
         })
 
     return jsonify({'recommendations': results})
@@ -362,4 +350,72 @@ def get_progress_group(level, lesson, progress):
         'lesson':   lesson,
         'progress': progress,
         'questions': questions,
+    })
+
+
+@practice_bp.route('/history', methods=['GET'])
+@login_required
+def get_practice_history():
+    """List the current user's past practice/exam sessions for the review page."""
+    db_conn = get_db_connection()
+    if not db_conn:
+        return jsonify({'error': 'Database unavailable'}), 503
+
+    try:
+        sessions = get_practice_history_sessions(db_conn, current_user.id)
+    finally:
+        db_conn.close()
+
+    return jsonify({'sessions': sessions})
+
+
+@practice_bp.route('/history/<int:session_id>', methods=['GET'])
+@login_required
+def get_practice_history_detail(session_id):
+    """Return every answered question in one of the current user's sessions,
+    with full question detail and the user's own answer."""
+    db_conn = get_db_connection()
+    if not db_conn:
+        return jsonify({'error': 'Database unavailable'}), 503
+
+    try:
+        rows = get_practice_session_detail(db_conn, current_user.id, session_id)
+    finally:
+        db_conn.close()
+
+    if not rows:
+        return jsonify({'error': 'Session not found'}), 404
+
+    questions = []
+    total = 0
+    correct = 0
+    for r in rows:
+        total += 1
+        if r['is_correct']:
+            correct += 1
+        questions.append({
+            'level':       r['level'],
+            'lesson':      r['lesson'],
+            'no':          r['no'],
+            'skill':       r['skill'] or 'listening',
+            'type':        r['type'],
+            'category':    r['category'],
+            'progress':    str(r['progress'] or ''),
+            'content':     r['content'],
+            'question':    r['question'],
+            'answer':      str(r['answer'] or ''),
+            'audio_key':   parse_audio_key(r['audio_key']),
+            'image':       r['image'],
+            'options':     parse_options(r['options']),
+            'user_answer': r['user_answer'],
+            'is_correct':  r['is_correct'],
+            'answered_at': r['answered_at'].isoformat() if r['answered_at'] else None,
+        })
+
+    return jsonify({
+        'session_id': session_id,
+        'total':      total,
+        'correct':    correct,
+        'score_pct':  round(correct / total * 100, 1) if total else 0.0,
+        'questions':  questions,
     })
