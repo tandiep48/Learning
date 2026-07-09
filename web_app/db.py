@@ -1129,6 +1129,54 @@ def get_learned_words(conn, user_id):
         print(f"⚠️ Database query failed (get_learned_words): {e}")
         return []
 
+
+def mark_passage_words_mastered(conn, user_id, passage_id):
+    """
+    Record that the user mastered every vocabulary word of a passage by completing its
+    lesson-trainer part at 100%. Writes the same 3-mode (typing/listen/meaning), round-1,
+    correct rows into vocab_records that the vocab trainer would, so every mastery consumer
+    (recommend, profile, level, progress bars) picks it up with no query changes.
+    Words already mastered are skipped so replays don't pile up duplicate records.
+    Returns the count of newly mastered words.
+    """
+    if not conn or not passage_id:
+        return 0
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT cn FROM passage_vocabulary WHERE passage_id = %s", (passage_id,))
+            words = [r[0] for r in cur.fetchall() if r[0]]
+        if not words:
+            return 0
+
+        already = set(get_learned_words(conn, user_id))
+        pending = [w for w in words if w not in already]
+        if not pending:
+            return 0
+
+        import time
+        session_id = int(time.time() * 1000)
+        game_info = json.dumps({"source": "lesson_trainer", "passage_id": passage_id},
+                               ensure_ascii=False)
+        rows = [
+            (user_id, session_id, mode, word, game_info)
+            for word in pending
+            for mode in ('typing', 'listen', 'meaning')
+        ]
+        with conn.cursor() as cur:
+            cur.executemany("""
+                INSERT INTO vocab_records
+                    (user_id, session_id, mode, word, round_num, is_correct,
+                     game_info, updated_at)
+                VALUES (%s, %s, %s, %s, 1, true, %s::jsonb, CURRENT_TIMESTAMP)
+            """, rows)
+        conn.commit()
+        return len(pending)
+    except Exception as e:
+        print(f"Database mark_passage_words_mastered failed: {e}")
+        conn.rollback()
+        return 0
+
+
 def get_mastered_words_with_recency(conn, user_id):
     """
     Returns mastered words with the timestamp of the latest mastered learning day

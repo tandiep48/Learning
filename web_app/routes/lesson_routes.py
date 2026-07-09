@@ -19,6 +19,7 @@ from db import (
     get_grammar_for_passage,
     insert_lesson_progress,
     mark_lesson_part_completed,
+    mark_passage_words_mastered,
     recompute_user_level,
 )
 from number_part import NUMBER_PART_ID, is_number_part, number_vocab_rows
@@ -59,6 +60,16 @@ def complete_lesson_part():
     if not passage_id:
         return jsonify({"error": "passage_id is required"}), 400
 
+    # A part only counts as complete when the round was perfect. The client sends the
+    # score; guard here so a non-100% run never marks the lesson done.
+    try:
+        total = int(data.get('total', 0))
+        correct = int(data.get('correct', 0))
+    except (TypeError, ValueError):
+        total, correct = 0, 0
+    if total <= 0 or correct < total:
+        return jsonify({"status": "incomplete", "passage_id": passage_id}), 200
+
     conn = get_db_connection()
     if not conn:
         return jsonify({"error": "Database connection failed"}), 500
@@ -66,11 +77,14 @@ def complete_lesson_part():
     try:
         if not mark_lesson_part_completed(conn, current_user.id, passage_id):
             return jsonify({"error": "Could not save lesson progress"}), 500
+        # 100% completion grants mastery of the passage's words.
+        mastered = mark_passage_words_mastered(conn, current_user.id, passage_id)
         # Finishing a part may complete a lesson/level, so re-derive the HSK level.
         new_level = recompute_user_level(conn, current_user.id)
         if new_level:
             current_user.level = new_level
-        return jsonify({"status": "success", "passage_id": passage_id, "level": new_level})
+        return jsonify({"status": "success", "passage_id": passage_id,
+                        "mastered_words": mastered, "level": new_level})
     finally:
         conn.close()
 

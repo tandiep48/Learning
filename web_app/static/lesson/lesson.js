@@ -574,7 +574,6 @@ function _buildLessonCompleteScreen() {
     document.querySelectorAll('.lesson-flow-continue').forEach(btn => {
         btn.style.display = isLessonPartFlow && currentPassageId ? 'inline-flex' : 'none';
     });
-    markLessonPartComplete();
 
     if (missedTasks.length > 0) {
         document.getElementById('recap-table-wrap').style.display = 'block';
@@ -596,6 +595,8 @@ function _buildLessonCompleteScreen() {
             list.appendChild(tr);
         });
     } else {
+        // Perfect round: this is the only path that marks the part complete.
+        markLessonPartComplete();
         document.getElementById('recap-table-wrap').style.display = 'none';
         document.getElementById('training-complete-title').style.display = 'none';
         document.getElementById('recap-actions').style.display = 'none';
@@ -613,10 +614,13 @@ function markLessonPartComplete() {
         : (isLessonPartFlow && currentPassageId ? [currentPassageId] : []);
     if (!passageIds.length) return;
 
+    // Only reached on a perfect round, so correct === total. The server re-checks this
+    // before marking completion and granting word mastery.
+    const total = sessionData?.tasks?.length || 0;
     Promise.all(passageIds.map(passageId => fetch('/api/lesson/part-complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ passage_id: passageId })
+        body: JSON.stringify({ passage_id: passageId, total, correct: total })
     }))).catch(e => console.error("Lesson part progress save failed", e));
 }
 
