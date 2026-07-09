@@ -55,6 +55,11 @@ async function loadProfileSummary() {
 
 function renderProfile(data) {
     renderAvatar(data.user?.avatar_url);
+    const level = data.user?.level;
+    if (level) {
+        const levelEl = document.getElementById('stat-hsk-level');
+        if (levelEl) levelEl.textContent = `HSK ${level}`;
+    }
     const totals = data.time_totals_ms || {};
     document.getElementById('stat-vocab-time').textContent = formatDuration(totals.vocab || 0);
     document.getElementById('stat-lesson-time').textContent = formatDuration(totals.lesson || 0);

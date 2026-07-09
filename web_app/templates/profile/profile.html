@@ -40,6 +40,10 @@
         </section>
 
         <section class="profile-stats-grid">
+            <div class="profile-stat profile-stat-level">
+                <span class="profile-stat-label">{{ t('profile.hsk_level') }}</span>
+                <strong id="stat-hsk-level">HSK {{ current_user.level }}</strong>
+            </div>
             <div class="profile-stat">
                 <span class="profile-stat-label">{{ t('profile.vocab_time') }}</span>
                 <strong id="stat-vocab-time">0m</strong>

@@ -147,6 +147,14 @@
     font-size: 1.7rem;
 }
 
+.profile-stat-level {
+    background: rgba(87, 104, 86, 0.1);
+    border-color: rgba(87, 104, 86, 0.2);
+}
+.profile-stat-level strong {
+    color: var(--primary);
+}
+
 .profile-section {
     margin-top: 18px;
     padding: 20px;
