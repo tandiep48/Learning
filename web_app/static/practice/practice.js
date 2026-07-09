@@ -756,9 +756,13 @@ function renderType5ReadingMatchGroup(card, group) {
         row.className = 't5l-audio-row';
         row.id = `row-${blockId}`;
 
-        // Sentence text on left
+        // Sentence text on left, prefixed with the sub-question number
         const sentPart = document.createElement('div');
         sentPart.className = 't5r-sentence-part';
+        const rowNumber = document.createElement('span');
+        rowNumber.className = 't5l-row-number';
+        rowNumber.textContent = idx + 1;
+        sentPart.appendChild(rowNumber);
         const sentEl = document.createElement('span');
         sentEl.className = 't5r-sentence';
         sentEl.innerHTML = replaceAllBlanks(q.content || '', null, false, blockId);
@@ -830,6 +834,10 @@ function renderType5ReadingImageGroup(card, group) {
 
         const sentPart = document.createElement('div');
         sentPart.className = 't5r-sentence-part';
+        const rowNumber = document.createElement('span');
+        rowNumber.className = 't5l-row-number';
+        rowNumber.textContent = idx + 1;
+        sentPart.appendChild(rowNumber);
         const sentEl = document.createElement('span');
         sentEl.className = 't5r-sentence';
         sentEl.textContent = q.content || '';
