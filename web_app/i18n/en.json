@@ -7,7 +7,6 @@
         "recommend": "Recommend",
         "exercise": "Exercise",
         "exam": "Exam",
-        "review": "Review",
         "learn_together": "Learn Together",
         "hanzi_label": "Hanzi",
         "logout": "Logout",
@@ -278,7 +277,12 @@
         "no_answer": "No answer",
         "question_label": "Question {n}",
         "session_summary": "{correct}/{total} correct",
-        "detail_missing": "This question is no longer in the question bank."
+        "detail_missing": "This question is no longer in the question bank.",
+        "sort": "Sort",
+        "sort_recent": "Most recent",
+        "sort_oldest": "Oldest first",
+        "no_more": "No more sessions to show.",
+        "page_indicator": "Page {page}"
     },
     "vocab": {
         "page_title": "Vocabulary Selection",
@@ -347,6 +351,9 @@
     "profile": {
         "page_title": "Profile",
         "dashboard": "Dashboard",
+        "review_practices": "Practice Review",
+        "review_practices_sub": "Revisit questions you've answered and see your results.",
+        "open_review": "Open Review",
         "upload_avatar": "Upload Avatar",
         "vocab_time": "Vocab Time",
         "lesson_time": "Lesson Time",

@@ -1500,49 +1500,79 @@ def get_recommended_practices(conn, user_id, threshold=0.75, limit=None, status_
         return []
 
 
-def get_practice_history_sessions(conn, user_id, limit=100):
+def get_practice_history_sessions(conn, user_id, hsk_level=None, category=None,
+                                  sort='recent', page=1, page_size=20):
     """
-    List a user's past practice/exam sessions (newest first) for the review page.
-    One row per session_id, with score and the level(s)/lesson(s) it covered.
+    List a user's past practice/exam sessions for the review page, with optional
+    backend filters (hsk_level, category) and ordering. One row per session_id, with
+    score and the level(s)/lesson(s) it covered.
+
+    Returns (sessions, has_more). has_more lets the caller do prev/next paging without a
+    separate COUNT query (we fetch one extra row and trim it). Scoped to user_id.
     """
     if not conn:
-        return []
+        return [], False
 
+    page = max(1, int(page or 1))
+    page_size = min(50, max(1, int(page_size or 20)))
+    order = "ASC" if sort == 'oldest' else "DESC"
+
+    where = ["user_id = %s"]
+    params = [user_id]
+    if category in ('practice', 'exam'):
+        where.append("COALESCE(category, 'practice') = %s")
+        params.append(category)
+
+    # Level can vary within a multi-lesson session, so keep the whole session (with its
+    # full score) as long as it touched the requested level, rather than filtering rows.
+    having = ""
+    if hsk_level is not None:
+        having = "HAVING bool_or(hsk_level = %s)"
+        params.append(hsk_level)
+
+    params.append(page_size + 1)          # fetch one extra to detect a next page
+    params.append((page - 1) * page_size)
+
+    sql = f"""
+        SELECT session_id,
+               MAX(created_at)                                   AS ended_at,
+               COUNT(*)                                          AS total,
+               SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)       AS correct,
+               ARRAY_AGG(DISTINCT hsk_level)                     AS levels,
+               ARRAY_AGG(DISTINCT lesson)                        AS lessons,
+               ARRAY_AGG(DISTINCT COALESCE(category, 'practice')) AS categories
+        FROM practice_record
+        WHERE {' AND '.join(where)}
+        GROUP BY session_id
+        {having}
+        ORDER BY ended_at {order}
+        LIMIT %s OFFSET %s
+    """
     try:
         with conn.cursor() as cur:
-            cur.execute("""
-                SELECT session_id,
-                       MAX(created_at)                                   AS ended_at,
-                       COUNT(*)                                          AS total,
-                       SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)       AS correct,
-                       ARRAY_AGG(DISTINCT hsk_level)                     AS levels,
-                       ARRAY_AGG(DISTINCT lesson)                        AS lessons,
-                       ARRAY_AGG(DISTINCT COALESCE(category, 'practice')) AS categories
-                FROM practice_record
-                WHERE user_id = %s
-                GROUP BY session_id
-                ORDER BY ended_at DESC
-                LIMIT %s
-            """, (user_id, limit))
-            sessions = []
-            for row in cur.fetchall():
-                session_id, ended_at, total, correct, levels, lessons, categories = row
-                total = total or 0
-                correct = correct or 0
-                sessions.append({
-                    'session_id':   session_id,
-                    'ended_at':     ended_at.isoformat() if ended_at else None,
-                    'total':        total,
-                    'correct':      correct,
-                    'score_pct':    round(correct / total * 100, 1) if total else 0.0,
-                    'levels':       sorted([l for l in (levels or []) if l is not None]),
-                    'lessons':      sorted([str(l) for l in (lessons or []) if l is not None]),
-                    'categories':   [c for c in (categories or []) if c],
-                })
-            return sessions
+            cur.execute(sql, tuple(params))
+            rows = cur.fetchall()
+        has_more = len(rows) > page_size
+        rows = rows[:page_size]
+        sessions = []
+        for row in rows:
+            session_id, ended_at, total, correct, levels, lessons, categories = row
+            total = total or 0
+            correct = correct or 0
+            sessions.append({
+                'session_id':   session_id,
+                'ended_at':     ended_at.isoformat() if ended_at else None,
+                'total':        total,
+                'correct':      correct,
+                'score_pct':    round(correct / total * 100, 1) if total else 0.0,
+                'levels':       sorted([l for l in (levels or []) if l is not None]),
+                'lessons':      sorted([str(l) for l in (lessons or []) if l is not None]),
+                'categories':   [c for c in (categories or []) if c],
+            })
+        return sessions, has_more
     except Exception as e:
         print(f"[WARN] get_practice_history_sessions failed: {e}")
-        return []
+        return [], False
 
 
 def get_practice_session_detail(conn, user_id, session_id):

@@ -46,29 +46,79 @@ function fmtDate(iso) {
 
 // ── Session list ────────────────────────────────────────────────
 
+const filters = { level: 'all', category: 'all', sort: 'recent', page: 1 };
+let hasMore = false;
+
 async function loadSessions() {
     const list = document.getElementById('session-list');
+    const pager = document.getElementById('review-pagination');
+    list.innerHTML = `
+        <div class="state-box">
+            <div class="loading-dots"><span></span><span></span><span></span></div>
+        </div>`;
+    pager.classList.add('hidden');
+
+    const qs = new URLSearchParams({
+        level: filters.level,
+        category: filters.category,
+        sort: filters.sort,
+        page: filters.page,
+    });
     try {
-        const res = await fetch('/api/practice/history');
+        const res = await fetch(`/api/practice/history?${qs.toString()}`);
         const data = await res.json();
         if (!res.ok) {
             list.innerHTML = stateBox(data.error || t('review.failed_load'));
             return;
         }
         const sessions = data.sessions || [];
+        hasMore = !!data.has_more;
         if (sessions.length === 0) {
+            const emptyMsg = filters.page > 1 ? t('review.no_more') : t('review.empty_sub');
+            const emptyTitle = filters.page > 1 ? '' : t('review.empty_title');
             list.innerHTML = `
                 <div class="state-box">
                     <i class="fa-regular fa-folder-open state-icon" aria-hidden="true"></i>
-                    <div class="state-title">${t('review.empty_title')}</div>
-                    <div class="state-sub">${t('review.empty_sub')}</div>
+                    ${emptyTitle ? `<div class="state-title">${emptyTitle}</div>` : ''}
+                    <div class="state-sub">${emptyMsg}</div>
                 </div>`;
-            return;
+        } else {
+            list.innerHTML = sessions.map(sessionCard).join('');
         }
-        list.innerHTML = sessions.map(sessionCard).join('');
+        renderPagination();
     } catch (e) {
         list.innerHTML = stateBox(t('review.connect_failed'));
     }
+}
+
+function renderPagination() {
+    const pager = document.getElementById('review-pagination');
+    // Only show the pager when there's somewhere to go.
+    if (filters.page <= 1 && !hasMore) {
+        pager.classList.add('hidden');
+        return;
+    }
+    pager.classList.remove('hidden');
+    document.getElementById('page-prev').disabled = filters.page <= 1;
+    document.getElementById('page-next').disabled = !hasMore;
+    document.getElementById('page-indicator').textContent =
+        t('review.page_indicator', { page: filters.page });
+}
+
+function changePage(delta) {
+    const next = filters.page + delta;
+    if (next < 1 || (delta > 0 && !hasMore)) return;
+    filters.page = next;
+    loadSessions();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function onFilterChange() {
+    filters.level = document.getElementById('filter-level').value;
+    filters.category = document.getElementById('filter-category').value;
+    filters.sort = document.getElementById('filter-sort').value;
+    filters.page = 1;
+    loadSessions();
 }
 
 function sessionCard(s) {
@@ -294,4 +344,9 @@ function escapeHtml(str) {
     return div.innerHTML;
 }
 
-document.addEventListener('DOMContentLoaded', loadSessions);
+document.addEventListener('DOMContentLoaded', () => {
+    ['filter-level', 'filter-category', 'filter-sort'].forEach(id => {
+        document.getElementById(id).addEventListener('change', onFilterChange);
+    });
+    loadSessions();
+});

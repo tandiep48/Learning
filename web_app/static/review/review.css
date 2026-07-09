@@ -62,6 +62,59 @@
     40% { transform: translateY(-8px); opacity: 1; }
 }
 
+/* ── Filters ── */
+.review-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 22px;
+}
+.review-filters .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.review-filters .filter-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+.review-filters .filter-select {
+    padding: 8px 12px;
+    border: 1px solid var(--secondary-hover);
+    border-radius: 10px;
+    background: var(--card-bg);
+    color: var(--text-main);
+    font-size: 0.9rem;
+    cursor: pointer;
+    min-width: 150px;
+}
+
+/* ── Pagination ── */
+.review-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 24px;
+}
+.review-page-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: 1px solid var(--secondary-hover);
+    border-radius: 10px;
+    background: var(--card-bg);
+    color: var(--text-main);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+}
+.review-page-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+.review-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.review-page-indicator { font-size: 0.9rem; color: var(--text-muted); }
+
 /* ── Session list ── */
 #session-list {
     display: flex;

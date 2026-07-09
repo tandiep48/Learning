@@ -356,17 +356,43 @@ def get_progress_group(level, lesson, progress):
 @practice_bp.route('/history', methods=['GET'])
 @login_required
 def get_practice_history():
-    """List the current user's past practice/exam sessions for the review page."""
+    """List the current user's past practice/exam sessions for the review page.
+    Supports backend filters: level (HSK 1-6), category (practice/exam), sort
+    (recent/oldest), and page-based pagination (default: most recent first)."""
+    level = request.args.get('level')
+    hsk_level = None
+    if level and level != 'all':
+        try:
+            hsk_level = int(level)
+        except (TypeError, ValueError):
+            hsk_level = None
+
+    category = request.args.get('category')
+    if category not in ('practice', 'exam'):
+        category = None
+
+    sort = request.args.get('sort')
+    if sort not in ('recent', 'oldest'):
+        sort = 'recent'
+
+    try:
+        page = max(1, int(request.args.get('page', 1)))
+    except (TypeError, ValueError):
+        page = 1
+
     db_conn = get_db_connection()
     if not db_conn:
         return jsonify({'error': 'Database unavailable'}), 503
 
     try:
-        sessions = get_practice_history_sessions(db_conn, current_user.id)
+        sessions, has_more = get_practice_history_sessions(
+            db_conn, current_user.id,
+            hsk_level=hsk_level, category=category, sort=sort, page=page,
+        )
     finally:
         db_conn.close()
 
-    return jsonify({'sessions': sessions})
+    return jsonify({'sessions': sessions, 'page': page, 'has_more': has_more})
 
 
 @practice_bp.route('/history/<int:session_id>', methods=['GET'])

@@ -157,6 +157,29 @@
     margin-bottom: 14px;
 }
 
+.profile-review-cta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.profile-review-cta .profile-review-cta-text h2 {
+    margin-bottom: 4px;
+}
+
+.profile-review-cta .profile-review-cta-text p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.profile-review-btn {
+    white-space: nowrap;
+    text-decoration: none;
+}
+
 .profile-section h3 {
     font-size: 1rem;
     margin-bottom: 10px;

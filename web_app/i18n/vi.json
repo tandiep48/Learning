@@ -7,7 +7,6 @@
         "recommend": "Đề Xuất",
         "exercise": "Luyện Tập",
         "exam": "Kiểm Tra",
-        "review": "Xem Lại",
         "learn_together": "Học Cùng Nhau",
         "hanzi_label": "Chữ Hán",
         "logout": "Đăng Xuất",
@@ -278,7 +277,12 @@
         "no_answer": "Không trả lời",
         "question_label": "Câu {n}",
         "session_summary": "Đúng {correct}/{total}",
-        "detail_missing": "Câu hỏi này không còn trong ngân hàng câu hỏi."
+        "detail_missing": "Câu hỏi này không còn trong ngân hàng câu hỏi.",
+        "sort": "Sắp xếp",
+        "sort_recent": "Mới nhất",
+        "sort_oldest": "Cũ nhất",
+        "no_more": "Không còn phiên nào để hiển thị.",
+        "page_indicator": "Trang {page}"
     },
     "vocab": {
         "page_title": "Chọn Từ Vựng",
@@ -347,6 +351,9 @@
     "profile": {
         "page_title": "Hồ Sơ",
         "dashboard": "Trang Chính",
+        "review_practices": "Xem Lại Bài Làm",
+        "review_practices_sub": "Xem lại các câu hỏi bạn đã làm và kết quả của bạn.",
+        "open_review": "Mở Xem Lại",
         "upload_avatar": "Tải Ảnh Đại Diện",
         "vocab_time": "Thời Gian Từ Vựng",
         "lesson_time": "Thời Gian Bài Học",
