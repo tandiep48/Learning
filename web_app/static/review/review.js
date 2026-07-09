@@ -84,7 +84,7 @@ function sessionCard(s) {
     return `
         <button type="button" class="session-card" onclick="openSession(${s.session_id})">
             <div class="session-card-main">
-                <div class="session-card-title">${levels}${lessons ? ` · ${t('picker.lesson') || 'Lesson'} ${lessons}` : ''}</div>
+                <div class="session-card-title">${levels}${lessons ? ` · ${t('picker.lesson_prefix')} ${lessons}` : ''}</div>
                 <div class="session-card-meta">
                     <span class="session-cat">${catLabel}</span>
                     <span class="session-date">${fmtDate(s.ended_at)}</span>
