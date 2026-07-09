@@ -1,9 +1,13 @@
 import os
+import re
 import sys
 import uuid
 import random
 import json
 import time
+import logging
+import unicodedata
+from logging.handlers import RotatingFileHandler
 from datetime import datetime
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
@@ -19,10 +23,95 @@ from db import (
     get_grammar_for_passage,
     insert_lesson_progress,
     mark_lesson_part_completed,
+    mark_passage_words_mastered,
+    recompute_user_level,
 )
 from number_part import NUMBER_PART_ID, is_number_part, number_vocab_rows
 
 lesson_bp = Blueprint('lesson', __name__, url_prefix='/api/lesson')
+
+# ── Lesson-trainer diagnostic log ────────────────────────────────────────────
+# Appends one JSON line per answered task to help debug the reorder issues
+# (answers marked wrong despite looking identical, and text appearing to grow on
+# review). Override the path with LESSON_TRAINER_LOG.
+_LESSON_LOG_PATH = os.getenv("LESSON_TRAINER_LOG") or os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "logs", "lesson_trainer.log"
+)
+
+
+def _build_lesson_logger():
+    logger = logging.getLogger("lesson_trainer")
+    if logger.handlers:
+        return logger
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+    try:
+        os.makedirs(os.path.dirname(_LESSON_LOG_PATH), exist_ok=True)
+        handler = RotatingFileHandler(
+            _LESSON_LOG_PATH, maxBytes=5_000_000, backupCount=3, encoding="utf-8"
+        )
+        handler.setFormatter(logging.Formatter("%(message)s"))
+        logger.addHandler(handler)
+    except Exception as e:
+        print(f"[WARN] lesson_trainer log init failed: {e}")
+    return logger
+
+
+_lesson_logger = _build_lesson_logger()
+
+
+# Mirror of the client's ANSWER_PUNCT_MAP so normalized_equal matches answersMatch.
+_ANSWER_PUNCT_MAP = {
+    '、': ',', '。': '.', '｡': '.', '【': '[', '】': ']', '《': '<', '》': '>',
+    '「': '"', '」': '"', '『': '"', '』': '"', '“': '"', '”': '"', '‘': "'", '’': "'",
+    '～': '~', '—': '-', '–': '-', '‧': '', '·': '', '・': '',
+}
+_WS_RE = re.compile(r"[\s​‌‍﻿]")
+
+
+def _normalize_answer(value):
+    """Mirror the client's normalizeAnswer: NFKC, fold CJK punctuation to ASCII, then
+    drop whitespace/zero-width chars. Lets normalized_equal cross-check is_correct."""
+    if value is None:
+        return ""
+    text = unicodedata.normalize("NFKC", str(value))
+    text = "".join(_ANSWER_PUNCT_MAP.get(ch, ch) for ch in text)
+    return _WS_RE.sub("", text)
+
+
+def _codepoints(value):
+    return [f"U+{ord(ch):04X}" for ch in str(value or "")]
+
+
+def log_lesson_event(user_id, session_id, passage_id, line_id, task_type,
+                     user_answer, correct_answer, is_correct, response_time_ms, tokens):
+    """Record one answered task. Adds codepoint dumps when the result is wrong or when
+    the raw strings look identical, so invisible/lookalike differences are visible."""
+    try:
+        event = {
+            "ts": datetime.now().isoformat(timespec="seconds"),
+            "user_id": user_id,
+            "session_id": session_id,
+            "passage_id": passage_id,
+            "line_id": line_id,
+            "type": task_type,
+            "is_correct": is_correct,
+            "response_time_ms": response_time_ms,
+            "user_answer": user_answer,
+            "correct_answer": correct_answer,
+            "tokens": tokens,
+        }
+        if user_answer is not None and correct_answer is not None:
+            raw_equal = user_answer == correct_answer
+            event["raw_equal"] = raw_equal
+            event["normalized_equal"] = _normalize_answer(user_answer) == _normalize_answer(correct_answer)
+            # The interesting cases: marked wrong, or strings that look the same.
+            if not is_correct or raw_equal:
+                event["user_codepoints"] = _codepoints(user_answer)
+                event["correct_codepoints"] = _codepoints(correct_answer)
+        _lesson_logger.info(json.dumps(event, ensure_ascii=False))
+    except Exception as e:
+        print(f"[WARN] lesson_trainer log write failed: {e}")
 
 @lesson_bp.route('/passages', methods=['GET'])
 def get_passages():
@@ -58,6 +147,16 @@ def complete_lesson_part():
     if not passage_id:
         return jsonify({"error": "passage_id is required"}), 400
 
+    # A part only counts as complete when the round was perfect. The client sends the
+    # score; guard here so a non-100% run never marks the lesson done.
+    try:
+        total = int(data.get('total', 0))
+        correct = int(data.get('correct', 0))
+    except (TypeError, ValueError):
+        total, correct = 0, 0
+    if total <= 0 or correct < total:
+        return jsonify({"status": "incomplete", "passage_id": passage_id}), 200
+
     conn = get_db_connection()
     if not conn:
         return jsonify({"error": "Database connection failed"}), 500
@@ -65,7 +164,14 @@ def complete_lesson_part():
     try:
         if not mark_lesson_part_completed(conn, current_user.id, passage_id):
             return jsonify({"error": "Could not save lesson progress"}), 500
-        return jsonify({"status": "success", "passage_id": passage_id})
+        # 100% completion grants mastery of the passage's words.
+        mastered = mark_passage_words_mastered(conn, current_user.id, passage_id)
+        # Finishing a part may complete a lesson/level, so re-derive the HSK level.
+        new_level = recompute_user_level(conn, current_user.id)
+        if new_level:
+            current_user.level = new_level
+        return jsonify({"status": "success", "passage_id": passage_id,
+                        "mastered_words": mastered, "level": new_level})
     finally:
         conn.close()
 
@@ -231,10 +337,25 @@ def submit_lesson():
     mode_map = {'meaning': 1, 'typing': 2, 'type': 2, 'reorder': 3, 'listening': 4, 'listen': 4}
     mode = mode_map.get(mode_str, 1)
     user_answer = data.get("user_answer")
+    correct_answer = data.get("correct_answer")
     is_correct = data.get("is_correct")
     response_time_ms = data.get("response_time_ms", 0)
     game_info = data.get("game_info", "{}")
-    
+
+    tokens = game_info.get("tokens") if isinstance(game_info, dict) else None
+    log_lesson_event(
+        user_id=current_user.id,
+        session_id=session_id,
+        passage_id=passage_id,
+        line_id=line_id,
+        task_type=mode_str,
+        user_answer=user_answer,
+        correct_answer=correct_answer,
+        is_correct=is_correct,
+        response_time_ms=response_time_ms,
+        tokens=tokens,
+    )
+
     db_conn = get_db_connection()
     if db_conn:
         insert_lesson_progress(
@@ -251,5 +372,5 @@ def submit_lesson():
             updated_at=datetime.now()
         )
         db_conn.close()
-        
+
     return jsonify({"status": "success"})

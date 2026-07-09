@@ -131,6 +131,8 @@ CREATE TABLE IF NOT EXISTS practice_record (
 
 CREATE INDEX IF NOT EXISTS idx_practice_record_user_session ON practice_record(user_id, session_id);
 CREATE INDEX IF NOT EXISTS idx_practice_record_lesson ON practice_record(hsk_level, lesson);
+-- Speeds up the review page's session list (newest sessions per user first)
+CREATE INDEX IF NOT EXISTS idx_practice_record_user_created ON practice_record(user_id, created_at DESC);
 
 -- ==========================================
 -- 5. Question Bank and Recommendations
@@ -172,6 +174,8 @@ CREATE INDEX IF NOT EXISTS idx_qb_category_level_lesson ON question_bank(categor
 CREATE INDEX IF NOT EXISTS idx_qb_progress              ON question_bank(level, lesson, progress);
 CREATE INDEX IF NOT EXISTS idx_qb_unit_id               ON question_bank(unit_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_qb_unique         ON question_bank(category, level, lesson, no);
+-- Covering index for the recommend coverage step: maps a unit to its group without a heap hit
+CREATE INDEX IF NOT EXISTS idx_qb_unit_group           ON question_bank(unit_id, category, level, lesson, progress);
 
 CREATE TABLE IF NOT EXISTS learning_units (
     id          SERIAL PRIMARY KEY,
@@ -181,6 +185,8 @@ CREATE TABLE IF NOT EXISTS learning_units (
 
 CREATE INDEX IF NOT EXISTS idx_lu_unit_id ON learning_units(unit_id);
 CREATE INDEX IF NOT EXISTS idx_lu_word    ON learning_units(unique_word);
+-- Covering index so the recommend coverage join reads words straight from the index
+CREATE INDEX IF NOT EXISTS idx_lu_unit_word ON learning_units(unit_id, unique_word);
 
 -- ==========================================
 -- 6. Grammar

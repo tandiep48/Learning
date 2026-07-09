@@ -147,6 +147,14 @@
     font-size: 1.7rem;
 }
 
+.profile-stat-level {
+    background: rgba(87, 104, 86, 0.1);
+    border-color: rgba(87, 104, 86, 0.2);
+}
+.profile-stat-level strong {
+    color: var(--primary);
+}
+
 .profile-section {
     margin-top: 18px;
     padding: 20px;
@@ -155,6 +163,29 @@
 .profile-section h2 {
     text-align: left;
     margin-bottom: 14px;
+}
+
+.profile-review-cta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.profile-review-cta .profile-review-cta-text h2 {
+    margin-bottom: 4px;
+}
+
+.profile-review-cta .profile-review-cta-text p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.profile-review-btn {
+    white-space: nowrap;
+    text-decoration: none;
 }
 
 .profile-section h3 {
