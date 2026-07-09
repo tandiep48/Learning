@@ -384,6 +384,7 @@ function skipTask() {
             line_id: task.line_id,
             type: task.type,
             user_answer: '',
+            correct_answer: task.correct_answer,
             is_correct: false,
             response_time_ms: Date.now() - taskStartTime,
             game_info: gameInfo
@@ -493,6 +494,7 @@ async function checkAnswer(task, userAnswer, correctAnswer, element) {
             line_id: task.line_id,
             type: task.type,
             user_answer: userAnswer,
+            correct_answer: correctAnswer,
             is_correct: isCorrect,
             response_time_ms: responseTime,
             game_info: gameInfo
