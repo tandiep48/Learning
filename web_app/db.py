@@ -1635,11 +1635,11 @@ def get_recommended_practices(conn, user_id, threshold=0.75, limit=None, status_
 
 
 def get_practice_history_sessions(conn, user_id, hsk_level=None, category=None,
-                                  sort='recent', page=1, page_size=20):
+                                  date=None, sort='recent', page=1, page_size=20):
     """
     List a user's past practice/exam sessions for the review page, with optional
-    backend filters (hsk_level, category) and ordering. One row per session_id, with
-    score and the level(s)/lesson(s) it covered.
+    backend filters (hsk_level, category, date) and ordering. One row per session_id,
+    with score and the level(s)/lesson(s) it covered.
 
     Returns (sessions, has_more). has_more lets the caller do prev/next paging without a
     separate COUNT query (we fetch one extra row and trim it). Scoped to user_id.
@@ -1658,11 +1658,16 @@ def get_practice_history_sessions(conn, user_id, hsk_level=None, category=None,
         params.append(category)
 
     # Level can vary within a multi-lesson session, so keep the whole session (with its
-    # full score) as long as it touched the requested level, rather than filtering rows.
-    having = ""
+    # full score) as long as it touched the requested level. Date matches the session's
+    # end day. Both are HAVING conditions so session stats stay complete.
+    having_clauses = []
     if hsk_level is not None:
-        having = "HAVING bool_or(hsk_level = %s)"
+        having_clauses.append("bool_or(hsk_level = %s)")
         params.append(hsk_level)
+    if date:
+        having_clauses.append("MAX(created_at)::date = %s")
+        params.append(date)
+    having = ("HAVING " + " AND ".join(having_clauses)) if having_clauses else ""
 
     params.append(page_size + 1)          # fetch one extra to detect a next page
     params.append((page - 1) * page_size)
