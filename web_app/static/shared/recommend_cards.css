@@ -52,12 +52,13 @@
     padding: 4px 10px;
 }
 
-.hsk-1 { background: rgba(16, 185, 129, 0.2); color: #057a55; }
-.hsk-2 { background: rgba(59, 130, 246, 0.2); color: #1d4ed8; }
-.hsk-3 { background: rgba(245, 158, 11, 0.22); color: #92400e; }
-.hsk-4 { background: rgba(239, 68, 68, 0.18); color: #b91c1c; }
-.hsk-5 { background: rgba(139, 92, 246, 0.2); color: #6d28d9; }
-.hsk-6 { background: rgba(236, 72, 153, 0.2); color: #be185d; }
+/* Match the HSK level colors used by the pickers (HSK_COLORS in passage_picker.js). */
+.hsk-1 { background: #d9d9d8; color: #1f2937; }
+.hsk-2 { background: #d0f1d2; color: #1f2937; }
+.hsk-3 { background: #99d8e9; color: #1f2937; }
+.hsk-4 { background: #fce084; color: #1f2937; }
+.hsk-5 { background: #fcb86f; color: #1f2937; }
+.hsk-6 { background: #ee5550; color: #1f2937; }
 
 .rec-card-title {
     min-width: 0;
