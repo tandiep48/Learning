@@ -833,72 +833,79 @@ def get_lesson_picker_progress(conn, user_id, hsk_level):
         return {"lessons": {}, "parts": {}}
 
 
+def _level_passes(level, lesson_pct, word_pct):
+    """Per-band pass rule for HSK level progression (see recompute_user_level)."""
+    if level in (1, 2):
+        return lesson_pct >= 85 or (word_pct >= 85 and lesson_pct >= 50)
+    if level in (3, 4):
+        return lesson_pct >= 80 or (word_pct >= 80 and lesson_pct >= 50)
+    if level == 5:
+        return lesson_pct >= 75 or (word_pct >= 75 and lesson_pct >= 40)
+    if level == 6:
+        return lesson_pct >= 70 or (word_pct >= 70 and lesson_pct >= 40)
+    return False
+
+
 def recompute_user_level(conn, user_id):
     """
-    Derive and (if higher) persist the user's HSK level from their lesson-trainer
-    completion. Level only ever increases (cap HSK 6). Two ways to qualify, and we take
-    the highest:
-      - Completion: finished every lesson part at levels 1..L  -> ready for level L+1.
-      - Engagement: completed at least one full lesson (all its parts) at level H
-        -> they can do level H, so jump straight to H.
-    Passage ids look like H{level}_{lesson}_{part}. Returns the resulting level.
+    Derive and (if higher) persist the user's HSK level from lesson-trainer progress.
+    For each level compute lesson% (completed parts / total parts across ALL lessons at
+    that level) and word% (mastered / total lesson words at that level), then apply the
+    per-band pass rule in _level_passes. The user jumps to (highest passed level + 1),
+    capped at HSK 6, and the level never decreases. Returns the resulting level.
     """
     if not conn:
         return None
 
     try:
+        learned = get_learned_words(conn, user_id)
+        parts = {}   # lvl -> (total_parts, done_parts)
+        words = {}   # lvl -> (total_words, mastered_words)
         with conn.cursor() as cur:
             cur.execute(r"""
-                SELECT
-                    (regexp_replace(split_part(lp.passage_id, '_', 1), '\D', '', 'g'))::int AS lvl,
-                    split_part(lp.passage_id, '_', 2)                                       AS lesson,
-                    COUNT(*)                                                                AS total_parts,
-                    COUNT(ulp.passage_id)                                                   AS done_parts
+                SELECT (regexp_replace(split_part(lp.passage_id, '_', 1), '\D', '', 'g'))::int AS lvl,
+                       COUNT(*)                AS total_parts,
+                       COUNT(ulp.passage_id)   AS done_parts
                 FROM lesson_passages lp
                 LEFT JOIN user_lesson_part_progress ulp
                        ON ulp.passage_id = lp.passage_id
                       AND ulp.user_id = %s
                       AND ulp.lesson_trainer_completed_at IS NOT NULL
                 WHERE lp.passage_id ~ '^H\d+_\d+_\d+$'
-                GROUP BY 1, 2
+                GROUP BY 1
             """, (user_id,))
-            rows = cur.fetchall()
+            for lvl, total, done in cur.fetchall():
+                if lvl:
+                    parts[lvl] = (total or 0, done or 0)
+
+            cur.execute(r"""
+                SELECT (regexp_replace(split_part(lp.passage_id, '_', 1), '\D', '', 'g'))::int AS lvl,
+                       COUNT(DISTINCT pv.cn)                                     AS total_words,
+                       COUNT(DISTINCT pv.cn) FILTER (WHERE pv.cn = ANY(%s::text[])) AS mastered_words
+                FROM lesson_passages lp
+                JOIN passage_vocabulary pv ON pv.passage_id = lp.passage_id
+                WHERE lp.passage_id ~ '^H\d+_\d+_\d+$'
+                GROUP BY 1
+            """, (learned,))
+            for lvl, total, mastered in cur.fetchall():
+                if lvl:
+                    words[lvl] = (total or 0, mastered or 0)
 
             cur.execute("SELECT level FROM users WHERE id = %s", (user_id,))
             row = cur.fetchone()
             current = int(row[0]) if row and row[0] else 1
 
-        # Per level: is every lesson complete, and is at least one lesson complete?
-        from collections import defaultdict
-        level_lessons = defaultdict(list)
-        for lvl, _lesson, total_parts, done_parts in rows:
-            if lvl and 1 <= lvl <= 6:
-                level_lessons[lvl].append((total_parts, done_parts))
-
-        level_fully_complete = {}
-        level_has_full_lesson = {}
+        highest_passed = 0
         for lvl in range(1, 7):
-            lessons = level_lessons.get(lvl, [])
-            level_fully_complete[lvl] = bool(lessons) and all(d == t for t, d in lessons)
-            level_has_full_lesson[lvl] = any(t > 0 and d == t for t, d in lessons)
+            ptot, pdone = parts.get(lvl, (0, 0))
+            wtot, wdone = words.get(lvl, (0, 0))
+            lesson_pct = (pdone / ptot * 100) if ptot else 0
+            word_pct = (wdone / wtot * 100) if wtot else 0
+            if _level_passes(lvl, lesson_pct, word_pct):
+                highest_passed = lvl
 
-        # Completion: highest level such that all of 1..L are fully done -> ready for L+1.
-        completed_through = 0
-        for lvl in range(1, 7):
-            if level_fully_complete[lvl]:
-                completed_through = lvl
-            else:
-                break
-        completion_target = min(6, completed_through + 1) if completed_through >= 1 else 0
-
-        # Engagement: highest level with at least one fully completed lesson.
-        engagement_target = max(
-            (lvl for lvl in range(1, 7) if level_has_full_lesson[lvl]),
-            default=0,
-        )
-
-        target = max(current, completion_target, engagement_target)
-        target = min(6, max(1, target))
+        target = min(6, highest_passed + 1) if highest_passed >= 1 else 1
+        target = min(6, max(current, target))   # never decrease
 
         if target > current:
             with conn.cursor() as cur:
