@@ -10,7 +10,7 @@
 .level-picker-card {
     min-height: 200px;
     background: #CBE2D4;
-    border: 2px solid #afcfbd;
+    border: none;
     border-radius: 16px;
     padding: 34px 24px;
     text-align: center;
@@ -24,7 +24,6 @@
 
 .level-picker-card:hover {
     background: #bddbc9;
-    border-color: #93bda7;
     transform: translateY(-2px);
 }
 

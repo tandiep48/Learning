@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import ast
 from flask import Blueprint, jsonify, request
@@ -357,8 +358,8 @@ def get_progress_group(level, lesson, progress):
 @login_required
 def get_practice_history():
     """List the current user's past practice/exam sessions for the review page.
-    Supports backend filters: level (HSK 1-6), category (practice/exam), sort
-    (recent/oldest), and page-based pagination (default: most recent first)."""
+    Supports backend filters: level (HSK 1-6), category (practice/exam), date
+    (YYYY-MM-DD), sort (recent/oldest), and page-based pagination."""
     level = request.args.get('level')
     hsk_level = None
     if level and level != 'all':
@@ -370,6 +371,10 @@ def get_practice_history():
     category = request.args.get('category')
     if category not in ('practice', 'exam'):
         category = None
+
+    date = request.args.get('date')
+    if not re.match(r'^\d{4}-\d{2}-\d{2}$', date or ''):
+        date = None
 
     sort = request.args.get('sort')
     if sort not in ('recent', 'oldest'):
@@ -387,7 +392,7 @@ def get_practice_history():
     try:
         sessions, has_more = get_practice_history_sessions(
             db_conn, current_user.id,
-            hsk_level=hsk_level, category=category, sort=sort, page=page,
+            hsk_level=hsk_level, category=category, date=date, sort=sort, page=page,
         )
     finally:
         db_conn.close()

@@ -281,6 +281,8 @@
         "sort": "Sort",
         "sort_recent": "Most recent",
         "sort_oldest": "Oldest first",
+        "date": "Date",
+        "all_dates": "All dates",
         "no_more": "No more sessions to show.",
         "page_indicator": "Page {page}"
     },

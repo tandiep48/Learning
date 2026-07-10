@@ -281,6 +281,8 @@
         "sort": "Sắp xếp",
         "sort_recent": "Mới nhất",
         "sort_oldest": "Cũ nhất",
+        "date": "Ngày",
+        "all_dates": "Tất cả ngày",
         "no_more": "Không còn phiên nào để hiển thị.",
         "page_indicator": "Trang {page}"
     },

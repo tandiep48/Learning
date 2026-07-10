@@ -27,6 +27,23 @@ CREATE TABLE IF NOT EXISTS lesson_passages (
 
 CREATE INDEX IF NOT EXISTS idx_passages_hsk ON lesson_passages(hsk_level);
 
+-- Individual dialogue lines for a passage (used by the lesson trainer).
+CREATE TABLE IF NOT EXISTS lesson_lines (
+    id             SERIAL PRIMARY KEY,
+    passage_id     VARCHAR(100) REFERENCES lesson_passages(passage_id) ON DELETE CASCADE,
+    line_id        INTEGER,
+    speaker        VARCHAR(50),
+    content        TEXT,
+    pinyin         TEXT,
+    audio_key      VARCHAR(100),
+    translation_en TEXT,
+    translation_vi TEXT,
+    tokens         JSONB
+);
+
+-- line_id restarts at 1 within each passage, so (passage_id, line_id) is the unique key.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_lesson_lines_passage_line ON lesson_lines(passage_id, line_id);
+
 CREATE TABLE IF NOT EXISTS passage_vocabulary (
     passage_id VARCHAR(100),
     cn VARCHAR(100),
