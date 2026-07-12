@@ -13,11 +13,13 @@ Rule 2: Coding style need to be readable for human review
 2.2: You need to make sure the code have good performance
 2.3: Do not write test case for each new feature you write since the test is done manually by user
 2.4: Make sure to clean-up unneeded items if possible inside the folder that you work
+2.5: For any code that relate to database always use SQLAlchemy query method. Avoid using standard SQL command if possible.
 
 Rule 3: You do not commit after you done coding
 3.1: Always pull latest code on the requested branch first
 
-Rule 4: You need to have a quick summary of what you done, what file you change.
+Rule 4: You don't need to explain every action that you do. Only do the task and done.
+4.1: Only give the explanation if I ask you to do so.
 
 About Project
 This project is an Elearning project website focus on teaching user how to learn Chinese language. Here is the infomation regarding Back-end, Front-end, Database.
