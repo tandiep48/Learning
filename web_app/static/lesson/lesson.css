@@ -1,3 +1,18 @@
+/* Lesson title / part heading in the trainer topbar */
+.trainer-subtitle {
+    margin-left: auto;
+    align-self: center;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.02em;
+    text-align: right;
+}
+
+.trainer-subtitle:empty {
+    display: none;
+}
+
 .chip-container {
     display: flex;
     flex-wrap: wrap;

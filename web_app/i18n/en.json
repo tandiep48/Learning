@@ -92,6 +92,13 @@
     "lesson": {
         "page_title": "Lesson Practice - {hsk_level}",
         "generating_tasks": "Generating lesson tasks...",
+        "instruction_listen": "Listen and choose the correct translation:",
+        "instruction_meaning": "What is the meaning of this sentence?",
+        "instruction_typing": "Type the following sentence in Chinese:",
+        "instruction_reorder": "Reorder the words to form the correct sentence:",
+        "pinyin_label": "Pinyin:",
+        "correct_answer_label": "Correct Answer:",
+        "next": "Next",
         "typing_placeholder": "Type the sentence here...",
         "your_sentence": "Your Sentence:",
         "available_words": "Available Words:",

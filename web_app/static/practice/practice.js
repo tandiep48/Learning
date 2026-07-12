@@ -102,6 +102,23 @@ function resetAudioControl(control) {
     resetScrubber(control);
 }
 
+// Pause without rewinding: flip the icon back to play but keep the scrubber position
+// so the next click resumes from where it stopped.
+function pauseAudioControl(control) {
+    if (!control) return;
+    const btn = control.querySelector('.p-audio-play-btn');
+    const icon = btn?.querySelector('.fa-solid');
+    control.classList.remove('playing');
+    if (icon) {
+        icon.classList.add('fa-play');
+        icon.classList.remove('fa-stop');
+    }
+    if (btn) {
+        btn.title = t('lesson.play_audio');
+        btn.setAttribute('aria-label', t('lesson.play_audio'));
+    }
+}
+
 function setAudioControlPlaying(control) {
     const btn = control?.querySelector('.p-audio-play-btn');
     const icon = btn?.querySelector('.fa-solid');
@@ -148,11 +165,11 @@ function loadAudioForControl(control, src) {
 function playAudio(key, control, level, category) {
     const src = audioSrc(key, level, category);
     const isSamePausedAudio = activeAudioControl === control && audioEl.paused && activeAudioSrc === src;
-    // Toggling the button while it plays acts as "stop": halt and rewind to the start.
+    // Toggling the button while it plays acts as "pause": halt at the current time so the
+    // next click resumes from the same spot instead of restarting.
     if (activeAudioControl === control && !audioEl.paused) {
         audioEl.pause();
-        audioEl.currentTime = 0;
-        resetAudioControl(control);
+        pauseAudioControl(control);
         return;
     }
 
@@ -1095,6 +1112,14 @@ function renderType1(block, q, blockId, skill) {
         img.className = 'p-image';
         img.src = imageUrl(q.level, imgFile, q.category);
         block.appendChild(img);
+    }
+
+    // Statement to judge (reading true/false carries it in content, not question)
+    if (skill === 'reading' && q.content && !isImageFilename(q.content)) {
+        const cEl = document.createElement('div');
+        cEl.className = 'p-paragraph';
+        cEl.textContent = q.content;
+        block.appendChild(cEl);
     }
 
     // Question text (reading only, if it's a real question and not a filename)
