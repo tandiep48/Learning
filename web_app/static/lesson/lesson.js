@@ -7,6 +7,7 @@ let currentPassageId = null;
 let lessonWideTrainingMeta = null;
 let isLessonPartFlow = false;
 let answerSubmitted = false;
+let skipButtonMode = 'skip';
 
 // Fetch passages on load
 window.onload = async () => {
@@ -146,13 +147,8 @@ function loadTask() {
     document.getElementById('mc-area').innerHTML = '';
     document.getElementById('typing-area').style.display = 'none';
     document.getElementById('reorder-area').style.display = 'none';
-    document.getElementById('wrong-answer-next').style.display = 'none';
-    const skipBtn = document.getElementById('btn-skip-task');
-    const typingSubmitBtn = document.getElementById('typing-submit-btn');
-    const reorderSubmitBtn = document.getElementById('reorder-submit-btn');
-    if (skipBtn) skipBtn.style.display = '';
-    if (typingSubmitBtn) typingSubmitBtn.style.display = 'none';
-    if (reorderSubmitBtn) reorderSubmitBtn.style.display = 'none';
+    setSkipButtonMode('skip');
+    updateTrainerSubtitle(task);
 
     const typingInput = document.getElementById('typing-input');
     typingInput.value = '';
@@ -192,27 +188,25 @@ function loadTask() {
     taskStartTime = Date.now();
 
     if (task.type === "listening" || task.type === "listen") {
-        instructionEl.innerHTML = '<i class="fa-solid fa-headphones-simple" aria-hidden="true"></i><span>Listen and choose the correct translation:</span>';
+        instructionEl.innerHTML = `<i class="fa-solid fa-headphones-simple" aria-hidden="true"></i><span>${escapeHtml(t('lesson.instruction_listen'))}</span>`;
         document.getElementById('audio-controls').style.display = 'block';
         if (task.audio_key) {
             playTrainerAudio(audioEl);
         }
         setupMultipleChoice(task);
     } else if (task.type === "meaning") {
-        instructionEl.innerHTML = '<i class="fa-solid fa-book-open" aria-hidden="true"></i><span>What is the meaning of this sentence?</span>';
+        instructionEl.innerHTML = `<i class="fa-solid fa-book-open" aria-hidden="true"></i><span>${escapeHtml(t('lesson.instruction_meaning'))}</span>`;
         document.getElementById('word-display').innerText = task.content;
         document.getElementById('word-display').style.display = 'block';
         setupMultipleChoice(task);
     } else if (task.type === "typing") {
-        instructionEl.innerHTML = '<i class="fa-solid fa-keyboard" aria-hidden="true"></i><span>Type the following sentence in Chinese:</span>';
+        instructionEl.innerHTML = `<i class="fa-solid fa-keyboard" aria-hidden="true"></i><span>${escapeHtml(t('lesson.instruction_typing'))}</span>`;
         document.getElementById('word-display').innerText = task.content;
         document.getElementById('word-display').style.display = 'block';
         document.getElementById('typing-area').style.display = 'flex';
-        if (typingSubmitBtn) typingSubmitBtn.style.display = 'inline-flex';
         document.getElementById('typing-input').focus();
     } else if (task.type === "reorder") {
-        instructionEl.innerHTML = '<i class="fa-solid fa-arrows-up-down-left-right" aria-hidden="true"></i><span>Reorder the words to form the correct sentence:</span>';
-        if (reorderSubmitBtn) reorderSubmitBtn.style.display = 'inline-flex';
+        instructionEl.innerHTML = `<i class="fa-solid fa-arrows-up-down-left-right" aria-hidden="true"></i><span>${escapeHtml(t('lesson.instruction_reorder'))}</span>`;
         setupReorder(task);
     }
 
@@ -360,13 +354,20 @@ function submitMC(selected, task, btnElement) {
 function submitReorder() {
     const task = sessionData.tasks[currentTaskIndex];
     const userSentence = currentReorderTokens.join('');
-    const btnElement = document.getElementById('reorder-submit-btn');
-    checkAnswer(task, userSentence, task.correct_answer, btnElement);
+    checkAnswer(task, userSentence, task.correct_answer, null);
 }
 
+// Sole bottom-bar button. In "skip" mode it reveals the answer (scored as a fail);
+// after revealing it morphs into "Next" so a second click advances the task.
 function skipTask() {
+    if (skipButtonMode === 'next') {
+        nextTaskManual();
+        return;
+    }
+
     const task = sessionData?.tasks[currentTaskIndex];
-    if (!task) return;
+    if (!task || answerSubmitted) return;
+    answerSubmitted = true;
 
     task.user_answer = '';
     missedTasks.push(task);
@@ -391,7 +392,78 @@ function skipTask() {
         })
     }).catch(e => console.error("DB skip log failed", e));
 
-    nextTask();
+    revealCorrectAnswer(task);
+    setSkipButtonMode('next');
+}
+
+// Toggle the single bottom-bar button between "Skip" (attempt) and "Next" (advance).
+function setSkipButtonMode(mode) {
+    skipButtonMode = mode;
+    const skipBtn = document.getElementById('btn-skip-task');
+    if (!skipBtn) return;
+    skipBtn.textContent = mode === 'next' ? t('lesson.next') : t('trainer.skip');
+    skipBtn.style.display = '';
+}
+
+// Show a "HSK · Lesson N · Part M" heading so the learner knows the current part.
+function updateTrainerSubtitle(task) {
+    const el = document.getElementById('trainer-subtitle');
+    if (!el) return;
+    const parts = String(task?.passage_id || '').split('_');
+    const lessonNum = parts.length >= 2 ? parts[1] : '';
+    const partNum = parts.length >= 3 ? parts[2] : '';
+    let hsk = task?.hsk_level || '';
+    if (hsk && !String(hsk).startsWith('HSK')) hsk = 'HSK' + String(hsk).replace('H', '');
+    const lessonLabel = lessonNum ? `${t('picker.lesson_prefix')} ${lessonNum}` : '';
+    const partLabel = partNum ? `${t('picker.part_prefix')} ${partNum}` : '';
+    el.textContent = [hsk, lessonLabel, partLabel].filter(Boolean).join(' · ');
+}
+
+// Reveal the correct answer and lock the task inputs (used by Skip and wrong answers).
+function revealCorrectAnswer(task) {
+    if (task.options) {
+        const mcBtns = document.querySelectorAll('#mc-area .btn');
+        mcBtns.forEach(btn => {
+            const textContent = btn.querySelector('.mc-btn-inner')
+                ? btn.querySelector('.mc-btn-inner').textContent.slice(1).trim()
+                : btn.innerText.slice(1).trim();
+            if (answersMatch(textContent, task.correct_answer)) {
+                btn.style.backgroundColor = "var(--success)";
+                btn.style.color = "white";
+                btn.style.borderColor = "var(--success)";
+            }
+        });
+    } else if (task.type === "reorder") {
+        const reorderFeedback = document.getElementById('reorder-feedback');
+        if (reorderFeedback) {
+            reorderFeedback.innerHTML = `<span style="color:var(--text-muted); font-size:16px;">${t('lesson.correct_answer_label')}</span><br><span style="color:var(--success)">${task.correct_answer}</span>`;
+            reorderFeedback.style.display = 'block';
+        }
+    }
+
+    if (task.type === "typing") {
+        const typingFeedback = document.getElementById('typing-feedback');
+        if (typingFeedback) {
+            let htmlContent = '';
+            if (task.pinyin) {
+                htmlContent += `<span style="color:var(--text-muted); font-size:16px;">${t('lesson.pinyin_label')}</span><br><span style="color:var(--primary)">${task.pinyin}</span><br>`;
+            }
+            htmlContent += `<span style="color:var(--text-muted); font-size:16px; margin-top: 5px; display:inline-block;">${t('lesson.correct_answer_label')}</span><br><span style="color:var(--success)">${task.correct_answer}</span>`;
+            typingFeedback.innerHTML = htmlContent;
+            typingFeedback.style.display = 'block';
+        }
+    }
+
+    applyLessonHanText(task);
+
+    const allBtns = document.querySelectorAll('#screen-training .btn');
+    allBtns.forEach(b => {
+        if (!b.classList.contains('warning') && !b.classList.contains('secondary')) {
+            b.disabled = true;
+        }
+    });
+    const typingInput = document.getElementById('typing-input');
+    if (typingInput) typingInput.disabled = true;
 }
 
 // Reorder/typing answers can mix full-width & half-width punctuation, ideographic
@@ -450,7 +522,7 @@ async function checkAnswer(task, userAnswer, correctAnswer, element) {
         } else if (task.type === "reorder") {
             const reorderFeedback = document.getElementById('reorder-feedback');
             if (reorderFeedback) {
-                reorderFeedback.innerHTML = `<span style="color:var(--text-muted); font-size:16px;">Correct Answer:</span><br><span style="color:var(--success)">${task.correct_answer}</span>`;
+                reorderFeedback.innerHTML = `<span style="color:var(--text-muted); font-size:16px;">${t('lesson.correct_answer_label')}</span><br><span style="color:var(--success)">${task.correct_answer}</span>`;
                 reorderFeedback.style.display = 'block';
             }
         }
@@ -459,9 +531,9 @@ async function checkAnswer(task, userAnswer, correctAnswer, element) {
     if (task.type === "typing") {
         const typingFeedback = document.getElementById('typing-feedback');
         if (typingFeedback && task.pinyin) {
-            let htmlContent = `<span style="color:var(--text-muted); font-size:16px;">Pinyin:</span><br><span style="color:var(--primary)">${task.pinyin}</span>`;
+            let htmlContent = `<span style="color:var(--text-muted); font-size:16px;">${t('lesson.pinyin_label')}</span><br><span style="color:var(--primary)">${task.pinyin}</span>`;
             if (!isCorrect) {
-                htmlContent += `<br><span style="color:var(--text-muted); font-size:16px; margin-top: 5px; display:inline-block;">Correct Answer:</span><br><span style="color:var(--success)">${task.correct_answer}</span>`;
+                htmlContent += `<br><span style="color:var(--text-muted); font-size:16px; margin-top: 5px; display:inline-block;">${t('lesson.correct_answer_label')}</span><br><span style="color:var(--success)">${task.correct_answer}</span>`;
             }
             typingFeedback.innerHTML = htmlContent;
             typingFeedback.style.display = 'block';
@@ -478,8 +550,6 @@ async function checkAnswer(task, userAnswer, correctAnswer, element) {
     });
     const typingInput = document.getElementById('typing-input');
     if (typingInput) typingInput.disabled = true;
-    const skipBtn = document.getElementById('btn-skip-task');
-    if (skipBtn) skipBtn.style.display = 'none';
 
     const gameInfo = {};
     if (task.options) gameInfo.options = task.options;
@@ -502,6 +572,8 @@ async function checkAnswer(task, userAnswer, correctAnswer, element) {
     }).catch(e => console.error("DB Log failed", e));
 
     if (isCorrect) {
+        const skipBtn = document.getElementById('btn-skip-task');
+        if (skipBtn) skipBtn.style.display = 'none';
         if (task.type === "typing" || task.type === "reorder") {
             await playCurrentAudioToEnd();
             resetTaskUI(element, isCorrect, task);
@@ -513,7 +585,7 @@ async function checkAnswer(task, userAnswer, correctAnswer, element) {
             }, 3000);
         }
     } else {
-        document.getElementById('wrong-answer-next').style.display = 'block';
+        setSkipButtonMode('next');
     }
 }
 
@@ -533,10 +605,7 @@ function resetTaskUI(element, isCorrect, task) {
         typingInput.style.color = "";
         typingInput.style.borderColor = "";
     }
-    const skipBtn = document.getElementById('btn-skip-task');
-    if (skipBtn) skipBtn.style.display = '';
-
-    document.getElementById('wrong-answer-next').style.display = 'none';
+    setSkipButtonMode('skip');
 }
 
 function nextTaskManual() {

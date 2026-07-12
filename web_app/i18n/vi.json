@@ -92,6 +92,13 @@
     "lesson": {
         "page_title": "Luyện Tập Bài Học - {hsk_level}",
         "generating_tasks": "Đang tạo bài tập...",
+        "instruction_listen": "Nghe và chọn bản dịch đúng:",
+        "instruction_meaning": "Câu này có nghĩa là gì?",
+        "instruction_typing": "Nhập câu sau bằng tiếng Trung:",
+        "instruction_reorder": "Sắp xếp các từ để tạo thành câu đúng:",
+        "pinyin_label": "Phiên âm:",
+        "correct_answer_label": "Đáp Án Đúng:",
+        "next": "Tiếp Theo",
         "typing_placeholder": "Nhập câu vào đây...",
         "your_sentence": "Câu Của Bạn:",
         "available_words": "Từ Có Sẵn:",
