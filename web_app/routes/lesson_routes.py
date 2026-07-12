@@ -18,7 +18,6 @@ from db import (
     get_lesson_picker_progress,
     get_passages_summary,
     get_passage_content,
-    get_all_vn_meanings,
     get_passage_vocab,
     get_grammar_for_passage,
     insert_lesson_progress,
@@ -58,6 +57,65 @@ def _build_lesson_logger():
 
 
 _lesson_logger = _build_lesson_logger()
+
+# ── Lesson-trainer question mix ──────────────────────────────────────────────
+# A round samples a fixed number of tasks (so the learner no longer answers every
+# possible question) split across the four task types. "part" = one part; "master"
+# = the whole lesson (all parts).
+LESSON_TASK_DISTRIBUTION = [
+    ("listening", 0.35),
+    ("meaning", 0.35),
+    ("typing", 0.20),
+    ("reorder", 0.10),
+]
+
+LESSON_PART_COUNTS = {
+    "HSK1": 10, "HSK2": 12, "HSK3": 15,
+    "HSK4": 18, "HSK5": 21, "HSK6": 24,
+}
+
+LESSON_MASTER_COUNTS = {
+    "HSK1": 24, "HSK2": 36, "HSK3": 48,
+    "HSK4": 54, "HSK5": 75, "HSK6": 90,
+}
+
+DEFAULT_LESSON_TASK_COUNT = 10
+
+# A part counts as complete (updates the lesson progress bar) at or above this
+# fraction correct. Word mastery still requires a perfect round.
+LESSON_PASS_THRESHOLD = 0.70
+
+
+def _normalize_hsk_level(raw):
+    """Coerce values like 'HSK1', 'H1', '1' to the canonical 'HSK1' form."""
+    s = str(raw or "").upper().strip()
+    if s.startswith("HSK"):
+        return s
+    digits = "".join(ch for ch in s if ch.isdigit())
+    return f"HSK{digits}" if digits else ""
+
+
+def _allocate_task_counts(total, distribution):
+    """Split `total` across the distribution, using largest-remainder rounding so
+    the per-type counts always sum back to `total`."""
+    raw = [(name, total * pct) for name, pct in distribution]
+    counts = {name: int(value) for name, value in raw}
+    remainder = total - sum(counts.values())
+    # Hand the leftover slots to the types with the biggest fractional parts.
+    by_frac = sorted(raw, key=lambda item: item[1] - int(item[1]), reverse=True)
+    for name, _ in by_frac[:remainder]:
+        counts[name] += 1
+    return counts
+
+
+def _sample_task_pool(pool, count):
+    """Pick `count` tasks from `pool`. Prefers unique tasks; only repeats when the
+    pool is smaller than the requested count."""
+    if count <= 0 or not pool:
+        return []
+    if count <= len(pool):
+        return random.sample(pool, count)
+    return pool[:] + random.choices(pool, k=count - len(pool))
 
 
 # Mirror of the client's ANSWER_PUNCT_MAP so normalized_equal matches answersMatch.
@@ -147,14 +205,14 @@ def complete_lesson_part():
     if not passage_id:
         return jsonify({"error": "passage_id is required"}), 400
 
-    # A part only counts as complete when the round was perfect. The client sends the
-    # score; guard here so a non-100% run never marks the lesson done.
+    # A part counts as complete at or above the pass threshold. The client sends the
+    # score; guard here so a low run never marks the lesson done.
     try:
         total = int(data.get('total', 0))
         correct = int(data.get('correct', 0))
     except (TypeError, ValueError):
         total, correct = 0, 0
-    if total <= 0 or correct < total:
+    if total <= 0 or (correct / total) < LESSON_PASS_THRESHOLD:
         return jsonify({"status": "incomplete", "passage_id": passage_id}), 200
 
     conn = get_db_connection()
@@ -164,8 +222,10 @@ def complete_lesson_part():
     try:
         if not mark_lesson_part_completed(conn, current_user.id, passage_id):
             return jsonify({"error": "Could not save lesson progress"}), 500
-        # 100% completion grants mastery of the passage's words.
-        mastered = mark_passage_words_mastered(conn, current_user.id, passage_id)
+        # Only a perfect round grants mastery of the passage's words.
+        mastered = []
+        if correct >= total:
+            mastered = mark_passage_words_mastered(conn, current_user.id, passage_id)
         # Finishing a part may complete a lesson/level, so re-derive the HSK level.
         new_level = recompute_user_level(conn, current_user.id)
         if new_level:
@@ -236,31 +296,30 @@ def start_session():
         conn.close()
         return jsonify({"error": "Passage not found"}), 404
         
-    global_vn_meanings = get_all_vn_meanings(conn)
     conn.close()
-    
+
     line_items = []
     for pid, passage in passages:
         for line in passage.get("lines", []):
             line_items.append((pid, passage, line))
-    
-    # We will generate a mix of tasks for the lines in this passage
-    tasks = []
-    
-    # Collect all Vietnamese meanings in this passage for distractors
+
+    # Build a pool of candidate tasks per type, one per line, then sample from each
+    # pool to hit the target count and 35/35/20/10 mix.
+    pools = {"listening": [], "meaning": [], "typing": [], "reorder": []}
+
+    # Collect all Vietnamese meanings in this session for multiple-choice distractors.
     all_vn_meanings = [line["translations"]["vi"] for _, _, line in line_items]
-    
+
     for line_passage_id, passage, line in line_items:
         line_id = line.get("line_id", 0)
         correct_meaning = line["translations"]["vi"]
-        
-        # 1. Meaning Task
+
         meaning_options = list(set([opt for opt in all_vn_meanings if opt != correct_meaning]))
         distractors = random.sample(meaning_options, min(3, len(meaning_options)))
         m_options = distractors + [correct_meaning]
         random.shuffle(m_options)
-        
-        tasks.append({
+
+        pools["meaning"].append({
             "type": "meaning",
             "passage_id": line_passage_id,
             "line_id": line_id,
@@ -270,25 +329,23 @@ def start_session():
             "audio_key": line.get("audio_key"),
             "hsk_level": passage.get("hsk_level")
         })
-        
-        # 2. Listening Task
-        tasks.append({
+
+        pools["listening"].append({
             "type": "listening",
             "passage_id": line_passage_id,
             "line_id": line_id,
-            "options": m_options, # Same options logic as meaning
+            "options": m_options,  # Same options logic as meaning
             "correct_answer": correct_meaning,
             "audio_key": line.get("audio_key"),
-            "content": line["content"], # provided for reveal
+            "content": line["content"],  # provided for reveal
             "hsk_level": passage.get("hsk_level")
         })
-        
-        # 3. Reorder Task
+
         tokens = line.get("tokens", [])
-        if len(tokens) > 1: # Only reorder if there are multiple tokens
+        if len(tokens) > 1:  # Only reorder if there are multiple tokens
             shuffled_tokens = tokens[:]
             random.shuffle(shuffled_tokens)
-            tasks.append({
+            pools["reorder"].append({
                 "type": "reorder",
                 "passage_id": line_passage_id,
                 "line_id": line_id,
@@ -299,9 +356,8 @@ def start_session():
                 "audio_key": line.get("audio_key"),
                 "hsk_level": passage.get("hsk_level")
             })
-            
-        # 4. Typing Task
-        tasks.append({
+
+        pools["typing"].append({
             "type": "typing",
             "passage_id": line_passage_id,
             "line_id": line_id,
@@ -311,16 +367,31 @@ def start_session():
             "pinyin": line.get("pinyin", ""),
             "hsk_level": passage.get("hsk_level")
         })
-        
+
+    # Target count depends on the mode (part vs master) and the lesson's HSK level.
+    mode = "master" if data.get("mode") == "master" else "part"
+    hsk_level = _normalize_hsk_level(passages[0][1].get("hsk_level"))
+    count_table = LESSON_MASTER_COUNTS if mode == "master" else LESSON_PART_COUNTS
+    target_total = count_table.get(hsk_level, DEFAULT_LESSON_TASK_COUNT)
+
+    targets = _allocate_task_counts(target_total, LESSON_TASK_DISTRIBUTION)
+
+    # If a type has no candidates (e.g. no multi-token lines → no reorder), move its
+    # share to the first type that does have material.
+    for name in ("reorder", "typing", "meaning", "listening"):
+        if targets.get(name) and not pools[name]:
+            moved = targets[name]
+            targets[name] = 0
+            for fallback in ("meaning", "listening", "typing"):
+                if pools[fallback]:
+                    targets[fallback] += moved
+                    break
+
+    tasks = []
+    for name, _ in LESSON_TASK_DISTRIBUTION:
+        tasks.extend(_sample_task_pool(pools[name], targets.get(name, 0)))
     random.shuffle(tasks)
-    
-    # We might want to limit the tasks if it's too long
-    # Let's limit to 10 tasks per session by default
-    limit = data.get("limit", 10)
-    if str(limit).isdigit() and int(limit) > 0 and len(tasks) > int(limit):
-        limit = int(limit)
-        tasks = tasks[:limit]
-        
+
     return jsonify({
         "session_id": int(time.time() * 1000),
         "tasks": tasks

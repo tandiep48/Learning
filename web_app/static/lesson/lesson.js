@@ -96,8 +96,8 @@ async function startSession(passage_id, passage_ids = null) {
 
     try {
         const bodyData = passage_ids?.length
-            ? { passage_ids: passage_ids, limit: 0 }
-            : { passage_id: passage_id, limit: 12 };
+            ? { passage_ids: passage_ids, mode: 'master' }
+            : { passage_id: passage_id, mode: 'part' };
         const response = await fetch('/api/lesson/start', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -646,6 +646,10 @@ function _buildLessonCompleteScreen() {
         btn.style.display = isLessonPartFlow && currentPassageId ? 'inline-flex' : 'none';
     });
 
+    // Save progress every finished round; the server only stores it at/above the
+    // pass threshold and grants word mastery only on a perfect round.
+    markLessonPartComplete();
+
     if (missedTasks.length > 0) {
         document.getElementById('recap-table-wrap').style.display = 'block';
         document.getElementById('training-complete-title').style.display = 'block';
@@ -666,8 +670,6 @@ function _buildLessonCompleteScreen() {
             list.appendChild(tr);
         });
     } else {
-        // Perfect round: this is the only path that marks the part complete.
-        markLessonPartComplete();
         document.getElementById('recap-table-wrap').style.display = 'none';
         document.getElementById('training-complete-title').style.display = 'none';
         document.getElementById('recap-actions').style.display = 'none';
@@ -680,18 +682,20 @@ function _showLessonCompleteScreen() {
 }
 
 function markLessonPartComplete() {
+    // Master runs cover every part; a single-part run marks just its own passage.
     const passageIds = lessonWideTrainingMeta?.passage_ids?.length
         ? lessonWideTrainingMeta.passage_ids
-        : (isLessonPartFlow && currentPassageId ? [currentPassageId] : []);
+        : (currentPassageId ? [currentPassageId] : []);
     if (!passageIds.length) return;
 
-    // Only reached on a perfect round, so correct === total. The server re-checks this
-    // before marking completion and granting word mastery.
+    // Send the real score; the server decides completion (pass threshold) and word
+    // mastery (perfect only).
     const total = sessionData?.tasks?.length || 0;
+    const correct = Math.max(0, total - missedTasks.length);
     Promise.all(passageIds.map(passageId => fetch('/api/lesson/part-complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ passage_id: passageId, total, correct: total })
+        body: JSON.stringify({ passage_id: passageId, total, correct })
     }))).catch(e => console.error("Lesson part progress save failed", e));
 }
 
