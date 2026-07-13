@@ -31,6 +31,13 @@
     display: flex;
     align-items: flex-start;
     gap: 14px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+/* Highlights the line whose audio is currently playing during auto-play */
+.reading-line.reading-line-active {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(87, 104, 86, 0.28);
 }
 
 .reading-text {
@@ -120,9 +127,6 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-    max-height: 56vh;
-    overflow-y: auto;
-    padding-right: 8px;
 }
 
 .lesson-preview-line {
@@ -295,9 +299,7 @@
 }
 
 .reading-content {
-    max-height: 60vh;
-    overflow-y: auto;
-    padding-right: 10px;
+    padding-right: 2px;
 }
 
 .finish-bar .btn {

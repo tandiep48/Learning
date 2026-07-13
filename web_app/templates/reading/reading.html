@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="/static/shared/passage_picker.css?v=8">
     <link rel="stylesheet" href="/static/shared/vocab_table.css?v=11">
     <link rel="stylesheet" href="/static/vocab_learning/vocab_learning.css?v=10">
-    <link rel="stylesheet" href="/static/reading/reading.css?v=11">
+    <link rel="stylesheet" href="/static/reading/reading.css?v=12">
     <link rel="stylesheet" href="/static/shared/sidebar.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
@@ -28,6 +28,10 @@
         <div id="screen-reading" class="screen">
             <div class="toolbar">
                 <div class="toolbar-right">
+                    <button class="btn" id="auto-play-btn" onclick="toggleAutoPlay()">
+                        <i class="fa-solid fa-play" aria-hidden="true"></i>
+                        <span>{{ t('reading.auto_play') }}</span>
+                    </button>
                     <button class="btn" id="toggle-pinyin-btn" onclick="togglePinyin()">{{ t('reading.show_pinyin') }}</button>
                     <button class="btn" id="toggle-meaning-btn" onclick="toggleMeaning()">{{ t('reading.show_meaning') }}</button>
                     <button class="btn" id="show-vocab-btn" onclick="openVocabPanel()">
@@ -179,7 +183,7 @@
     <script src="/static/shared/passage_picker.js?v=11"></script>
     <script src="/static/shared/passage_label.js"></script>
     <script src="/static/shared/han_text.js?v=2"></script>
-    <script src="/static/reading/reading.js?v=27"></script>
+    <script src="/static/reading/reading.js?v=28"></script>
     <script src="/static/shared/sidebar.js?v=7"></script>
 </body>
 

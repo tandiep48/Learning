@@ -207,6 +207,8 @@
         "train_this_lesson": "Train This Lesson",
         "summary": "Summary",
         "play_audio": "Play Audio",
+        "auto_play": "Auto Play",
+        "stop_auto_play": "Stop",
         "speaking_status": "Press Speak and say the sentence clearly.",
         "prev": "Prev",
         "next": "Next",

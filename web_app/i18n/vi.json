@@ -207,6 +207,8 @@
         "train_this_lesson": "Luyện Bài Này",
         "summary": "Tổng Kết",
         "play_audio": "Phát Âm Thanh",
+        "auto_play": "Tự Động Phát",
+        "stop_auto_play": "Dừng",
         "speaking_status": "Nhấn Nói và đọc câu thật rõ.",
         "prev": "Trước",
         "next": "Tiếp",

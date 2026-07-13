@@ -594,12 +594,12 @@ function renderVocabTable() {
             <thead>
                 <tr>
                     <th class="vocab-tools-col">
-                        <button type="button" onclick="event.stopPropagation(); playAllVocabAudio()"
-                            id="vl-summary-play-all-btn" class="vocab-header-icon-btn" title="${t('reading.play_all_vocab_audio')}"
-                            aria-label="${t('reading.play_all_vocab_audio')}"><i class="fa-solid fa-play" aria-hidden="true"></i></button>
                         <button type="button" onclick="event.stopPropagation(); strokeOrderAllSummary()"
                             id="vl-summary-stroke-all-btn" class="vocab-header-icon-btn" title="${t('vocab.stroke_all_aria')}"
                             aria-label="${t('vocab.stroke_all_aria')}"><i class="fa-solid fa-paintbrush" aria-hidden="true"></i></button>
+                        <button type="button" onclick="event.stopPropagation(); playAllVocabAudio()"
+                            id="vl-summary-play-all-btn" class="vocab-header-icon-btn" title="${t('reading.play_all_vocab_audio')}"
+                            aria-label="${t('reading.play_all_vocab_audio')}"><i class="fa-solid fa-play" aria-hidden="true"></i></button>
                     </th>
                     <th class="vocab-no-col">
                         <button type="button" onclick="event.stopPropagation(); shuffleVocab()"
