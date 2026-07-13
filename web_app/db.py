@@ -1930,7 +1930,7 @@ def get_passage_content(conn, passage_id):
         hsk_level = row[0]
         
         cur.execute("""
-            SELECT line_id, speaker, content, pinyin, audio_key, translation_en, translation_vi, tokens
+            SELECT line_id, speaker, content, pinyin, audio_key, translation_en, translation_vi, tokens, flag
             FROM lesson_lines
             WHERE passage_id = %s
             ORDER BY line_id
@@ -1947,7 +1947,8 @@ def get_passage_content(conn, passage_id):
                     "en": r[5],
                     "vi": r[6]
                 },
-                "tokens": r[7] if r[7] else []
+                "tokens": r[7] if r[7] else [],
+                "flag": 1 if r[8] is None else r[8]
             })
             
         return {

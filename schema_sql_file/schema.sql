@@ -399,3 +399,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS hanzi_font TEXT DEFAULT 'Noto Sans';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS hanzi_script TEXT DEFAULT 'simplified';
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS ui_language TEXT DEFAULT 'en';
+
+-- 1 = line introduces a new word (lesson trainer only quizzes flagged lines);
+-- 0 = review-only line. Defaults to 1 so un-flagged lines still appear.
+ALTER TABLE lesson_lines ADD COLUMN IF NOT EXISTS flag SMALLINT DEFAULT 1;

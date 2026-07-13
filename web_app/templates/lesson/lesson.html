@@ -4,7 +4,7 @@
 
 {% block extra_css %}
     <link rel="stylesheet" href="/static/shared/passage_picker.css?v=8">
-    <link rel="stylesheet" href="/static/lesson/lesson.css?v=10">
+    <link rel="stylesheet" href="/static/lesson/lesson.css?v=11">
 {% endblock %}
 
 {% block body_class %}with-site-nav lesson-trainer-page{% endblock %}
@@ -58,17 +58,6 @@
 {% endblock %}
 
 {% block submit_buttons %}
-                    <button id="typing-submit-btn" class="btn primary" onclick="submitTyping()"
-                        style="display:none;">{{ t('lesson.submit') }}</button>
-                    <button id="reorder-submit-btn" class="btn primary" onclick="submitReorder()"
-                        style="display:none;">{{ t('lesson.submit_sentence') }}</button>
-{% endblock %}
-
-{% block post_task_actions %}
-                <div id="wrong-answer-next" style="display:none; margin-top: 20px; text-align: center;">
-                    <button class="btn warning" onclick="nextTaskManual()"
-                        style="width: 100%; padding: 15px; font-size: 18px; color: white; justify-content: center;">{{ t('lesson.next_question') }}</button>
-                </div>
 {% endblock %}
 
 {% block screen_complete %}
@@ -116,5 +105,5 @@
 {% block extra_js %}
     <script src="/static/shared/passage_picker.js?v=11"></script>
     <script src="/static/shared/han_text.js?v=3"></script>
-    <script src="/static/lesson/lesson.js?v=14"></script>
+    <script src="/static/lesson/lesson.js?v=16"></script>
 {% endblock %}

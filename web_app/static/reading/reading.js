@@ -102,6 +102,7 @@ async function loadPassage(passage_id) {
 }
 
 function renderPassage() {
+    stopAutoPlay();
     if (window.buildBreadcrumb) window.buildBreadcrumb('reading-breadcrumb', currentPassage.passage_id);
 
     const contentDiv = document.getElementById('reading-content');
@@ -138,9 +139,93 @@ function renderPassage() {
 
 // ── Audio ─────────────────────────────────────────────
 function playAudio(src) {
+    stopAutoPlay();
     if (currentAudio) currentAudio.pause();
     currentAudio = new Audio(src);
     currentAudio.play().catch(e => console.warn("Audio failed", e));
+}
+
+// ── Auto-play: run every line's audio in sequence ─────
+let lineAutoPlayActive = false;
+let lineAutoPlayItems = [];
+let lineAutoPlayIndex = 0;
+
+function collectLineAudioItems() {
+    if (!currentPassage?.lines) return [];
+    const hskLevel = currentPassage.hsk_level || 'H1';
+    const lineDivs = document.querySelectorAll('#reading-content .reading-line');
+    const items = [];
+    currentPassage.lines.forEach((line, i) => {
+        if (line.audio_key) {
+            items.push({ src: `/lesson_audio/${hskLevel}/${line.audio_key}.mp3`, el: lineDivs[i] || null });
+        }
+    });
+    return items;
+}
+
+function toggleAutoPlay() {
+    if (lineAutoPlayActive) {
+        stopAutoPlay();
+        return;
+    }
+    const items = collectLineAudioItems();
+    if (!items.length) return;
+    lineAutoPlayItems = items;
+    lineAutoPlayIndex = 0;
+    lineAutoPlayActive = true;
+    setAutoPlayBtn(true);
+    playNextAutoPlay();
+}
+
+function playNextAutoPlay() {
+    if (!lineAutoPlayActive) return;
+    if (lineAutoPlayIndex >= lineAutoPlayItems.length) {
+        stopAutoPlay();
+        return;
+    }
+    const item = lineAutoPlayItems[lineAutoPlayIndex];
+    if (currentAudio) currentAudio.pause();
+    highlightAutoPlayLine(item.el);
+    currentAudio = new Audio(item.src);
+    const advance = () => {
+        if (!lineAutoPlayActive) return;
+        lineAutoPlayIndex++;
+        playNextAutoPlay();
+    };
+    currentAudio.onended = advance;
+    currentAudio.onerror = advance;
+    currentAudio.play().catch(e => {
+        console.warn("Auto-play audio failed", e);
+        advance();
+    });
+}
+
+function stopAutoPlay() {
+    if (!lineAutoPlayActive) return;
+    lineAutoPlayActive = false;
+    if (currentAudio) {
+        currentAudio.onended = null;
+        currentAudio.onerror = null;
+        currentAudio.pause();
+    }
+    setAutoPlayBtn(false);
+    highlightAutoPlayLine(null);
+}
+
+function highlightAutoPlayLine(el) {
+    document.querySelectorAll('#reading-content .reading-line.reading-line-active')
+        .forEach(line => line.classList.remove('reading-line-active'));
+    if (el) el.classList.add('reading-line-active');
+}
+
+function setAutoPlayBtn(playing) {
+    const btn = document.getElementById('auto-play-btn');
+    if (!btn) return;
+    const icon = btn.querySelector('i');
+    const label = btn.querySelector('span');
+    if (icon) icon.className = playing ? 'fa-solid fa-stop' : 'fa-solid fa-play';
+    if (label) label.textContent = playing ? t('reading.stop_auto_play') : t('reading.auto_play');
+    btn.classList.toggle('primary', playing);
 }
 
 // ── Pinyin / Meaning toggles ──────────────────────────
