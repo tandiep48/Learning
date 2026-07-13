@@ -38,10 +38,7 @@ CREATE TABLE IF NOT EXISTS lesson_lines (
     audio_key      VARCHAR(100),
     translation_en TEXT,
     translation_vi TEXT,
-    tokens         JSONB,
-    -- 1 = line introduces a new word (used by the lesson trainer to skip review-only
-    -- lines); 0 = no new word. Defaults to 1 so un-flagged lines still appear.
-    flag           SMALLINT DEFAULT 1
+    tokens         JSONB
 );
 
 -- line_id restarts at 1 within each passage, so (passage_id, line_id) is the unique key.
@@ -402,3 +399,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS hanzi_font TEXT DEFAULT 'Noto Sans';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS hanzi_script TEXT DEFAULT 'simplified';
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS ui_language TEXT DEFAULT 'en';
+
+-- 1 = line introduces a new word (lesson trainer only quizzes flagged lines);
+-- 0 = review-only line. Defaults to 1 so un-flagged lines still appear.
+ALTER TABLE lesson_lines ADD COLUMN IF NOT EXISTS flag SMALLINT DEFAULT 1;
