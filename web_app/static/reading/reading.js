@@ -472,6 +472,7 @@ function getLessonAudioSrc(line) {
 
 // ── Lesson Summary ────────────────────────────────────
 function renderLessonSummary() {
+    stopLessonSummaryAutoPlay();
     document.querySelector('.lesson-summary-actions')?.removeAttribute('hidden');
     const actionFooter = document.querySelector('.lesson-summary-actions');
     if (actionFooter) {
@@ -677,7 +678,81 @@ function applyLessonLearnerHanText(container) {
     }
 }
 
+// ── Lesson summary auto-play: run every line's audio in sequence ─────
+let summaryAutoPlayActive = false;
+let summaryAutoPlayItems = [];
+let summaryAutoPlayPos = 0;
+
+function toggleLessonSummaryAutoPlay() {
+    if (summaryAutoPlayActive) {
+        stopLessonSummaryAutoPlay();
+        return;
+    }
+    const lines = getLessonLines();
+    summaryAutoPlayItems = [];
+    lines.forEach((line, i) => { if (getLessonAudioSrc(line)) summaryAutoPlayItems.push(i); });
+    if (!summaryAutoPlayItems.length) return;
+    summaryAutoPlayPos = 0;
+    summaryAutoPlayActive = true;
+    setSummaryAutoPlayBtn(true);
+    playNextSummaryAutoPlay();
+}
+
+function playNextSummaryAutoPlay() {
+    if (!summaryAutoPlayActive) return;
+    if (summaryAutoPlayPos >= summaryAutoPlayItems.length) {
+        stopLessonSummaryAutoPlay();
+        return;
+    }
+    const index = summaryAutoPlayItems[summaryAutoPlayPos];
+    const src = getLessonAudioSrc(getLessonLines()[index]);
+    document.querySelectorAll('.lesson-preview-line').forEach(el => el.classList.remove('playing-highlight'));
+    const lineEl = document.getElementById(`lesson-preview-line-${index}`);
+    if (lineEl) lineEl.classList.add('playing-highlight');
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.onended = null;
+        currentAudio.onerror = null;
+    }
+    currentAudio = new Audio(src);
+    const advance = () => {
+        if (lineEl) lineEl.classList.remove('playing-highlight');
+        if (!summaryAutoPlayActive) return;
+        summaryAutoPlayPos++;
+        playNextSummaryAutoPlay();
+    };
+    currentAudio.onended = advance;
+    currentAudio.onerror = advance;
+    currentAudio.play().catch(e => {
+        console.warn("Auto-play audio failed", e);
+        advance();
+    });
+}
+
+function stopLessonSummaryAutoPlay() {
+    if (!summaryAutoPlayActive) return;
+    summaryAutoPlayActive = false;
+    if (currentAudio) {
+        currentAudio.onended = null;
+        currentAudio.onerror = null;
+        currentAudio.pause();
+    }
+    document.querySelectorAll('.lesson-preview-line').forEach(el => el.classList.remove('playing-highlight'));
+    setSummaryAutoPlayBtn(false);
+}
+
+function setSummaryAutoPlayBtn(playing) {
+    const btn = document.getElementById('lesson-summary-auto-play-btn');
+    if (!btn) return;
+    const icon = btn.querySelector('i');
+    const label = btn.querySelector('span');
+    if (icon) icon.className = playing ? 'fa-solid fa-stop' : 'fa-solid fa-play';
+    if (label) label.textContent = playing ? t('reading.stop_auto_play') : t('reading.auto_play');
+    btn.classList.toggle('primary', playing);
+}
+
 function playPassageLineAudio(index) {
+    stopLessonSummaryAutoPlay();
     const lines = getLessonLines();
     const line = lines[index];
     if (!line) return;
@@ -716,6 +791,7 @@ function backToPartPicker() {
 }
 
 function showLessonSummary() {
+    stopLessonSummaryAutoPlay();
     resetLessonSpeakingPractice(true);
     if (currentPassage?.passage_id === NUMBER_PART_ID) {
         renderNumberLessonSummary();
