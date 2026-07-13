@@ -38,7 +38,10 @@ CREATE TABLE IF NOT EXISTS lesson_lines (
     audio_key      VARCHAR(100),
     translation_en TEXT,
     translation_vi TEXT,
-    tokens         JSONB
+    tokens         JSONB,
+    -- 1 = line introduces a new word (used by the lesson trainer to skip review-only
+    -- lines); 0 = no new word. Defaults to 1 so un-flagged lines still appear.
+    flag           SMALLINT DEFAULT 1
 );
 
 -- line_id restarts at 1 within each passage, so (passage_id, line_id) is the unique key.

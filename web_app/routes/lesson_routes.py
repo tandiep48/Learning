@@ -63,9 +63,9 @@ _lesson_logger = _build_lesson_logger()
 # possible question) split across the four task types. "part" = one part; "master"
 # = the whole lesson (all parts).
 LESSON_TASK_DISTRIBUTION = [
-    ("listening", 0.35),
-    ("meaning", 0.35),
-    ("typing", 0.20),
+    ("listening", 0.30),
+    ("meaning", 0.30),
+    ("typing", 0.30),
     ("reorder", 0.10),
 ]
 
@@ -303,8 +303,15 @@ def start_session():
         for line in passage.get("lines", []):
             line_items.append((pid, passage, line))
 
+    # Only quiz lines that introduce a new word (flag == 1), so learners skip
+    # review-only lines. Fall back to every line if a part has no flagged lines,
+    # so a directly-selected part is never empty.
+    flagged_items = [item for item in line_items if item[2].get("flag", 1) == 1]
+    if flagged_items:
+        line_items = flagged_items
+
     # Build a pool of candidate tasks per type, one per line, then sample from each
-    # pool to hit the target count and 35/35/20/10 mix.
+    # pool to hit the target count and 30/30/30/10 mix.
     pools = {"listening": [], "meaning": [], "typing": [], "reorder": []}
 
     # Collect all Vietnamese meanings in this session for multiple-choice distractors.
