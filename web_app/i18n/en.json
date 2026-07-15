@@ -311,7 +311,7 @@
         "select_hsk": "Select HSK",
         "select_lesson_option": "Select lesson",
         "select_part_option": "Select part",
-        "multi_select_hint": "Hold Ctrl (Cmd on Mac) to select multiple",
+        "n_selected": "{n} selected",
         "rows_label": "Rows",
         "state_choose_filters": "Choose filters to load vocabulary.",
         "page_status": "Page {current} / {total}",
