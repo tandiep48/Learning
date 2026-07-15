@@ -68,6 +68,12 @@ function isHistoryMode() {
 function resetSelect(id, label, disabled = false) {
     const el = document.getElementById(id);
     if (!el) return;
+    // Multi-selects (lesson/part) have no placeholder option.
+    if (el.multiple) {
+        el.innerHTML = '';
+        el.disabled = disabled;
+        return;
+    }
     el.innerHTML = `<option value="">${label}</option>`;
     if (id === 'filter-hsk') {
         for (let i = 1; i <= 6; i++) {
@@ -141,22 +147,31 @@ function numericSort(a, b) {
 function handleLessonChange() {
     currentPage = 1;
     currentPassageId = null;
-    const lesson = document.getElementById('filter-lesson').value;
+    const lessonSelect = document.getElementById('filter-lesson');
+    const selectedLessons = Array.from(lessonSelect.selectedOptions).map(o => o.value).filter(Boolean);
     const partSelect = document.getElementById('filter-part');
     resetSelect('filter-part', t('vocab.select_part_option'));
 
-    if (!lesson || !groupedPassages[lesson]) {
+    if (!selectedLessons.length) {
         partSelect.disabled = true;
         clearTable(t('vocab.choose_lesson_and_part'));
         return;
     }
 
-    groupedPassages[lesson].sort((a, b) => Number(a.part) - Number(b.part)).forEach(passage => {
-        const option = document.createElement('option');
-        option.value = passage.part;
-        option.textContent = `${t('picker.part_prefix')} ${passage.part}`;
-        option.dataset.passageId = passage.passage_id;
-        partSelect.appendChild(option);
+    // Each part option carries its full passage_id; lessons are grouped so parts stay
+    // distinguishable when several lessons are selected at once.
+    selectedLessons.sort(numericSort).forEach(lesson => {
+        const passages = groupedPassages[lesson];
+        if (!passages || !passages.length) return;
+        const group = document.createElement('optgroup');
+        group.label = lesson === 'Other' ? t('vocab.other_label') : `${t('picker.lesson_prefix')} ${lesson}`;
+        [...passages].sort((a, b) => Number(a.part) - Number(b.part)).forEach(passage => {
+            const option = document.createElement('option');
+            option.value = passage.passage_id;
+            option.textContent = `${t('picker.part_prefix')} ${passage.part}`;
+            group.appendChild(option);
+        });
+        partSelect.appendChild(group);
     });
     partSelect.disabled = false;
     clearTable(t('vocab.choose_a_part'));
@@ -175,10 +190,13 @@ function changePageSize() {
 
 async function loadVocabTable() {
     const hskLevel = document.getElementById('filter-hsk').value;
-    const lesson = document.getElementById('filter-lesson').value;
-    const part = document.getElementById('filter-part').value;
+    let selectedPassages = [];
+    if (tableMode === 'standard') {
+        const partSelect = document.getElementById('filter-part');
+        selectedPassages = Array.from(partSelect.selectedOptions).map(o => o.value).filter(Boolean);
+    }
 
-    if (!isHistoryMode() && (!hskLevel || (tableMode === 'standard' && (!lesson || !part)))) {
+    if (!isHistoryMode() && (!hskLevel || (tableMode === 'standard' && !selectedPassages.length))) {
         clearTable(tableMode === 'standard' ? t('vocab.choose_hsk_lesson_part') : t('vocab.choose_hsk_only'));
         return;
     }
@@ -191,8 +209,7 @@ async function loadVocabTable() {
         page_size: String(pageSize)
     });
     if (tableMode === 'standard') {
-        params.set('lesson', lesson);
-        params.set('part', part);
+        params.set('passages', selectedPassages.join(','));
     }
 
     try {

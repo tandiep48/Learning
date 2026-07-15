@@ -354,7 +354,13 @@ def get_vocab_table():
     passage_id = None
 
     if table_mode == "standard":
-        if not hsk_level or not lesson or not part:
+        # Multiple lessons/parts: the client sends the selected passage_ids. Fall back
+        # to a single lesson/part pair for backward compatibility.
+        passage_ids = [p for p in request.args.get("passages", "").split(",") if p]
+        if not passage_ids and hsk_level and lesson and part:
+            passage_ids = [f"{hsk_to_passage_prefix(hsk_level)}_{lesson}_{part}"]
+
+        if not passage_ids:
             return jsonify({
                 "rows": [],
                 "page": 1,
@@ -364,14 +370,21 @@ def get_vocab_table():
                 "passage_id": None
             })
 
-        passage_id = f"{hsk_to_passage_prefix(hsk_level)}_{lesson}_{part}"
         db_conn = get_db_connection()
         if not db_conn:
             return jsonify({"error": "Database connection failed."}), 500
         try:
-            rows = [normalize_vocab_row(row) for row in get_passage_vocab(db_conn, passage_id)]
+            seen = set()
+            for pid in passage_ids:
+                for row in get_passage_vocab(db_conn, pid):
+                    normalized = normalize_vocab_row(row)
+                    word = normalized.get("word")
+                    if word and word not in seen:
+                        seen.add(word)
+                        rows.append(normalized)
         finally:
             db_conn.close()
+        passage_id = passage_ids[0] if len(passage_ids) == 1 else None
 
     elif table_mode == "free":
         if not hsk_level:

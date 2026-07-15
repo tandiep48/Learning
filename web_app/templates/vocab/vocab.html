@@ -68,15 +68,13 @@
                     </div>
                     <div class="form-group standard-filter">
                         <label for="filter-lesson">{{ t('picker.lesson_prefix') }}</label>
-                        <select id="filter-lesson" onchange="handleLessonChange()" disabled>
-                            <option value="">{{ t('vocab.select_lesson_option') }}</option>
-                        </select>
+                        <select id="filter-lesson" multiple size="5" onchange="handleLessonChange()" disabled
+                            title="{{ t('vocab.multi_select_hint') }}"></select>
                     </div>
                     <div class="form-group standard-filter">
                         <label for="filter-part">{{ t('picker.part_prefix') }}</label>
-                        <select id="filter-part" onchange="handlePartChange()" disabled>
-                            <option value="">{{ t('vocab.select_part_option') }}</option>
-                        </select>
+                        <select id="filter-part" multiple size="5" onchange="handlePartChange()" disabled
+                            title="{{ t('vocab.multi_select_hint') }}"></select>
                     </div>
                     <div class="form-group page-size-filter">
                         <label for="filter-page-size">{{ t('vocab.rows_label') }}</label>
@@ -100,7 +98,7 @@
         </div>
     </div>
 
-    <script src="/static/vocab/vocab_select.js?v=4"></script>
+    <script src="/static/vocab/vocab_select.js?v=5"></script>
 
     <!-- ── Vocab Table Stroke Order Modal ── -->
     <div id="vocab-stroke-modal-overlay" class="stroke-modal-overlay" onclick="closeVocabStrokeModalIfBackground(event)">
