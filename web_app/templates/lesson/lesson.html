@@ -3,18 +3,18 @@
 {% block title %}{{ t('lesson.page_title', hsk_level=hsk_level) }}{% endblock %}
 
 {% block extra_css %}
-    <link rel="stylesheet" href="/static/shared/passage_picker.css?v=8">
-    <link rel="stylesheet" href="/static/lesson/lesson.css?v=12">
+<link rel="stylesheet" href="/static/shared/passage_picker.css?v=8">
+<link rel="stylesheet" href="/static/lesson/lesson.css?v=12">
 {% endblock %}
 
 {% block body_class %}with-site-nav lesson-trainer-page{% endblock %}
 
 {% block pre_app %}
-    {% include 'shared/site_nav.html' %}
+{% include 'shared/site_nav.html' %}
 {% endblock %}
 
 {% block in_app_top %}
-    {% include 'shared/passage_picker.html' %}
+{% include 'shared/passage_picker.html' %}
 {% endblock %}
 
 {% block loading_class %}{% endblock %}
@@ -22,90 +22,91 @@
 {% block loading_text %}{{ t('lesson.generating_tasks') }}{% endblock %}
 
 {% block task_components %}
-                <div id="word-display" class="chinese-word" style="display:none; font-size: 40px; line-height: 1.4;">
-                </div>
+<div id="word-display" class="chinese-word" style="display:none; font-size: 40px; line-height: 1.4;">
+</div>
 
-                <div id="passage-pinyin" class="passage-pinyin" style="display:none;"></div>
+<div id="passage-pinyin" class="passage-pinyin" style="display:none;"></div>
 
-                <div id="audio-controls" style="display:none;" class="audio-controls">
-                    <button id="btn-current-audio" class="btn-audio" onclick="playCurrentAudio()"
-                        aria-label="Play audio" title="Play audio">
-                        <i class="fa-solid fa-play play-icon" aria-hidden="true"></i>
-                    </button>
-                    <audio id="audio-player"></audio>
-                </div>
+<div id="audio-controls" style="display:none;" class="audio-controls">
+    <button id="btn-current-audio" class="btn-audio" onclick="playCurrentAudio()" aria-label="Play audio"
+        title="Play audio">
+        <i class="fa-solid fa-play play-icon" aria-hidden="true"></i>
+    </button>
+    <audio id="audio-player"></audio>
+</div>
 
-                <div id="mc-area" class="mc-grid" style="display:none;"></div>
+<div id="mc-area" class="mc-grid" style="display:none;"></div>
 
-                <div id="typing-area" class="typing-container" style="display:none;">
-                    <input type="text" id="typing-input" lang="zh-CN" placeholder="{{ t('lesson.typing_placeholder') }}"
-                        autocomplete="off">
-                    <div id="typing-feedback"
-                        style="display:none; margin-top: 10px; margin-bottom: 15px; text-align: center; font-size: 22px; padding: 10px; border-radius: 8px; background: rgba(87, 104, 86, 0.08); width: 100%; box-sizing: border-box;">
-                    </div>
-                </div>
+<div id="typing-area" class="typing-container" style="display:none;">
+    <input type="text" id="typing-input" lang="zh-CN" placeholder="{{ t('lesson.typing_placeholder') }}"
+        autocomplete="off">
+    <div id="typing-feedback"
+        style="display:none; margin-top: 10px; margin-bottom: 15px; text-align: center; font-size: 22px; padding: 10px; border-radius: 8px; background: rgba(87, 104, 86, 0.08); width: 100%; box-sizing: border-box;">
+    </div>
+</div>
 
-                <div id="reorder-area" style="display:none; width: 100%;">
-                    <p style="color: var(--text-muted); margin-bottom: 5px; text-align:left;">{{ t('lesson.your_sentence') }}</p>
-                    <div id="reorder-target" class="chip-container"></div>
+<div id="reorder-area" style="display:none; width: 100%;">
+    <p style="color: var(--text-muted); margin-bottom: 5px; text-align:left;">{{ t('lesson.your_sentence') }}</p>
+    <div id="reorder-target" class="chip-container"></div>
 
-                    <p style="color: var(--text-muted); margin-bottom: 5px; text-align:left;">{{ t('lesson.available_words') }}</p>
-                    <div id="reorder-source" class="chip-container" style="border: none; background: transparent;">
-                    </div>
+    <p style="color: var(--text-muted); margin-bottom: 5px; text-align:left;">{{ t('lesson.available_words') }}</p>
+    <div id="reorder-source" class="chip-container" style="border: none; background: transparent;">
+    </div>
 
-                    <div id="reorder-feedback"
-                        style="display:none; margin-bottom: 15px; text-align: center; font-size: 24px; padding: 10px; border-radius: 8px; background: rgba(87, 104, 86, 0.08);">
-                    </div>
-                </div>
+    <div id="reorder-feedback"
+        style="display:none; margin-bottom: 15px; text-align: center; font-size: 24px; padding: 10px; border-radius: 8px; background: rgba(87, 104, 86, 0.08);">
+    </div>
+</div>
 {% endblock %}
 
-{% block submit_buttons %}
-{% endblock %}
+<!-- {% block submit_buttons %}
+{% endblock %} -->
 
 {% block screen_complete %}
-            <div class="nav-buttons training-complete-actions training-complete-top-actions">
-                <button class="btn primary" onclick="goHome()">{{ t('lesson.back_to_menu') }}</button>
-                <button class="btn primary lesson-flow-continue" style="display:none;"
-                    onclick="continueAfterLessonTraining()">{{ t('lesson.continue') }}</button>
-            </div>
+<div class="nav-buttons training-complete-actions training-complete-top-actions">
+    <button class="btn primary" onclick="goHome()">{{ t('lesson.back_to_menu') }}</button>
+    <button class="btn primary lesson-flow-continue" style="display:none;" onclick="continueAfterLessonTraining()">{{
+        t('lesson.continue') }}</button>
+</div>
 
-            <div class="lesson-complete-icon" aria-hidden="true">
-                <i class="fa-solid fa-circle-check"></i>
-            </div>
-            <h1 style="text-align: center; margin-bottom: 5px;">{{ t('lesson.complete_title') }}</h1>
-            <p style="text-align: center; color: var(--text-muted); margin-bottom: 24px;">{{ t('lesson.complete_body') }}</p>
+<div class="lesson-complete-icon" aria-hidden="true">
+    <i class="fa-solid fa-circle-check"></i>
+</div>
+<h1 style="text-align: center; margin-bottom: 5px;">{{ t('lesson.complete_title') }}</h1>
+<p style="text-align: center; color: var(--text-muted); margin-bottom: 24px;">{{ t('lesson.complete_body') }}</p>
 
-            <h2 id="training-complete-title" class="training-complete-title" style="display:none;">{{ t('lesson.recap_title') }}</h2>
+<h2 id="training-complete-title" class="training-complete-title" style="display:none;">{{ t('lesson.recap_title') }}
+</h2>
 
-            <div class="training-complete-table-wrap" id="recap-table-wrap" style="display:none;">
-                <table class="training-complete-table">
-                    <thead>
-                        <tr>
-                            <th>{{ t('lesson.table_task_type') }}</th>
-                            <th>{{ t('lesson.table_question') }}</th>
-                            <th>{{ t('lesson.table_your_answer') }}</th>
-                            <th>{{ t('lesson.table_correct_answer') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody id="recap-list"></tbody>
-                </table>
-            </div>
+<div class="training-complete-table-wrap" id="recap-table-wrap" style="display:none;">
+    <table class="training-complete-table">
+        <thead>
+            <tr>
+                <th>{{ t('lesson.table_task_type') }}</th>
+                <th>{{ t('lesson.table_question') }}</th>
+                <th>{{ t('lesson.table_your_answer') }}</th>
+                <th>{{ t('lesson.table_correct_answer') }}</th>
+            </tr>
+        </thead>
+        <tbody id="recap-list"></tbody>
+    </table>
+</div>
 
-            <div id="perfect-area" class="training-empty-state" style="display:none;">{{ t('lesson.perfect') }}</div>
+<div id="perfect-area" class="training-empty-state" style="display:none;">{{ t('lesson.perfect') }}</div>
 
-            <div class="nav-buttons training-complete-actions" id="recap-actions" style="display:none;">
-                <button class="btn primary" id="btn-retry" onclick="retryMissed()">{{ t('lesson.retry_missed') }}</button>
-            </div>
+<div class="nav-buttons training-complete-actions" id="recap-actions" style="display:none;">
+    <button class="btn primary" id="btn-retry" onclick="retryMissed()">{{ t('lesson.retry_missed') }}</button>
+</div>
 {% endblock %}
 
 {% block quit_modal_icon %}
-            <div class="quit-modal-icon" aria-hidden="true">
-                <i class="fa-solid fa-triangle-exclamation"></i>
-            </div>
+<div class="quit-modal-icon" aria-hidden="true">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+</div>
 {% endblock %}
 
 {% block extra_js %}
-    <script src="/static/shared/passage_picker.js?v=12"></script>
-    <script src="/static/shared/han_text.js?v=3"></script>
-    <script src="/static/lesson/lesson.js?v=18"></script>
+<script src="/static/shared/passage_picker.js?v=12"></script>
+<script src="/static/shared/han_text.js?v=3"></script>
+<script src="/static/lesson/lesson.js?v=18"></script>
 {% endblock %}
