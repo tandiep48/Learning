@@ -19,11 +19,124 @@ let activeAudioRevealRow = null;
 let searchMode = false;
 let searchDebounceTimer = null;
 
+// ── Custom multi-select dropdown ──────────────────────────────
+// A button that opens a checkbox panel; keeps the multi-select behaviour without
+// the clunky native <select multiple> list box.
+const MultiSelect = {
+    registry: {},
+
+    init(rootId, placeholder, onChange) {
+        this.registry[rootId] = { selected: new Set(), options: [], placeholder, onChange };
+        this._renderLabel(rootId);
+    },
+
+    setOptions(rootId, options) {
+        const reg = this.registry[rootId];
+        if (!reg) return;
+        reg.options = options;
+        reg.selected = new Set();
+        const panel = document.getElementById(`${rootId}-panel`);
+        panel.innerHTML = '';
+        let currentGroup = null;
+        options.forEach(opt => {
+            if (opt.group && opt.group !== currentGroup) {
+                currentGroup = opt.group;
+                const gl = document.createElement('div');
+                gl.className = 'ms-group-label';
+                gl.textContent = opt.group;
+                panel.appendChild(gl);
+            }
+            const row = document.createElement('label');
+            row.className = 'ms-option';
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.value = opt.value;
+            cb.onchange = () => this._toggle(rootId, opt.value, cb.checked);
+            const span = document.createElement('span');
+            span.textContent = opt.label;
+            row.appendChild(cb);
+            row.appendChild(span);
+            panel.appendChild(row);
+        });
+        this._renderLabel(rootId);
+        this._setDisabled(rootId, options.length === 0);
+    },
+
+    clear(rootId) {
+        const reg = this.registry[rootId];
+        if (!reg) return;
+        reg.options = [];
+        reg.selected = new Set();
+        const panel = document.getElementById(`${rootId}-panel`);
+        if (panel) panel.innerHTML = '';
+        this._renderLabel(rootId);
+        this._setDisabled(rootId, true);
+    },
+
+    values(rootId) {
+        const reg = this.registry[rootId];
+        return reg ? Array.from(reg.selected) : [];
+    },
+
+    toggle(rootId) {
+        const root = document.getElementById(rootId);
+        if (!root) return;
+        const willOpen = !root.classList.contains('open');
+        document.querySelectorAll('.ms-dropdown.open').forEach(el => el.classList.remove('open'));
+        if (willOpen) root.classList.add('open');
+    },
+
+    _toggle(rootId, value, checked) {
+        const reg = this.registry[rootId];
+        if (!reg) return;
+        if (checked) reg.selected.add(value);
+        else reg.selected.delete(value);
+        this._renderLabel(rootId);
+        if (reg.onChange) reg.onChange();
+    },
+
+    _renderLabel(rootId) {
+        const reg = this.registry[rootId];
+        const labelEl = document.querySelector(`#${rootId} .ms-label`);
+        if (!reg || !labelEl) return;
+        const n = reg.selected.size;
+        if (n === 0) {
+            labelEl.textContent = reg.placeholder;
+            labelEl.classList.add('ms-placeholder');
+        } else if (n === 1) {
+            const opt = reg.options.find(o => o.value === Array.from(reg.selected)[0]);
+            labelEl.textContent = opt ? opt.label : '1';
+            labelEl.classList.remove('ms-placeholder');
+        } else {
+            labelEl.textContent = t('vocab.n_selected', { n });
+            labelEl.classList.remove('ms-placeholder');
+        }
+    },
+
+    _setDisabled(rootId, disabled) {
+        const toggle = document.querySelector(`#${rootId} .ms-toggle`);
+        if (toggle) toggle.disabled = disabled;
+        if (disabled) {
+            const root = document.getElementById(rootId);
+            if (root) root.classList.remove('open');
+        }
+    },
+};
+
+// Close any open dropdown when clicking outside of it.
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.ms-dropdown')) {
+        document.querySelectorAll('.ms-dropdown.open').forEach(el => el.classList.remove('open'));
+    }
+});
+
 document.addEventListener('DOMContentLoaded', () => {
     initTableTrainer();
 });
 
 function initTableTrainer() {
+    MultiSelect.init('filter-lesson-ms', t('vocab.select_lesson_option'), handleLessonChange);
+    MultiSelect.init('filter-part-ms', t('vocab.select_part_option'), handlePartChange);
     const pageSizeEl = document.getElementById('filter-page-size');
     if (pageSizeEl) pageSize = Number(pageSizeEl.value) || 20;
     const params = new URLSearchParams(window.location.search);
@@ -52,8 +165,8 @@ function setTableMode(mode) {
     });
 
     resetSelect('filter-hsk', t('vocab.select_hsk'));
-    resetSelect('filter-lesson', t('vocab.select_lesson_option'), true);
-    resetSelect('filter-part', t('vocab.select_part_option'), true);
+    MultiSelect.clear('filter-lesson-ms');
+    MultiSelect.clear('filter-part-ms');
     if (isHistoryMode()) {
         loadVocabTable();
     } else {
@@ -84,8 +197,8 @@ function resetSelect(id, label, disabled = false) {
 async function handleHskChange() {
     currentPage = 1;
     currentPassageId = null;
-    resetSelect('filter-lesson', t('vocab.select_lesson_option'), true);
-    resetSelect('filter-part', t('vocab.select_part_option'), true);
+    MultiSelect.clear('filter-lesson-ms');
+    MultiSelect.clear('filter-part-ms');
 
     const hskLevel = document.getElementById('filter-hsk').value;
     if (!hskLevel) {
@@ -116,16 +229,13 @@ async function loadStandardLessons(hskLevel) {
             groupedPassages[lesson].push({ ...passage, lesson, part });
         });
 
-        const lessonSelect = document.getElementById('filter-lesson');
-        resetSelect('filter-lesson', t('vocab.select_lesson_option'));
-        Object.keys(groupedPassages).sort(numericSort).forEach(lesson => {
-            const option = document.createElement('option');
-            option.value = lesson;
-            option.textContent = lesson === 'Other' ? t('vocab.other_label') : `${t('picker.lesson_prefix')} ${lesson}`;
-            lessonSelect.appendChild(option);
-        });
-        lessonSelect.disabled = Object.keys(groupedPassages).length === 0;
-        clearTable(Object.keys(groupedPassages).length ? t('vocab.choose_lesson_and_part') : t('vocab.no_lessons_found'));
+        const lessonOptions = Object.keys(groupedPassages).sort(numericSort).map(lesson => ({
+            value: lesson,
+            label: lesson === 'Other' ? t('vocab.other_label') : `${t('picker.lesson_prefix')} ${lesson}`,
+        }));
+        MultiSelect.setOptions('filter-lesson-ms', lessonOptions);
+        MultiSelect.clear('filter-part-ms');
+        clearTable(lessonOptions.length ? t('vocab.choose_lesson_and_part') : t('vocab.no_lessons_found'));
     } catch (e) {
         console.error(e);
         clearTable(t('picker.failed_load_lessons'));
@@ -141,24 +251,31 @@ function numericSort(a, b) {
 function handleLessonChange() {
     currentPage = 1;
     currentPassageId = null;
-    const lesson = document.getElementById('filter-lesson').value;
-    const partSelect = document.getElementById('filter-part');
-    resetSelect('filter-part', t('vocab.select_part_option'));
+    const selectedLessons = MultiSelect.values('filter-lesson-ms');
 
-    if (!lesson || !groupedPassages[lesson]) {
-        partSelect.disabled = true;
+    if (!selectedLessons.length) {
+        MultiSelect.clear('filter-part-ms');
         clearTable(t('vocab.choose_lesson_and_part'));
         return;
     }
 
-    groupedPassages[lesson].sort((a, b) => Number(a.part) - Number(b.part)).forEach(passage => {
-        const option = document.createElement('option');
-        option.value = passage.part;
-        option.textContent = `${t('picker.part_prefix')} ${passage.part}`;
-        option.dataset.passageId = passage.passage_id;
-        partSelect.appendChild(option);
+    // Each part option carries its full passage_id; when several lessons are selected
+    // the parts are grouped by lesson so they stay distinguishable.
+    const showGroups = selectedLessons.length > 1;
+    const partOptions = [];
+    selectedLessons.sort(numericSort).forEach(lesson => {
+        const passages = groupedPassages[lesson];
+        if (!passages || !passages.length) return;
+        const groupLabel = lesson === 'Other' ? t('vocab.other_label') : `${t('picker.lesson_prefix')} ${lesson}`;
+        [...passages].sort((a, b) => Number(a.part) - Number(b.part)).forEach(passage => {
+            partOptions.push({
+                value: passage.passage_id,
+                label: `${t('picker.part_prefix')} ${passage.part}`,
+                group: showGroups ? groupLabel : null,
+            });
+        });
     });
-    partSelect.disabled = false;
+    MultiSelect.setOptions('filter-part-ms', partOptions);
     clearTable(t('vocab.choose_a_part'));
 }
 
@@ -175,10 +292,12 @@ function changePageSize() {
 
 async function loadVocabTable() {
     const hskLevel = document.getElementById('filter-hsk').value;
-    const lesson = document.getElementById('filter-lesson').value;
-    const part = document.getElementById('filter-part').value;
+    let selectedPassages = [];
+    if (tableMode === 'standard') {
+        selectedPassages = MultiSelect.values('filter-part-ms');
+    }
 
-    if (!isHistoryMode() && (!hskLevel || (tableMode === 'standard' && (!lesson || !part)))) {
+    if (!isHistoryMode() && (!hskLevel || (tableMode === 'standard' && !selectedPassages.length))) {
         clearTable(tableMode === 'standard' ? t('vocab.choose_hsk_lesson_part') : t('vocab.choose_hsk_only'));
         return;
     }
@@ -191,8 +310,7 @@ async function loadVocabTable() {
         page_size: String(pageSize)
     });
     if (tableMode === 'standard') {
-        params.set('lesson', lesson);
-        params.set('part', part);
+        params.set('passages', selectedPassages.join(','));
     }
 
     try {

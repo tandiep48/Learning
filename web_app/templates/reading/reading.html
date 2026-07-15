@@ -58,6 +58,10 @@
 
             <div class="vocab-content-card lesson-summary-content-card">
                 <div class="lesson-summary-toolbar">
+                    <button class="btn" id="lesson-summary-auto-play-btn" onclick="toggleLessonSummaryAutoPlay()">
+                        <i class="fa-solid fa-play" aria-hidden="true"></i>
+                        <span>{{ t('reading.auto_play') }}</span>
+                    </button>
                     <button class="btn" id="lesson-toggle-pinyin-btn" onclick="toggleLessonSummaryPinyin()">{{ t('reading.show_pinyin') }}</button>
                     <button class="btn" id="lesson-toggle-meaning-btn" onclick="toggleLessonSummaryMeaning()">{{ t('reading.show_meaning') }}</button>
                 </div>
@@ -180,10 +184,10 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
-    <script src="/static/shared/passage_picker.js?v=11"></script>
+    <script src="/static/shared/passage_picker.js?v=12"></script>
     <script src="/static/shared/passage_label.js"></script>
     <script src="/static/shared/han_text.js?v=2"></script>
-    <script src="/static/reading/reading.js?v=28"></script>
+    <script src="/static/reading/reading.js?v=29"></script>
     <script src="/static/shared/sidebar.js?v=7"></script>
 </body>
 

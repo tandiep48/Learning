@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="/static/shared/styles.css?v=7">
     <link rel="stylesheet" href="/static/shared/vocab_table.css?v=11">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <link rel="stylesheet" href="/static/vocab/vocab_select.css?v=3">
+    <link rel="stylesheet" href="/static/vocab/vocab_select.css?v=4">
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
 </head>
 <body class="with-site-nav vocab-select-page">
@@ -67,16 +67,24 @@
                         </select>
                     </div>
                     <div class="form-group standard-filter">
-                        <label for="filter-lesson">{{ t('picker.lesson_prefix') }}</label>
-                        <select id="filter-lesson" onchange="handleLessonChange()" disabled>
-                            <option value="">{{ t('vocab.select_lesson_option') }}</option>
-                        </select>
+                        <label>{{ t('picker.lesson_prefix') }}</label>
+                        <div class="ms-dropdown" id="filter-lesson-ms">
+                            <button type="button" class="ms-toggle" onclick="MultiSelect.toggle('filter-lesson-ms')" disabled>
+                                <span class="ms-label ms-placeholder"></span>
+                                <i class="fa-solid fa-chevron-down ms-caret" aria-hidden="true"></i>
+                            </button>
+                            <div class="ms-panel" id="filter-lesson-ms-panel"></div>
+                        </div>
                     </div>
                     <div class="form-group standard-filter">
-                        <label for="filter-part">{{ t('picker.part_prefix') }}</label>
-                        <select id="filter-part" onchange="handlePartChange()" disabled>
-                            <option value="">{{ t('vocab.select_part_option') }}</option>
-                        </select>
+                        <label>{{ t('picker.part_prefix') }}</label>
+                        <div class="ms-dropdown" id="filter-part-ms">
+                            <button type="button" class="ms-toggle" onclick="MultiSelect.toggle('filter-part-ms')" disabled>
+                                <span class="ms-label ms-placeholder"></span>
+                                <i class="fa-solid fa-chevron-down ms-caret" aria-hidden="true"></i>
+                            </button>
+                            <div class="ms-panel" id="filter-part-ms-panel"></div>
+                        </div>
                     </div>
                     <div class="form-group page-size-filter">
                         <label for="filter-page-size">{{ t('vocab.rows_label') }}</label>
@@ -100,7 +108,7 @@
         </div>
     </div>
 
-    <script src="/static/vocab/vocab_select.js?v=4"></script>
+    <script src="/static/vocab/vocab_select.js?v=6"></script>
 
     <!-- ── Vocab Table Stroke Order Modal ── -->
     <div id="vocab-stroke-modal-overlay" class="stroke-modal-overlay" onclick="closeVocabStrokeModalIfBackground(event)">

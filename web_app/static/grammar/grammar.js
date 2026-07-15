@@ -60,8 +60,8 @@ async function loadGrammar(passageId) {
         if (window.buildBreadcrumb) buildBreadcrumb('grammar-breadcrumb', passageId);
 
         if (data.grammar && data.grammar.length > 0) {
-            const sortedGrammar = groupAndSortGrammar(data.grammar);
-            renderGrammar(sortedGrammar, document.getElementById('grammar-body'));
+            const sections = splitGrammarByType1(data.grammar);
+            renderGrammar(sections, document.getElementById('grammar-body'));
         } else {
             document.getElementById('grammar-body').innerHTML =
                 `<div style="padding:20px;text-align:center;color:#666;">${t('grammar.no_rules')}</div>`;
@@ -75,64 +75,61 @@ async function loadGrammar(passageId) {
     }
 }
 
-function groupAndSortGrammar(grammarList) {
-    const groups = {};
+// Split the flat, id-ordered grammar list into sections, starting a new section at
+// each type=1 row (e.g. [1,2,4,2,2,1,4,3,2] -> [[1,2,4,2,2],[1,4,3,2]]).
+function splitGrammarByType1(grammarList) {
+    const sections = [];
+    let current = null;
     grammarList.forEach(g => {
-        if (!groups[g.grammar_id]) groups[g.grammar_id] = [];
-        groups[g.grammar_id].push(g);
+        if (g.type === 1 || current === null) {
+            current = [];
+            sections.push(current);
+        }
+        current.push(g);
     });
-
-    let sortedList = [];
-
-    for (const id in groups) {
-        const items = groups[id];
-        const type1 = items.filter(g => g.type === 1);
-
-        let type2 = items.filter(g => g.type === 2);
-        type2.sort((a, b) => {
-            const aHasExample = (a.vietnamese_content || '').includes('Vi du:') ||
-                (a.vietnamese_content || '').includes('Ví dụ:');
-            const bHasExample = (b.vietnamese_content || '').includes('Vi du:') ||
-                (b.vietnamese_content || '').includes('Ví dụ:');
-            if (aHasExample && !bHasExample) return 1;
-            if (!aHasExample && bHasExample) return -1;
-            return 0;
-        });
-
-        const type4 = items.filter(g => g.type === 4);
-        const type3 = items.filter(g => g.type === 3);
-
-        sortedList = sortedList.concat(type1, type2, type4, type3);
-    }
-
-    return sortedList;
+    return sections;
 }
 
-function renderGrammar(grammarList, container) {
+function renderGrammar(sections, container) {
     let html = '<div class="grammar-content">';
-    grammarList.forEach(g => {
-        if (g.type === 1) {
-            html += `<h3 class="grammar-title">${escapeHtml(g.vietnamese_content || '')}</h3>`;
-        } else if (g.type === 2) {
-            html += `<p class="grammar-desc">${escapeHtml(g.vietnamese_content || '')}</p>`;
-        } else if (g.type === 3) {
-            const parts = (g.vietnamese_content || '').split('~');
-            const cn = parts[0] ? parts[0].trim() : '';
-            const vn = parts[1] ? parts[1].trim() : '';
-            html += `<div class="grammar-example">
-                <div class="ex-cn">${escapeHtml(cn)}</div>
-                <div class="ex-vn">${escapeHtml(vn)}</div>
-            </div>`;
-        } else if (g.type === 4) {
-            if (g.vn_context && Array.isArray(g.vn_context) && g.vn_context.length > 0) {
-                html += renderGrammarTable(g.vn_context);
-            } else {
-                html += `<div class="grammar-table-ref">${escapeHtml(g.vietnamese_content || '')}</div>`;
-            }
-        }
+    sections.forEach(section => {
+        html += '<div class="grammar-section">';
+        section.forEach(g => { html += renderGrammarItem(g); });
+        html += '</div>';
     });
     html += '</div>';
     container.innerHTML = html;
+}
+
+function renderGrammarItem(g) {
+    if (g.type === 1) {
+        return `<h3 class="grammar-title">${escapeHtml(g.vietnamese_content || '')}</h3>`;
+    }
+    if (g.type === 2) {
+        return `<p class="grammar-desc">${escapeHtml(g.vietnamese_content || '')}</p>`;
+    }
+    if (g.type === 3) {
+        const parts = (g.vietnamese_content || '').split('~');
+        return `<div class="grammar-example">
+            <div class="ex-cn">${escapeHtml((parts[0] || '').trim())}</div>
+            <div class="ex-vn">${escapeHtml((parts[1] || '').trim())}</div>
+        </div>`;
+    }
+    if (g.type === 4) {
+        if (g.vn_context && Array.isArray(g.vn_context) && g.vn_context.length > 0) {
+            return renderGrammarTable(g.vn_context);
+        }
+        return `<div class="grammar-table-ref">${escapeHtml(g.vietnamese_content || '')}</div>`;
+    }
+    if (g.type === 5) {
+        // Example dialogue: "A：...？ ~ translation" -> Chinese line + translation.
+        const parts = (g.vietnamese_content || '').split('~');
+        return `<div class="grammar-dialogue">
+            <div class="dlg-cn">${escapeHtml((parts[0] || '').trim())}</div>
+            <div class="dlg-vn">${escapeHtml((parts[1] || '').trim())}</div>
+        </div>`;
+    }
+    return '';
 }
 
 function renderGrammarTable(rows) {
