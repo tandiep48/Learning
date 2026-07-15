@@ -19,7 +19,7 @@ from db import (
     get_passages_summary,
     get_passage_content,
     get_passage_vocab,
-    get_grammar_for_passage,
+    get_grammar_for_lesson,
     insert_lesson_progress,
     mark_lesson_part_completed,
     mark_passage_words_mastered,
@@ -266,10 +266,10 @@ def get_passage_grammar(passage_id):
         parts = passage_id.split('_')
         hsk_level = parts[0].replace('H', '')
         lesson = parts[1]
-        passage_number = parts[2]
-        
+
+        # Show every grammar rule in the lesson (all parts), not just this part.
         conn = get_db_connection()
-        grammar = get_grammar_for_passage(conn, hsk_level, lesson, passage_number)
+        grammar = get_grammar_for_lesson(conn, hsk_level, lesson)
         conn.close()
         return jsonify({"grammar": grammar})
     except Exception as e:

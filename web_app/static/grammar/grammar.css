@@ -72,6 +72,45 @@ body {
     color: #2b2b2b;
 }
 
+/* Each grammar topic (started by a type=1 title) is a separated section */
+.grammar-section {
+    padding-bottom: 16px;
+    margin-bottom: 18px;
+    border-bottom: 2px solid rgba(87, 104, 86, 0.12);
+}
+
+.grammar-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.grammar-section .grammar-title {
+    margin-top: 0;
+}
+
+/* type=5 example dialogue (A/B style question–answer) */
+.grammar-dialogue {
+    background: #eef4ec;
+    border-left: 3px solid #7fa07c;
+    padding: 12px 14px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+}
+
+.dlg-cn {
+    font-size: 1.1rem;
+    color: #111111;
+    font-weight: 600;
+    margin-bottom: 4px;
+    line-height: 1.5;
+}
+
+.dlg-vn {
+    font-size: 0.95rem;
+    color: #2b2b2b;
+}
+
 .grammar-table-ref {
     margin-top: 10px;
     margin-bottom: 15px;

@@ -2041,20 +2041,22 @@ def get_passage_vocab(conn, passage_id):
             for r in rows
         ]
 
-def get_grammar_for_passage(conn, hsk_level, lesson, passage_number):
+def get_grammar_for_lesson(conn, hsk_level, lesson):
+    """All grammar rules for a whole lesson (every part), ordered by insertion id.
+    The caller splits the flat list into sections at each type=1 row."""
     try:
         prefix = f'H{hsk_level}-{lesson}-%'
         with conn.cursor() as cur:
             cur.execute('''
-                SELECT r.grammar_id, r.type, r.vietnamese_content, r.english_content, 
+                SELECT r.grammar_id, r.type, r.vietnamese_content, r.english_content,
                        c_vn.content_json AS vn_context,
                        c_en.content_json AS en_context
                 FROM grammar_rule r
                 LEFT JOIN grammar_context c_vn ON r.vietnamese_content = c_vn.grammar_id AND r.type = 4
                 LEFT JOIN grammar_context c_en ON r.english_content = c_en.grammar_id AND r.type = 4
-                WHERE r.grammar_id LIKE %s AND r.passage_number = %s
+                WHERE r.grammar_id LIKE %s
                 ORDER BY r.id ASC
-            ''', (prefix, passage_number))
+            ''', (prefix,))
             cols = ['grammar_id', 'type', 'vietnamese_content', 'english_content', 'vn_context', 'en_context']
             results = []
             for row in cur.fetchall():
@@ -2066,5 +2068,5 @@ def get_grammar_for_passage(conn, hsk_level, lesson, passage_number):
                 results.append(d)
             return results
     except Exception as e:
-        print(f'[WARN] get_grammar_for_passage failed: {e}')
+        print(f'[WARN] get_grammar_for_lesson failed: {e}')
         return []
