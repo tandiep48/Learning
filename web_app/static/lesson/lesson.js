@@ -165,6 +165,12 @@ function loadTask() {
     typingFeedback.style.display = 'none';
     typingFeedback.innerHTML = '';
 
+    const passagePinyin = document.getElementById('passage-pinyin');
+    if (passagePinyin) {
+        passagePinyin.style.display = 'none';
+        passagePinyin.textContent = '';
+    }
+
     const reorderFeedback = document.getElementById('reorder-feedback');
     reorderFeedback.style.display = 'none';
 
@@ -442,16 +448,7 @@ function revealCorrectAnswer(task) {
     }
 
     if (task.type === "typing") {
-        const typingFeedback = document.getElementById('typing-feedback');
-        if (typingFeedback) {
-            let htmlContent = '';
-            if (task.pinyin) {
-                htmlContent += `<span style="color:var(--text-muted); font-size:16px;">${t('lesson.pinyin_label')}</span><br><span style="color:var(--primary)">${task.pinyin}</span><br>`;
-            }
-            htmlContent += `<span style="color:var(--text-muted); font-size:16px; margin-top: 5px; display:inline-block;">${t('lesson.correct_answer_label')}</span><br><span style="color:var(--success)">${task.correct_answer}</span>`;
-            typingFeedback.innerHTML = htmlContent;
-            typingFeedback.style.display = 'block';
-        }
+        showTypingPinyin(task);
     }
 
     applyLessonHanText(task);
@@ -464,6 +461,15 @@ function revealCorrectAnswer(task) {
     });
     const typingInput = document.getElementById('typing-input');
     if (typingInput) typingInput.disabled = true;
+}
+
+// The Chinese sentence is already shown for the learner to type, so after answering
+// we only reveal its pinyin (below the passage) — no separate "correct answer".
+function showTypingPinyin(task) {
+    const el = document.getElementById('passage-pinyin');
+    if (!el || task.type !== 'typing' || !task.pinyin) return;
+    el.textContent = task.pinyin;
+    el.style.display = 'block';
 }
 
 // Reorder/typing answers can mix full-width & half-width punctuation, ideographic
@@ -529,15 +535,7 @@ async function checkAnswer(task, userAnswer, correctAnswer, element) {
     }
 
     if (task.type === "typing") {
-        const typingFeedback = document.getElementById('typing-feedback');
-        if (typingFeedback && task.pinyin) {
-            let htmlContent = `<span style="color:var(--text-muted); font-size:16px;">${t('lesson.pinyin_label')}</span><br><span style="color:var(--primary)">${task.pinyin}</span>`;
-            if (!isCorrect) {
-                htmlContent += `<br><span style="color:var(--text-muted); font-size:16px; margin-top: 5px; display:inline-block;">${t('lesson.correct_answer_label')}</span><br><span style="color:var(--success)">${task.correct_answer}</span>`;
-            }
-            typingFeedback.innerHTML = htmlContent;
-            typingFeedback.style.display = 'block';
-        }
+        showTypingPinyin(task);
     }
 
     applyLessonHanText(task);
@@ -683,19 +681,21 @@ function _showLessonCompleteScreen() {
 
 function markLessonPartComplete() {
     // Master runs cover every part; a single-part run marks just its own passage.
-    const passageIds = lessonWideTrainingMeta?.passage_ids?.length
+    const isMaster = !!lessonWideTrainingMeta?.passage_ids?.length;
+    const passageIds = isMaster
         ? lessonWideTrainingMeta.passage_ids
         : (currentPassageId ? [currentPassageId] : []);
     if (!passageIds.length) return;
 
-    // Send the real score; the server decides completion (pass threshold) and word
-    // mastery (perfect only).
+    // Send the real score. Master records it as a % progress; part (child) runs
+    // complete at the pass threshold. Word mastery is server-gated to perfect rounds.
     const total = sessionData?.tasks?.length || 0;
     const correct = Math.max(0, total - missedTasks.length);
+    const mode = isMaster ? 'master' : 'part';
     Promise.all(passageIds.map(passageId => fetch('/api/lesson/part-complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ passage_id: passageId, total, correct })
+        body: JSON.stringify({ passage_id: passageId, total, correct, mode })
     }))).catch(e => console.error("Lesson part progress save failed", e));
 }
 

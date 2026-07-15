@@ -202,7 +202,7 @@ const Picker = {
             const progressHtml = progress
                 ? `<div class="picker-progress-lines">
                     ${this._progressBar(progress.learned_words, progress.total_words, t('picker.words_label'))}
-                    ${this._progressBar(progress.lesson_learned, progress.lesson_total, t('picker.lesson_progress_label'), true)}
+                    ${this._progressBar(progress.progress_pct, 100, t('picker.lesson_progress_label'), true)}
                    </div>`
                 : '';
 
@@ -270,7 +270,7 @@ const Picker = {
             const progressHtml = progress
                 ? `<div class="picker-progress-lines picker-progress-lines-centered">
                     ${this._progressBar(progress.learned_words, progress.total_words, t('picker.words_label'))}
-                    ${this._progressBar(progress.lesson_learned, progress.lesson_total, t('picker.lesson_progress_label'), true)}
+                    ${this._progressBar(progress.progress_pct, 100, t('picker.lesson_progress_label'), true)}
                    </div>`
                 : '';
 
@@ -311,7 +311,7 @@ const Picker = {
             <div class="picker-lesson-action-header">
                 <div class="picker-lesson-progress">
                     ${progress ? this._progressBar(progress.learned_words, progress.total_words, t('picker.words_label')) : this._emptyProgressBar(t('picker.words_label'))}
-                    ${progress ? this._progressBar(progress.lesson_learned, progress.lesson_total, t('picker.lesson_progress_label'), true) : this._emptyProgressBar(t('picker.lesson_progress_label'), true)}
+                    ${progress ? this._progressBar(progress.progress_pct, 100, t('picker.lesson_progress_label'), true) : this._emptyProgressBar(t('picker.lesson_progress_label'), true)}
                 </div>
                 <div class="picker-lesson-action-buttons">
                     <button type="button" class="picker-action-btn" data-action="vocab" ${canStartVocab ? '' : 'disabled'}>${t('picker.vocab_trainer_btn')}</button>

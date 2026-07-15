@@ -733,19 +733,32 @@ def get_recent_learning(conn, user_id):
         print(f"⚠️ Database get_recent_learning failed: {e}")
         return None
 
-def mark_lesson_part_completed(conn, user_id, passage_id):
+def mark_lesson_part_completed(conn, user_id, passage_id, completed=True, score_pct=None):
+    """Record lesson-trainer progress for a part.
+    - completed=True stamps lesson_trainer_completed_at (binary "done").
+    - score_pct (0-100, from the master trainer) is kept as the highest value seen,
+      so progress never decreases. Passing None leaves the existing score untouched.
+    """
     if not conn or not passage_id:
         return False
     try:
         with conn.cursor() as cur:
             cur.execute("""
                 INSERT INTO user_lesson_part_progress
-                    (user_id, passage_id, lesson_trainer_completed_at, updated_at)
-                VALUES (%s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    (user_id, passage_id, lesson_trainer_completed_at, score_pct, updated_at)
+                VALUES (%s, %s,
+                        CASE WHEN %s THEN CURRENT_TIMESTAMP ELSE NULL END,
+                        %s, CURRENT_TIMESTAMP)
                 ON CONFLICT (user_id, passage_id)
-                DO UPDATE SET lesson_trainer_completed_at = CURRENT_TIMESTAMP,
-                              updated_at = CURRENT_TIMESTAMP
-            """, (user_id, passage_id))
+                DO UPDATE SET
+                    lesson_trainer_completed_at = COALESCE(
+                        EXCLUDED.lesson_trainer_completed_at,
+                        user_lesson_part_progress.lesson_trainer_completed_at),
+                    score_pct = GREATEST(
+                        COALESCE(user_lesson_part_progress.score_pct, 0),
+                        COALESCE(EXCLUDED.score_pct, 0)),
+                    updated_at = CURRENT_TIMESTAMP
+            """, (user_id, passage_id, bool(completed), score_pct))
         conn.commit()
         return True
     except Exception as e:
@@ -771,12 +784,16 @@ def get_lesson_picker_progress(conn, user_id, hsk_level):
             vocab_rows = cur.fetchall()
 
             cur.execute("""
-                SELECT passage_id
+                SELECT passage_id, lesson_trainer_completed_at, score_pct
                 FROM user_lesson_part_progress
                 WHERE user_id = %s
-                  AND lesson_trainer_completed_at IS NOT NULL
             """, (user_id,))
-            completed_passages = {row[0] for row in cur.fetchall()}
+            completed_passages = set()
+            part_scores = {}
+            for pid, completed_at, score in cur.fetchall():
+                part_scores[pid] = score or 0
+                if completed_at is not None:
+                    completed_passages.add(pid)
 
         parts = {}
         lesson_words = {}
@@ -794,6 +811,12 @@ def get_lesson_picker_progress(conn, user_id, hsk_level):
                 "learned_words": 0,
                 "lesson_learned": 1 if passage_id in completed_passages else 0,
                 "lesson_total": 1,
+                # Effective progress: a completed part counts as 100%; otherwise the
+                # master trainer's recorded score.
+                "progress_pct": max(
+                    100 if passage_id in completed_passages else 0,
+                    part_scores.get(passage_id, 0),
+                ),
                 "_words": set(),
                 "_learned_word_set": set(),
             })
@@ -819,12 +842,16 @@ def get_lesson_picker_progress(conn, user_id, hsk_level):
         for lesson_num, words in lesson_words.items():
             passages = lesson_passages.get(lesson_num, set())
             completed = lesson_completed.get(lesson_num, set())
+            part_pcts = [parts[pid]["progress_pct"] for pid in passages if pid in parts]
+            avg_pct = round(sum(part_pcts) / len(part_pcts)) if part_pcts else 0
             lessons[lesson_num] = {
                 "lesson": lesson_num,
                 "total_words": len(words),
                 "learned_words": len(words.intersection(mastered_words)),
                 "lesson_learned": len(completed),
                 "lesson_total": len(passages),
+                # Lesson progress = average of its parts' effective progress.
+                "progress_pct": avg_pct,
             }
 
         return {"lessons": lessons, "parts": parts}

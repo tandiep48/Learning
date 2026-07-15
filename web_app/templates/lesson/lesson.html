@@ -4,7 +4,7 @@
 
 {% block extra_css %}
     <link rel="stylesheet" href="/static/shared/passage_picker.css?v=8">
-    <link rel="stylesheet" href="/static/lesson/lesson.css?v=11">
+    <link rel="stylesheet" href="/static/lesson/lesson.css?v=12">
 {% endblock %}
 
 {% block body_class %}with-site-nav lesson-trainer-page{% endblock %}
@@ -24,6 +24,8 @@
 {% block task_components %}
                 <div id="word-display" class="chinese-word" style="display:none; font-size: 40px; line-height: 1.4;">
                 </div>
+
+                <div id="passage-pinyin" class="passage-pinyin" style="display:none;"></div>
 
                 <div id="audio-controls" style="display:none;" class="audio-controls">
                     <button id="btn-current-audio" class="btn-audio" onclick="playCurrentAudio()"
@@ -103,7 +105,7 @@
 {% endblock %}
 
 {% block extra_js %}
-    <script src="/static/shared/passage_picker.js?v=11"></script>
+    <script src="/static/shared/passage_picker.js?v=12"></script>
     <script src="/static/shared/han_text.js?v=3"></script>
-    <script src="/static/lesson/lesson.js?v=16"></script>
+    <script src="/static/lesson/lesson.js?v=18"></script>
 {% endblock %}

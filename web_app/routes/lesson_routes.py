@@ -205,33 +205,48 @@ def complete_lesson_part():
     if not passage_id:
         return jsonify({"error": "passage_id is required"}), 400
 
-    # A part counts as complete at or above the pass threshold. The client sends the
-    # score; guard here so a low run never marks the lesson done.
     try:
         total = int(data.get('total', 0))
         correct = int(data.get('correct', 0))
     except (TypeError, ValueError):
         total, correct = 0, 0
-    if total <= 0 or (correct / total) < LESSON_PASS_THRESHOLD:
+    if total <= 0:
         return jsonify({"status": "incomplete", "passage_id": passage_id}), 200
+
+    mode = 'master' if data.get('mode') == 'master' else 'part'
+    ratio = correct / total
+    is_perfect = correct >= total
+    score_pct = round(ratio * 100)
+
+    # Master: record the score % as progress (no threshold); mark done + word mastery
+    # only on a perfect round. Part (children): keep the pass-threshold completion.
+    if mode == 'master':
+        completed = is_perfect
+        store_score = score_pct
+    else:
+        if ratio < LESSON_PASS_THRESHOLD:
+            return jsonify({"status": "incomplete", "passage_id": passage_id}), 200
+        completed = True
+        store_score = None
 
     conn = get_db_connection()
     if not conn:
         return jsonify({"error": "Database connection failed"}), 500
 
     try:
-        if not mark_lesson_part_completed(conn, current_user.id, passage_id):
+        if not mark_lesson_part_completed(conn, current_user.id, passage_id,
+                                          completed=completed, score_pct=store_score):
             return jsonify({"error": "Could not save lesson progress"}), 500
         # Only a perfect round grants mastery of the passage's words.
         mastered = []
-        if correct >= total:
+        if is_perfect:
             mastered = mark_passage_words_mastered(conn, current_user.id, passage_id)
         # Finishing a part may complete a lesson/level, so re-derive the HSK level.
         new_level = recompute_user_level(conn, current_user.id)
         if new_level:
             current_user.level = new_level
         return jsonify({"status": "success", "passage_id": passage_id,
-                        "mastered_words": mastered, "level": new_level})
+                        "score_pct": score_pct, "mastered_words": mastered, "level": new_level})
     finally:
         conn.close()
 

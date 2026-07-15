@@ -1,3 +1,19 @@
+/* Pinyin revealed below the passage after a typing answer */
+.passage-pinyin {
+    text-align: center;
+    color: var(--primary);
+    font-size: 22px;
+    line-height: 1.4;
+    margin: 2px 0 14px;
+}
+
+/* Larger typing box on the lesson trainer (scoped so the vocab trainer is unaffected) */
+.lesson-trainer-page #typing-input {
+    height: 60px;
+    font-size: 30px;
+    box-sizing: border-box;
+}
+
 /* Lesson title / part heading in the trainer topbar */
 .trainer-subtitle {
     margin-left: auto;
