@@ -99,10 +99,10 @@ def index():
 def vocab_page():
     return render_template('vocab/vocab.html')
 
-@app.route('/vocab-training')
+@app.route('/vocab-training-batch')
 @login_required
-def vocab_training_page():
-    return render_template('vocab/vocab_training.html')
+def vocab_training_batch_page():
+    return render_template('vocab/vocab_training_batch.html')
 
 @app.route('/vocab-learning')
 @login_required

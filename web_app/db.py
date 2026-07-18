@@ -48,6 +48,36 @@ def insert_learning_progress(conn, user_id, session_id, mode, word, round_num, g
         print(f"⚠️ Database insert failed: {e}")
         conn.rollback()
 
+def insert_learning_progress_batch(conn, user_id, session_id, records, updated_at):
+    """
+    Bulk-insert several vocab_records rows in one round-trip. Each record is a dict with keys:
+    mode, word, round_num, game_info (JSON string), user_answer, is_correct, response_time_ms.
+    Used by the batch vocab trainer, which submits a whole group's answers at once.
+    """
+    if not conn or not records:
+        return
+
+    query = """
+        INSERT INTO vocab_records
+        (user_id, session_id, mode, word, round_num, game_info, user_answer, is_correct, response_time_ms, updated_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """
+    rows = [
+        (
+            user_id, str(session_id), r.get("mode"), r.get("word"),
+            r.get("round_num", 1), r.get("game_info"), r.get("user_answer"),
+            r.get("is_correct"), r.get("response_time_ms", 0), updated_at,
+        )
+        for r in records
+    ]
+    try:
+        with conn.cursor() as cur:
+            cur.executemany(query, rows)
+        conn.commit()
+    except Exception as e:
+        print(f"⚠️ Database batch insert failed: {e}")
+        conn.rollback()
+
 def insert_lesson_progress(conn, user_id, session_id, passage_id, line_id, mode, game_info, user_answer, is_correct, response_time_ms, updated_at):
     if not conn:
         return
@@ -1335,152 +1365,41 @@ def get_mastered_words_page(conn, user_id, page=1, page_size=24):
         print(f"⚠️ Database query failed (get_mastered_words_page): {e}")
         return {"rows": [], "page": 1, "page_size": page_size, "total": 0, "total_pages": 1}
 
-def greedy_rank_recommendations(results):
-    """
-    Rank groups by recent mastered words while spreading matched-word coverage.
-    """
-    ranked = []
-    remaining = list(results)
-    covered_words = set()
 
-    def stable_key(item):
-        progress = str(item.get('progress') or '')
-        return (
-            item.get('level') or 0,
-            item.get('lesson') or 0,
-            item.get('category') or '',
-            progress
-        )
-
-    remaining.sort(key=stable_key)
-
-    while remaining:
-        best_index = 0
-        best_score = None
-        for idx, item in enumerate(remaining):
-            matched_words = set(item.get('matched_words') or [])
-            new_words = matched_words - covered_words
-            recent_new = set(item.get('recent_matched_words') or []) - covered_words
-            newest_value = item.get('newest_learned_sort') or 0
-
-            score = (
-                len(recent_new),
-                len(new_words),
-                item.get('recent_score', 0),
-                newest_value,
-                item.get('coverage', 0),
-                -len(matched_words)
-            )
-            if best_score is None or score > best_score:
-                best_score = score
-                best_index = idx
-
-        selected = remaining.pop(best_index)
-        ranked.append(selected)
-        covered_words.update(selected.get('matched_words') or [])
-
-    return ranked
-
-# Recommendations only consider groups that contain at least one of the user's most
-# recently mastered words. This keeps the coverage computation bounded (and fast) as a
-# user's vocabulary grows, instead of scanning the whole question bank every call.
-RECOMMEND_RECENT_WORD_LIMIT = 80
-
-# Hard cap on how many ready groups we rank and return. Ranking is O(n²) and a power user
-# can be "ready" for hundreds of groups — far more than anyone browses. We keep the groups
-# most relevant to what they just learned, so the cap trims the long tail, not the top picks.
-RECOMMEND_MAX_GROUPS = 60
-
-
-def get_recommended_practices(conn, user_id, threshold=0.75, limit=None, status_filter=None):
+def get_recommended_practices(conn, user_id, threshold=0.80, limit=None, status_filter=None):
     """
     Returns practice progress groups the user is ready for.
     Uses question_bank + learning_units + vocab_records — NO CSV loading.
 
-    A group is recommended when coverage = known_words/total_words >= threshold.
-    Excludes groups where the user's latest session was 100% correct.
+    A group is recommended when coverage = known_words/total_words >= threshold,
+    measured over the user's ENTIRE mastered-word set (no recency or HSK-level bias).
+    Groups are ordered by coverage (highest first).
 
     Returns list of dicts:
-      {level, lesson, progress, skill, type, unit_ids,
-       total_words, known_words, coverage, coverage_pct, questions: [...]}
+      {level, lesson, progress, skill, type, category, status, unit_ids,
+       total_words, known_words, coverage, coverage_pct, matched_words, question_count}
     """
     if not conn:
         return []
 
     try:
-        # 1. Get mastered words (3-mode logic) — word + learned_at only (no vocabulary join)
-        mastered_rows = get_mastered_words_with_recency(conn, user_id)
-        if not mastered_rows:
-            return []
-        mastered_recency = {row["word"]: row["learned_at"] for row in mastered_rows}
-        mastered = list(mastered_recency.keys())
-        sorted_mastered = sorted(
-            mastered_rows,
-            key=lambda row: row["learned_at"].timestamp() if row["learned_at"] else 0,
-            reverse=True
-        )
-        recent_window_size = min(10, max(3, len(sorted_mastered) // 3 or 1))
-        recent_words = {row["word"] for row in sorted_mastered[:recent_window_size]}
-
-        # Recency-scoped candidate words: the most recently mastered words drive which
-        # groups we bother scoring. Keeps the coverage query bounded as vocab grows.
-        candidate_words = [row["word"] for row in sorted_mastered[:RECOMMEND_RECENT_WORD_LIMIT]]
-        if not candidate_words:
+        # 1. Every mastered word (3-mode round-1 rule). No recency or HSK-level bias —
+        #    the whole mastered set drives coverage.
+        mastered = get_learned_words(conn, user_id)
+        if not mastered:
             return []
 
-        # Infer the learner's active HSK level(s) from the levels of their recent words.
-        # Common words (你, 好, …) appear in practice groups at every level, so without this
-        # a handful of recent words match thousands of units across the whole bank. We scope
-        # candidate groups to these levels; if none can be resolved we fall back to no filter.
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT DISTINCT substring(hsk_level from '[0-9]+')::int AS lvl
-                FROM vocabulary
-                WHERE cn = ANY(%s) AND hsk_level ~ '[0-9]'
-            """, (candidate_words,))
-            active_levels = [r[0] for r in cur.fetchall() if r[0] and 1 <= r[0] <= 6]
-
-        # 2a. Shortlist candidate groups: only those that contain a recent word AND sit at
-        #     one of the learner's active levels, then take every unit in those groups
-        #     (coverage still needs the full group word set).
-        level_clause = "AND qb2.level = ANY(%s)" if active_levels else ""
-        shortlist_params = [candidate_words]
-        if active_levels:
-            shortlist_params.append(active_levels)
-        with conn.cursor() as cur:
-            cur.execute(f"""
-                SELECT DISTINCT qb.unit_id
-                FROM question_bank qb
-                WHERE qb.category IN ('practice', 'exam')
-                  AND (qb.category, qb.level, qb.lesson, qb.progress) IN (
-                        SELECT DISTINCT qb2.category, qb2.level, qb2.lesson, qb2.progress
-                        FROM learning_units lu
-                        JOIN question_bank qb2 ON lu.unit_id = qb2.unit_id
-                        WHERE qb2.category IN ('practice', 'exam')
-                          AND lu.unique_word = ANY(%s)
-                          {level_clause}
-                  )
-            """, tuple(shortlist_params))
-            candidate_unit_ids = [row[0] for row in cur.fetchall()]
-        if not candidate_unit_ids:
-            return []
-
-        # 2b. Compute coverage only for those candidate units (bounded set).
-        #     Dedupe each unit to its group first, then the (group, word) pairs, so the
-        #     final aggregate is plain COUNT(*) over distinct words (hash-aggregatable) —
-        #     avoids the disk-spilling sort that COUNT(DISTINCT)/ARRAY_AGG(DISTINCT) forces.
-        #     matched_words is returned straight from SQL (only the user's mastered words).
+        # 2. Coverage per (category, level, lesson, progress) across the whole practice/exam
+        #    bank. Dedupe to distinct (group, word) pairs first so the aggregate is a plain
+        #    COUNT(*) over distinct words (hash-aggregatable) — avoids the disk-spilling sort
+        #    that COUNT(DISTINCT)/ARRAY_AGG(DISTINCT) forces. matched_words holds only the
+        #    user's mastered words for that group.
         coverage_sql = """
-            WITH unit_groups AS (
-                SELECT DISTINCT unit_id, category, level, lesson, progress
-                FROM question_bank
-                WHERE category IN ('practice', 'exam')
-                  AND unit_id = ANY(%s)
-            ),
-            group_words AS (
-                SELECT DISTINCT ug.category, ug.level, ug.lesson, ug.progress, lu.unique_word
-                FROM unit_groups ug
-                JOIN learning_units lu ON lu.unit_id = ug.unit_id
+            WITH group_words AS (
+                SELECT DISTINCT qb.category, qb.level, qb.lesson, qb.progress, lu.unique_word
+                FROM question_bank qb
+                JOIN learning_units lu ON lu.unit_id = qb.unit_id
+                WHERE qb.category IN ('practice', 'exam')
             )
             SELECT
                 category, level, lesson, progress,
@@ -1491,7 +1410,7 @@ def get_recommended_practices(conn, user_id, threshold=0.75, limit=None, status_
             GROUP BY category, level, lesson, progress
         """
         with conn.cursor() as cur:
-            cur.execute(coverage_sql, (candidate_unit_ids, list(mastered), list(mastered)))
+            cur.execute(coverage_sql, (list(mastered), list(mastered)))
             group_coverage = {
                 (row[0], row[1], row[2], row[3]): {
                     'total_words': row[4],
@@ -1563,51 +1482,27 @@ def get_recommended_practices(conn, user_id, threshold=0.75, limit=None, status_
             status = lesson_status.get((category, level, lesson, progress), "Not start")
             if status_filter and status != status_filter:
                 continue
-            total = group_coverage[(category, level, lesson, progress)]['total_words']
-            known = group_coverage[(category, level, lesson, progress)]['known_words']
-            coverage = group_coverage[(category, level, lesson, progress)]['coverage']
-            matched_words = sorted(group_coverage[(category, level, lesson, progress)]['matched_words'])
-            recent_matched_words = sorted(
-                [word for word in matched_words if word in recent_words],
-                key=lambda word: mastered_recency.get(word) or 0,
-                reverse=True
-            )
-            newest_learned_at = max(
-                (mastered_recency.get(word) for word in matched_words if mastered_recency.get(word)),
-                default=None
-            )
-            recent_score = sum(1 for word in matched_words if word in recent_words)
-            
+            data = group_coverage[(category, level, lesson, progress)]
             summaries.append({
                 'level':        level,
                 'lesson':       lesson,
                 'progress':     progress,
                 'category':     category,
                 'status':       status,
-                'total_words':  total,
-                'known_words':  known,
-                'coverage':     round(coverage, 4),
-                'coverage_pct': round(coverage * 100, 1),
-                'matched_words': matched_words,
-                'recent_matched_words': recent_matched_words,
-                'newest_learned_at': newest_learned_at.isoformat() if newest_learned_at else None,
-                'newest_learned_sort': newest_learned_at.timestamp() if newest_learned_at else 0,
-                'recent_score': recent_score,
+                'total_words':  data['total_words'],
+                'known_words':  data['known_words'],
+                'coverage':     round(data['coverage'], 4),
+                'coverage_pct': round(data['coverage'] * 100, 1),
+                'matched_words': sorted(data['matched_words']),
             })
 
-        # Trim to the most relevant groups before the O(n²) greedy ranking: prioritise
-        # groups tied to the most recently learned words, then newest match, then coverage.
-        if len(summaries) > RECOMMEND_MAX_GROUPS:
-            summaries.sort(
-                key=lambda s: (s['recent_score'], s['newest_learned_sort'], s['coverage']),
-                reverse=True
-            )
-            summaries = summaries[:RECOMMEND_MAX_GROUPS]
-
-        ranked_summaries = greedy_rank_recommendations(summaries)
+        # Order by coverage (highest first); stable tie-break on level/lesson/progress so the
+        # list is deterministic between calls.
+        summaries.sort(key=lambda s: (s['level'], s['lesson'], str(s['progress'])))
+        summaries.sort(key=lambda s: s['coverage'], reverse=True)
         if limit:
-            ranked_summaries = ranked_summaries[:limit]
-        if not ranked_summaries:
+            summaries = summaries[:limit]
+        if not summaries:
             return []
 
         # Fetch only lightweight per-group metadata (count + representative skill/type +
@@ -1615,7 +1510,7 @@ def get_recommended_practices(conn, user_id, threshold=0.75, limit=None, status_
         # loads them on demand — so we avoid pulling every question's TEXT/JSONB columns.
         where_clauses = []
         params = []
-        for item in ranked_summaries:
+        for item in summaries:
             where_clauses.append("(category = %s AND level = %s AND lesson = %s AND progress = %s)")
             params.extend([item['category'], item['level'], item['lesson'], item['progress']])
 
@@ -1642,7 +1537,7 @@ def get_recommended_practices(conn, user_id, threshold=0.75, limit=None, status_
             }
 
         results = []
-        for item in ranked_summaries:
+        for item in summaries:
             key = (item['category'], item['level'], item['lesson'], item['progress'])
             meta = meta_by_key.get(key)
             if not meta or not meta['question_count']:
@@ -1651,7 +1546,6 @@ def get_recommended_practices(conn, user_id, threshold=0.75, limit=None, status_
             item['type'] = meta['type']
             item['unit_ids'] = meta['unit_ids']
             item['question_count'] = meta['question_count']
-            item.pop('newest_learned_sort', None)
             results.append(item)
 
         return results
