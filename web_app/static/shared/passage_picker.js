@@ -330,7 +330,7 @@ const Picker = {
 
     startLessonWideVocabTrainer(lessonNum, parts) {
         sessionStorage.setItem('lessonWideVocabTrainer', JSON.stringify(this.buildLessonTrainerPayload(lessonNum, parts)));
-        window.location.href = '/vocab-training';
+        window.location.href = '/vocab-training-batch';
     },
 
     startLessonWideLessonTrainer(lessonNum, parts) {
