@@ -258,7 +258,7 @@ def submit_practice():
 @practice_bp.route('/recommend', methods=['GET'])
 @login_required
 def get_recommendations():
-    """Return ranked practice progress groups the user is ready for (coverage >= 0.75).
+    """Return ranked practice progress groups the user is ready for (coverage >= 0.80).
     Data comes entirely from question_bank + learning_units + vocab_records.
     """
     allowed_statuses = {"Not start", "Finish and success", "Finish and fail"}
@@ -282,7 +282,7 @@ def get_recommendations():
         groups = get_recommended_practices(
             db_conn,
             current_user.id,
-            threshold=0.75,
+            threshold=0.80,
             limit=limit,
             status_filter=status_filter,
         )
