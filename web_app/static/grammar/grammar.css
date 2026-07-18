@@ -40,7 +40,8 @@ body {
 
 .grammar-title {
     color: var(--primary);
-    font-size: 1.2rem;
+    font-size: 1.6rem;
+    text-align: center;
     margin-top: 15px;
     margin-bottom: 10px;
     border-bottom: 1px solid rgba(87, 104, 86,0.1);
