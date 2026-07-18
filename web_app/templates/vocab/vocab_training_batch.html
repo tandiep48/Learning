@@ -1,0 +1,48 @@
+{% extends 'shared/trainer_base.html' %}
+
+{% block title %}{{ t('vocab_trainer.page_title') }}{% endblock %}
+
+{% block loading_text %}{{ t('vocab_trainer.loading') }}{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="/static/vocab/vocab_training_batch.css?v=2">
+{% endblock %}
+
+{% block task_components %}
+                <div id="activity-area" class="batch-activity"></div>
+{% endblock %}
+
+{% block screen_complete %}
+            <div class="nav-buttons training-complete-actions training-complete-top-actions">
+                <button class="btn primary" onclick="goHome()">{{ t('vocab_trainer.back_to_vocabulary') }}</button>
+            </div>
+
+            <h2 id="training-complete-title" class="training-complete-title">{{ t('vocab_trainer.recap_title') }}</h2>
+
+            <div class="training-complete-table-wrap">
+                <table class="training-complete-table">
+                    <thead>
+                        <tr>
+                            <th>{{ t('dashboard.table_character') }}</th>
+                            <th>{{ t('dashboard.table_pinyin') }}</th>
+                            <th>{{ t('dashboard.table_meaning_vn') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recap-table-body"></tbody>
+                </table>
+                <div id="perfect-area" class="training-empty-state">{{ t('vocab_trainer.perfect') }}</div>
+            </div>
+
+            <div class="nav-buttons training-complete-actions">
+                <button class="btn primary" id="btn-retry" style="display:none;" onclick="retryMissed()">{{ t('lesson.retry_missed') }}</button>
+                <button class="btn primary" id="btn-start-lesson" style="display:none;" onclick="startLearnLesson()">
+                    <i class="fa-solid fa-book-open" aria-hidden="true"></i>
+                    <span>{{ t('vocab_trainer.lesson_summary') }}</span>
+                </button>
+            </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="/static/shared/han_text.js?v=2"></script>
+    <script src="/static/vocab/vocab_training_batch.js?v=5"></script>
+{% endblock %}

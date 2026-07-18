@@ -1103,7 +1103,7 @@ function startNumberFlashcards() {
 function startNumberTrainer() {
     sessionStorage.setItem('selectedVocabTrainerWords', JSON.stringify(ensureNumberPracticeRows().map(row => row.word)));
     sessionStorage.setItem('numberTrainerReturnPassageId', NUMBER_PART_ID);
-    window.location.href = '/vocab-training';
+    window.location.href = '/vocab-training-batch';
 }
 
 function goToWordSummary() {

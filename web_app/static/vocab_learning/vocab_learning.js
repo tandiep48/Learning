@@ -516,7 +516,7 @@ function goToTrainer() {
     if (!lessonMeta) return;
     if (lessonMeta.source === 'selection') {
         sessionStorage.setItem('selectedVocabTrainerWords', JSON.stringify(lessonMeta.selected_words || []));
-        window.location.href = '/vocab-training';
+        window.location.href = '/vocab-training-batch';
         return;
     }
     // Deep-link to vocab trainer with URL params so it auto-starts
@@ -525,7 +525,7 @@ function goToTrainer() {
         passage_id: lessonMeta.passage_id
     });
     if (isLessonPartFlow) params.set('flow', 'lesson-part');
-    window.location.href = `/vocab-training?${params.toString()}`;
+    window.location.href = `/vocab-training-batch?${params.toString()}`;
 }
 
 function goToLessonSummary() {

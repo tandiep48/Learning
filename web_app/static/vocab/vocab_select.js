@@ -505,7 +505,7 @@ function startSelectedTraining() {
         return;
     }
     sessionStorage.setItem('selectedVocabTrainerWords', JSON.stringify(selected.map(row => row.word)));
-    window.location.href = '/vocab-training';
+    window.location.href = '/vocab-training-batch';
 }
 
 function openSelectedFlashcards() {

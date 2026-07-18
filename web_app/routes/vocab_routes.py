@@ -1,7 +1,5 @@
 import os
 import sys
-import time
-import random
 import json
 import re
 import subprocess
@@ -16,9 +14,10 @@ from flask_login import login_required, current_user
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from db import (
-    get_db_connection, 
-    insert_learning_progress, 
-    get_unlearned_words_from_db, 
+    get_db_connection,
+    insert_learning_progress,
+    insert_learning_progress_batch,
+    get_unlearned_words_from_db,
     get_unsure_words_from_db, 
     get_hard_semantic_learned_words, 
     get_hard_stroke_learned_words,
@@ -197,38 +196,6 @@ def get_full_lesson_records():
     if not df.empty:
         return df[['word','pinyin','meaning_en','meaning_vn', 'audio_key', 'level']].dropna(subset=['word']).drop_duplicates(subset=['word']).reset_index(drop=True)
     return pd.DataFrame()
-
-def build_vocab_tasks(subset_df):
-    subset_df = subset_df.fillna("")
-    task_types = ["listen", "typing", "meaning", "speaking"]
-    tasks = []
-
-    for _, row in subset_df.iterrows():
-        for t_type in task_types:
-            task = {
-                "word": row["word"],
-                "pinyin": row["pinyin"],
-                "meaning_en": row["meaning_en"],
-                "meaning_vn": row["meaning_vn"],
-                "type": t_type,
-                "audio_key": row.get("audio_key", "")
-            }
-
-            if t_type in ["listen", "meaning"]:
-                lesson_pool = subset_df[subset_df["word"] != row["word"]]["meaning_vn"].dropna().unique().tolist()
-                sample_size = min(3, len(lesson_pool))
-                other_words = random.sample(lesson_pool, sample_size)
-                options = [row["meaning_vn"]] + other_words
-                random.shuffle(options)
-                task["options"] = options
-
-            tasks.append(task)
-
-    random.shuffle(tasks)
-    return tasks
-
-def number_rows_dataframe():
-    return pd.DataFrame([normalize_vocab_row(row) for row in number_vocab_rows(include_all=True)])
 
 def get_records_for_words(words):
     if not words:
@@ -439,6 +406,50 @@ def get_flashcard_words():
         return jsonify({"words": []})
     return jsonify({"words": [normalize_vocab_row(row) for row in subset_df.to_dict("records")]})
 
+@vocab_bp.route('/words', methods=['POST'])
+@login_required
+def resolve_words():
+    """Resolve a selection (explicit words and/or passage_ids) into normalized word rows
+    for the batch vocab trainer. No task generation — the client builds the activities."""
+    data = request.json or {}
+    words = data.get("words") or []
+    passage_ids = list(data.get("passage_ids") or [])
+    single = data.get("passage_id")
+    if single:
+        passage_ids.insert(0, single)
+
+    collected = []
+    seen = set()
+
+    def add(word):
+        word = str(word or "").strip()
+        if word and word not in seen:
+            seen.add(word)
+            collected.append(word)
+
+    if passage_ids:
+        db_conn = get_db_connection()
+        if not db_conn:
+            return jsonify({"error": "Database connection failed."}), 500
+        try:
+            for pid in passage_ids:
+                rows = number_vocab_rows() if is_number_part(pid) else get_passage_vocab(db_conn, pid)
+                for row in rows:
+                    add(row.get("cn"))
+        finally:
+            db_conn.close()
+
+    for word in words:
+        add(word)
+
+    if not collected:
+        return jsonify({"words": []})
+
+    subset_df = get_records_for_words(collected)
+    if subset_df.empty:
+        return jsonify({"words": []})
+    return jsonify({"words": [normalize_vocab_row(row) for row in subset_df.to_dict("records")]})
+
 @vocab_bp.route('/has_history', methods=['GET'])
 @login_required
 def check_has_history():
@@ -519,115 +530,6 @@ def preview_mode():
     word_list = subset_df.to_dict('records')
     return jsonify({"words": word_list})
 
-@vocab_bp.route('/start', methods=['POST'])
-@login_required
-def start_session():
-    data = request.json
-    mode = str(data.get("mode"))
-    
-    subset_words = []
-    
-    if mode == "1":
-        hsk_level = data.get("hsk_level", "H1")
-        # Normalize "H1" to "HSK1" to match database formatting
-        hsk_level = normalize_hsk_level(hsk_level)
-            
-        start_idx = int(data.get("start_idx", 0))
-        end_idx = int(data.get("end_idx", 10))
-        
-        full_lesson_records = get_full_lesson_records()
-        if not full_lesson_records.empty:
-            lesson = full_lesson_records[full_lesson_records['level'] == hsk_level].reset_index(drop=True)
-            subset = lesson.iloc[start_idx:end_idx+1].reset_index(drop=True)
-            subset_words = subset["word"].tolist()
-        
-    elif mode == "7":
-        subset_df = get_records_for_words(data.get("words", []))
-        if subset_df.empty:
-            return jsonify({"error": "No valid words found for this selection."}), 404
-
-        tasks = build_vocab_tasks(subset_df)
-        return jsonify({
-            "session_id": int(time.time() * 1000),
-            "tasks": tasks
-        })
-
-    elif mode == "6" and is_number_part(data.get("passage_id")):
-        tasks = build_vocab_tasks(number_rows_dataframe())
-        return jsonify({
-            "session_id": int(time.time() * 1000),
-            "tasks": tasks
-        })
-
-    else:
-        db_conn = get_db_connection()
-        if not db_conn:
-            return jsonify({"error": "Database connection failed."}), 500
-        
-        if mode == "2":
-            words = get_unlearned_words_from_db(db_conn, current_user.id)
-        elif mode == "3":
-            words = get_unsure_words_from_db(db_conn, current_user.id)
-        elif mode == "4":
-            words = get_hard_semantic_learned_words(db_conn, current_user.id)
-        elif mode == "5":
-            words = get_hard_stroke_learned_words(db_conn, current_user.id)
-        elif mode == "6":
-            passage_id = data.get("passage_id")
-            passage_vocab = number_vocab_rows() if is_number_part(passage_id) else get_passage_vocab(db_conn, passage_id)
-            words = [w["cn"] for w in passage_vocab]
-        elif mode == "8":
-            passage_ids = data.get("passage_ids") or []
-            if not isinstance(passage_ids, list) or not passage_ids:
-                db_conn.close()
-                return jsonify({"error": "passage_ids is required."}), 400
-
-            seen = set()
-            words = []
-            for passage_id in passage_ids:
-                passage_vocab = number_vocab_rows() if is_number_part(passage_id) else get_passage_vocab(db_conn, passage_id)
-                for row in passage_vocab:
-                    word = row.get("cn")
-                    if word and word not in seen:
-                        seen.add(word)
-                        words.append(word)
-        else:
-            db_conn.close()
-            return jsonify({"error": "Invalid mode."}), 400
-            
-        db_conn.close()
-        
-        limit = data.get("limit")
-        if limit is not None and str(limit).isdigit() and int(limit) > 0:
-            words = random.sample(words, min(int(limit), len(words)))
-            
-        subset_words = words
-
-    if not subset_words:
-        return jsonify({"error": "No words found for this selection."}), 404
-        
-    full_lesson_records = get_full_lesson_records()
-    if full_lesson_records.empty:
-        if any(row["word"] in subset_words for row in number_vocab_rows()):
-            full_lesson_records = number_rows_dataframe()
-        else:
-            return jsonify({"error": "No lesson records available."}), 404
-
-    subset_df = full_lesson_records[full_lesson_records["word"].isin(subset_words)].drop_duplicates("word").reset_index(drop=True)
-    missing_number_rows = [
-        normalize_vocab_row(row)
-        for row in number_vocab_rows()
-        if row["word"] in subset_words and row["word"] not in set(subset_df["word"].tolist())
-    ]
-    if missing_number_rows:
-        subset_df = pd.concat([subset_df, pd.DataFrame(missing_number_rows)], ignore_index=True)
-    tasks = build_vocab_tasks(subset_df)
-    
-    return jsonify({
-        "session_id": int(time.time() * 1000),
-        "tasks": tasks
-    })
-
 @vocab_bp.route('/submit', methods=['POST'])
 @login_required
 def submit_progress():
@@ -657,8 +559,49 @@ def submit_progress():
             updated_at=datetime.now()
         )
         db_conn.close()
-        
+
     return jsonify({"status": "success"})
+
+
+@vocab_bp.route('/submit-batch', methods=['POST'])
+@login_required
+def submit_progress_batch():
+    """Insert several vocab_records rows in one request. Used by the batch vocab trainer,
+    which submits a whole group's answers at once instead of one POST per answer."""
+    data = request.json or {}
+    session_id = data.get("session_id")
+    records = data.get("records") or []
+
+    prepared = []
+    if isinstance(records, list):
+        for r in records:
+            if not isinstance(r, dict) or not r.get("word") or not r.get("type"):
+                continue
+            prepared.append({
+                "mode": r.get("type"),
+                "word": r.get("word"),
+                "round_num": r.get("round_num", 1),
+                "game_info": json.dumps(r.get("game_info") or {}, ensure_ascii=False),
+                "user_answer": r.get("user_answer"),
+                "is_correct": r.get("is_correct"),
+                "response_time_ms": r.get("response_time_ms", 0),
+            })
+
+    if not prepared:
+        return jsonify({"status": "success", "inserted": 0})
+
+    db_conn = get_db_connection()
+    if db_conn:
+        insert_learning_progress_batch(
+            conn=db_conn,
+            user_id=current_user.id,
+            session_id=session_id,
+            records=prepared,
+            updated_at=datetime.now(),
+        )
+        db_conn.close()
+
+    return jsonify({"status": "success", "inserted": len(prepared)})
 
 
 @vocab_bp.route('/speaking/score', methods=['POST'])
