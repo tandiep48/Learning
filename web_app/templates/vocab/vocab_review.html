@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="{{ current_lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ t('vocab_review.page_title') }}</title>
+    <link rel="stylesheet" href="/static/shared/styles.css?v=7">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="/static/vocab/vocab_review.css?v=1">
+</head>
+<body class="with-site-nav">
+    {% include 'shared/site_nav.html' %}
+    <div class="app-container">
+        <div class="vocab-top-link">
+            <a href="/">&larr; {{ t('picker.back_to_dashboard') }}</a>
+        </div>
+
+        <div class="review-content-card">
+            <div class="review-header">
+                <div>
+                    <h1 class="review-heading">{{ t('vocab_review.heading') }}</h1>
+                    <p class="review-subtitle">{{ t('vocab_review.subtitle') }}</p>
+                </div>
+                <button id="review-start-btn" class="btn primary review-start-btn" onclick="startReviewTraining()" disabled>
+                    {{ t('vocab_review.start_training', count=0) }}
+                </button>
+            </div>
+
+            <div id="review-state" class="review-state">{{ t('vocab_review.loading') }}</div>
+
+            <div id="review-sections" class="review-sections" style="display:none;">
+                <section class="review-section" data-mode="unlearn">
+                    <div class="review-section-head">
+                        <label class="review-select-all">
+                            <input type="checkbox" class="review-select-all-cb" data-mode="unlearn">
+                            <span>{{ t('vocab_review.select_all') }}</span>
+                        </label>
+                        <h2 class="review-section-title">
+                            {{ t('vocab_review.unlearned_title') }}
+                            <span class="review-section-count" data-mode="unlearn">0</span>
+                        </h2>
+                    </div>
+                    <div class="review-list" data-mode="unlearn"></div>
+                    <div class="review-empty" data-mode="unlearn" style="display:none;">{{ t('vocab_review.empty_unlearned') }}</div>
+                    <button class="btn secondary review-load-more" data-mode="unlearn" style="display:none;">{{ t('vocab_review.load_more') }}</button>
+                </section>
+
+                <section class="review-section" data-mode="unsure">
+                    <div class="review-section-head">
+                        <label class="review-select-all">
+                            <input type="checkbox" class="review-select-all-cb" data-mode="unsure">
+                            <span>{{ t('vocab_review.select_all') }}</span>
+                        </label>
+                        <h2 class="review-section-title">
+                            {{ t('vocab_review.unsure_title') }}
+                            <span class="review-section-count" data-mode="unsure">0</span>
+                        </h2>
+                    </div>
+                    <div class="review-list" data-mode="unsure"></div>
+                    <div class="review-empty" data-mode="unsure" style="display:none;">{{ t('vocab_review.empty_unsure') }}</div>
+                    <button class="btn secondary review-load-more" data-mode="unsure" style="display:none;">{{ t('vocab_review.load_more') }}</button>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/vocab/vocab_review.js?v=1"></script>
+</body>
+</html>
