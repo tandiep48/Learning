@@ -43,6 +43,10 @@
         "continue_subtitle": "Tiếp tục từ nơi bạn đã dừng lại.",
         "continue_lesson": "Tiếp Tục Bài Học",
         "change_lesson": "Đổi Bài Học",
+        "review_kicker": "Ôn Tập",
+        "review_title": "Ôn Tập Từ Vựng",
+        "review_subtitle": "Xem lại những từ bạn chưa thành thạo.",
+        "review_button": "Ôn Tập",
         "vocabulary_kicker": "Từ Vựng",
         "exercise_exam_kicker": "Luyện Tập & Kiểm Tra",
         "lesson_activities": "Hoạt Động Bài Học",
@@ -182,6 +186,20 @@
         "pronunciation_retry": "✗ Hãy thử lại lần sau",
         "stop": "Dừng",
         "scoring": "Đang chấm điểm..."
+    },
+    "vocab_review": {
+        "page_title": "Ôn Tập Từ Vựng",
+        "heading": "Ôn Tập Từ Vựng",
+        "subtitle": "Chọn những từ bạn muốn luyện tập, sau đó bắt đầu.",
+        "start_training": "Bắt đầu ({count})",
+        "loading": "Đang tải từ vựng của bạn...",
+        "load_failed": "Không thể tải từ vựng. Vui lòng thử lại.",
+        "load_more": "Tải thêm",
+        "select_all": "Chọn tất cả",
+        "unlearned_title": "Chưa Học",
+        "unsure_title": "Chưa Chắc",
+        "empty_unlearned": "Không có từ chưa học để ôn tập.",
+        "empty_unsure": "Không có từ chưa chắc để ôn tập."
     },
     "grammar": {
         "page_title": "Ngữ Pháp",
