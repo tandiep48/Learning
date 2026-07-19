@@ -5,16 +5,27 @@
     </section>
 
     <section id="dashboard-content" class="home-dashboard" style="display:none;">
-        <section class="current-lesson-row">
-            <div>
-                <span class="dashboard-kicker">{{ t('dashboard.current_lesson') }}</span>
-                <h1 id="home-lesson-title">{{ t('nav.brand') }}</h1>
-                <p id="home-lesson-subtitle" class="subtitle">{{ t('dashboard.continue_subtitle') }}</p>
-            </div>
-            <div class="current-lesson-actions">
-                <a id="home-continue-link" class="btn primary dashboard-action-link" href="/learning">{{ t('dashboard.continue_lesson') }}</a>
-                <a class="btn secondary dashboard-action-link" href="/learning">{{ t('dashboard.change_lesson') }}</a>
-            </div>
+        <section class="dashboard-top-row">
+            <section class="current-lesson-row">
+                <div>
+                    <span class="dashboard-kicker">{{ t('dashboard.current_lesson') }}</span>
+                    <h1 id="home-lesson-title">{{ t('nav.brand') }}</h1>
+                    <p id="home-lesson-subtitle" class="subtitle">{{ t('dashboard.continue_subtitle') }}</p>
+                </div>
+                <div class="current-lesson-actions">
+                    <a id="home-continue-link" class="btn primary dashboard-action-link" href="/learning">{{ t('dashboard.continue_lesson') }}</a>
+                    <a class="btn secondary dashboard-action-link" href="/learning">{{ t('dashboard.change_lesson') }}</a>
+                </div>
+            </section>
+
+            <section class="review-card">
+                <div>
+                    <span class="dashboard-kicker">{{ t('dashboard.review_kicker') }}</span>
+                    <h2 class="review-card-title">{{ t('dashboard.review_title') }}</h2>
+                    <p class="subtitle">{{ t('dashboard.review_subtitle') }}</p>
+                </div>
+                <a class="btn primary dashboard-action-link" href="/vocab-review">{{ t('dashboard.review_button') }}</a>
+            </section>
         </section>
 
         <section class="dashboard-panel dashboard-recommend-panel">
