@@ -104,6 +104,11 @@ def vocab_page():
 def vocab_training_batch_page():
     return render_template('vocab/vocab_training_batch.html')
 
+@app.route('/vocab-review')
+@login_required
+def vocab_review_page():
+    return render_template('vocab/vocab_review.html')
+
 @app.route('/vocab-learning')
 @login_required
 def vocab_learning_dashboard():
