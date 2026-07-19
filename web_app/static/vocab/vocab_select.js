@@ -381,11 +381,11 @@ function renderVocabTable(rows) {
                     <input type="checkbox" id="select-page-checkbox" onchange="togglePageSelection(this.checked)" title="${t('vocab.select_visible_rows_aria')}">
                 </th>
                 <th class="vocab-tools-col">
-                    <button class="vocab-header-icon-btn" id="table-play-all-btn" onclick="event.stopPropagation(); playAllTableAudio()" title="${t('vocab.play_all_visible_aria')}" aria-label="${t('vocab.play_all_visible_aria')}">
-                        <i class="fa-solid fa-play play-icon" aria-hidden="true"></i>
-                    </button>
                     <button class="vocab-header-icon-btn" id="table-stroke-all-btn" onclick="event.stopPropagation(); strokeOrderAll()" title="${t('vocab.stroke_all_aria')}" aria-label="${t('vocab.stroke_all_aria')}">
                         <i class="fa-solid fa-paintbrush" aria-hidden="true"></i>
+                    </button>
+                    <button class="vocab-header-icon-btn" id="table-play-all-btn" onclick="event.stopPropagation(); playAllTableAudio()" title="${t('vocab.play_all_visible_aria')}" aria-label="${t('vocab.play_all_visible_aria')}">
+                        <i class="fa-solid fa-play play-icon" aria-hidden="true"></i>
                     </button>
                 </th>
                 <th>${renderColumnHeader('cn', t('dashboard.table_character'), 'trainer-vocab-table')}</th>

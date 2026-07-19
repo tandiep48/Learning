@@ -43,6 +43,10 @@
         "continue_subtitle": "Continue where you left off.",
         "continue_lesson": "Continue Lesson",
         "change_lesson": "Change Lesson",
+        "review_kicker": "Review",
+        "review_title": "Review Words",
+        "review_subtitle": "Revisit words you haven't mastered yet.",
+        "review_button": "Review",
         "vocabulary_kicker": "Vocabulary",
         "exercise_exam_kicker": "Exercise & Exam",
         "lesson_activities": "Lesson Activities",
@@ -182,6 +186,20 @@
         "pronunciation_retry": "✗ Try again next time",
         "stop": "Stop",
         "scoring": "Scoring..."
+    },
+    "vocab_review": {
+        "page_title": "Review Words",
+        "heading": "Review Words",
+        "subtitle": "Select words you want to practice, then start the trainer.",
+        "start_training": "Start training ({count})",
+        "loading": "Loading your words...",
+        "load_failed": "Could not load your words. Please try again.",
+        "load_more": "Load more",
+        "select_all": "Select all",
+        "unlearned_title": "Unlearned",
+        "unsure_title": "Unsure",
+        "empty_unlearned": "No unlearned words to review.",
+        "empty_unsure": "No unsure words to review."
     },
     "grammar": {
         "page_title": "Grammar",
