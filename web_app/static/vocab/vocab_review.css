@@ -56,9 +56,7 @@
 /* ── Sections ─────────────────────────────────────────────────────────────────── */
 
 .review-sections {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    display: block;
 }
 
 .review-section-head {
@@ -182,10 +180,4 @@
 .review-load-more {
     margin-top: 10px;
     width: 100%;
-}
-
-@media (max-width: 780px) {
-    .review-sections {
-        grid-template-columns: 1fr;
-    }
 }
