@@ -1717,46 +1717,143 @@ where rn = 1 and successful_modes < 3
 
 def get_unsure_words_from_db(conn, user_id):
     """
-    Returns a list of unsure words that the given user has learned but takes a longer time to answer.
+    Returns learned words the user answers slowly. For each mastered word, response times are
+    z-scored per mode against the baseline of all the user's mastered words on their latest
+    mastery day; words whose average z-score >= 1.0 are "unsure". Only meaningful once the user
+    has mastered >= 50 words — returns [] below that, to keep the baseline stable.
     """
     if not conn:
         return []
 
     query = """
-    WITH learned_words AS (
-        SELECT word
-        FROM vocab_records 
-        WHERE is_correct = true
-          AND user_id = %s
-        GROUP BY word
-        HAVING COUNT(*) >= 3
-    ),
-    stats AS (
-        SELECT a.mode,
-               AVG(a.response_time_ms) AS avg_rt,
-               NULLIF(STDDEV(a.response_time_ms), 0) AS std_rt
-        FROM vocab_records a
-        JOIN learned_words b ON a.word = b.word
-        WHERE a.user_id = %s
-        GROUP BY a.mode
-    )
-    SELECT a.word
-    FROM vocab_records a
-    JOIN learned_words b ON a.word = b.word
-    JOIN stats s ON a.mode = s.mode
-    WHERE a.user_id = %s
-      AND s.std_rt IS NOT NULL AND (a.response_time_ms - s.avg_rt) / s.std_rt > 1.0
-    GROUP BY a.word
-    ORDER BY MAX((a.response_time_ms - s.avg_rt) / s.std_rt) DESC;
+WITH daily_attempts AS (
+    SELECT
+        word,
+        DATE(updated_at) AS attempt_date,
+        COUNT(DISTINCT CASE WHEN is_correct THEN mode END) AS successful_modes
+    FROM vocab_records
+    WHERE user_id = %s
+      AND round_num = 1
+      AND mode IN ('typing', 'listen', 'meaning')
+    GROUP BY word, DATE(updated_at)
+),
+latest_status AS (
+    SELECT
+        word,
+        attempt_date,
+        successful_modes,
+        ROW_NUMBER() OVER (PARTITION BY word ORDER BY attempt_date DESC) AS rn
+    FROM daily_attempts
+),
+learned_words AS (
+    SELECT word, attempt_date
+    FROM latest_status
+    WHERE rn = 1 AND successful_modes = 3
+),
+mastered_count AS (
+    SELECT COUNT(*) AS total_mastered FROM learned_words
+),
+latest_records AS (
+    SELECT v.word, v.mode, v.response_time_ms
+    FROM vocab_records v
+    JOIN learned_words l
+      ON v.word = l.word
+     AND DATE(v.updated_at) = l.attempt_date
+    WHERE v.user_id = %s
+      AND v.round_num = 1
+      AND v.is_correct = true
+      AND v.mode IN ('typing', 'listen', 'meaning')
+),
+stats AS (
+    SELECT
+        mode,
+        AVG(response_time_ms) AS avg_rt,
+        NULLIF(STDDEV(response_time_ms), 0) AS std_rt
+    FROM latest_records
+    GROUP BY mode
+),
+z_scores AS (
+    SELECT
+        lr.word,
+        lr.mode,
+        (lr.response_time_ms - s.avg_rt) / s.std_rt AS z_score
+    FROM latest_records lr
+    JOIN stats s ON lr.mode = s.mode
+    WHERE s.std_rt IS NOT NULL
+)
+SELECT
+    z.word,
+    AVG(z.z_score) AS avg_z_score
+FROM z_scores z
+CROSS JOIN mastered_count mc
+WHERE mc.total_mastered >= 50
+GROUP BY z.word
+HAVING AVG(z.z_score) >= 1.0
+ORDER BY avg_z_score DESC;
     """
     try:
         with conn.cursor() as cur:
-            cur.execute(query, (user_id, user_id, user_id))
+            cur.execute(query, (user_id, user_id))
             rows = cur.fetchall()
             return [row[0] for row in rows]
     except Exception as e:
         print(f"⚠️ Database query failed (get_unsure_words_from_db): {e}")
         return []
+
+def get_review_words(conn, user_id):
+    """
+    Combines unsure + unlearned words into one prioritized review list.
+
+    Tiers:
+      - 'critical'   : word is in BOTH lists (slow AND not fully mastered)
+      - 'unsure'     : mastered but slow to answer
+      - 'incomplete' : not yet mastered across all 3 modes
+
+    Returns a list of {"word": str, "reason": str}, critical first; within each tier the
+    original ordering from the source functions is preserved.
+    """
+    if not conn:
+        return []
+
+    unsure_list = get_unsure_words_from_db(conn, user_id)
+    unlearned_list = get_unlearned_words_from_db(conn, user_id)
+
+    unsure_set = set(unsure_list)
+    unlearned_set = set(unlearned_list)
+
+    seen = set()
+    result = []
+
+    # Pass 1: 'critical' — in both lists (unsure order primary, then any unlearned-first ones)
+    for word in unsure_list:
+        if word in unlearned_set and word not in seen:
+            result.append({"word": word, "reason": "critical"})
+            seen.add(word)
+    for word in unlearned_list:
+        if word in unsure_set and word not in seen:
+            result.append({"word": word, "reason": "critical"})
+            seen.add(word)
+
+    # Pass 2: 'unsure' — slow but fully mastered
+    for word in unsure_list:
+        if word not in seen:
+            result.append({"word": word, "reason": "unsure"})
+            seen.add(word)
+
+    # Pass 3: 'incomplete' — not yet mastered all 3 modes
+    for word in unlearned_list:
+        if word not in seen:
+            result.append({"word": word, "reason": "incomplete"})
+            seen.add(word)
+
+    return result
+
+def get_review_words_flat(conn, user_id):
+    """
+    Same as get_review_words() but returns a plain prioritized list of word strings
+    (critical > unsure > incomplete).
+    """
+    return [entry["word"] for entry in get_review_words(conn, user_id)]
 
 def get_hard_semantic_learned_words(conn, user_id):
     """
