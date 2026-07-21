@@ -123,7 +123,7 @@ const ACTIVITY_TYPES = ['typing', 'listen', 'reading'];
 // Matching config per activity. `db` is the vocab_records mode; the left column is the
 // scored anchor (one record per word), the right column is what gets paired to it.
 const MATCH_CONFIG = {
-    listen:  { db: 'listen',  instruction: 'instruction_match_listen',  leftKind: 'audio', rightKind: 'word' },
+    listen:  { db: 'listen',  instruction: 'instruction_match_listen',  leftKind: 'audio', rightKind: 'meaning' },
     reading: { db: 'meaning', instruction: 'instruction_match_reading', leftKind: 'word',  rightKind: 'meaning' },
 };
 

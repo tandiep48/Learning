@@ -1,84 +1,75 @@
-// Vocab review page — lists the user's Unlearned and Unsure words, lets them select
-// all or some, then hands the selection to the batch vocab trainer.
+// Vocab review page — one combined, priority-ordered list (unsure + unlearned) from
+// /api/vocab/review. The learner selects all or some, then starts the batch trainer.
 
-const REVIEW_MODES = ['unlearn', 'unsure'];
 const PAGE_SIZE = 100;
 
-const selectedWords = new Map();   // word -> row (shared across both sections)
-const sectionState = {};           // mode -> { page, totalPages, rows: [] }
+const selectedWords = new Map();   // word -> row
+let loadedRows = [];               // rows rendered so far
+let page = 1;
+let totalPages = 1;
 let reviewAudio = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.review-select-all-cb').forEach(cb => {
-        cb.addEventListener('change', () => toggleSelectAll(cb.dataset.mode, cb.checked));
-    });
-    document.querySelectorAll('.review-load-more').forEach(btn => {
-        btn.addEventListener('click', () => loadMore(btn.dataset.mode));
-    });
-    loadSections();
+    document.getElementById('review-select-all-cb')?.addEventListener('change', (e) => toggleSelectAll(e.target.checked));
+    document.getElementById('review-load-more')?.addEventListener('click', loadMore);
+    loadReview();
 });
 
-async function loadSections() {
-    setState(t('vocab_review.loading'), true);
+async function loadReview() {
+    setState(t('vocab_review.loading'));
+    let data;
     try {
-        const results = await Promise.all(REVIEW_MODES.map(mode => fetchPage(mode, 1)));
-        REVIEW_MODES.forEach((mode, i) => {
-            const data = results[i];
-            sectionState[mode] = { page: 1, totalPages: data.total_pages || 1, rows: [] };
-            appendRows(mode, data.rows || []);
-        });
+        data = await fetchPage(1);
     } catch (e) {
-        setState(t('vocab_review.load_failed'), false);
+        setState(t('vocab_review.load_failed'));
         return;
     }
+    page = 1;
+    totalPages = data.total_pages || 1;
+    appendRows(data.rows || []);
 
     document.getElementById('review-state').style.display = 'none';
     document.getElementById('review-sections').style.display = '';
-    updateStartButton();
+    updateUI();
 }
 
-function fetchPage(mode, page) {
-    const url = `/api/vocab/table?mode=${encodeURIComponent(mode)}&page=${page}&page_size=${PAGE_SIZE}`;
-    return fetch(url).then(r => {
+function fetchPage(pageNum) {
+    return fetch(`/api/vocab/review?page=${pageNum}&page_size=${PAGE_SIZE}`).then(r => {
         if (!r.ok) throw new Error('load failed');
         return r.json();
     });
 }
 
-async function loadMore(mode) {
-    const state = sectionState[mode];
-    if (!state || state.page >= state.totalPages) return;
-    const btn = document.querySelector(`.review-load-more[data-mode="${mode}"]`);
+async function loadMore() {
+    if (page >= totalPages) return;
+    const btn = document.getElementById('review-load-more');
     if (btn) btn.disabled = true;
     try {
-        const data = await fetchPage(mode, state.page + 1);
-        state.page += 1;
-        state.totalPages = data.total_pages || state.totalPages;
-        appendRows(mode, data.rows || []);
+        const data = await fetchPage(page + 1);
+        page += 1;
+        totalPages = data.total_pages || totalPages;
+        appendRows(data.rows || []);
     } catch (e) {
         /* leave the button for a retry */
     }
     if (btn) btn.disabled = false;
+    updateUI();
 }
 
 // ── Rendering ────────────────────────────────────────────────────────────────
 
-function appendRows(mode, rows) {
-    const state = sectionState[mode];
-    const list = document.querySelector(`.review-list[data-mode="${mode}"]`);
-    const emptyEl = document.querySelector(`.review-empty[data-mode="${mode}"]`);
-
+function appendRows(rows) {
+    const list = document.getElementById('review-list');
     rows.forEach(row => {
         if (!row || !row.word) return;
-        state.rows.push(row);
-        list.appendChild(buildRow(mode, row));
+        loadedRows.push(row);
+        list.appendChild(buildRow(row));
     });
-
-    if (emptyEl) emptyEl.style.display = state.rows.length ? 'none' : 'block';
-    updateSectionUI(mode);
+    const emptyEl = document.getElementById('review-empty');
+    if (emptyEl) emptyEl.style.display = loadedRows.length ? 'none' : 'block';
 }
 
-function buildRow(mode, row) {
+function buildRow(row) {
     const item = document.createElement('label');
     item.className = 'review-item';
     item.dataset.word = row.word;
@@ -97,7 +88,7 @@ function buildRow(mode, row) {
     `;
 
     const cb = item.querySelector('.review-item-cb');
-    cb.addEventListener('change', () => setSelected(row, cb.checked, mode));
+    cb.addEventListener('change', () => setSelected(row, cb.checked));
 
     const audio = item.querySelector('.review-audio-btn');
     if (audio) {
@@ -111,52 +102,42 @@ function buildRow(mode, row) {
 
 // ── Selection ────────────────────────────────────────────────────────────────
 
-function setSelected(row, isSelected, mode) {
+function setSelected(row, isSelected) {
     if (isSelected) selectedWords.set(row.word, row);
     else selectedWords.delete(row.word);
-    updateSectionUI(mode);
-    updateStartButton();
+    updateUI();
 }
 
-function toggleSelectAll(mode, checked) {
-    const state = sectionState[mode];
-    if (!state) return;
-    state.rows.forEach(row => {
+function toggleSelectAll(checked) {
+    loadedRows.forEach(row => {
         if (checked) selectedWords.set(row.word, row);
         else selectedWords.delete(row.word);
     });
-    // Reflect on the visible checkboxes for this section.
-    document.querySelectorAll(`.review-list[data-mode="${mode}"] .review-item-cb`).forEach(cb => {
-        cb.checked = checked;
-    });
-    updateSectionUI(mode);
-    updateStartButton();
+    document.querySelectorAll('#review-list .review-item-cb').forEach(cb => { cb.checked = checked; });
+    updateUI();
 }
 
-function updateSectionUI(mode) {
-    const state = sectionState[mode];
-    if (!state) return;
-    const countEl = document.querySelector(`.review-section-count[data-mode="${mode}"]`);
-    if (countEl) countEl.textContent = state.rows.length;
+function updateUI() {
+    const countEl = document.getElementById('review-count');
+    if (countEl) countEl.textContent = loadedRows.length;
 
-    const selectAll = document.querySelector(`.review-select-all-cb[data-mode="${mode}"]`);
+    const selectAll = document.getElementById('review-select-all-cb');
     if (selectAll) {
-        const selectedInSection = state.rows.filter(r => selectedWords.has(r.word)).length;
-        selectAll.checked = state.rows.length > 0 && selectedInSection === state.rows.length;
-        selectAll.indeterminate = selectedInSection > 0 && selectedInSection < state.rows.length;
-        selectAll.disabled = state.rows.length === 0;
+        const selectedCount = loadedRows.filter(r => selectedWords.has(r.word)).length;
+        selectAll.checked = loadedRows.length > 0 && selectedCount === loadedRows.length;
+        selectAll.indeterminate = selectedCount > 0 && selectedCount < loadedRows.length;
+        selectAll.disabled = loadedRows.length === 0;
     }
 
-    const loadMoreBtn = document.querySelector(`.review-load-more[data-mode="${mode}"]`);
-    if (loadMoreBtn) loadMoreBtn.style.display = state.page < state.totalPages ? '' : 'none';
-}
+    const loadMoreBtn = document.getElementById('review-load-more');
+    if (loadMoreBtn) loadMoreBtn.style.display = page < totalPages ? '' : 'none';
 
-function updateStartButton() {
-    const btn = document.getElementById('review-start-btn');
-    if (!btn) return;
-    const count = selectedWords.size;
-    btn.textContent = t('vocab_review.start_training', { count });
-    btn.disabled = count === 0;
+    const startBtn = document.getElementById('review-start-btn');
+    if (startBtn) {
+        const count = selectedWords.size;
+        startBtn.textContent = t('vocab_review.start_training', { count });
+        startBtn.disabled = count === 0;
+    }
 }
 
 function startReviewTraining() {
@@ -178,12 +159,12 @@ function playAudio(audioKey) {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function setState(message, loading) {
+function setState(message) {
     const el = document.getElementById('review-state');
-    if (!el) return;
-    el.style.display = '';
-    el.textContent = message;
-    el.classList.toggle('is-loading', !!loading);
+    if (el) {
+        el.style.display = '';
+        el.textContent = message;
+    }
     document.getElementById('review-sections').style.display = 'none';
 }
 
