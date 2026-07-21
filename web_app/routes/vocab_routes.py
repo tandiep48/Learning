@@ -18,7 +18,8 @@ from db import (
     insert_learning_progress,
     insert_learning_progress_batch,
     get_unlearned_words_from_db,
-    get_unsure_words_from_db, 
+    get_unsure_words_from_db,
+    get_review_words_flat,
     get_hard_semantic_learned_words, 
     get_hard_stroke_learned_words,
     get_course_vocab,
@@ -449,6 +450,41 @@ def resolve_words():
     if subset_df.empty:
         return jsonify({"words": []})
     return jsonify({"words": [normalize_vocab_row(row) for row in subset_df.to_dict("records")]})
+
+@vocab_bp.route('/review', methods=['GET'])
+@login_required
+def get_review_list():
+    """Combined prioritized review list (unsure + unlearned) as normalized word rows for the
+    review page. Order follows get_review_words_flat: critical > unsure > incomplete."""
+    page = max(1, int(request.args.get("page", 1)))
+    page_size = min(200, max(5, int(request.args.get("page_size", 100))))
+
+    empty = {"rows": [], "page": 1, "page_size": page_size, "total": 0, "total_pages": 1}
+
+    db_conn = get_db_connection()
+    if not db_conn:
+        return jsonify({"error": "Database connection failed."}), 500
+    try:
+        words = get_review_words_flat(db_conn, current_user.id)
+    finally:
+        db_conn.close()
+
+    if not words:
+        return jsonify(empty)
+
+    subset_df = get_records_for_words(words)
+    if subset_df.empty:
+        return jsonify(empty)
+
+    rows = [normalize_vocab_row(row) for row in subset_df.to_dict("records")]
+    page_rows, total, total_pages, page = paginate_rows(rows, page, page_size)
+    return jsonify({
+        "rows": page_rows,
+        "page": page,
+        "page_size": page_size,
+        "total": total,
+        "total_pages": total_pages
+    })
 
 @vocab_bp.route('/has_history', methods=['GET'])
 @login_required
