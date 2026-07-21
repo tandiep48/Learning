@@ -170,7 +170,7 @@
         "activity_typing": "Typing",
         "activity_listen": "Listening",
         "activity_reading": "Reading",
-        "instruction_match_listen": "Play each audio and match it to the correct word:",
+        "instruction_match_listen": "Play each audio and match it to the correct meaning:",
         "instruction_match_reading": "Match each word to its meaning:",
         "check": "Check",
         "instruction_meaning": "What is the meaning of this word?",
@@ -196,10 +196,8 @@
         "load_failed": "Could not load your words. Please try again.",
         "load_more": "Load more",
         "select_all": "Select all",
-        "unlearned_title": "Unlearned",
-        "unsure_title": "Unsure",
-        "empty_unlearned": "No unlearned words to review.",
-        "empty_unsure": "No unsure words to review."
+        "list_title": "Words to review",
+        "empty": "Nothing to review right now."
     },
     "grammar": {
         "page_title": "Grammar",

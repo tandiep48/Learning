@@ -170,7 +170,7 @@
         "activity_typing": "Đánh máy",
         "activity_listen": "Nghe",
         "activity_reading": "Đọc",
-        "instruction_match_listen": "Phát từng âm thanh và ghép với từ đúng:",
+        "instruction_match_listen": "Phát từng âm thanh và ghép với nghĩa đúng:",
         "instruction_match_reading": "Ghép mỗi từ với nghĩa của nó:",
         "check": "Kiểm tra",
         "instruction_meaning": "Nghĩa của từ này là gì?",
@@ -196,10 +196,8 @@
         "load_failed": "Không thể tải từ vựng. Vui lòng thử lại.",
         "load_more": "Tải thêm",
         "select_all": "Chọn tất cả",
-        "unlearned_title": "Chưa Học",
-        "unsure_title": "Chưa Chắc",
-        "empty_unlearned": "Không có từ chưa học để ôn tập.",
-        "empty_unsure": "Không có từ chưa chắc để ôn tập."
+        "list_title": "Từ cần ôn tập",
+        "empty": "Hiện không có từ nào để ôn tập."
     },
     "grammar": {
         "page_title": "Ngữ Pháp",
