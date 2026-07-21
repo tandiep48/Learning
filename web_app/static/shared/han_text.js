@@ -1,5 +1,9 @@
 (function () {
-    const HAN_TEXT_RE = /([\u3000-\u303f\uff00-\uff65]*[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff][\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\u3000-\u303f\uff00-\uff65]*)/g;
+    // A run is one or more Han ideographs plus adjacent CJK punctuation/fullwidth chars.
+    // ASCII digits (0-9) and spaces are included as "surrounding" chars so numbers embedded in
+    // Chinese text (e.g. 9\u70b925, 300 \u5143) get sized with the hanzi. A run still requires at least
+    // one ideograph, so standalone Latin-context numbers (1. 2.) are left untouched.
+    const HAN_TEXT_RE = /([\u3000-\u303f\uff00-\uff65 0-9]*[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff][\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\u3000-\u303f\uff00-\uff65 0-9]*)/g;
     const SIZED_CLASS = 'hsk-sized-han';
     const HAN_CLASS = 'han-text';
     const WRAPPED_ATTR = 'data-han-text';
