@@ -12,7 +12,7 @@
         window.multiMode = {{ 'true' if multi_mode else 'false' }};
     </script>
     <link rel="stylesheet" href="/static/shared/styles.css?v=7">
-    <link rel="stylesheet" href="/static/practice/practice.css?v=11">
+    <link rel="stylesheet" href="/static/practice/practice.css?v=12">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 <body class="with-site-nav practice-page">
@@ -55,14 +55,11 @@
                 <button class="p-btn p-btn-nav" id="btn-prev" onclick="goPrevGroup()" style="display:none">
                     ← {{ t('practice.previous') }}
                 </button>
-                <button class="p-btn p-btn-skip" id="btn-skip" onclick="skipGroup()">
-                    {{ t('practice.skip') }}
-                </button>
                 <button class="p-btn p-btn-check" id="btn-check" onclick="checkAnswers()" disabled>
                     {{ t('practice.check') }}
                 </button>
                 <button class="p-btn p-btn-nav" id="btn-next" onclick="goNextGroup()" style="display:none">
-                    {{ t('reading.next') }} →
+                    {{ t('practice.skip') }} →
                 </button>
                 <button class="p-btn p-btn-finish" id="btn-finish" onclick="finishPractice()" style="display:none">
                     {{ t('practice.finish') }}
@@ -97,6 +94,7 @@
 
     <audio id="audio-player" preload="auto"></audio>
     <script src="/static/shared/han_text.js?v=4"></script>
-    <script src="/static/practice/practice.js?v=12"></script>
+    <script src="/static/practice/practice_engine.js?v=1"></script>
+    <script src="/static/practice/practice.js?v=14"></script>
 </body>
 </html>
