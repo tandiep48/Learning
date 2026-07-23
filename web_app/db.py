@@ -1938,6 +1938,27 @@ def get_passages_summary(conn, hsk_level=None):
         rows = cur.fetchall()
         return [{"passage_id": r[0], "hsk_level": r[1], "line_count": r[2]} for r in rows]
 
+def get_lesson_translations(conn, hsk_level, lesson):
+    """Return every translation row for one lesson, e.g. HSK1 + lesson 2 -> 'H1_2_%'.
+    Ordered by the trailing index numerically so H1_2_10 follows H1_2_9, not H1_2_1."""
+    if not conn:
+        return []
+    digits = "".join(ch for ch in str(hsk_level or "") if ch.isdigit())
+    lesson_num = "".join(ch for ch in str(lesson or "") if ch.isdigit())
+    if not digits or not lesson_num:
+        return []
+    prefix = f"H{digits}_{lesson_num}_"
+    query = """
+        SELECT translation_id, cn, vn, en
+        FROM translation
+        WHERE translation_id LIKE %s
+        ORDER BY (split_part(translation_id, '_', 3))::int
+    """
+    with conn.cursor() as cur:
+        cur.execute(query, (prefix + "%",))
+        rows = cur.fetchall()
+        return [{"translation_id": r[0], "cn": r[1], "vn": r[2], "en": r[3]} for r in rows]
+
 def get_passage_content(conn, passage_id):
     if not conn: return None
     with conn.cursor() as cur:
