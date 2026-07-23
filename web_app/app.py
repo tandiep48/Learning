@@ -16,6 +16,7 @@ from routes.passage_crud_routes import passage_crud_bp
 from routes.passage_vocab_crud_routes import passage_vocab_crud_bp
 from routes.user_crud_routes import user_crud_bp
 from routes.question_crud_routes import question_crud_bp
+from routes.translation_routes import translation_bp
 from competition_socket import init_competition_socket
 from service.i18n_service import get_current_lang, get_translations, t as i18n_t, SUPPORTED_LANGUAGES
 from db import get_db_connection, update_user_ui_language
@@ -49,6 +50,7 @@ app.register_blueprint(passage_crud_bp)
 app.register_blueprint(passage_vocab_crud_bp)
 app.register_blueprint(user_crud_bp)
 app.register_blueprint(question_crud_bp)
+app.register_blueprint(translation_bp)
 init_competition_socket(socketio)
 
 GCS_BUCKET_URL = os.getenv('GCS_BUCKET_URL', '')
@@ -119,6 +121,11 @@ def vocab_learning_dashboard():
 def learning_page():
     return render_template('learning/learning.html')
 
+@app.route('/translation')
+@login_required
+def translation_page():
+    return render_template('translation/translation.html')
+
 @app.route('/grammar')
 @login_required
 def grammar_page():
@@ -181,14 +188,14 @@ def practice_page(number, lesson_id):
     category = request.args.get('category', 'practice')
     if category not in ('practice', 'exam'):
         category = 'practice'
-    return render_template('practice/practice.html', number=number, lesson_id=lesson_id, category=category)
+    return render_template('practice/practice_standard.html', number=number, lesson_id=lesson_id, category=category)
 
 @app.route('/practice/<int:number>/<lesson_id>/<path:progress>')
 @login_required
 def practice_progress_group(number, lesson_id, progress):
-    """Deep-link: opens practice.html scoped to a specific progress group."""
+    """Deep-link: opens practice_standard.html scoped to a specific progress group."""
     category = request.args.get('category', 'practice')
-    return render_template('practice/practice.html', number=number, lesson_id=lesson_id,
+    return render_template('practice/practice_standard.html', number=number, lesson_id=lesson_id,
                            progress_filter=progress, category=category)
 
 @app.route('/practice/multi')

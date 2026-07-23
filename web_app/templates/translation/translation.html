@@ -3,32 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ t('grammar.page_title') }}</title>
+    <title>{{ t('translation.page_title') }}</title>
     <link rel="stylesheet" href="/static/shared/styles.css?v=7">
     <link rel="stylesheet" href="/static/shared/passage_picker.css?v=999">
-    <link rel="stylesheet" href="/static/grammar/grammar.css?v=1000">
+    <link rel="stylesheet" href="/static/translation/translation.css?v=3">
     <link rel="stylesheet" href="/static/shared/sidebar.css?v=5">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 <body class="with-site-nav">
     {% include 'shared/site_nav.html' %}
     {% include 'shared/sidebar.html' %}
-        <div class="app-container grammar-container">
+        <div class="app-container translation-container">
             {% include 'shared/passage_picker.html' %}
 
             <section id="screen-loading" class="screen">
                 <div class="loader"></div>
-                <p>{{ t('grammar.loading') }}</p>
+                <p>{{ t('translation.loading') }}</p>
             </section>
 
-            <section id="screen-grammar" class="screen">
-                <div class="grammar-topbar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <div id="grammar-breadcrumb" style="margin-bottom: 0;"></div>
-                    <button class="btn primary grammar-finish-btn" onclick="goBackToPartSelection()" style="padding: 8px 16px; min-height: auto; flex-direction: row;">
-                        {{ t('grammar.finish') }}
+            <section id="screen-translation" class="screen">
+                <div class="translation-topbar">
+                    <div id="translation-breadcrumb"></div>
+                    <button class="btn primary translation-finish-btn" onclick="goBackToPartSelection()">
+                        {{ t('translation.back') }}
                     </button>
                 </div>
-                <div id="grammar-body" class="grammar-body"></div>
+
+                <div id="translation-empty" class="translation-state" hidden>
+                    <p>{{ t('translation.empty') }}</p>
+                </div>
+
+                <div id="translation-list" class="translation-list"></div>
             </section>
         </div>
     </div><!-- /.page-main -->
@@ -36,7 +41,7 @@
 
     <script src="/static/shared/passage_picker.js?v=15"></script>
     <script src="/static/shared/passage_label.js"></script>
-    <script src="/static/grammar/grammar.js?v=1000"></script>
+    <script src="/static/translation/translation.js?v=3"></script>
     <script src="/static/shared/sidebar.js?v=8"></script>
 </body>
 </html>

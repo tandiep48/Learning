@@ -152,7 +152,20 @@
         "words_label": "Words",
         "lesson_progress_label": "Lesson",
         "vocab_trainer_btn": "Vocab Trainer",
-        "lesson_trainer_btn": "Lesson Trainer"
+        "lesson_trainer_btn": "Lesson Trainer",
+        "translation_btn": "Translation",
+        "grammar_btn": "Grammar"
+    },
+    "translation": {
+        "page_title": "Translation",
+        "lesson_label": "Lesson",
+        "loading": "Loading translations...",
+        "empty": "No translations found for this lesson.",
+        "failed_load": "Failed to load translations.",
+        "input_placeholder": "Type the Chinese here",
+        "reveal": "Show answer",
+        "hide": "Hide answer",
+        "back": "Back"
     },
     "vocab_trainer": {
         "page_title": "Vocabulary Training",
@@ -496,6 +509,7 @@
     "practice": {
         "loading": "Loading practice…",
         "check": "Check",
+        "all_questions": "All Questions",
         "complete_title": "Practice Complete!",
         "set_label": "Practice Set",
         "correct_answers": "Correct answers",

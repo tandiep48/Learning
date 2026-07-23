@@ -13,11 +13,12 @@
     </script>
     <link rel="stylesheet" href="/static/shared/styles.css?v=7">
     <link rel="stylesheet" href="/static/practice/practice.css?v=12">
+    <link rel="stylesheet" href="/static/practice/practice_standard.css?v=1">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 <body class="with-site-nav practice-page">
     {% include 'shared/site_nav.html' %}
-    <div class="practice-shell" id="practice-shell">
+    <div class="practice-shell ps-shell" id="practice-shell">
 
         <!-- LOADING -->
         <div class="p-screen active" id="screen-loading">
@@ -42,28 +43,32 @@
                 </div>
             </div>
 
-            <!-- Skill Tag -->
-            <div class="p-skill-tag" id="skill-tag">{{ t('recommend.listening') }}</div>
+            <div class="ps-body">
+                <!-- Question Sidebar -->
+                <aside class="ps-sidebar">
+                    <div class="ps-sidebar-title">{{ t('practice.all_questions') }}</div>
+                    <div class="ps-sidebar-list" id="ps-sidebar-list"></div>
+                </aside>
 
-            <!-- Question Card Area -->
-            <div class="p-card" id="question-card">
-                <!-- Dynamically rendered -->
-            </div>
+                <div class="ps-main">
+                    <!-- Skill Tag -->
+                    <div class="p-skill-tag" id="skill-tag">{{ t('recommend.listening') }}</div>
 
-            <!-- Bottom Nav -->
-            <div class="p-nav">
-                <button class="p-btn p-btn-nav" id="btn-prev" onclick="goPrevGroup()" style="display:none">
-                    ← {{ t('practice.previous') }}
-                </button>
-                <button class="p-btn p-btn-check" id="btn-check" onclick="checkAnswers()" disabled>
-                    {{ t('practice.check') }}
-                </button>
-                <button class="p-btn p-btn-nav" id="btn-next" onclick="goNextGroup()" style="display:none">
-                    {{ t('practice.skip') }} →
-                </button>
-                <button class="p-btn p-btn-finish" id="btn-finish" onclick="finishPractice()" style="display:none">
-                    {{ t('practice.finish') }}
-                </button>
+                    <!-- Question Card Area -->
+                    <div class="p-card" id="question-card">
+                        <!-- Dynamically rendered -->
+                    </div>
+
+                    <!-- Bottom Nav -->
+                    <div class="p-nav">
+                        <button class="p-btn p-btn-check" id="btn-check" onclick="checkAnswers()" disabled>
+                            {{ t('practice.check') }}
+                        </button>
+                        <button class="p-btn p-btn-finish" id="btn-finish" onclick="finishPractice()" style="display:none">
+                            {{ t('practice.finish') }}
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -95,6 +100,6 @@
     <audio id="audio-player" preload="auto"></audio>
     <script src="/static/shared/han_text.js?v=4"></script>
     <script src="/static/practice/practice_engine.js?v=1"></script>
-    <script src="/static/practice/practice.js?v=14"></script>
+    <script src="/static/practice/practice_standard.js?v=1"></script>
 </body>
 </html>

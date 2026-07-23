@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (path.includes('reading')) currentDomain = 'lesson';
     else if (path.includes('vocab-learning')) currentDomain = 'vocab';
     else if (path.includes('grammar')) currentDomain = 'grammar';
+    else if (path.includes('translation')) currentDomain = 'translation';
 
     // Highlight current domain button
     if (currentDomain) {
@@ -63,6 +64,8 @@ function navigateToDomain(domain) {
         url = `/vocab-learning?passage_id=${encodeURIComponent(sidebarPassageId)}&flow=lesson-part`;
     } else if (domain === 'grammar') {
         url = `/grammar?passage_id=${encodeURIComponent(sidebarPassageId)}&flow=lesson-part`;
+    } else if (domain === 'translation') {
+        url = `/translation?passage_id=${encodeURIComponent(sidebarPassageId)}&flow=lesson-part`;
     }
     window.location.href = url;
 }
