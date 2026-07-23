@@ -288,13 +288,23 @@ const Picker = {
             container.appendChild(btn);
         });
 
-        // Treat translation as its own part: an extra item below the part list.
+        // Grammar and Translation are lesson-wide domains — offer them as extra
+        // items below the part list, opened via the shared sidebar flow.
+        const grammarBtn = document.createElement('div');
+        grammarBtn.className = 'part-list-item part-list-item-grammar';
+        grammarBtn.innerHTML = `<div class="part-list-title">${this.escapeHtml(t('picker.grammar_btn'))}</div>`;
+        grammarBtn.addEventListener('click', () => {
+            this.hide();
+            this.openLessonDomain(lessonNum, 'grammar');
+        });
+        container.appendChild(grammarBtn);
+
         const translationBtn = document.createElement('div');
         translationBtn.className = 'part-list-item part-list-item-translation';
         translationBtn.innerHTML = `<div class="part-list-title">${this.escapeHtml(t('picker.translation_btn'))}</div>`;
         translationBtn.addEventListener('click', () => {
             this.hide();
-            this.openLessonTranslation(lessonNum);
+            this.openLessonDomain(lessonNum, 'translation');
         });
         container.appendChild(translationBtn);
     },
@@ -338,12 +348,17 @@ const Picker = {
         });
     },
 
-    openLessonTranslation(lessonNum) {
-        const params = new URLSearchParams({
-            hsk_level: this.currentHskLevel || '',
-            lesson: lessonNum,
-        });
-        window.location.href = `/translation?${params.toString()}`;
+    // Grammar/Translation are lesson-wide, reached via any part's id + the
+    // lesson-part flow so the shared sidebar populates. Use a synthetic first
+    // part (H<level>_<lesson>_1) — the exact part index doesn't matter.
+    openLessonDomain(lessonNum, domain) {
+        const digits = String(this.currentHskLevel || '').replace(/\D/g, '');
+        if (!digits || !lessonNum) {
+            window.location.href = '/learning';
+            return;
+        }
+        const passageId = `H${digits}_${lessonNum}_1`;
+        window.location.href = `/${domain}?passage_id=${encodeURIComponent(passageId)}&flow=lesson-part`;
     },
 
     startLessonWideVocabTrainer(lessonNum, parts) {
