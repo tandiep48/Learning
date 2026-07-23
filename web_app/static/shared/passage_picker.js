@@ -287,6 +287,16 @@ const Picker = {
             });
             container.appendChild(btn);
         });
+
+        // Treat translation as its own part: an extra item below the part list.
+        const translationBtn = document.createElement('div');
+        translationBtn.className = 'part-list-item part-list-item-translation';
+        translationBtn.innerHTML = `<div class="part-list-title">${this.escapeHtml(t('picker.translation_btn'))}</div>`;
+        translationBtn.addEventListener('click', () => {
+            this.hide();
+            this.openLessonTranslation(lessonNum);
+        });
+        container.appendChild(translationBtn);
     },
 
     hideLessonActionCard() {
@@ -326,6 +336,14 @@ const Picker = {
         actionCard.querySelector('[data-action="lesson"]')?.addEventListener('click', () => {
             if (canStartLesson) this.startLessonWideLessonTrainer(lessonNum, lessonTrainerParts);
         });
+    },
+
+    openLessonTranslation(lessonNum) {
+        const params = new URLSearchParams({
+            hsk_level: this.currentHskLevel || '',
+            lesson: lessonNum,
+        });
+        window.location.href = `/translation?${params.toString()}`;
     },
 
     startLessonWideVocabTrainer(lessonNum, parts) {
