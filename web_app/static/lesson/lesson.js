@@ -264,7 +264,7 @@ function setupReorder(task) {
                 const idx = currentReorderTokens.indexOf(token);
                 if (idx > -1) currentReorderTokens.splice(idx, 1);
             }
-            if (answersMatch(currentReorderTokens.join(''), task.correct_answer)) {
+            if (reorderMatches(currentReorderTokens, task.tokens)) {
                 submitReorder();
             }
         };
@@ -497,11 +497,23 @@ function answersMatch(a, b) {
     return normalizeAnswer(a) === normalizeAnswer(b);
 }
 
+// Reorder answers were compared as one concatenated string, which is fragile for long
+// sentences (a single normalized blob can mis-compare on multi-token / astral-plane
+// characters). Compare token-by-token in order instead: same length, and each chip
+// normalizes equal to the expected token at that position.
+function reorderMatches(userTokens, correctTokens) {
+    if (!Array.isArray(userTokens) || !Array.isArray(correctTokens)) return false;
+    if (userTokens.length !== correctTokens.length) return false;
+    return correctTokens.every((token, i) => normalizeAnswer(userTokens[i]) === normalizeAnswer(token));
+}
+
 async function checkAnswer(task, userAnswer, correctAnswer, element) {
     if (answerSubmitted) return;
     answerSubmitted = true;
     const responseTime = Date.now() - taskStartTime;
-    const isCorrect = answersMatch(userAnswer, correctAnswer);
+    const isCorrect = task.type === "reorder"
+        ? reorderMatches(currentReorderTokens, task.tokens)
+        : answersMatch(userAnswer, correctAnswer);
 
     if (element) {
         element.style.transition = "background-color 0.3s, color 0.3s";
