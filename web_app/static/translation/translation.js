@@ -1,8 +1,43 @@
 // Lesson translation page: show each sentence's meaning (in the UI language) with an
 // input for the learner to type the Chinese, plus a per-row reveal of the answer.
+// Mirrors the grammar page: reached with a passage_id, driven by the shared picker
+// and universal sidebar. Content is lesson-wide (all H<level>_<lesson>_* sentences).
 
-function getParam(name) {
-    return new URLSearchParams(window.location.search).get(name);
+let currentPassageId = null;
+let isLessonPartFlow = false;
+
+document.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    const autoPassage = params.get('passage_id');
+    isLessonPartFlow = params.get('flow') === 'lesson-part';
+
+    Picker.init((passage) => {
+        loadTranslation(passage.passage_id);
+    }, 'Translation', !autoPassage);
+
+    const backLink = document.getElementById('picker-back-link');
+    if (backLink) {
+        backLink.href = '/learning';
+        backLink.innerHTML = '&larr; Back to Learning';
+    }
+
+    if (autoPassage) {
+        loadTranslation(autoPassage);
+    }
+});
+
+function switchScreen(screenId) {
+    document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.picker-screen').forEach(el => el.classList.remove('active'));
+    document.getElementById(screenId).classList.add('active');
+}
+
+function goBackToPartSelection() {
+    if (currentPassageId) {
+        window.location.href = `/learning?passage_id=${encodeURIComponent(currentPassageId)}&show_parts=true`;
+    } else {
+        window.location.href = '/learning';
+    }
 }
 
 function escapeHtml(value) {
@@ -21,21 +56,12 @@ function meaningFor(row) {
     return primary || row.en || row.vn || '';
 }
 
-function goBackToLearning() {
-    // Return to this lesson's part list. /learning?passage_id=<id>&show_parts=true
-    // deep-links into the part picker; it only needs level + lesson, so any part
-    // index works (H<level>_<lesson>_1).
-    const hskLevel = getParam('hsk_level');
-    const lesson = getParam('lesson');
-    const digits = String(hskLevel || '').replace(/\D/g, '');
-    const lessonNum = String(lesson || '').replace(/\D/g, '');
-
-    if (digits && lessonNum) {
-        const passageId = `H${digits}_${lessonNum}_1`;
-        window.location.href = `/learning?passage_id=${encodeURIComponent(passageId)}&show_parts=true`;
-        return;
-    }
-    window.location.href = '/learning';
+// Derive HSK level + lesson from a passage_id like H1_2_1 -> { hskLevel: 'HSK1', lesson: '2' }.
+function lessonKeyFrom(passageId) {
+    const parts = String(passageId || '').split('_');
+    const digits = (parts[0] || '').replace(/\D/g, '');
+    const lesson = parts.length >= 2 ? (parts[1] || '').replace(/\D/g, '') : '';
+    return { hskLevel: digits ? `HSK${digits}` : '', lesson };
 }
 
 function renderRows(rows) {
@@ -68,33 +94,32 @@ function renderRows(rows) {
     });
 }
 
-async function loadTranslations() {
-    const hskLevel = getParam('hsk_level');
-    const lesson = getParam('lesson');
+async function loadTranslation(passageId) {
+    currentPassageId = passageId;
+    switchScreen('screen-loading');
 
-    const loadingEl = document.getElementById('translation-loading');
+    if (window.buildBreadcrumb) buildBreadcrumb('translation-breadcrumb', passageId);
+
+    const { hskLevel, lesson } = lessonKeyFrom(passageId);
     const emptyEl = document.getElementById('translation-empty');
-    const subtitleEl = document.getElementById('translation-subtitle');
-
-    if (subtitleEl && hskLevel && lesson) {
-        subtitleEl.textContent = `${hskLevel} — ${t('translation.lesson_label')} ${lesson}`;
-    }
+    emptyEl.hidden = true;
 
     try {
         const res = await fetch(`/api/translation/lesson?hsk_level=${encodeURIComponent(hskLevel)}&lesson=${encodeURIComponent(lesson)}`);
         const data = await res.json();
-        loadingEl.hidden = true;
 
         const rows = data.translations || [];
         if (!rows.length) {
+            document.getElementById('translation-list').innerHTML = '';
             emptyEl.hidden = false;
-            return;
+        } else {
+            renderRows(rows);
         }
-        renderRows(rows);
+        switchScreen('screen-translation');
     } catch (e) {
         console.error(e);
-        loadingEl.innerHTML = `<p style="color:var(--danger);">${t('translation.failed_load')}</p>`;
+        document.getElementById('translation-list').innerHTML =
+            `<p style="color:var(--danger); padding:20px;">${t('translation.failed_load')}</p>`;
+        switchScreen('screen-translation');
     }
 }
-
-document.addEventListener('DOMContentLoaded', loadTranslations);
