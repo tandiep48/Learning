@@ -153,7 +153,8 @@
         "lesson_progress_label": "Bài Học",
         "vocab_trainer_btn": "Luyện Từ Vựng",
         "lesson_trainer_btn": "Luyện Bài Học",
-        "translation_btn": "Dịch"
+        "translation_btn": "Dịch",
+        "grammar_btn": "Ngữ Pháp"
     },
     "translation": {
         "page_title": "Dịch",
