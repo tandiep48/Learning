@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="{{ current_lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ t('translation.page_title') }}</title>
+    <link rel="stylesheet" href="/static/shared/styles.css?v=7">
+    <link rel="stylesheet" href="/static/translation/translation.css?v=2">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+<body class="with-site-nav">
+    {% include 'shared/site_nav.html' %}
+    <div class="translation-container">
+        <div class="translation-topbar">
+            <div>
+                <h1 id="translation-title" class="translation-title">{{ t('translation.page_title') }}</h1>
+                <div id="translation-subtitle" class="translation-subtitle"></div>
+            </div>
+            <button class="btn primary translation-back-btn" onclick="goBackToLearning()">
+                {{ t('translation.back') }}
+            </button>
+        </div>
+
+        <section id="translation-loading" class="translation-state">
+            <div class="loader"></div>
+            <p>{{ t('translation.loading') }}</p>
+        </section>
+
+        <section id="translation-empty" class="translation-state" hidden>
+            <p>{{ t('translation.empty') }}</p>
+        </section>
+
+        <div id="translation-list" class="translation-list"></div>
+    </div>
+
+    <script src="/static/translation/translation.js?v=2"></script>
+</body>
+</html>
