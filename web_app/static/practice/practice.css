@@ -716,16 +716,6 @@ body {
 }
 .p-btn-nav:hover { background: rgba(87, 104, 86,0.12); }
 
-/* Skip — muted, distinct so it isn't hit by accident */
-.p-btn-skip {
-    flex: 0 1 auto;
-    min-width: 92px;
-    background: #ffffff;
-    color: var(--text-muted);
-    border: 1px solid rgba(87, 104, 86,0.2);
-}
-.p-btn-skip:hover { background: rgba(87, 104, 86,0.06); color: var(--text-main); }
-
 /* Finish — primary submit action */
 .p-btn-finish {
     background: var(--primary);
