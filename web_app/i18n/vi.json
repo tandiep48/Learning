@@ -152,7 +152,19 @@
         "words_label": "Từ Vựng",
         "lesson_progress_label": "Bài Học",
         "vocab_trainer_btn": "Luyện Từ Vựng",
-        "lesson_trainer_btn": "Luyện Bài Học"
+        "lesson_trainer_btn": "Luyện Bài Học",
+        "translation_btn": "Dịch"
+    },
+    "translation": {
+        "page_title": "Dịch",
+        "lesson_label": "Bài",
+        "loading": "Đang tải bản dịch...",
+        "empty": "Không tìm thấy bản dịch cho bài học này.",
+        "failed_load": "Tải bản dịch thất bại.",
+        "input_placeholder": "Nhập tiếng Trung vào đây",
+        "reveal": "Xem đáp án",
+        "hide": "Ẩn đáp án",
+        "back": "Quay lại"
     },
     "vocab_trainer": {
         "page_title": "Luyện Từ Vựng",
@@ -496,6 +508,7 @@
     "practice": {
         "loading": "Đang tải bài luyện tập…",
         "check": "Kiểm Tra",
+        "all_questions": "Tất Cả Câu Hỏi",
         "complete_title": "Hoàn Thành Luyện Tập!",
         "set_label": "Bộ Luyện Tập",
         "correct_answers": "Câu trả lời đúng",
