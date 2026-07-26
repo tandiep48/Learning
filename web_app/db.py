@@ -1194,6 +1194,120 @@ def get_learned_words(conn, user_id):
         return []
 
 
+def get_learned_words_last_3_days(conn, user_id):
+    """
+    Cumulative running total of fully-learned words as of each of the 3 most
+    recent mastery days.
+
+    A word counts as learned once it reaches all 3 correct modes (typing/listen/
+    meaning) in round 1 on a given day; its mastery day is the FIRST such day, so
+    each word is counted once and the total only grows. The running total sums
+    every mastery from the start of history, then the 3 most recent mastery days
+    are returned oldest -> newest for a Chart.js chart:
+        [{"date": "2026-07-24", "count": 120}, {"date": "2026-07-25", "count": 132}, ...]
+    """
+    if not conn:
+        return []
+
+    query = """
+    WITH daily_attempts AS (
+        SELECT
+            word,
+            DATE(updated_at) as attempt_date,
+            count(DISTINCT CASE WHEN is_correct = true THEN mode END) as successful_modes
+        FROM vocab_records
+        WHERE mode IN ('typing', 'listen', 'meaning')
+          AND round_num = 1
+          AND user_id = %s
+        GROUP BY word, DATE(updated_at)
+    ),
+    mastery AS (
+        -- First day each word reached all 3 modes.
+        SELECT word, MIN(attempt_date) as mastered_date
+        FROM daily_attempts
+        WHERE successful_modes = 3
+        GROUP BY word
+    ),
+    per_day AS (
+        SELECT mastered_date, count(*) as new_count
+        FROM mastery
+        GROUP BY mastered_date
+    ),
+    cumulative AS (
+        SELECT
+            mastered_date,
+            SUM(new_count) OVER (ORDER BY mastered_date) as cumulative_count
+        FROM per_day
+    )
+    SELECT mastered_date, cumulative_count
+    FROM (
+        SELECT mastered_date, cumulative_count
+        FROM cumulative
+        ORDER BY mastered_date DESC
+        LIMIT 3
+    ) latest
+    ORDER BY mastered_date ASC;
+    """
+    try:
+        with conn.cursor() as cur:
+            cur.execute(query, (user_id,))
+            rows = cur.fetchall()
+            return [{"date": row[0].isoformat(), "count": int(row[1] or 0)} for row in rows]
+    except Exception as e:
+        print(f"⚠️ Database query failed (get_learned_words_last_3_days): {e}")
+        return []
+
+
+def get_time_learned_last_3_days(conn, user_id):
+    """
+    Total learning time per day for the 3 most recent active days.
+
+    Sums response_time_ms across every answered task (vocab trainer, lesson
+    trainer, exercise/exam) grouped by day — the same sources global-stats totals.
+    "3 most recent active days" = the 3 latest days that actually have activity
+    (gaps are skipped, not zero-filled). Returned oldest -> newest with
+    milliseconds and minutes, ready for a Chart.js bar chart:
+        [{"date": "2026-07-24", "ms": 3900000, "minutes": 65}, ...]
+    """
+    if not conn:
+        return []
+
+    query = """
+    WITH all_time AS (
+        SELECT DATE(updated_at) as day, response_time_ms as ms
+        FROM vocab_records WHERE user_id = %s
+        UNION ALL
+        SELECT DATE(updated_at) as day, response_time_ms as ms
+        FROM lesson_records WHERE user_id = %s
+        UNION ALL
+        SELECT DATE(updated_at) as day, response_time_ms as ms
+        FROM practice_record WHERE user_id = %s
+    ),
+    per_day AS (
+        SELECT day, COALESCE(SUM(ms), 0)::bigint as total_ms
+        FROM all_time
+        WHERE day IS NOT NULL
+        GROUP BY day
+        ORDER BY day DESC
+        LIMIT 3
+    )
+    SELECT day, total_ms
+    FROM per_day
+    ORDER BY day ASC;
+    """
+    try:
+        with conn.cursor() as cur:
+            cur.execute(query, (user_id, user_id, user_id))
+            rows = cur.fetchall()
+            return [
+                {"date": row[0].isoformat(), "ms": int(row[1] or 0), "minutes": round((int(row[1] or 0)) / 60_000)}
+                for row in rows
+            ]
+    except Exception as e:
+        print(f"⚠️ Database query failed (get_time_learned_last_3_days): {e}")
+        return []
+
+
 def mark_passage_words_mastered(conn, user_id, passage_id):
     """
     Record that the user mastered every vocabulary word of a passage by completing its

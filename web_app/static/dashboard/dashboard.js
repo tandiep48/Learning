@@ -39,6 +39,9 @@ async function loadHomeDashboard() {
             const statsData = await statsRes.json();
             renderGlobalStats(statsData);
         }
+
+        renderTimeChart();
+        renderWordsChart();
     } catch (err) {
         setDashboardState(err.message || t('dashboard.load_failed'), false);
     }
@@ -113,6 +116,154 @@ function renderGlobalStats(data) {
     setBucketCard('exam', buckets.exam);
     setBucketCard('lesson', buckets.lesson_trainer);
     setBucketCard('vocab', buckets.vocab_trainer);
+}
+
+let wordsChartInstance = null;
+let timeChartInstance = null;
+
+function formatChartDate(iso) {
+    const parts = String(iso || '').split('-').map(Number);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    if (parts.length !== 3 || !months[parts[1] - 1]) return String(iso || '');
+    return `${months[parts[1] - 1]} ${parts[2]}`;
+}
+
+// "Words Mastered (Last 3 Days)" bar chart. Pulls per-day learned-word counts and
+// renders with Chart.js; shows an empty state when there is no recent activity.
+async function renderWordsChart() {
+    const canvas = document.getElementById('wordsChart');
+    const emptyEl = document.getElementById('wordsChartEmpty');
+    if (!canvas || typeof Chart === 'undefined') return;
+
+    let days = [];
+    try {
+        const res = await fetch('/api/user/learned-words-last-3-days');
+        if (res.ok) {
+            const data = await res.json();
+            days = data.days || [];
+        }
+    } catch (e) {
+        console.warn('Could not load learned-words chart data', e);
+    }
+
+    if (!days.length) {
+        canvas.style.display = 'none';
+        if (emptyEl) emptyEl.style.display = 'block';
+        if (wordsChartInstance) { wordsChartInstance.destroy(); wordsChartInstance = null; }
+        return;
+    }
+
+    canvas.style.display = '';
+    if (emptyEl) emptyEl.style.display = 'none';
+
+    const labels = days.map(d => formatChartDate(d.date));
+    const counts = days.map(d => d.count);
+
+    if (wordsChartInstance) wordsChartInstance.destroy();
+    wordsChartInstance = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: t('dashboard.words_mastered'),
+                data: counts,
+                backgroundColor: '#007a61',
+                borderRadius: 6,
+                barPercentage: 0.5,
+            }],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { backgroundColor: '#111827', padding: 12, cornerRadius: 8 },
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { precision: 0 },
+                    grid: { color: '#f3f4f6' },
+                    border: { display: false },
+                },
+                x: {
+                    grid: { display: false },
+                    border: { display: false },
+                },
+            },
+        },
+    });
+}
+
+// "Time Learned (Last 3 Days)" bar chart — hours studied per day.
+async function renderTimeChart() {
+    const canvas = document.getElementById('timeChart');
+    const emptyEl = document.getElementById('timeChartEmpty');
+    if (!canvas || typeof Chart === 'undefined') return;
+
+    let days = [];
+    try {
+        const res = await fetch('/api/user/time-learned-last-3-days');
+        if (res.ok) {
+            const data = await res.json();
+            days = data.days || [];
+        }
+    } catch (e) {
+        console.warn('Could not load time-learned chart data', e);
+    }
+
+    if (!days.length) {
+        canvas.style.display = 'none';
+        if (emptyEl) emptyEl.style.display = 'block';
+        if (timeChartInstance) { timeChartInstance.destroy(); timeChartInstance = null; }
+        return;
+    }
+
+    canvas.style.display = '';
+    if (emptyEl) emptyEl.style.display = 'none';
+
+    const labels = days.map(d => formatChartDate(d.date));
+    const minutes = days.map(d => d.minutes);
+
+    if (timeChartInstance) timeChartInstance.destroy();
+    timeChartInstance = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: t('dashboard.minutes_label'),
+                data: minutes,
+                backgroundColor: '#007a61',
+                borderRadius: 6,
+                barPercentage: 0.5,
+            }],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#111827',
+                    padding: 12,
+                    cornerRadius: 8,
+                    callbacks: { label: ctx => `${ctx.parsed.y}m` },
+                },
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#f3f4f6' },
+                    border: { display: false },
+                    ticks: { precision: 0, callback: value => `${value}m` },
+                },
+                x: {
+                    grid: { display: false },
+                    border: { display: false },
+                },
+            },
+        },
+    });
 }
 
 function setBucketCard(key, bucket) {
