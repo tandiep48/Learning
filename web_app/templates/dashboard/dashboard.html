@@ -4,90 +4,142 @@
         <p>{{ t('dashboard.loading') }}</p>
     </section>
 
-    <section id="dashboard-content" class="home-dashboard" style="display:none;">
-        <section class="dashboard-top-row">
-            <section class="current-lesson-row">
-                <div>
-                    <span class="dashboard-kicker">{{ t('dashboard.current_lesson') }}</span>
-                    <h1 id="home-lesson-title">{{ t('nav.brand') }}</h1>
-                    <p id="home-lesson-subtitle" class="subtitle">{{ t('dashboard.continue_subtitle') }}</p>
-                </div>
-                <div class="current-lesson-actions">
-                    <a id="home-continue-link" class="btn primary dashboard-action-link" href="/learning">{{ t('dashboard.continue_lesson') }}</a>
-                    <a class="btn secondary dashboard-action-link" href="/learning">{{ t('dashboard.change_lesson') }}</a>
-                </div>
-            </section>
+    <section id="dashboard-content" class="ui2-dashboard" style="display:none;">
+        <div class="top-grid">
+            <!-- Current Lesson -->
+            <div class="card current-lesson">
+                <div class="card-content">
+                    <div class="tag">
+                        <i class="ph-fill ph-book-open-text"></i> {{ t('dashboard.current_lesson') }}
+                    </div>
+                    <h2 id="home-lesson-title">{{ t('nav.brand') }}</h2>
+                    <p id="home-lesson-subtitle" class="description">{{ t('dashboard.continue_subtitle') }}</p>
 
-            <section class="review-card">
-                <div>
-                    <span class="dashboard-kicker">{{ t('dashboard.review_kicker') }}</span>
-                    <h2 class="review-card-title">{{ t('dashboard.review_title') }}</h2>
-                    <p class="subtitle">{{ t('dashboard.review_subtitle') }}</p>
+                    <div class="button-group">
+                        <a id="home-continue-link" class="btn btn-primary" href="/learning">
+                            {{ t('dashboard.continue_lesson') }} <i class="ph-bold ph-arrow-right"></i>
+                        </a>
+                        <a class="btn btn-secondary" href="/learning">
+                            {{ t('dashboard.change_lesson') }}
+                        </a>
+                    </div>
                 </div>
-                <a class="btn primary dashboard-action-link" href="/vocab-review">{{ t('dashboard.review_button') }}</a>
-            </section>
-        </section>
+                <div class="card-illustration">
+                    <i class="ph-duotone ph-student"></i>
+                </div>
+            </div>
 
-        <section class="dashboard-panel dashboard-recommend-panel">
-            <div class="dashboard-panel-heading">
-                <div>
-                    <span class="dashboard-kicker">{{ t('dashboard.recommend_kicker') }}</span>
+            <!-- Review -->
+            <div class="card review-card">
+                <div class="tag text-primary">
+                    <i class="ph-fill ph-arrows-clockwise"></i> {{ t('dashboard.review_kicker') }}
+                </div>
+                <h2>{{ t('dashboard.review_title') }}</h2>
+                <p class="description">{{ t('dashboard.review_subtitle') }}</p>
+
+                <a class="btn btn-primary w-100 mt-auto" href="/vocab-review">
+                    {{ t('dashboard.review_button') }} <i class="ph-bold ph-play"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- Recommended Section -->
+        <section class="recommended-section">
+            <div class="section-header">
+                <div class="title-wrapper">
+                    <div class="tag"><i class="ph-fill ph-sparkle"></i> {{ t('dashboard.recommend_kicker') }}</div>
                     <h2>{{ t('dashboard.recommend_title') }}</h2>
                 </div>
-                <a class="dashboard-see-more-link" href="/recommend">{{ t('dashboard.recommend_see_more') }}</a>
+                <a href="/recommend" class="see-more">{{ t('dashboard.recommend_see_more') }} <i class="ph-bold ph-caret-right"></i></a>
             </div>
+
             <div id="dashboard-recommend-state" class="dashboard-empty">{{ t('dashboard.recommend_loading') }}</div>
             <div id="dashboard-recommend-grid" class="rec-grid dashboard-rec-grid" style="display:none;"></div>
             <div id="dashboard-recommend-actions" class="dashboard-recommend-actions">
                 <span id="dashboard-recommend-selected">{{ t('recommend.items_selected', count=0) }}</span>
-                <button id="dashboard-start-selected" type="button" class="btn primary dashboard-start-selected">
+                <button id="dashboard-start-selected" type="button" class="btn btn-primary dashboard-start-selected">
                     <span>{{ t('recommend.start_selected') }}</span>
                 </button>
             </div>
         </section>
 
-        <section class="dashboard-panel lesson-progress-row">
-            <div class="dashboard-panel-heading">
-                <div>
-                    <span class="dashboard-kicker">{{ t('dashboard.progress_kicker') }}</span>
+        <!-- Progress Section -->
+        <section class="progress-section">
+            <div class="section-header">
+                <div class="title-wrapper">
+                    <div class="tag"><i class="ph-fill ph-chart-line-up"></i> {{ t('dashboard.progress_kicker') }}</div>
                     <h2>{{ t('dashboard.learning_statistics') }}</h2>
                 </div>
             </div>
 
-            <!-- Hero totals row -->
-            <div class="stats-hero" id="stats-hero">
-                <div class="stat-hero-item">
-                    <span class="stat-hero-label">{{ t('dashboard.total_time') }}</span>
-                    <strong class="stat-hero-value" id="stat-total-time">—</strong>
+            <div class="stats-overview">
+                <div class="main-stats">
+                    <div class="stat-box primary-stat">
+                        <p class="stat-label">{{ t('dashboard.total_time') }}</p>
+                        <h3 id="stat-total-time">—</h3>
+                    </div>
+                    <div class="stat-divider-vertical"></div>
+                    <div class="stat-box primary-stat">
+                        <p class="stat-label">{{ t('dashboard.words_mastered') }}</p>
+                        <h3 id="stat-total-words">—</h3>
+                    </div>
                 </div>
-                <div class="stat-hero-divider"></div>
-                <div class="stat-hero-item">
-                    <span class="stat-hero-label">{{ t('dashboard.words_mastered') }}</span>
-                    <strong class="stat-hero-value" id="stat-total-words">—</strong>
-                </div>
-            </div>
 
-            <!-- 4 bucket cards -->
-            <div class="stats-grid" id="stats-grid">
-                <div class="stats-bucket-card" id="stat-exercise">
-                    <span class="stats-bucket-label">{{ t('dashboard.exercise') }}</span>
-                    <strong class="stats-bucket-count" id="stat-exercise-q">—</strong>
-                    <small class="stats-bucket-time" id="stat-exercise-t">—</small>
+                <div class="charts-section">
+                    <div class="charts-grid">
+                        <div class="chart-card">
+                            <h4><i class="ph-duotone ph-clock text-primary"></i> {{ t('dashboard.time_learned_3days') }}</h4>
+                            <div class="chart-canvas-wrap">
+                                <canvas id="timeChart"></canvas>
+                            </div>
+                            <div id="timeChartEmpty" class="chart-empty" style="display:none;">{{ t('dashboard.no_chart_data') }}</div>
+                        </div>
+                        <div class="chart-card">
+                            <h4><i class="ph-duotone ph-chart-bar text-primary"></i> {{ t('dashboard.words_mastered_3days') }}</h4>
+                            <div class="chart-canvas-wrap">
+                                <canvas id="wordsChart"></canvas>
+                            </div>
+                            <div id="wordsChartEmpty" class="chart-empty" style="display:none;">{{ t('dashboard.no_chart_data') }}</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="stats-bucket-card" id="stat-exam">
-                    <span class="stats-bucket-label">{{ t('dashboard.exam') }}</span>
-                    <strong class="stats-bucket-count" id="stat-exam-q">—</strong>
-                    <small class="stats-bucket-time" id="stat-exam-t">—</small>
-                </div>
-                <div class="stats-bucket-card" id="stat-lesson">
-                    <span class="stats-bucket-label">{{ t('dashboard.lesson_trainer') }}</span>
-                    <strong class="stats-bucket-count" id="stat-lesson-q">—</strong>
-                    <small class="stats-bucket-time" id="stat-lesson-t">—</small>
-                </div>
-                <div class="stats-bucket-card" id="stat-vocab">
-                    <span class="stats-bucket-label">{{ t('dashboard.vocab_trainer') }}</span>
-                    <strong class="stats-bucket-count" id="stat-vocab-q">—</strong>
-                    <small class="stats-bucket-time" id="stat-vocab-t">—</small>
+
+                <div class="sub-stats-grid">
+                    <div class="sub-stat-card">
+                        <div class="icon-wrapper"><i class="ph-duotone ph-pencil-line"></i></div>
+                        <div class="sub-stat-info">
+                            <p class="label">{{ t('dashboard.exercise') }}</p>
+                            <h4 id="stat-exercise-q">—</h4>
+                            <p class="time" id="stat-exercise-t">—</p>
+                        </div>
+                    </div>
+
+                    <div class="sub-stat-card">
+                        <div class="icon-wrapper"><i class="ph-duotone ph-exam"></i></div>
+                        <div class="sub-stat-info">
+                            <p class="label">{{ t('dashboard.exam') }}</p>
+                            <h4 id="stat-exam-q">—</h4>
+                            <p class="time" id="stat-exam-t">—</p>
+                        </div>
+                    </div>
+
+                    <div class="sub-stat-card">
+                        <div class="icon-wrapper"><i class="ph-duotone ph-chalkboard-teacher"></i></div>
+                        <div class="sub-stat-info">
+                            <p class="label">{{ t('dashboard.lesson_trainer') }}</p>
+                            <h4 id="stat-lesson-q">—</h4>
+                            <p class="time" id="stat-lesson-t">—</p>
+                        </div>
+                    </div>
+
+                    <div class="sub-stat-card">
+                        <div class="icon-wrapper"><i class="ph-duotone ph-translate"></i></div>
+                        <div class="sub-stat-info">
+                            <p class="label">{{ t('dashboard.vocab_trainer') }}</p>
+                            <h4 id="stat-vocab-q">—</h4>
+                            <p class="time" id="stat-vocab-t">—</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>

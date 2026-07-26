@@ -10,6 +10,8 @@ from werkzeug.utils import secure_filename
 from service.i18n_service import t
 from db import (
     get_db_connection,
+    get_learned_words_last_3_days,
+    get_time_learned_last_3_days,
     get_mastered_words_page,
     get_unlearned_words_from_db,
     get_unsure_words_from_db,
@@ -591,6 +593,30 @@ def global_stats():
             "total_words":      total_words,
             "buckets":          buckets,
         })
+    finally:
+        conn.close()
+
+
+@user_bp.route('/api/user/learned-words-last-3-days', methods=['GET'])
+@login_required
+def learned_words_last_3_days():
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database unavailable"}), 503
+    try:
+        return jsonify({"days": get_learned_words_last_3_days(conn, current_user.id)})
+    finally:
+        conn.close()
+
+
+@user_bp.route('/api/user/time-learned-last-3-days', methods=['GET'])
+@login_required
+def time_learned_last_3_days():
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"error": "Database unavailable"}), 503
+    try:
+        return jsonify({"days": get_time_learned_last_3_days(conn, current_user.id)})
     finally:
         conn.close()
 
