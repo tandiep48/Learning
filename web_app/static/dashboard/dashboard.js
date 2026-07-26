@@ -128,6 +128,31 @@ function formatChartDate(iso) {
     return `${months[parts[1] - 1]} ${parts[2]}`;
 }
 
+// Custom plugin: draw each bar's value just above the column (no extra library).
+function makeValueLabelPlugin(suffix = '') {
+    return {
+        id: 'valueLabels',
+        afterDatasetsDraw(chart) {
+            const { ctx } = chart;
+            ctx.save();
+            ctx.font = "600 12px 'Inter', sans-serif";
+            ctx.fillStyle = '#111827';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            chart.data.datasets.forEach((dataset, di) => {
+                const meta = chart.getDatasetMeta(di);
+                if (meta.hidden) return;
+                meta.data.forEach((bar, i) => {
+                    const value = dataset.data[i];
+                    if (value == null) return;
+                    ctx.fillText(`${value}${suffix}`, bar.x, bar.y - 6);
+                });
+            });
+            ctx.restore();
+        },
+    };
+}
+
 // "Words Mastered (Last 3 Days)" bar chart. Pulls per-day learned-word counts and
 // renders with Chart.js; shows an empty state when there is no recent activity.
 async function renderWordsChart() {
@@ -175,6 +200,7 @@ async function renderWordsChart() {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            layout: { padding: { top: 22 } },
             plugins: {
                 legend: { display: false },
                 tooltip: { backgroundColor: '#111827', padding: 12, cornerRadius: 8 },
@@ -192,6 +218,7 @@ async function renderWordsChart() {
                 },
             },
         },
+        plugins: [makeValueLabelPlugin('')],
     });
 }
 
@@ -241,6 +268,7 @@ async function renderTimeChart() {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            layout: { padding: { top: 22 } },
             plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -263,6 +291,7 @@ async function renderTimeChart() {
                 },
             },
         },
+        plugins: [makeValueLabelPlugin('m')],
     });
 }
 
