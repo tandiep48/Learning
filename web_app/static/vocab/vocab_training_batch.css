@@ -19,20 +19,21 @@
 
 .bt-type-list {
     display: flex;
-    flex-direction: column;
-    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 22px;
     width: 100%;
-    max-width: 560px;
+    max-width: 920px;
     margin: 0 auto;
 }
 
 .bt-type-row {
-    display: grid;
-    grid-template-columns: 1fr minmax(140px, 200px);
-    grid-template-areas: "prompt input";
-    align-items: center;
-    gap: 6px 14px;
-    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    flex: 0 1 200px;
+    padding: 14px 16px;
     border: 1px solid var(--border-soft, #d7e3c6);
     border-radius: 12px;
     background: var(--card-bg, #fff);
@@ -90,20 +91,18 @@
 }
 
 .bt-type-result {
-    font-size: 1.05rem;
-    text-align: left;
-    max-width: 0;
+    font-size: 0.95rem;
+    text-align: center;
+    max-height: 0;
     opacity: 0;
     overflow: hidden;
-    white-space: nowrap;
-    transition: max-width 0.4s ease, opacity 0.4s ease;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
 }
 
 .bt-type-row.correct .bt-type-result,
 .bt-type-row.incorrect .bt-type-result {
-    max-width: 400px;
+    max-height: 90px;
     opacity: 1;
-    margin-left: 12px;
 }
 
 .bt-ok { color: var(--success); font-weight: 600; }
@@ -124,6 +123,23 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+}
+
+/* Listening: stack the two sides as rows (audio row + meaning row) instead of columns. */
+.bt-match-board-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.bt-match-board-rows .bt-match-col {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-evenly;
+    gap: 12px;
+}
+.bt-match-board-rows .bt-match-item {
+    flex: 0 1 auto;
+    min-width: 96px;
 }
 
 .bt-match-item {
@@ -187,11 +203,3 @@
     min-width: 200px;
 }
 
-@media (max-width: 520px) {
-    .bt-type-row {
-        grid-template-columns: 1fr;
-        grid-template-areas:
-            "prompt"
-            "input";
-    }
-}
