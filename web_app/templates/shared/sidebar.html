@@ -1,46 +1,77 @@
 <!-- templates/shared/sidebar.html -->
 <div class="page-layout sidebar-open" id="page-layout">
-    <aside id="universal-sidebar" class="universal-sidebar">
+    <aside id="universal-sidebar" class="universal-sidebar lesson-sidebar">
         <div class="sidebar-header">
-            <h3>{{ t('sidebar.navigation') }}</h3>
+            <button class="sidebar-back-btn" onclick="goBackToPartPicker()" aria-label="{{ t('sidebar.part_selection') }}" title="{{ t('sidebar.part_selection') }}">
+                <i class="ph-bold ph-arrow-left"></i>
+            </button>
+            <span class="badge" id="sidebar-hsk-badge">HSK</span>
+            <h2 id="sidebar-lesson-title">{{ t('sidebar.navigation') }}</h2>
             <button class="sidebar-close-btn" onclick="toggleSidebar()" aria-label="{{ t('sidebar.close_sidebar_aria') }}">
-                <i class="fa-solid fa-xmark"></i>
+                <i class="ph-bold ph-x"></i>
             </button>
         </div>
 
-        <div class="sidebar-content">
-            <div class="sidebar-section">
-                <button class="sidebar-btn sidebar-back-btn" onclick="goBackToPartPicker()">
-                    <i class="fa-solid fa-arrow-left"></i> {{ t('sidebar.part_selection') }}
-                </button>
-            </div>
+        <div class="sidebar-accordion">
 
-            <div class="sidebar-section">
-                <h4 class="sidebar-section-title">{{ t('sidebar.current_part') }}</h4>
-                <button class="sidebar-btn" id="sidebar-nav-vocab" onclick="navigateToDomain('vocab')">
-                    <i class="fa-solid fa-list"></i> {{ t('sidebar.word_summary') }}
+            <!-- Lesson Parts -->
+            <div class="accordion-item active">
+                <button class="accordion-header" data-target="acc-parts">
+                    <div class="acc-icon"><i class="ph-duotone ph-book-open"></i></div>
+                    <span class="acc-title">{{ t('sidebar.lesson_parts') }}</span>
+                    <i class="ph-bold ph-caret-up acc-arrow"></i>
                 </button>
-                <button class="sidebar-btn" id="sidebar-nav-lesson" onclick="navigateToDomain('lesson')">
-                    <i class="fa-solid fa-book-open"></i> {{ t('vocab_trainer.lesson_summary') }}
-                </button>
-                <button class="sidebar-btn" id="sidebar-nav-grammar" onclick="navigateToDomain('grammar')">
-                    <i class="fa-solid fa-spell-check"></i> {{ t('grammar.page_title') }}
-                </button>
-                <button class="sidebar-btn" id="sidebar-nav-translation" onclick="navigateToDomain('translation')">
-                    <i class="fa-solid fa-language"></i> {{ t('translation.page_title') }}
-                </button>
-            </div>
-
-            <div class="sidebar-section">
-                <h4 class="sidebar-section-title">{{ t('sidebar.lesson_parts') }}</h4>
-                <div id="sidebar-parts-list" class="sidebar-parts-list">
-                    <div class="sidebar-loader">{{ t('widgets.loading') }}</div>
+                <div class="accordion-body" id="acc-parts">
+                    <nav class="sidebar-nav">
+                        <div id="sidebar-parts-list">
+                            <div class="sidebar-loader">{{ t('widgets.loading') }}</div>
+                        </div>
+                    </nav>
                 </div>
             </div>
+
+            <!-- Grammar -->
+            <div class="accordion-item">
+                <button class="accordion-header" data-target="acc-grammar">
+                    <div class="acc-icon"><i class="ph-duotone ph-text-aa"></i></div>
+                    <span class="acc-title">{{ t('grammar.page_title') }}</span>
+                    <i class="ph-bold ph-caret-down acc-arrow"></i>
+                </button>
+                <div class="accordion-body" id="acc-grammar" style="display: none;">
+                    <nav class="sidebar-nav">
+                        <button class="sidebar-step" id="sidebar-nav-grammar" onclick="navigateToDomain('grammar')">
+                            <div class="step-icon"><i class="ph-bold ph-lightbulb"></i></div>
+                            <div class="step-info">
+                                <span class="step-label">{{ t('grammar.page_title') }}</span>
+                            </div>
+                        </button>
+                    </nav>
+                </div>
+            </div>
+
+            <!-- Translation -->
+            <div class="accordion-item">
+                <button class="accordion-header" data-target="acc-translation">
+                    <div class="acc-icon"><i class="ph-duotone ph-translate"></i></div>
+                    <span class="acc-title">{{ t('translation.page_title') }}</span>
+                    <i class="ph-bold ph-caret-down acc-arrow"></i>
+                </button>
+                <div class="accordion-body" id="acc-translation" style="display: none;">
+                    <nav class="sidebar-nav">
+                        <button class="sidebar-step" id="sidebar-nav-translation" onclick="navigateToDomain('translation')">
+                            <div class="step-icon"><i class="ph-bold ph-pencil-simple"></i></div>
+                            <div class="step-info">
+                                <span class="step-label">{{ t('translation.page_title') }}</span>
+                            </div>
+                        </button>
+                    </nav>
+                </div>
+            </div>
+
         </div>
     </aside>
 
     <div class="page-main" id="page-main">
         <button id="sidebar-toggle-btn" class="sidebar-toggle-btn" onclick="toggleSidebar()" aria-label="{{ t('sidebar.open_sidebar_aria') }}">
-            <i class="fa-solid fa-bars"></i>
+            <i class="ph-bold ph-list"></i>
         </button>

@@ -1,51 +1,53 @@
 /* static/shared/sidebar.css
-   Sidebar layout — no overlay, no fixed/absolute positioning.
-   The sidebar is a normal flex child that sits next to the main content.
-   Controlled entirely by .page-layout and .page-layout.sidebar-open.
+   Universal lesson sidebar. Layout shell is a normal flex child next to the
+   content; the internals use the "lesson-option10" accordion design with a
+   local (--ui-*) palette so the new look stays scoped to the sidebar.
 */
 
 :root {
-    --sidebar-width: 280px;
+    --sidebar-width: 340px;
     --sidebar-bg: #ffffff;
-    --sidebar-text: #111111;
-    --sidebar-muted: #666666;
-    --sidebar-hover: rgba(87, 104, 86, 0.08);
-    --sidebar-active: rgba(87, 104, 86, 0.15);
+    --sidebar-text: #111827;
+    --sidebar-muted: #4b5563;
+    --sidebar-hover: #f8fafc;
+    --sidebar-active: #f1f5f9;
 }
 
 /* ── Layout shell ─────────────────────────────────────────────────────────── */
-
-/*
-  .page-layout wraps the sidebar + main content side-by-side.
-  It sits below the <header> in normal document flow.
-*/
 .page-layout {
     display: flex;
     flex-direction: row;
     align-items: flex-start;
     width: 100%;
-    min-height: calc(100vh - 69px); /* subtract header height */
+    min-height: calc(100vh - 69px);
 }
 
-/* ── Sidebar panel ────────────────────────────────────────────────────────── */
-
 .universal-sidebar {
-    /* Normal flow element — no position:fixed, no z-index tricks */
+    /* Local palette — new look scoped to the sidebar only. */
+    --ui-primary: #007a61;
+    --ui-primary-light: #e0efe9;
+    --ui-secondary: #cbe2d4;
+    --ui-text-main: #111827;
+    --ui-text-muted: #4b5563;
+    --ui-text-light: #9ca3af;
+    --ui-bg: #f7fbf9;
+    --ui-success: #10b981;
+    --ui-warning: #f59e0b;
+
     flex-shrink: 0;
     width: var(--sidebar-width);
     min-height: calc(100vh - 69px);
     background: var(--sidebar-bg);
-    border-right: 1px solid rgba(87, 104, 86, 0.12);
-    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.04);
+    border-right: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.02);
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
     overflow-x: hidden;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 
-    /* Collapse by shrinking width to 0 (no transform, no overlay) */
     max-width: var(--sidebar-width);
     transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                opacity   0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     opacity: 1;
 }
 
@@ -56,20 +58,16 @@
     overflow: hidden;
 }
 
-/* ── Main content area ────────────────────────────────────────────────────── */
-
 .page-main {
     flex: 1;
-    min-width: 0;           /* prevent flex overflow */
+    min-width: 0;
     padding: 32px 20px;
-    transition: none;
     display: flex;
     flex-direction: column;
-    align-items: center;    /* center children horizontally */
-    position: relative;     /* anchor for the absolutely-positioned toggle button */
+    align-items: center;
+    position: relative;
 }
 
-/* All content containers inside page-main should fill available width up to their max-width */
 .page-main > .app-container,
 .page-main > .recommend-container,
 .page-main > .profile-container,
@@ -78,13 +76,10 @@
 .page-main > .practice-shell,
 .page-main > .vl-container {
     width: 100%;
-    margin: 0;   /* let flexbox centering handle this, not margin auto */
+    margin: 0;
 }
 
-/* ── Toggle button ─────────────────────────────────────────────────────────
-   Shown only when sidebar is collapsed.
-   Positioned inside the page flow (not fixed) so it never covers the header.
-*/
+/* ── Toggle button (shown only when collapsed) ────────────────────────────── */
 .sidebar-toggle-btn {
     display: inline-flex;
     align-items: center;
@@ -93,52 +88,75 @@
     height: 40px;
     border-radius: 8px;
     background: var(--sidebar-bg);
-    color: var(--primary, #576856);
-    border: 1px solid rgba(87, 104, 86, 0.2);
+    color: var(--ui-primary, #007a61);
+    border: 1px solid rgba(0, 0, 0, 0.1);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     font-size: 1.1rem;
     cursor: pointer;
-    transition: background 0.2s, box-shadow 0.2s;
-    /* Out of flow — never shifts content position */
     position: absolute;
     top: 16px;
     left: 16px;
     z-index: 5;
+    transition: background 0.2s, box-shadow 0.2s;
 }
-
 .sidebar-toggle-btn:hover {
-    background: var(--sidebar-hover);
+    background: #f1f5f9;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
-
-/* Hide the toggle button while sidebar is open */
 .page-layout.sidebar-open .sidebar-toggle-btn {
     display: none;
 }
 
-/* ── Sidebar internals ────────────────────────────────────────────────────── */
-
+/* ── Sidebar header ───────────────────────────────────────────────────────── */
 .sidebar-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 20px;
-    border-bottom: 1px solid #eaeaea;
+    gap: 0.75rem;
     flex-shrink: 0;
 }
 
-.sidebar-header h3 {
-    margin: 0;
-    font-size: 1.1rem;
-    color: var(--primary, #576856);
+.sidebar-header .badge {
+    background-color: var(--ui-secondary);
+    color: var(--ui-primary);
+    font-size: 0.7rem;
     font-weight: 700;
+    padding: 0.25rem 0.5rem;
+    border-radius: 100px;
+    white-space: nowrap;
+}
+
+.sidebar-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--ui-text-main);
+    font-weight: 700;
+    flex: 1;
+}
+
+.sidebar-back-btn {
+    background: none;
+    border: none;
+    font-size: 1.1rem;
+    color: var(--ui-text-muted);
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    transition: background 0.2s, color 0.2s;
+}
+.sidebar-back-btn:hover {
+    background: var(--sidebar-hover);
+    color: var(--ui-primary);
 }
 
 .sidebar-close-btn {
     background: none;
     border: none;
     font-size: 1.1rem;
-    color: var(--sidebar-muted);
+    color: var(--ui-text-muted);
     cursor: pointer;
     padding: 4px 8px;
     border-radius: 6px;
@@ -149,101 +167,171 @@
     color: #ef4444;
 }
 
-.sidebar-content {
+/* ── Accordion ────────────────────────────────────────────────────────────── */
+.sidebar-accordion {
     flex: 1;
     overflow-y: auto;
-    padding: 16px;
+    display: flex;
+    flex-direction: column;
 }
 
-.sidebar-section {
-    margin-bottom: 20px;
+.accordion-item {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.sidebar-section-title {
-    font-size: 0.78rem;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    color: var(--sidebar-muted);
-    margin: 0 0 10px 0;
-    font-weight: 700;
-    padding: 0 4px;
-}
-
-.sidebar-btn {
+.accordion-header {
     width: 100%;
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    background: transparent;
     border: none;
-    background: transparent;
-    color: var(--sidebar-text);
-    border-radius: 8px;
-    font-size: 0.95rem;
-    font-weight: 500;
     cursor: pointer;
     text-align: left;
-    transition: background 0.2s;
-    margin-bottom: 2px;
+    transition: background-color 0.2s;
 }
+.accordion-header:hover { background-color: var(--sidebar-hover); }
+.accordion-item.active .accordion-header { background-color: var(--sidebar-active); }
 
-.sidebar-btn i {
-    width: 18px;
-    text-align: center;
-    color: var(--primary, #576856);
+.acc-icon {
+    font-size: 1.25rem;
+    display: flex;
+    color: var(--ui-primary);
+}
+.acc-title {
+    flex: 1;
     font-size: 1rem;
-    flex-shrink: 0;
-}
-
-.sidebar-btn:hover {
-    background: var(--sidebar-hover);
-}
-
-.sidebar-btn.active {
-    background: var(--sidebar-active);
-    color: var(--primary, #576856);
     font-weight: 600;
+    color: var(--ui-text-main);
+}
+.acc-arrow {
+    color: var(--ui-text-muted);
+    transition: transform 0.3s;
 }
 
-.sidebar-back-btn {
-    background: #f5f5f5;
-    color: #333;
-}
-.sidebar-back-btn i {
-    color: #555;
-}
-.sidebar-back-btn:hover {
-    background: #e8e8e8;
+.accordion-body {
+    background-color: #fafbfc;
 }
 
-.sidebar-part-btn {
+.sidebar-nav {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* Steps (parts / grammar / translation) */
+.sidebar-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
     width: 100%;
-    text-align: left;
-    padding: 9px 14px;
-    background: transparent;
-    border: 1px solid #eaeaea;
-    border-radius: 6px;
-    margin-bottom: 6px;
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 1rem;
+    border-radius: 12px;
     cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+.sidebar-step:hover {
+    border-color: var(--ui-secondary);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+}
+
+.step-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: var(--ui-bg);
+    color: var(--ui-text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
     font-size: 0.9rem;
-    color: var(--sidebar-text);
-    transition: border-color 0.2s, background 0.2s;
+    flex-shrink: 0;
+    margin-top: 2px;
 }
 
-.sidebar-part-btn:hover {
-    border-color: var(--primary, #576856);
-    background: var(--sidebar-hover);
+.step-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+.step-label {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--ui-text-main);
+}
+.step-desc {
+    font-size: 0.75rem;
+    color: var(--ui-text-muted);
 }
 
-.sidebar-part-btn.active {
-    background: var(--primary, #576856);
+/* Mini progress bars inside a part step */
+.sidebar-part-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    width: 100%;
+}
+.mini-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.mini-stat .label {
+    width: 45px;
+    font-size: 0.65rem;
+    color: var(--ui-text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+}
+.mini-progress-bg {
+    flex: 1;
+    height: 4px;
+    background-color: #e5e7eb;
+    border-radius: 10px;
+    overflow: hidden;
+}
+.mini-progress-fill {
+    height: 100%;
+    background-color: var(--ui-primary);
+    border-radius: 10px;
+}
+.mini-progress-fill.warning { background-color: var(--ui-warning); }
+.mini-progress-fill.success { background-color: var(--ui-success); }
+.mini-stat .value {
+    width: 38px;
+    text-align: right;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--ui-text-muted);
+}
+.mini-stat .value.success-text { color: var(--ui-success); }
+
+/* Active step */
+.sidebar-step.active {
+    background-color: #ffffff;
+    border-color: var(--ui-primary);
+    box-shadow: 0 4px 12px rgba(0, 122, 97, 0.08);
+}
+.sidebar-step.active .step-icon {
+    background-color: var(--ui-primary);
     color: #ffffff;
-    border-color: var(--primary, #576856);
+}
+.sidebar-step.active .step-label {
+    color: var(--ui-primary);
 }
 
 .sidebar-loader {
     font-size: 0.88rem;
-    color: var(--sidebar-muted);
+    color: var(--ui-text-muted);
     text-align: center;
     padding: 12px;
 }

@@ -1,11 +1,25 @@
 // static/shared/sidebar.js
 let sidebarPassageId = null;
-let currentDomain = null; // 'lesson', 'vocab', 'grammar'
+let currentDomain = null; // 'lesson', 'vocab', 'grammar', 'translation'
 var NUMBER_PART_ID = window.NUMBER_PART_ID || 'H1_5_99';
 window.NUMBER_PART_ID = NUMBER_PART_ID;
 
+const SIDEBAR_HSK_MAP = {
+    'H1': 'HSK1', 'H2': 'HSK2', 'H3': 'HSK3',
+    'H4': 'HSK4', 'H5': 'HSK5', 'H6': 'HSK6', 'H79': 'HSK7-9'
+};
+
 function isNumberPart(passageId) {
     return String(passageId || '') === NUMBER_PART_ID;
+}
+
+function sidebarEscapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -16,32 +30,66 @@ document.addEventListener('DOMContentLoaded', () => {
     else if (path.includes('grammar')) currentDomain = 'grammar';
     else if (path.includes('translation')) currentDomain = 'translation';
 
-    // Highlight current domain button
-    if (currentDomain) {
-        const btn = document.getElementById(`sidebar-nav-${currentDomain}`);
-        if (btn) btn.classList.add('active');
-    }
-
     // Extract passage ID from URL
     const params = new URLSearchParams(window.location.search);
     sidebarPassageId = params.get('passage_id');
 
+    initAccordion();
+    highlightCurrentDomain();
+
     if (sidebarPassageId) {
+        populateSidebarHeader(sidebarPassageId);
         loadSidebarParts(sidebarPassageId);
     }
 });
 
+// ── Accordion ──────────────────────────────────────────────────────────────
+function initAccordion() {
+    document.querySelectorAll('.accordion-header').forEach(header => {
+        header.addEventListener('click', () => {
+            openAccordionItem(header.closest('.accordion-item'));
+        });
+    });
+
+    // Open the section matching the current domain (parts by default).
+    let targetId = 'acc-parts';
+    if (currentDomain === 'grammar') targetId = 'acc-grammar';
+    else if (currentDomain === 'translation') targetId = 'acc-translation';
+    const body = document.getElementById(targetId);
+    if (body) openAccordionItem(body.closest('.accordion-item'));
+}
+
+function openAccordionItem(item) {
+    if (!item) return;
+    document.querySelectorAll('.accordion-item').forEach(it => {
+        const body = it.querySelector('.accordion-body');
+        const arrow = it.querySelector('.acc-arrow');
+        const isTarget = it === item;
+        it.classList.toggle('active', isTarget);
+        if (body) body.style.display = isTarget ? 'block' : 'none';
+        if (arrow) {
+            arrow.classList.toggle('ph-caret-up', isTarget);
+            arrow.classList.toggle('ph-caret-down', !isTarget);
+        }
+    });
+}
+
+function highlightCurrentDomain() {
+    if (!currentDomain) return;
+    const btn = document.getElementById(`sidebar-nav-${currentDomain}`);
+    if (btn) btn.classList.add('active');
+}
+
+// ── Toggle / navigation ─────────────────────────────────────────────────────
 function toggleSidebar() {
     const sidebar = document.getElementById('universal-sidebar');
-    const layout  = document.getElementById('page-layout');
+    const layout = document.getElementById('page-layout');
     if (!sidebar || !layout) return;
 
     if (sidebar.classList.contains('collapsed')) {
-        // Open
         sidebar.classList.remove('collapsed');
         layout.classList.add('sidebar-open');
     } else {
-        // Close
         sidebar.classList.add('collapsed');
         layout.classList.remove('sidebar-open');
     }
@@ -72,7 +120,31 @@ function navigateToDomain(domain) {
 
 function navigateToPart(newPassageId) {
     sidebarPassageId = newPassageId;
-    navigateToDomain(currentDomain || 'lesson');
+    // Word/Lesson Summary are content tabs now, so a part opens in its Word/Lesson
+    // view; keep the current one if we're already in it, else default to Word Summary.
+    const domain = (currentDomain === 'vocab' || currentDomain === 'lesson') ? currentDomain : 'vocab';
+    navigateToDomain(domain);
+}
+
+// ── Header + parts ──────────────────────────────────────────────────────────
+function populateSidebarHeader(passageId) {
+    const parts = passageId.split('_');
+    const hskLevel = SIDEBAR_HSK_MAP[parts[0]] || parts[0];
+    const lessonNum = parts.length >= 2 ? parts[1] : '';
+    const badge = document.getElementById('sidebar-hsk-badge');
+    const title = document.getElementById('sidebar-lesson-title');
+    if (badge) badge.textContent = hskLevel;
+    if (title) title.textContent = lessonNum ? `${t('picker.lesson_prefix')} ${lessonNum}` : t('sidebar.navigation');
+}
+
+async function loadPartsProgress(hskLevel) {
+    try {
+        const res = await fetch(`/api/lesson/picker-progress?hsk_level=${encodeURIComponent(hskLevel)}`);
+        if (!res.ok) return null;
+        return await res.json();
+    } catch (_) {
+        return null;
+    }
 }
 
 async function loadSidebarParts(passageId) {
@@ -86,17 +158,14 @@ async function loadSidebarParts(passageId) {
     }
 
     const hskLevelCode = partsStr[0]; // e.g. H1
-    const lessonNum    = partsStr[1];
-
-    const hskMap = {
-        'H1': 'HSK1', 'H2': 'HSK2', 'H3': 'HSK3',
-        'H4': 'HSK4', 'H5': 'HSK5', 'H6': 'HSK6', 'H79': 'HSK7-9'
-    };
-    const hskLevel = hskMap[hskLevelCode] || hskLevelCode;
+    const lessonNum = partsStr[1];
+    const hskLevel = SIDEBAR_HSK_MAP[hskLevelCode] || hskLevelCode;
 
     try {
-        const res  = await fetch(`/api/lesson/passages?hsk_level=${hskLevel}`);
-        const data = await res.json();
+        const [data, progress] = await Promise.all([
+            fetch(`/api/lesson/passages?hsk_level=${hskLevel}`).then(r => r.json()),
+            loadPartsProgress(hskLevel),
+        ]);
 
         let lessonPassages = data.passages.filter(p => {
             const pParts = p.passage_id.split('_');
@@ -126,16 +195,57 @@ async function loadSidebarParts(passageId) {
             return;
         }
 
-        partsContainer.innerHTML = lessonPassages.map(p => {
-            const pParts  = p.passage_id.split('_');
-            const partNum = pParts.length > 2 ? pParts[2] : '1';
-            const isActive = p.passage_id === passageId;
-            const title    = p.title || (isNumberPart(p.passage_id) ? t('picker.number_part') : `${t('picker.part_prefix')} ${partNum}`);
-            return `<button class="sidebar-part-btn ${isActive ? 'active' : ''}" onclick="navigateToPart('${p.passage_id}')">${title}</button>`;
-        }).join('');
+        partsContainer.innerHTML = lessonPassages
+            .map(p => renderPartStep(p, passageId, progress))
+            .join('');
 
     } catch (e) {
         console.error('Sidebar parts load failed', e);
         partsContainer.innerHTML = `<div class="sidebar-loader">${t('sidebar.failed_load_parts')}</div>`;
     }
+}
+
+function renderPartStep(p, activePassageId, progress) {
+    const pParts = p.passage_id.split('_');
+    const partNum = pParts.length > 2 ? pParts[2] : '1';
+    const isActive = p.passage_id === activePassageId;
+    const number = isNumberPart(p.passage_id);
+    const label = p.title || (number ? t('picker.number_part') : `${t('picker.part_prefix')} ${partNum}`);
+    const iconContent = number ? '#' : partNum;
+
+    const stat = progress?.parts?.[p.passage_id];
+    const statsHtml = stat ? renderMiniStats(stat) : '';
+
+    return `<button class="sidebar-step ${isActive ? 'active' : ''}" onclick="navigateToPart('${p.passage_id}')">
+        <div class="step-icon">${sidebarEscapeHtml(iconContent)}</div>
+        <div class="step-info">
+            <span class="step-label">${sidebarEscapeHtml(label)}</span>
+            ${statsHtml}
+        </div>
+    </button>`;
+}
+
+function sidebarPct(done, total) {
+    if (!total || total <= 0) return 0;
+    return Math.max(0, Math.min(100, Math.round(((Number(done) || 0) / total) * 100)));
+}
+
+function renderMiniStats(stat) {
+    const wordsPct = sidebarPct(stat.learned_words, stat.total_words);
+    const lessonPct = Math.max(0, Math.min(100, Math.round(Number(stat.progress_pct) || 0)));
+    const wordsFull = (stat.total_words || 0) > 0 && wordsPct >= 100;
+    const lessonFull = lessonPct >= 100;
+
+    return `<div class="sidebar-part-stats">
+        <div class="mini-stat">
+            <span class="label">${t('picker.words_label')}</span>
+            <div class="mini-progress-bg"><div class="mini-progress-fill ${wordsFull ? 'success' : ''}" style="width:${wordsPct}%;"></div></div>
+            <span class="value ${wordsFull ? 'success-text' : ''}">${Number(stat.learned_words) || 0}/${Number(stat.total_words) || 0}</span>
+        </div>
+        <div class="mini-stat">
+            <span class="label">${t('picker.lesson_progress_label')}</span>
+            <div class="mini-progress-bg"><div class="mini-progress-fill ${lessonFull ? 'success' : ''}" style="width:${lessonPct}%;"></div></div>
+            <span class="value ${lessonFull ? 'success-text' : ''}">${lessonPct}%</span>
+        </div>
+    </div>`;
 }

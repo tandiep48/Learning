@@ -209,12 +209,12 @@ function renderTypingActivity(area, activity) {
         item.innerHTML = `
             <div class="bt-type-prompt">
                 <span class="bt-hanzi" style="font-size: ${fontSize}; font-weight: bold;">${escapeHtml(row.word || '')}</span>
-                <div class="bt-type-result" aria-live="polite"></div>
             </div>
             <input type="text" class="bt-type-input" lang="zh-CN" autocomplete="off"
-                   inputmode="text" placeholder="${escapeHtml(t('vocab_trainer.type_word_placeholder'))}"
+                   inputmode="text"
                    data-index="${idx}"
                    style="font-size: ${fontSize}; background: #ffffff;">
+            <div class="bt-type-result" aria-live="polite"></div>
         `;
         list.appendChild(item);
     });
@@ -235,6 +235,28 @@ function renderTypingActivity(area, activity) {
     // Enter on the last input triggers the group check.
     const inputs = wrap.querySelectorAll('.bt-type-input');
     inputs.forEach((input, idx) => {
+        const row = activity.words[idx];
+        const rowEl = input.closest('.bt-type-row');
+        const result = rowEl.querySelector('.bt-type-result');
+        // When the typed value matches: reveal pinyin + meaning and play the audio once.
+        input.addEventListener('input', () => {
+            if (input.disabled) return;
+            if (input.value.trim() === (row.word || '')) {
+                if (input.dataset.autoplayed !== '1') {
+                    input.dataset.autoplayed = '1';
+                    rowEl.classList.add('correct');
+                    if (result) result.innerHTML = typingResultHtml(row, true);
+                    playWordAudio(row.audio_key);
+                }
+            } else {
+                input.dataset.autoplayed = '';
+                // Edited away from the answer before checking — hide the live reveal again.
+                if (rowEl.classList.contains('correct')) {
+                    rowEl.classList.remove('correct');
+                    if (result) result.innerHTML = '';
+                }
+            }
+        });
         input.addEventListener('keydown', (e) => {
             if (e.key !== 'Enter') return;
             e.preventDefault();
@@ -244,6 +266,13 @@ function renderTypingActivity(area, activity) {
         });
     });
     if (inputs[0]) inputs[0].focus();
+}
+
+function typingResultHtml(row, ok) {
+    const cls = ok ? 'bt-ok' : 'bt-bad';
+    const icon = ok ? 'fa-check' : 'fa-xmark';
+    const meaning = row.meaning_vn || row.meaning_en || '';
+    return `<span class="${cls}"><i class="fa-solid ${icon}"></i> ${escapeHtml(row.pinyin)} - ${escapeHtml(meaning)}</span>`;
 }
 
 function checkTypingGroup(activity, wrap, checkBtn) {
@@ -258,10 +287,9 @@ function checkTypingGroup(activity, wrap, checkBtn) {
         const isCorrect = answer === row.word;
 
         input.disabled = true;
+        rowEl.classList.remove('correct', 'incorrect');
         rowEl.classList.add(isCorrect ? 'correct' : 'incorrect');
-        result.innerHTML = isCorrect
-            ? `<span class="bt-ok"><i class="fa-solid fa-check"></i> ${escapeHtml(row.pinyin)} - ${escapeHtml(row.meaning_vn || row.meaning_en || '')}</span>`
-            : `<span class="bt-bad"><i class="fa-solid fa-xmark"></i> ${escapeHtml(row.pinyin)} - ${escapeHtml(row.meaning_vn || row.meaning_en || '')}</span>`;
+        result.innerHTML = typingResultHtml(row, isCorrect);
 
         recordAnswer(row, 'typing', answer, isCorrect);
     });
@@ -286,7 +314,8 @@ function renderMatchActivity(area, activity) {
     wrap.appendChild(instruction);
 
     const board = document.createElement('div');
-    board.className = 'bt-match-board';
+    // Listening lays the two sides out as rows (audio row + meaning row); reading keeps columns.
+    board.className = 'bt-match-board' + (activity.type === 'listen' ? ' bt-match-board-rows' : '');
 
     const leftCol = document.createElement('div');
     leftCol.className = 'bt-match-col';

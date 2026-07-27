@@ -560,9 +560,7 @@ let isAudioPlaying = false;
 let audioQueue = [];
 let tableVocabList = [];
 let summaryAudio = null;
-let summaryHiddenCells = new Set();
 let summaryHiddenColumns = new Set();
-let summaryRevealedColumnCells = new Set();
 let activeSummaryAudioButton = null;
 let activeSummaryAudioRevealRow = null;
 
@@ -588,58 +586,47 @@ function renderVocabTable() {
         return;
     }
 
-    const tableId = 'vl-summary-table';
-    let html = `
-        <table class="vocab-table vocab-canonical-table" id="${tableId}">
-            <thead>
-                <tr>
-                    <th class="vocab-tools-col">
-                        <button type="button" onclick="event.stopPropagation(); strokeOrderAllSummary()"
-                            id="vl-summary-stroke-all-btn" class="vocab-header-icon-btn" title="${t('vocab.stroke_all_aria')}"
-                            aria-label="${t('vocab.stroke_all_aria')}"><i class="fa-solid fa-paintbrush" aria-hidden="true"></i></button>
-                        <button type="button" onclick="event.stopPropagation(); playAllVocabAudio()"
-                            id="vl-summary-play-all-btn" class="vocab-header-icon-btn" title="${t('reading.play_all_vocab_audio')}"
-                            aria-label="${t('reading.play_all_vocab_audio')}"><i class="fa-solid fa-play" aria-hidden="true"></i></button>
-                    </th>
-                    <th class="vocab-no-col">
-                        <button type="button" onclick="event.stopPropagation(); shuffleVocab()"
-                            class="vocab-header-icon-btn" title="${t('reading.shuffle_vocab_audio')}"
-                            aria-label="${t('reading.shuffle_vocab_audio')}"><i class="fa-solid fa-shuffle" aria-hidden="true"></i></button>
-                    </th>
-                    <th>${renderSummaryColumnHeader('cn', t('dashboard.table_character').toUpperCase(), tableId)}</th>
-                    <th>${renderSummaryColumnHeader('py', t('dashboard.table_pinyin').toUpperCase(), tableId)}</th>
-                    <th>${renderSummaryColumnHeader('vn', t('dashboard.table_meaning_vn').toUpperCase(), tableId)}</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
+    const toolbar = `
+        <div class="vl-cards-toolbar">
+            <div class="toolbar-left">
+                <button type="button" class="btn vl-col-toggle" data-summary-col="cn" onclick="toggleVocabColumn('cn')">${vocabColToggleInner('cn')}</button>
+                <button type="button" class="btn vl-col-toggle" data-summary-col="py" onclick="toggleVocabColumn('py')">${vocabColToggleInner('py')}</button>
+                <button type="button" class="btn vl-col-toggle" data-summary-col="vn" onclick="toggleVocabColumn('vn')">${vocabColToggleInner('vn')}</button>
+            </div>
+            <div class="toolbar-right">
+                <button type="button" class="btn" onclick="strokeOrderAllSummary()" title="${t('vocab.stroke_all_aria')}"><i class="fa-solid fa-paintbrush" aria-hidden="true"></i> ${escapeHtml(t('vocab_learning.stroke_order'))}</button>
+                <button type="button" class="btn" onclick="shuffleVocab()" title="${t('reading.shuffle_vocab_audio')}"><i class="fa-solid fa-shuffle" aria-hidden="true"></i> ${escapeHtml(t('vocab_learning.shuffle'))}</button>
+                <button type="button" class="btn vl-toolbar-primary" id="vl-summary-play-all-btn" onclick="playAllVocabAudio()" title="${t('reading.play_all_vocab_audio')}"><i class="fa-solid fa-play play-icon" aria-hidden="true"></i> ${escapeHtml(t('vocab_learning.play_all'))}</button>
+            </div>
+        </div>`;
 
-    tableVocabList.forEach((v, index) => {
+    const cards = tableVocabList.map((v, index) => {
         const word = v.word || '';
+        const hasChineseChars = /[\u4e00-\u9fff]/.test(word);
         const audioBtn = v.audio_key
-            ? `<button type="button" class="vocab-audio-btn" onclick="playSingleVocabAudio('${escapeAttr(v.audio_key)}', ${escapeJsArg(word)}, this)" title="${t('reading.play_word_audio')}" aria-label="${escapeAttr(t('reading.play_audio_for', { word: v.word || 'word' }))}"><i class="fa-solid fa-volume-high" aria-hidden="true"></i></button>`
-            : `<span class="vocab-no-audio" title="${t('reading.no_audio_available')}">-</span>`;
-        const hasChineseChars = /[\u4e00-\u9fff]/.test(v.word || '');
-        const strokeBtn = hasChineseChars
-            ? `<button type="button" class="vocab-stroke-row-btn" onclick="openStrokeModalForWord('${escapeAttr(v.word)}', '${escapeAttr(v.pinyin || '')}')" title="${t('vocab_learning.show_stroke_order_aria')}" aria-label="${t('vocab_learning.show_stroke_order_aria')}"><i class="fa-solid fa-paintbrush" aria-hidden="true"></i></button>`
+            ? `<button type="button" class="action-btn vocab-audio-btn" onclick="playSingleVocabAudio('${escapeAttr(v.audio_key)}', ${escapeJsArg(word)}, this)" title="${t('reading.play_word_audio')}" aria-label="${escapeAttr(t('reading.play_audio_for', { word: word || 'word' }))}"><i class="fa-solid fa-volume-high" aria-hidden="true"></i></button>`
             : '';
-        html += `
-            <tr id="vl-tr-${index}" data-audio="${escapeAttr(v.audio_key || '')}">
-                <td class="vocab-tools-cell">${strokeBtn}${audioBtn}</td>
-                <td class="vocab-no-cell">${index + 1}</td>
-                <td class="vocab-cn clickable-cell ${getSummaryCellClasses(word, 'cn')}" onclick="toggleSummaryVocabCell(this, 'cn', ${escapeJsArg(word)}, '${tableId}')">${escapeHtml(v.word || '')}</td>
-                <td class="vocab-pinyin clickable-cell ${getSummaryCellClasses(word, 'py')}" onclick="toggleSummaryVocabCell(this, 'py', ${escapeJsArg(word)}, '${tableId}')">${escapeHtml(v.pinyin || '')}</td>
-                <td class="vocab-meaning-vn clickable-cell ${getSummaryCellClasses(word, 'vn')}" onclick="toggleSummaryVocabCell(this, 'vn', ${escapeJsArg(word)}, '${tableId}')">${escapeHtml(v.meaning_vn || v.meaning_en || '')}</td>
-            </tr>
-        `;
-    });
+        const strokeBtn = hasChineseChars
+            ? `<button type="button" class="action-btn" onclick="openStrokeModalForWord('${escapeAttr(word)}', '${escapeAttr(v.pinyin || '')}')" title="${t('vocab_learning.show_stroke_order_aria')}" aria-label="${t('vocab_learning.show_stroke_order_aria')}"><i class="fa-solid fa-paintbrush" aria-hidden="true"></i></button>`
+            : '';
+        return `
+            <div class="vocab-card" id="vl-tr-${index}" data-audio="${escapeAttr(v.audio_key || '')}">
+                <div class="vc-left">
+                    <span class="vc-num">${index + 1}</span>
+                    <div class="vc-char han-text">${escapeHtml(word)}</div>
+                </div>
+                <div class="vc-middle">
+                    <div class="vc-pinyin">${escapeHtml(v.pinyin || '')}</div>
+                    <div class="vc-meaning">${escapeHtml(v.meaning_vn || v.meaning_en || '')}</div>
+                </div>
+                <div class="vc-right">${audioBtn}${strokeBtn}</div>
+            </div>`;
+    }).join('');
 
-    html += `
-            </tbody>
-        </table>`;
-    container.innerHTML = html;
-    const table = document.getElementById(tableId);
-    ['cn', 'py', 'vn'].forEach(col => table?.classList.toggle(`hide-${col}`, summaryHiddenColumns.has(col)));
+    container.innerHTML = toolbar + `<div class="vl-vocab-cards" id="vl-summary-cards">${cards}</div>`;
+
+    const cardsEl = document.getElementById('vl-summary-cards');
+    ['cn', 'py', 'vn'].forEach(col => cardsEl.classList.toggle(`hide-${col}`, summaryHiddenColumns.has(col)));
 }
 
 function escapeAttr(value) {
@@ -656,85 +643,29 @@ function escapeJsArg(value) {
     return JSON.stringify(String(value ?? '')).replace(/"/g, '&quot;');
 }
 
-function renderSummaryColumnHeader(colType, label, tableId) {
-    const isHidden = summaryHiddenColumns.has(colType);
-    return `
-        <span class="vocab-column-header-label">${escapeHtml(label)}</span>
-        <button type="button" class="vocab-column-toggle" data-summary-col="${colType}" onclick="event.stopPropagation(); toggleVocabColumn('${colType}', '${tableId}')" title="${isHidden ? t('vocab.show') : t('vocab.hide')} ${escapeAttr(label)}" aria-label="${isHidden ? t('vocab.show') : t('vocab.hide')} ${escapeAttr(label)}">
-            <i class="fa-solid ${isHidden ? 'fa-eye' : 'fa-eye-slash'}" aria-hidden="true"></i>
-        </button>
-    `;
+function vocabColMeta(colType) {
+    if (colType === 'cn') return t('dashboard.table_character');
+    if (colType === 'py') return t('dashboard.table_pinyin');
+    return t('dashboard.table_meaning_vn');
 }
 
-function toggleVocabColumn(colType, tableId) {
-    const table = document.getElementById(tableId);
-    if (!table) return;
-    tableVocabList.forEach(row => summaryRevealedColumnCells.delete(getSummaryHiddenCellKey(row.word || '', colType)));
+// Inner markup (icon + label) for a toolbar column-hide toggle button.
+function vocabColToggleInner(colType) {
+    const isHidden = summaryHiddenColumns.has(colType);
+    const verb = isHidden ? t('vocab.show') : t('vocab.hide');
+    const icon = isHidden ? 'fa-eye' : 'fa-eye-slash';
+    return `<i class="fa-solid ${icon}" aria-hidden="true"></i> ${escapeHtml(verb)} ${escapeHtml(vocabColMeta(colType))}`;
+}
+
+// Whole-column hide/show driven by the toolbar toggles (operates on the card list).
+function toggleVocabColumn(colType) {
+    const cardsEl = document.getElementById('vl-summary-cards');
+    if (!cardsEl) return;
     if (summaryHiddenColumns.has(colType)) summaryHiddenColumns.delete(colType);
-    else {
-        summaryHiddenColumns.add(colType);
-        tableVocabList.forEach(row => summaryHiddenCells.delete(getSummaryHiddenCellKey(row.word || '', colType)));
-    }
-    table.classList.toggle(`hide-${colType}`, summaryHiddenColumns.has(colType));
-    updateSummaryColumnToggleIcon(colType);
-    refreshSummaryCellVisibility();
-}
-
-function toggleSummaryVocabCell(cell, colType, word, tableId) {
-    const table = document.getElementById(tableId);
-    const key = getSummaryHiddenCellKey(word, colType);
-    if (table?.classList.contains(`hide-${colType}`)) {
-        const shouldReveal = !summaryRevealedColumnCells.has(key);
-        if (shouldReveal) summaryRevealedColumnCells.add(key);
-        else summaryRevealedColumnCells.delete(key);
-        cell.classList.toggle('column-cell-revealed', shouldReveal);
-        return;
-    }
-    const shouldHide = !cell.classList.contains('hidden-cell');
-    cell.classList.toggle('hidden-cell', shouldHide);
-    if (shouldHide) summaryHiddenCells.add(key);
-    else summaryHiddenCells.delete(key);
-}
-
-function updateSummaryColumnToggleIcon(colType) {
-    const button = document.querySelector(`.vocab-column-toggle[data-summary-col="${colType}"]`);
-    if (!button) return;
-    const icon = button.querySelector('.fa-solid');
-    const isHidden = summaryHiddenColumns.has(colType);
-    icon?.classList.toggle('fa-eye', isHidden);
-    icon?.classList.toggle('fa-eye-slash', !isHidden);
-    button.title = `${isHidden ? t('vocab.show') : t('vocab.hide')} ${t('vocab.column_label')}`;
-    button.setAttribute('aria-label', button.title);
-}
-
-function getSummaryHiddenCellKey(word, colType) {
-    return `${word || ''}::${colType}`;
-}
-
-function getSummaryCellClasses(word, colType) {
-    const key = getSummaryHiddenCellKey(word, colType);
-    return [
-        summaryHiddenCells.has(key) ? 'hidden-cell' : '',
-        summaryRevealedColumnCells.has(key) ? 'column-cell-revealed' : ''
-    ].filter(Boolean).join(' ');
-}
-
-function refreshSummaryCellVisibility() {
-    tableVocabList.forEach((row, index) => {
-        const word = row.word || '';
-        const tr = document.getElementById(`vl-tr-${index}`);
-        if (!tr) return;
-        [
-            ['cn', '.vocab-cn'],
-            ['py', '.vocab-pinyin'],
-            ['vn', '.vocab-meaning-vn']
-        ].forEach(([colType, selector]) => {
-            const cell = tr.querySelector(selector);
-            const key = getSummaryHiddenCellKey(word, colType);
-            cell?.classList.toggle('hidden-cell', summaryHiddenCells.has(key));
-            cell?.classList.toggle('column-cell-revealed', summaryHiddenColumns.has(colType) && summaryRevealedColumnCells.has(key));
-        });
-    });
+    else summaryHiddenColumns.add(colType);
+    cardsEl.classList.toggle(`hide-${colType}`, summaryHiddenColumns.has(colType));
+    const btn = document.querySelector(`.vl-col-toggle[data-summary-col="${colType}"]`);
+    if (btn) btn.innerHTML = vocabColToggleInner(colType);
 }
 
 function revealSummaryRowForAudio(rowIndex) {
@@ -811,7 +742,7 @@ function playAllVocabAudio() {
 
 function playNextInQueue() {
     // Clear previous highlights
-    document.querySelectorAll('#vl-summary-table tr').forEach(tr => tr.classList.remove('playing-highlight'));
+    document.querySelectorAll('#vl-summary-cards .vocab-card').forEach(tr => tr.classList.remove('playing-highlight'));
 
     if (!isAudioPlaying || audioQueue.length === 0) {
         isAudioPlaying = false;
@@ -856,7 +787,7 @@ function stopSummaryAudio() {
         summaryAudio = null;
     }
     resetSummaryAudioButtons();
-    document.querySelectorAll('#vl-summary-table tr').forEach(tr => tr.classList.remove('playing-highlight'));
+    document.querySelectorAll('#vl-summary-cards .vocab-card').forEach(tr => tr.classList.remove('playing-highlight'));
 }
 
 // ─── Stroke Order Modal ───────────────────────────────────────────────────────

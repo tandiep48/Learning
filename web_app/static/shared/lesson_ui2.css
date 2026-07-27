@@ -1,0 +1,402 @@
+/* ============================================================
+   Shared "lesson-option10" content theme. Scoped to body.ui2-lesson so the
+   brighter palette / Inter font applies to the lesson content pages only.
+   Re-maps the design tokens (so existing page CSS recolors automatically),
+   then adds card/toolbar polish on top.
+   ============================================================ */
+
+body.ui2-lesson {
+    --bg-color: #f7fbf9;
+    --card-bg: #ffffff;
+    --text-main: #111827;
+    --text-muted: #4b5563;
+    --primary: #007a61;
+    --primary-hover: #00634f;
+    --primary-light: #e0efe9;
+    --secondary: #cbe2d4;
+    --secondary-hover: #b5d5c1;
+
+    background: var(--bg-color);
+}
+
+/* styles.css sets `* { font-family: Roboto }` directly on every element, so a
+   scoped universal override is needed to switch this page's text to Inter.
+   `<i>` is excluded so FontAwesome / Phosphor icon fonts keep working. */
+body.ui2-lesson,
+body.ui2-lesson *:not(i) {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Re-assert the han font for Chinese text (higher specificity wins over the
+   scoped universal above). */
+body.ui2-lesson [lang="zh-CN"],
+body.ui2-lesson .han-text,
+body.ui2-lesson .chinese-word,
+body.ui2-lesson .hanzi-text,
+body.ui2-lesson .lesson-line-hanzi,
+body.ui2-lesson .vl-hanzi,
+body.ui2-lesson .vocab-cn,
+body.ui2-lesson .complete-word,
+body.ui2-lesson .ex-cn,
+body.ui2-lesson .dlg-cn,
+body.ui2-lesson .stroke-modal-word,
+body.ui2-lesson .stroke-tab,
+body.ui2-lesson .speaking-prompt,
+body.ui2-lesson .speaking-reveal-hanzi {
+    font-family: var(--han-font-family, 'Noto Sans', Helvetica, sans-serif);
+}
+
+/* Lesson pages wrap content in .app-container, which is itself a white card.
+   Flatten it so content sits on the page like the mockup (grammar/translation
+   already flatten their own container). */
+.ui2-lesson .app-container {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+    min-height: 0;
+    overflow: visible;
+}
+
+/* ── Toolbar (shared shape across lesson pages) ──────────────────────────── */
+.ui2-lesson .toolbar {
+    background: var(--card-bg);
+    border: 1px solid rgba(0, 0, 0, 0.03);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 122, 97, 0.04);
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+/* ── Bottom action buttons ───────────────────────────────────────────────── */
+.ui2-lesson .bottom-actions { display: flex; gap: 1.5rem; margin-top: 1.5rem; }
+.ui2-lesson .bottom-actions.justify-end { justify-content: flex-end; }
+.ui2-lesson .btn-large { flex: 1; padding: 1.25rem; font-size: 1.125rem; }
+
+/* ── Grammar content → mockup grammar cards ──────────────────────────────── */
+.ui2-lesson .grammar-body {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+}
+.ui2-lesson .grammar-content {
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+.ui2-lesson .grammar-section {
+    background: var(--card-bg);
+    border: 1px solid rgba(0, 0, 0, 0.03);
+    border-radius: 24px;
+    box-shadow: 0 2px 8px rgba(0, 122, 97, 0.04);
+    padding: 2rem 2.25rem;
+    margin: 0;
+}
+.ui2-lesson .grammar-title {
+    text-align: left;
+    border-bottom: 0;
+    padding-bottom: 0;
+    margin-top: 0;
+    color: var(--text-main);
+    font-size: 1.4rem;
+    line-height: 1.35;
+}
+.ui2-lesson .grammar-desc { color: var(--text-muted); }
+.ui2-lesson .grammar-example,
+.ui2-lesson .grammar-dialogue {
+    background: var(--primary-light);
+    border-left: 3px solid var(--primary);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+}
+.ui2-lesson .ex-cn,
+.ui2-lesson .dlg-cn { color: var(--text-main); }
+.ui2-lesson .ex-vn,
+.ui2-lesson .dlg-vn { color: var(--text-muted); }
+.ui2-lesson .grammar-table-container {
+    border-radius: 12px;
+    border-color: rgba(0, 0, 0, 0.06);
+}
+
+/* ── Translation content → mockup cards ──────────────────────────────────── */
+.ui2-lesson .translation-item {
+    border-radius: 16px;
+    border-color: rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 8px rgba(0, 122, 97, 0.04);
+    padding: 1.5rem;
+}
+.ui2-lesson .translation-item-index {
+    background: var(--primary);
+}
+.ui2-lesson .translation-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0, 122, 97, 0.12);
+}
+.ui2-lesson .translation-answer { color: var(--primary); }
+.ui2-lesson .translation-reveal-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+/* ── Vocab-learning shared cards (softer, rounded like the mockup) ─ */
+.ui2-lesson .vl-card {
+    border-radius: 24px;
+    box-shadow: 0 4px 20px rgba(0, 122, 97, 0.08);
+}
+.ui2-lesson .reading-line {
+    border-radius: 16px;
+}
+
+/* ── Word / Lesson Summary content tabs ──────────────────────────────────── */
+.ui2-lesson .section-tabs {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.ui2-lesson .section-tabs .tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: var(--card-bg);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 1rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 122, 97, 0.04);
+    transition: all 0.2s;
+}
+.ui2-lesson .section-tabs .tab i { font-size: 1.25rem; }
+.ui2-lesson .section-tabs .tab:hover { border-color: var(--secondary); color: var(--primary); }
+.ui2-lesson .section-tabs .tab.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+
+/* ── Toolbars (Word Summary table header + Lesson Summary bar) ────────────── */
+.ui2-lesson .lesson-summary-toolbar {
+    background: var(--card-bg);
+    border: 1px solid rgba(0, 0, 0, 0.03);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 122, 97, 0.04);
+    padding: 1rem;
+}
+.ui2-lesson .lesson-summary-toolbar .btn,
+.ui2-lesson .reading .toolbar .btn {
+    border-radius: var(--ui-radius-sm, 8px);
+}
+
+/* ── Word / Lesson Summary outer containers (NO outer container box, matching mockup) ── */
+.ui2-lesson .summary-content-card,
+.ui2-lesson .vocab-content-card.summary-content-card,
+.ui2-lesson .lesson-summary-content-card,
+.ui2-lesson .vocab-content-card.lesson-summary-content-card,
+.ui2-lesson #vl-summary-body,
+.ui2-lesson .vocab-table-wrap,
+.ui2-lesson .vocab-table-theme .vocab-table-wrap {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+}
+
+.ui2-lesson .lesson-learner-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.ui2-lesson .lesson-preview-line {
+    gap: 1.5rem;
+    align-items: flex-start;
+    background: var(--card-bg);
+    border: 1px solid rgba(0, 0, 0, 0.03);
+    border-radius: 24px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 122, 97, 0.04);
+    transition: box-shadow 0.2s, border-color 0.2s, transform 0.2s;
+}
+.ui2-lesson .lesson-preview-line:hover {
+    background: var(--card-bg);
+    border-color: var(--secondary);
+    box-shadow: 0 4px 20px rgba(0, 122, 97, 0.08);
+    transform: translateY(-2px);
+}
+.ui2-lesson .lesson-preview-text .hanzi-text,
+.ui2-lesson .lesson-preview-text .line-token { color: var(--text-main); }
+.ui2-lesson .lesson-preview-text .pinyin-text { color: var(--primary); font-weight: 600; }
+.ui2-lesson .lesson-preview-text .meaning-text { color: var(--text-muted); }
+.ui2-lesson .lesson-passage-audio-btn {
+    width: 40px;
+    height: 40px;
+    background: var(--primary-light);
+    border: 1px solid rgba(0, 122, 97, 0.25);
+    color: var(--primary);
+}
+.ui2-lesson .lesson-passage-audio-btn:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+
+/* ── Word Summary → card list (toolbar toggles for hide) ─────────────────── */
+.ui2-lesson .vl-cards-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    background: var(--card-bg);
+    border: 1px solid rgba(0, 0, 0, 0.03);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 122, 97, 0.04);
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+.ui2-lesson .vl-cards-toolbar .toolbar-left,
+.ui2-lesson .vl-cards-toolbar .toolbar-right {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+.ui2-lesson .vl-cards-toolbar .btn {
+    flex-direction: row;
+    gap: 0.4rem;
+    padding: 0.55rem 0.9rem;
+    font-size: 0.85rem;
+    min-height: auto;
+    border-radius: 8px;
+    background: var(--card-bg);
+    color: var(--text-muted);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+.ui2-lesson .vl-cards-toolbar .btn:hover { border-color: var(--secondary); color: var(--primary); }
+.ui2-lesson .vl-cards-toolbar .vl-toolbar-primary {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+.ui2-lesson .vl-cards-toolbar .vl-toolbar-primary:hover { background: var(--primary-hover); color: #fff; }
+
+.ui2-lesson .vl-vocab-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+.ui2-lesson .vocab-card {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    background: var(--card-bg);
+    border: 1px solid rgba(0, 0, 0, 0.03);
+    border-radius: 20px;
+    padding: 1.25rem 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 122, 97, 0.04);
+    transition: box-shadow 0.2s, border-color 0.2s, transform 0.2s;
+}
+.ui2-lesson .vocab-card:hover {
+    border-color: var(--secondary);
+    box-shadow: 0 4px 20px rgba(0, 122, 97, 0.08);
+    transform: translateY(-2px);
+}
+.ui2-lesson .vocab-card .vc-left {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    width: 32%;
+    min-width: 0;
+}
+.ui2-lesson .vocab-card .vc-num {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-light);
+    width: 24px;
+    flex-shrink: 0;
+}
+.ui2-lesson .vocab-card .vc-char { font-size: 2.2rem; color: var(--primary); line-height: 1; }
+.ui2-lesson .vocab-card .vc-middle {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+}
+.ui2-lesson .vocab-card .vc-pinyin { font-size: 1.1rem; font-weight: 600; color: var(--text-main); }
+.ui2-lesson .vocab-card .vc-meaning { color: var(--text-muted); }
+.ui2-lesson .vocab-card .vc-right { display: flex; gap: 0.5rem; flex-shrink: 0; }
+.ui2-lesson .vocab-card .action-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: var(--bg-color);
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.ui2-lesson .vocab-card .action-btn:hover {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+/* The vocab audio button forces a white icon (green-fill table style); make the
+   icon green on the light card button, and white only on hover. */
+.ui2-lesson .vocab-card .action-btn .fa-solid { color: var(--primary); font-size: 1rem; }
+.ui2-lesson .vocab-card .action-btn:hover .fa-solid { color: #fff; }
+
+/* Drop the in-content breadcrumb bar (not in the mockup; the sidebar shows HSK/Lesson). */
+.ui2-lesson .word-summary-topbar,
+.ui2-lesson .lesson-summary-topbar { display: none; }
+
+/* Column hide (toolbar) + audio reveal + play highlight */
+.ui2-lesson .vl-vocab-cards.hide-cn .vc-char,
+.ui2-lesson .vl-vocab-cards.hide-py .vc-pinyin,
+.ui2-lesson .vl-vocab-cards.hide-vn .vc-meaning { visibility: hidden; }
+.ui2-lesson .vocab-card.audio-revealed .vc-char,
+.ui2-lesson .vocab-card.audio-revealed .vc-pinyin,
+.ui2-lesson .vocab-card.audio-revealed .vc-meaning { visibility: visible; }
+.ui2-lesson .vocab-card.playing-highlight {
+    border-color: var(--primary);
+    box-shadow: 0 4px 20px rgba(0, 122, 97, 0.12);
+}
+
+@media (max-width: 600px) {
+    .ui2-lesson .vocab-card { gap: 0.75rem; padding: 1rem; }
+    .ui2-lesson .vocab-card .vc-left { width: auto; gap: 0.75rem; }
+    .ui2-lesson .vocab-card .vc-char { font-size: 1.8rem; }
+}
+
+/* ── Bottom action buttons → mockup large buttons ────────────────────────── */
+.ui2-lesson .vl-summary-footer,
+.ui2-lesson .lesson-summary-actions {
+    gap: 1.5rem;
+}
+.ui2-lesson .vl-summary-footer .vl-train-btn,
+.ui2-lesson .lesson-summary-actions .vl-train-btn {
+    flex: 1;
+    justify-content: center;
+    padding: 1.15rem;
+    font-size: 1.05rem;
+    border-radius: var(--ui-radius-sm, 8px);
+}
+.ui2-lesson .vl-train-btn { background: var(--primary); }
+.ui2-lesson .vl-train-btn:hover { background: var(--primary-hover); box-shadow: 0 4px 18px rgba(0, 122, 97, 0.2); }
+.ui2-lesson .vl-learn-btn {
+    background: transparent;
+    color: var(--primary);
+    border: 2px solid var(--primary);
+}
+.ui2-lesson .vl-learn-btn:hover { background: var(--primary-light); }

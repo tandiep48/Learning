@@ -4,13 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ t('grammar.page_title') }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <link rel="stylesheet" href="/static/shared/styles.css?v=7">
     <link rel="stylesheet" href="/static/shared/passage_picker.css?v=999">
     <link rel="stylesheet" href="/static/grammar/grammar.css?v=1000">
-    <link rel="stylesheet" href="/static/shared/sidebar.css?v=5">
+    <link rel="stylesheet" href="/static/shared/lesson_ui2.css?v=5">
+    <link rel="stylesheet" href="/static/shared/sidebar.css?v=10">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
-<body class="with-site-nav">
+<body class="with-site-nav ui2-lesson">
     {% include 'shared/site_nav.html' %}
     {% include 'shared/sidebar.html' %}
         <div class="app-container grammar-container">
@@ -37,6 +42,6 @@
     <script src="/static/shared/passage_picker.js?v=15"></script>
     <script src="/static/shared/passage_label.js"></script>
     <script src="/static/grammar/grammar.js?v=1000"></script>
-    <script src="/static/shared/sidebar.js?v=8"></script>
+    <script src="/static/shared/sidebar.js?v=10"></script>
 </body>
 </html>
