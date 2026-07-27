@@ -1199,11 +1199,10 @@ def get_learned_words_last_3_days(conn, user_id):
     Cumulative running total of fully-learned words as of each of the 3 most
     recent mastery days.
 
-    A word counts as learned once it reaches all 3 correct modes (typing/listen/
-    meaning) in round 1 on a given day; its mastery day is the FIRST such day, so
-    each word is counted once and the total only grows. The running total sums
-    every mastery from the start of history, then the 3 most recent mastery days
-    are returned oldest -> newest for a Chart.js chart:
+    A word counts as learned if it reached all 3 correct modes (typing/listen/
+    meaning) in round 1 on its most recent practice day (matching get_learned_words).
+    The running total sums these masteries by their latest mastery date, and the 3
+    most recent mastery days are returned oldest -> newest for a Chart.js chart:
         [{"date": "2026-07-24", "count": 120}, {"date": "2026-07-25", "count": 132}, ...]
     """
     if not conn:
@@ -1222,11 +1221,17 @@ def get_learned_words_last_3_days(conn, user_id):
         GROUP BY word, DATE(updated_at)
     ),
     mastery AS (
-        -- First day each word reached all 3 modes.
-        SELECT word, MIN(attempt_date) as mastered_date
-        FROM daily_attempts
-        WHERE successful_modes = 3
-        GROUP BY word
+        -- Words that reached all 3 correct modes on their most recent practice day.
+        SELECT word, attempt_date AS mastered_date
+        FROM (
+            SELECT
+                word,
+                attempt_date,
+                successful_modes,
+                ROW_NUMBER() OVER (PARTITION BY word ORDER BY attempt_date DESC) AS rn
+            FROM daily_attempts
+        ) latest
+        WHERE rn = 1 AND successful_modes = 3
     ),
     per_day AS (
         SELECT mastered_date, count(*) as new_count
