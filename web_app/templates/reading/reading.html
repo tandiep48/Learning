@@ -5,16 +5,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ t('reading.page_title', hsk_level=hsk_level) }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <link rel="stylesheet" href="/static/shared/styles.css?v=7">
     <link rel="stylesheet" href="/static/shared/passage_picker.css?v=8">
     <link rel="stylesheet" href="/static/shared/vocab_table.css?v=11">
     <link rel="stylesheet" href="/static/vocab_learning/vocab_learning.css?v=10">
     <link rel="stylesheet" href="/static/reading/reading.css?v=12">
-    <link rel="stylesheet" href="/static/shared/sidebar.css">
+    <link rel="stylesheet" href="/static/shared/lesson_ui2.css?v=5">
+    <link rel="stylesheet" href="/static/shared/sidebar.css?v=10">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 
-<body class="with-site-nav">
+<body class="with-site-nav ui2-lesson">
     {% include 'shared/site_nav.html' %}
     {% include 'shared/sidebar.html' %}
     <div class="app-container reading-container">
@@ -50,13 +55,21 @@
         </div>
 
         <div id="screen-lesson-summary" class="screen">
+            <nav class="section-tabs lesson-view-tabs">
+                <button type="button" class="tab" onclick="navigateToDomain('vocab')">
+                    <i class="ph-duotone ph-list-bullets"></i> {{ t('sidebar.word_summary') }}
+                </button>
+                <button type="button" class="tab active">
+                    <i class="ph-duotone ph-book-open"></i> {{ t('vocab_trainer.lesson_summary') }}
+                </button>
+            </nav>
             <div class="vl-summary-topbar lesson-summary-topbar">
                 <div>
                     <div id="lesson-learner-breadcrumb"></div>
                 </div>
             </div>
 
-            <div class="vocab-content-card lesson-summary-content-card">
+            <div class="lesson-summary-content-card">
                 <div class="lesson-summary-toolbar">
                     <button class="btn" id="lesson-summary-auto-play-btn" onclick="toggleLessonSummaryAutoPlay()">
                         <i class="fa-solid fa-play" aria-hidden="true"></i>
@@ -188,7 +201,7 @@
     <script src="/static/shared/passage_label.js"></script>
     <script src="/static/shared/han_text.js?v=4"></script>
     <script src="/static/reading/reading.js?v=29"></script>
-    <script src="/static/shared/sidebar.js?v=8"></script>
+    <script src="/static/shared/sidebar.js?v=10"></script>
 </body>
 
 </html>
