@@ -615,10 +615,8 @@ function renderVocabTable() {
                     <span class="vc-num">${index + 1}</span>
                     <div class="vc-char han-text">${escapeHtml(word)}</div>
                 </div>
-                <div class="vc-middle">
-                    <div class="vc-pinyin">${escapeHtml(v.pinyin || '')}</div>
-                    <div class="vc-meaning">${escapeHtml(v.meaning_vn || v.meaning_en || '')}</div>
-                </div>
+                <div class="vc-pinyin">${escapeHtml(v.pinyin || '')}</div>
+                <div class="vc-meaning">${escapeHtml(v.meaning_vn || v.meaning_en || '')}</div>
                 <div class="vc-right">${audioBtn}${strokeBtn}</div>
             </div>`;
     }).join('');

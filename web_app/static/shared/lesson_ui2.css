@@ -19,6 +19,14 @@ body.ui2-lesson {
     background: var(--bg-color);
 }
 
+/* Word Summary + Lesson Summary pages: white page background, eye-protection cards.
+   Scoped via :has() so only the two pages that host these summary screens change
+   (grammar/translation share body.ui2-lesson but are left untouched). */
+body.ui2-lesson .page-main:has(#screen-summary),
+body.ui2-lesson .page-main:has(#screen-lesson-summary) {
+    background: #ffffff;
+}
+
 /* styles.css sets `* { font-family: Roboto }` directly on every element, so a
    scoped universal override is needed to switch this page's text to Inter.
    `<i>` is excluded so FontAwesome / Phosphor icon fonts keep working. */
@@ -297,7 +305,7 @@ body.ui2-lesson .speaking-reveal-hanzi {
     display: flex;
     align-items: center;
     gap: 1.25rem;
-    background: var(--card-bg);
+    background: #CBE2D4;
     border: 1px solid rgba(0, 0, 0, 0.03);
     border-radius: 20px;
     padding: 1.25rem 1.5rem;
@@ -313,26 +321,19 @@ body.ui2-lesson .speaking-reveal-hanzi {
     display: flex;
     align-items: center;
     gap: 1.25rem;
-    width: 32%;
+    width: 28%;
     min-width: 0;
 }
 .ui2-lesson .vocab-card .vc-num {
     font-size: 0.95rem;
     font-weight: 700;
-    color: var(--text-light);
+    color: #111111;
     width: 24px;
     flex-shrink: 0;
 }
-.ui2-lesson .vocab-card .vc-char { font-size: 2.2rem; color: var(--primary); line-height: 1; }
-.ui2-lesson .vocab-card .vc-middle {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    min-width: 0;
-}
-.ui2-lesson .vocab-card .vc-pinyin { font-size: 1.1rem; font-weight: 600; color: var(--text-main); }
-.ui2-lesson .vocab-card .vc-meaning { color: var(--text-muted); }
+.ui2-lesson .vocab-card .vc-char { font-size: 2.2rem; color: #111111; line-height: 1; }
+.ui2-lesson .vocab-card .vc-pinyin { flex: 1; min-width: 0; font-size: 1.1rem; font-weight: 600; color: #111111; }
+.ui2-lesson .vocab-card .vc-meaning { flex: 1; min-width: 0; color: #111111; }
 .ui2-lesson .vocab-card .vc-right { display: flex; gap: 0.5rem; flex-shrink: 0; }
 .ui2-lesson .vocab-card .action-btn {
     width: 40px;

@@ -129,13 +129,25 @@ const MATCH_CONFIG = {
 
 let trainerAudio = null;
 
-function buildActivities(groups) {
+// Build the flat activity list. Each activity type gets its own independent random
+// grouping of the words, and the types are interleaved round by round, so the words
+// paired together differ between typing, listening, and reading (e.g. typing shows
+// A/C while listening shows B/D). Every word still appears once per type, so all
+// words complete all three activities.
+function buildActivities(rows) {
+    const groupsByType = ACTIVITY_TYPES.map(type => ({
+        type,
+        groups: buildGroups(shuffle(rows.slice()))
+    }));
+    const roundCount = Math.max(...groupsByType.map(g => g.groups.length));
+
     const list = [];
-    groups.forEach((groupWords, groupIndex) => {
-        ACTIVITY_TYPES.forEach(type => {
-            list.push({ groupIndex, type, words: groupWords });
+    for (let round = 0; round < roundCount; round++) {
+        groupsByType.forEach(({ type, groups }) => {
+            const groupWords = groups[round];
+            if (groupWords) list.push({ groupIndex: round, type, words: groupWords });
         });
-    });
+    }
     return list;
 }
 
@@ -146,7 +158,7 @@ function startSession() {
     pendingRecords = [];
     totalAnswers = 0;
     correctAnswers = 0;
-    activities = buildActivities(buildGroups(words));
+    activities = buildActivities(words);
     currentActivityIndex = 0;
     renderActivity();
 }
@@ -238,6 +250,9 @@ function renderTypingActivity(area, activity) {
         const row = activity.words[idx];
         const rowEl = input.closest('.bt-type-row');
         const result = rowEl.querySelector('.bt-type-result');
+        // Answers must be typed — block paste and drag-drop into the field.
+        input.addEventListener('paste', (e) => e.preventDefault());
+        input.addEventListener('drop', (e) => e.preventDefault());
         // When the typed value matches: reveal pinyin + meaning and play the audio once.
         input.addEventListener('input', () => {
             if (input.disabled) return;
@@ -557,7 +572,7 @@ function retryMissed() {
     pendingRecords = [];
     totalAnswers = 0;
     correctAnswers = 0;
-    activities = buildActivities(buildGroups(retryPool));
+    activities = buildActivities(retryPool);
     currentActivityIndex = 0;
     renderActivity();
 }

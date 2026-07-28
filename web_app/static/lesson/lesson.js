@@ -153,6 +153,9 @@ function loadTask() {
     const typingInput = document.getElementById('typing-input');
     typingInput.value = '';
     typingInput.disabled = false;
+    // Answers must be typed — block paste and drag-drop into the field.
+    typingInput.onpaste = (e) => e.preventDefault();
+    typingInput.ondrop = (e) => e.preventDefault();
     typingInput.oninput = () => {
         const activeTask = sessionData?.tasks?.[currentTaskIndex];
         if (!activeTask || activeTask.type !== 'typing' || answerSubmitted) return;
