@@ -286,8 +286,10 @@
     gap: 0.5rem;
 }
 .mini-stat .label {
-    width: 45px;
-    font-size: 0.65rem;
+    width: 58px;
+    flex-shrink: 0;
+    font-size: 0.6rem;
+    white-space: nowrap;
     color: var(--ui-text-muted);
     font-weight: 600;
     text-transform: uppercase;

@@ -316,7 +316,7 @@
 
 .lesson-summary-toolbar {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
     gap: 10px;
     flex-wrap: wrap;
     margin-bottom: 16px;
@@ -324,6 +324,13 @@
     background: rgba(87, 104, 86, 0.035);
     border: 1px solid rgba(87, 104, 86, 0.07);
     border-radius: 10px;
+}
+
+.lesson-summary-toolbar .toolbar-left,
+.lesson-summary-toolbar .toolbar-right {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
 }
 
 .lesson-summary-toolbar .btn {
@@ -412,6 +419,11 @@
 
     .lesson-summary-toolbar {
         justify-content: stretch;
+    }
+
+    .lesson-summary-toolbar .toolbar-left,
+    .lesson-summary-toolbar .toolbar-right {
+        flex: 1;
     }
 
     .lesson-summary-toolbar .btn {
