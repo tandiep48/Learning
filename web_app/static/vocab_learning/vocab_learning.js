@@ -586,17 +586,18 @@ function renderVocabTable() {
         return;
     }
 
+    const colToggleBtn = (col) => `<button type="button" class="btn vl-col-toggle${summaryHiddenColumns.has(col) ? ' active' : ''}" data-summary-col="${col}" onclick="toggleVocabColumn('${col}')">${vocabColToggleInner(col)}</button>`;
     const toolbar = `
         <div class="vl-cards-toolbar">
             <div class="toolbar-left">
-                <button type="button" class="btn vl-col-toggle" data-summary-col="cn" onclick="toggleVocabColumn('cn')">${vocabColToggleInner('cn')}</button>
-                <button type="button" class="btn vl-col-toggle" data-summary-col="py" onclick="toggleVocabColumn('py')">${vocabColToggleInner('py')}</button>
-                <button type="button" class="btn vl-col-toggle" data-summary-col="vn" onclick="toggleVocabColumn('vn')">${vocabColToggleInner('vn')}</button>
+                <button type="button" class="btn vl-toolbar-primary" id="vl-summary-play-all-btn" onclick="playAllVocabAudio()" title="${t('reading.play_all_vocab_audio')}"><i class="fa-solid fa-play play-icon" aria-hidden="true"></i> ${escapeHtml(t('vocab_learning.play_all'))}</button>
+                <button type="button" class="btn" onclick="shuffleVocab()" title="${t('reading.shuffle_vocab_audio')}"><i class="fa-solid fa-shuffle" aria-hidden="true"></i> ${escapeHtml(t('vocab_learning.shuffle'))}</button>
+                <button type="button" class="btn" onclick="strokeOrderAllSummary()" title="${t('vocab.stroke_all_aria')}"><i class="fa-solid fa-paintbrush" aria-hidden="true"></i> ${escapeHtml(t('vocab_learning.stroke_order'))}</button>
             </div>
             <div class="toolbar-right">
-                <button type="button" class="btn" onclick="strokeOrderAllSummary()" title="${t('vocab.stroke_all_aria')}"><i class="fa-solid fa-paintbrush" aria-hidden="true"></i> ${escapeHtml(t('vocab_learning.stroke_order'))}</button>
-                <button type="button" class="btn" onclick="shuffleVocab()" title="${t('reading.shuffle_vocab_audio')}"><i class="fa-solid fa-shuffle" aria-hidden="true"></i> ${escapeHtml(t('vocab_learning.shuffle'))}</button>
-                <button type="button" class="btn vl-toolbar-primary" id="vl-summary-play-all-btn" onclick="playAllVocabAudio()" title="${t('reading.play_all_vocab_audio')}"><i class="fa-solid fa-play play-icon" aria-hidden="true"></i> ${escapeHtml(t('vocab_learning.play_all'))}</button>
+                ${colToggleBtn('cn')}
+                ${colToggleBtn('py')}
+                ${colToggleBtn('vn')}
             </div>
         </div>`;
 
@@ -663,7 +664,10 @@ function toggleVocabColumn(colType) {
     else summaryHiddenColumns.add(colType);
     cardsEl.classList.toggle(`hide-${colType}`, summaryHiddenColumns.has(colType));
     const btn = document.querySelector(`.vl-col-toggle[data-summary-col="${colType}"]`);
-    if (btn) btn.innerHTML = vocabColToggleInner(colType);
+    if (btn) {
+        btn.innerHTML = vocabColToggleInner(colType);
+        btn.classList.toggle('active', summaryHiddenColumns.has(colType));
+    }
 }
 
 function revealSummaryRowForAudio(rowIndex) {

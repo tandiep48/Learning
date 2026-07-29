@@ -226,7 +226,7 @@ body.ui2-lesson .speaking-reveal-hanzi {
 .ui2-lesson .lesson-preview-line {
     gap: 1.5rem;
     align-items: flex-start;
-    background: var(--card-bg);
+    background: #CBE2D4;
     border: 1px solid rgba(0, 0, 0, 0.03);
     border-radius: 24px;
     padding: 1.5rem;
@@ -234,7 +234,7 @@ body.ui2-lesson .speaking-reveal-hanzi {
     transition: box-shadow 0.2s, border-color 0.2s, transform 0.2s;
 }
 .ui2-lesson .lesson-preview-line:hover {
-    background: var(--card-bg);
+    background: #CBE2D4;
     border-color: var(--secondary);
     box-shadow: 0 4px 20px rgba(0, 122, 97, 0.08);
     transform: translateY(-2px);
@@ -295,6 +295,22 @@ body.ui2-lesson .speaking-reveal-hanzi {
 }
 .ui2-lesson .vl-cards-toolbar .vl-toolbar-primary:hover { background: var(--primary-hover); color: #fff; }
 
+/* Summary hide/show toggles (Word Summary col toggles + Lesson Summary pinyin/meaning).
+   Neutral base, green when active, and a fixed min-width so toggling the verb between
+   "Ẩn" and "Hiện" (different lengths) doesn't resize the button. */
+.ui2-lesson .vl-cards-toolbar .vl-col-toggle,
+.ui2-lesson .lesson-summary-toolbar .sum-toggle {
+    background: #F1F1F1;
+    min-width: 150px;
+    justify-content: center;
+}
+.ui2-lesson .vl-cards-toolbar .vl-col-toggle.active,
+.ui2-lesson .lesson-summary-toolbar .sum-toggle.primary {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+
 .ui2-lesson .vl-vocab-cards {
     display: flex;
     flex-direction: column;
@@ -334,7 +350,7 @@ body.ui2-lesson .speaking-reveal-hanzi {
 .ui2-lesson .vocab-card .vc-char { font-size: 2.2rem; color: #111111; line-height: 1; }
 .ui2-lesson .vocab-card .vc-pinyin { flex: 1; min-width: 0; font-size: 1.1rem; font-weight: 600; color: #111111; }
 .ui2-lesson .vocab-card .vc-meaning { flex: 1; min-width: 0; color: #111111; }
-.ui2-lesson .vocab-card .vc-right { display: flex; gap: 0.5rem; flex-shrink: 0; }
+.ui2-lesson .vocab-card .vc-right { display: flex; gap: 0.5rem; flex-shrink: 0; order: -1; }
 .ui2-lesson .vocab-card .action-btn {
     width: 40px;
     height: 40px;

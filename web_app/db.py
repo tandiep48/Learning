@@ -4,6 +4,10 @@ import psycopg2
 from psycopg2.extras import Json
 from dotenv import load_dotenv
 
+from sqlalchemy import select, func, distinct, case, union_all, cast, BigInteger
+from entity.database import SessionLocal
+from entity.record_entity import VocabRecord, LessonRecord, PracticeRecord
+
 load_dotenv()
 
 # --- DATABASE CONFIG (loaded from .env) ---
@@ -1208,59 +1212,72 @@ def get_learned_words_last_3_days(conn, user_id):
     if not conn:
         return []
 
-    query = """
-    WITH daily_attempts AS (
-        SELECT
-            word,
-            DATE(updated_at) as attempt_date,
-            count(DISTINCT CASE WHEN is_correct = true THEN mode END) as successful_modes
-        FROM vocab_records
-        WHERE mode IN ('typing', 'listen', 'meaning')
-          AND round_num = 1
-          AND user_id = %s
-        GROUP BY word, DATE(updated_at)
-    ),
-    mastery AS (
-        -- Words that reached all 3 correct modes on their most recent practice day.
-        SELECT word, attempt_date AS mastered_date
-        FROM (
-            SELECT
-                word,
-                attempt_date,
-                successful_modes,
-                ROW_NUMBER() OVER (PARTITION BY word ORDER BY attempt_date DESC) AS rn
-            FROM daily_attempts
-        ) latest
-        WHERE rn = 1 AND successful_modes = 3
-    ),
-    per_day AS (
-        SELECT mastered_date, count(*) as new_count
-        FROM mastery
-        GROUP BY mastered_date
-    ),
-    cumulative AS (
-        SELECT
-            mastered_date,
-            SUM(new_count) OVER (ORDER BY mastered_date) as cumulative_count
-        FROM per_day
-    )
-    SELECT mastered_date, cumulative_count
-    FROM (
-        SELECT mastered_date, cumulative_count
-        FROM cumulative
-        ORDER BY mastered_date DESC
-        LIMIT 3
-    ) latest
-    ORDER BY mastered_date ASC;
-    """
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            cur.execute(query, (user_id,))
-            rows = cur.fetchall()
-            return [{"date": row[0].isoformat(), "count": int(row[1] or 0)} for row in rows]
+        # daily_attempts: per (word, day) how many of the 3 modes were correct in round 1.
+        successful_modes = func.count(
+            distinct(case((VocabRecord.is_correct.is_(True), VocabRecord.mode)))
+        ).label("successful_modes")
+        daily_attempts = (
+            select(
+                VocabRecord.word.label("word"),
+                func.date(VocabRecord.updated_at).label("attempt_date"),
+                successful_modes,
+            )
+            .where(
+                VocabRecord.mode.in_(["typing", "listen", "meaning"]),
+                VocabRecord.round_num == 1,
+                VocabRecord.user_id == user_id,
+            )
+            .group_by(VocabRecord.word, func.date(VocabRecord.updated_at))
+            .cte("daily_attempts")
+        )
+
+        # mastery: each word's most recent day, kept only if it reached all 3 modes.
+        rn = func.row_number().over(
+            partition_by=daily_attempts.c.word,
+            order_by=daily_attempts.c.attempt_date.desc(),
+        ).label("rn")
+        ranked = select(
+            daily_attempts.c.word,
+            daily_attempts.c.attempt_date,
+            daily_attempts.c.successful_modes,
+            rn,
+        ).subquery("ranked")
+        mastery = (
+            select(ranked.c.word, ranked.c.attempt_date.label("mastered_date"))
+            .where(ranked.c.rn == 1, ranked.c.successful_modes == 3)
+            .cte("mastery")
+        )
+
+        # per_day new masteries, then a running cumulative total by date.
+        per_day = (
+            select(mastery.c.mastered_date, func.count().label("new_count"))
+            .group_by(mastery.c.mastered_date)
+            .cte("per_day")
+        )
+        cumulative_count = func.sum(per_day.c.new_count).over(
+            order_by=per_day.c.mastered_date
+        ).label("cumulative_count")
+        cumulative = select(per_day.c.mastered_date, cumulative_count).cte("cumulative")
+
+        # 3 most recent mastery days, returned oldest -> newest.
+        top3 = (
+            select(cumulative.c.mastered_date, cumulative.c.cumulative_count)
+            .order_by(cumulative.c.mastered_date.desc())
+            .limit(3)
+            .subquery("top3")
+        )
+        final = select(top3.c.mastered_date, top3.c.cumulative_count).order_by(
+            top3.c.mastered_date.asc()
+        )
+        rows = session.execute(final).all()
+        return [{"date": row[0].isoformat(), "count": int(row[1] or 0)} for row in rows]
     except Exception as e:
         print(f"⚠️ Database query failed (get_learned_words_last_3_days): {e}")
         return []
+    finally:
+        SessionLocal.remove()
 
 
 def get_time_learned_last_3_days(conn, user_id):
@@ -1277,40 +1294,42 @@ def get_time_learned_last_3_days(conn, user_id):
     if not conn:
         return []
 
-    query = """
-    WITH all_time AS (
-        SELECT DATE(updated_at) as day, response_time_ms as ms
-        FROM vocab_records WHERE user_id = %s
-        UNION ALL
-        SELECT DATE(updated_at) as day, response_time_ms as ms
-        FROM lesson_records WHERE user_id = %s
-        UNION ALL
-        SELECT DATE(updated_at) as day, response_time_ms as ms
-        FROM practice_record WHERE user_id = %s
-    ),
-    per_day AS (
-        SELECT day, COALESCE(SUM(ms), 0)::bigint as total_ms
-        FROM all_time
-        WHERE day IS NOT NULL
-        GROUP BY day
-        ORDER BY day DESC
-        LIMIT 3
-    )
-    SELECT day, total_ms
-    FROM per_day
-    ORDER BY day ASC;
-    """
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            cur.execute(query, (user_id, user_id, user_id))
-            rows = cur.fetchall()
-            return [
-                {"date": row[0].isoformat(), "ms": int(row[1] or 0), "minutes": round((int(row[1] or 0)) / 60_000)}
-                for row in rows
-            ]
+        # Union the per-answer times across the three activity tables.
+        def _per_table(model):
+            return select(
+                func.date(model.updated_at).label("day"),
+                model.response_time_ms.label("ms"),
+            ).where(model.user_id == user_id)
+
+        all_time = union_all(
+            _per_table(VocabRecord),
+            _per_table(LessonRecord),
+            _per_table(PracticeRecord),
+        ).subquery("all_time")
+
+        total_ms = cast(
+            func.coalesce(func.sum(all_time.c.ms), 0), BigInteger
+        ).label("total_ms")
+        # 3 most recent active days (gaps skipped), returned oldest -> newest.
+        per_day = (
+            select(all_time.c.day, total_ms)
+            .where(all_time.c.day.isnot(None))
+            .group_by(all_time.c.day)
+            .order_by(all_time.c.day.desc())
+            .limit(3)
+        )
+        rows = sorted(session.execute(per_day).all(), key=lambda r: r[0])
+        return [
+            {"date": row[0].isoformat(), "ms": int(row[1] or 0), "minutes": round((int(row[1] or 0)) / 60_000)}
+            for row in rows
+        ]
     except Exception as e:
         print(f"⚠️ Database query failed (get_time_learned_last_3_days): {e}")
         return []
+    finally:
+        SessionLocal.remove()
 
 
 def mark_passage_words_mastered(conn, user_id, passage_id):

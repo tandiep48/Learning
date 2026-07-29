@@ -821,14 +821,21 @@ function toggleLessonSummaryMeaning() {
 function updateLessonSummaryToggleText() {
     const pinyinBtn = document.getElementById('lesson-toggle-pinyin-btn');
     const meaningBtn = document.getElementById('lesson-toggle-meaning-btn');
-    if (pinyinBtn) {
-        pinyinBtn.textContent = lessonSummaryPinyinVisible ? t('reading.hide_pinyin') : t('reading.show_pinyin');
-        pinyinBtn.classList.toggle('primary', lessonSummaryPinyinVisible);
-    }
-    if (meaningBtn) {
-        meaningBtn.textContent = lessonSummaryMeaningVisible ? t('reading.hide_meaning') : t('reading.show_meaning');
-        meaningBtn.classList.toggle('primary', lessonSummaryMeaningVisible);
-    }
+    setSummaryToggleState(pinyinBtn, lessonSummaryPinyinVisible,
+        t('reading.hide_pinyin'), t('reading.show_pinyin'));
+    setSummaryToggleState(meaningBtn, lessonSummaryMeaningVisible,
+        t('reading.hide_meaning'), t('reading.show_meaning'));
+}
+
+// Update a lesson-summary toggle: swap the eye icon, refresh the label span, and
+// mark it active (green) when the content is visible.
+function setSummaryToggleState(btn, visible, hideLabel, showLabel) {
+    if (!btn) return;
+    const icon = btn.querySelector('i');
+    if (icon) icon.className = visible ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+    const label = btn.querySelector('.sum-toggle-label');
+    if (label) label.textContent = visible ? hideLabel : showLabel;
+    btn.classList.toggle('primary', visible);
 }
 
 // ── Lesson Cards ──────────────────────────────────────
