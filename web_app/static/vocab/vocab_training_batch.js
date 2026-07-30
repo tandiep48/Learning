@@ -329,8 +329,8 @@ function renderMatchActivity(area, activity) {
     wrap.appendChild(instruction);
 
     const board = document.createElement('div');
-    // Listening lays the two sides out as rows (audio row + meaning row); reading keeps columns.
-    board.className = 'bt-match-board' + (activity.type === 'listen' ? ' bt-match-board-rows' : '');
+    // Both matching activities lay the two sides out as rows (word/audio row + meaning row).
+    board.className = 'bt-match-board bt-match-board-rows';
 
     const leftCol = document.createElement('div');
     leftCol.className = 'bt-match-col';
