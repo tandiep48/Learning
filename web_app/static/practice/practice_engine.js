@@ -1040,16 +1040,22 @@ function renderType1(block, q, blockId, skill) {
         block.appendChild(img);
     }
 
-    // Statement to judge (reading true/false carries it in content, not question)
-    if (skill === 'reading' && q.content && !isImageFilename(q.content)) {
+    // Show the judged text for reading TF and for any non-audio TF. HSK 1-3 reading
+    // TF rows are sometimes tagged/defaulted as "listening", so gating purely on
+    // skill hid their statement — only genuine audio (listening) TF stays text-free.
+    const hasAudio = Array.isArray(q.audio_key) && q.audio_key.length > 0;
+    const showJudgedText = skill === 'reading' || !hasAudio;
+
+    // Statement to judge (true/false carries it in content, not question)
+    if (showJudgedText && q.content && !isImageFilename(q.content)) {
         const cEl = document.createElement('div');
         cEl.className = 'p-paragraph';
         cEl.textContent = q.content;
         block.appendChild(cEl);
     }
 
-    // Question text (reading only, if it's a real question and not a filename)
-    if (skill === 'reading' && q.question && !isImageFilename(q.question)) {
+    // Question text (if it's a real question and not a filename)
+    if (showJudgedText && q.question && !isImageFilename(q.question)) {
         const qEl = document.createElement('div');
         qEl.className = 'p-question-text p-centered';
         qEl.textContent = q.question;
