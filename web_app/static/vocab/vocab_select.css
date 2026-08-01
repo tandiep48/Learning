@@ -266,6 +266,13 @@ body.vocab-select-page {
     background: rgba(87, 104, 86, 0.08);
 }
 
+.ms-option-all {
+    font-weight: 700;
+    border-bottom: 1px solid var(--border-soft, #d7e3c6);
+    border-radius: 6px 6px 0 0;
+    margin-bottom: 2px;
+}
+
 .ms-option input[type="checkbox"] {
     cursor: pointer;
     accent-color: var(--primary);

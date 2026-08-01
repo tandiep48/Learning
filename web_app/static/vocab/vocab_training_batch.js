@@ -215,12 +215,12 @@ function renderTypingActivity(area, activity) {
     list.className = 'bt-type-list';
 
     activity.words.forEach((row, idx) => {
-        const fontSize = window.HanText ? (window.HanText.fontSizeForLevel(row.level) || '24px') : '24px';
+        const fontSize = '30px';
         const item = document.createElement('div');
         item.className = 'bt-type-row';
         item.innerHTML = `
             <div class="bt-type-prompt">
-                <span class="bt-hanzi" style="font-size: ${fontSize}; font-weight: bold;">${escapeHtml(row.word || '')}</span>
+                <span class="bt-hanzi" style="font-size: ${fontSize};">${escapeHtml(row.word || '')}</span>
             </div>
             <input type="text" class="bt-type-input" lang="zh-CN" autocomplete="off"
                    inputmode="text"
@@ -428,6 +428,7 @@ function renderMatchActivity(area, activity) {
         } else if (kind === 'word') {
             item.dataset.answer = row.word;
             item.innerText = row.word;
+            item.style.fontSize = '30px';
         } else { // meaning
             const meaning = row.meaning_vn || row.meaning_en || '';
             item.dataset.answer = meaning;
@@ -553,14 +554,14 @@ function showCompleteScreen() {
     }
 }
 
-function startLearnLesson() {
+// On finish, return to the vocab (word) summary the training was launched from.
+function goToVocabSummary() {
     if (!currentTrainingPassageId) return;
     const params = new URLSearchParams({
         passage_id: currentTrainingPassageId,
-        flow: 'lesson-part',
-        mode: 'lesson-learner'
+        flow: 'lesson-part'
     });
-    window.location.href = `/reading?${params.toString()}`;
+    window.location.href = `/vocab-learning?${params.toString()}`;
 }
 
 // Re-run the full activity flow (typing -> listen -> reading) for just the missed words,

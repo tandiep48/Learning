@@ -675,10 +675,10 @@ function _buildLessonCompleteScreen() {
         missedTasks.forEach(task => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td><strong>${task.type}</strong></td>
+                <td>${task.type}</td>
                 <td>${task.content || t('lesson.audio_fallback')}</td>
                 <td style="color:var(--danger)">${task.user_answer}</td>
-                <td style="color:var(--success); font-weight:bold;">${task.correct_answer}</td>
+                <td style="color:var(--success);">${task.correct_answer}</td>
             `;
             list.appendChild(tr);
         });
@@ -714,20 +714,9 @@ function markLessonPartComplete() {
     }))).catch(e => console.error("Lesson part progress save failed", e));
 }
 
-async function continueAfterLessonTraining() {
+// On finish, return to the lesson summary the training was launched from.
+function continueAfterLessonTraining() {
     if (!currentPassageId) return;
-
-    try {
-        const response = await fetch(`/api/lesson/grammar/${encodeURIComponent(currentPassageId)}`);
-        const data = await response.json();
-        if (response.ok && data.grammar && data.grammar.length > 0) {
-            window.location.href = `/grammar?passage_id=${encodeURIComponent(currentPassageId)}&flow=lesson-part`;
-            return;
-        }
-    } catch (e) {
-        console.warn("Grammar check failed", e);
-    }
-
     const params = new URLSearchParams({
         passage_id: currentPassageId,
         flow: 'lesson-part',

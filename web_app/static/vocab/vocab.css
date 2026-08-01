@@ -913,7 +913,7 @@ body {
 }
 
 #screen-training {
-    padding-top: clamp(48px, 6vw, 80px);
+    padding-top: 0;
 }
 
 #screen-training .task-card {

@@ -7,11 +7,7 @@
 <link rel="stylesheet" href="/static/lesson/lesson.css?v=12">
 {% endblock %}
 
-{% block body_class %}with-site-nav lesson-trainer-page{% endblock %}
-
-{% block pre_app %}
-{% include 'shared/site_nav.html' %}
-{% endblock %}
+{% block body_class %}lesson-trainer-page{% endblock %}
 
 {% block in_app_top %}
 {% include 'shared/passage_picker.html' %}
@@ -65,8 +61,10 @@
 {% block screen_complete %}
 <div class="nav-buttons training-complete-actions training-complete-top-actions">
     <button class="btn primary" onclick="goHome()">{{ t('lesson.back_to_menu') }}</button>
-    <button class="btn primary lesson-flow-continue" style="display:none;" onclick="continueAfterLessonTraining()">{{
-        t('lesson.continue') }}</button>
+    <button class="btn primary lesson-flow-continue" style="display:none;" onclick="continueAfterLessonTraining()">
+        <i class="fa-solid fa-book-open" aria-hidden="true"></i>
+        <span>{{ t('vocab_trainer.lesson_summary') }}</span>
+    </button>
 </div>
 
 <div class="lesson-complete-icon" aria-hidden="true">
@@ -108,5 +106,5 @@
 {% block extra_js %}
 <script src="/static/shared/passage_picker.js?v=15"></script>
 <script src="/static/shared/han_text.js?v=4"></script>
-<script src="/static/lesson/lesson.js?v=19"></script>
+<script src="/static/lesson/lesson.js?v=21"></script>
 {% endblock %}

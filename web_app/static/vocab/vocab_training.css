@@ -120,11 +120,12 @@
 .training-complete-table td {
     background: rgba(255, 255, 255, 0.72);
     color: #111111;
+    font-size: 30px;
+    font-weight: 400;
 }
 
 .complete-word {
-    font-size: 1.2rem;
-    font-weight: 700;
+    font-weight: 400;
 }
 
 .training-empty-state {
@@ -215,7 +216,8 @@ body {
     color: #ffffff;
 }
 
-.training-complete-table th {
+/* Higher specificity than `#screen-complete *` so the header text stays white. */
+#screen-complete .training-complete-table th {
     color: #ffffff;
 }
 
