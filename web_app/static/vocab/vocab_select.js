@@ -37,6 +37,7 @@ const MultiSelect = {
         reg.selected = new Set();
         const panel = document.getElementById(`${rootId}-panel`);
         panel.innerHTML = '';
+        if (options.length) this._renderSelectAll(rootId, panel);
         let currentGroup = null;
         options.forEach(opt => {
             if (opt.group && opt.group !== currentGroup) {
@@ -60,6 +61,21 @@ const MultiSelect = {
         });
         this._renderLabel(rootId);
         this._setDisabled(rootId, options.length === 0);
+    },
+
+    // "Select all" row pinned to the top of the panel; toggles every option at once.
+    _renderSelectAll(rootId, panel) {
+        const row = document.createElement('label');
+        row.className = 'ms-option ms-option-all';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'ms-select-all';
+        cb.onchange = () => this._toggleAll(rootId, cb.checked);
+        const span = document.createElement('span');
+        span.textContent = t('vocab.select_all');
+        row.appendChild(cb);
+        row.appendChild(span);
+        panel.appendChild(row);
     },
 
     clear(rootId) {
@@ -91,8 +107,27 @@ const MultiSelect = {
         if (!reg) return;
         if (checked) reg.selected.add(value);
         else reg.selected.delete(value);
+        this._syncSelectAll(rootId);
         this._renderLabel(rootId);
         if (reg.onChange) reg.onChange();
+    },
+
+    _toggleAll(rootId, checked) {
+        const reg = this.registry[rootId];
+        if (!reg) return;
+        reg.selected = checked ? new Set(reg.options.map(o => o.value)) : new Set();
+        const panel = document.getElementById(`${rootId}-panel`);
+        panel?.querySelectorAll('.ms-option:not(.ms-option-all) input[type="checkbox"]')
+            .forEach(cb => { cb.checked = checked; });
+        this._renderLabel(rootId);
+        if (reg.onChange) reg.onChange();
+    },
+
+    // Keep the "select all" checkbox in sync when individual options change.
+    _syncSelectAll(rootId) {
+        const reg = this.registry[rootId];
+        const allCb = document.querySelector(`#${rootId}-panel .ms-select-all`);
+        if (allCb && reg) allCb.checked = reg.options.length > 0 && reg.selected.size === reg.options.length;
     },
 
     _renderLabel(rootId) {
