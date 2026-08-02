@@ -168,7 +168,27 @@ body {
     gap: 8px;
 }
 
-.competition-question-card {
+.competition-section-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.competition-progress {
+    color: var(--text-muted);
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+/* In-room play: the shared vocab trainer on the left, live scoreboard on the right. */
+.competition-play-grid {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 16px;
+    align-items: start;
+}
+
+.competition-trainer {
     background: #CBE2D4;
     border: 1px solid #afcfbd;
     border-radius: 8px;
@@ -176,56 +196,36 @@ body {
     min-height: 360px;
 }
 
-.competition-question-text,
-.competition-content {
-    font-size: 1.05rem;
-    line-height: 1.7;
-    margin-bottom: 16px;
-    white-space: pre-wrap;
-}
-
-.competition-option-list {
-    display: grid;
-    gap: 10px;
-    margin-top: 16px;
-}
-
-.competition-option {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    border: 1px solid rgba(87, 104, 86, 0.12);
+.competition-scoreboard-panel {
+    background: #CBE2D4;
+    border: 1px solid #afcfbd;
     border-radius: 8px;
-    padding: 12px;
-    cursor: pointer;
-    background: #ffffff;
+    padding: 18px;
 }
 
-.competition-option input {
-    flex: 0 0 auto;
+.competition-scoreboard-panel h3 {
+    margin-bottom: 12px;
 }
 
-.competition-text-answer {
-    width: 100%;
-    margin-top: 16px;
-    border: 1px solid rgba(87, 104, 86, 0.18);
-    border-radius: 8px;
-    padding: 12px;
-    font-size: 1rem;
+.competition-scoreboard-panel .ranking-list {
+    margin: 0;
 }
 
-.competition-image {
-    max-width: min(100%, 460px);
-    border-radius: 8px;
-    display: block;
-    margin: 12px auto;
-}
-
-.competition-actions {
+.competition-action-bar {
     display: flex;
     justify-content: center;
-    gap: 12px;
-    margin-top: 16px;
+    margin-top: 18px;
+    min-height: 52px;
+}
+
+.competition-action-bar .btn {
+    min-width: 220px;
+}
+
+.competition-empty {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 40px 0;
 }
 
 .score-pill {
@@ -260,17 +260,10 @@ body {
     color: var(--primary);
 }
 
-.answer-feedback {
-    margin-top: 16px;
-    font-weight: 800;
-}
-
-.answer-feedback.correct {
-    color: var(--success);
-}
-
-.answer-feedback.wrong {
-    color: var(--danger);
+@media (max-width: 900px) {
+    .competition-play-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 640px) {

@@ -191,15 +191,3 @@
     75% { transform: translateX(5px); }
 }
 
-/* ── Actions ──────────────────────────────────────────────────────────────────── */
-
-.bt-actions {
-    display: flex;
-    justify-content: center;
-    margin-top: 20px;
-}
-
-.bt-actions .btn {
-    min-width: 200px;
-}
-

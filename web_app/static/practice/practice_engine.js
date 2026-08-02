@@ -13,7 +13,6 @@ let currentGroupIndex = 0;
 let score = 0;
 let totalQuestions = 0;
 let sessionAnswers = [];
-let sessionCounter = 1;
 let practiceSessionId = null;
 let groupStartTime = 0;
 
@@ -395,7 +394,10 @@ async function loadPracticeSession() {
     score = 0;
     sessionAnswers = [];
     groupSaved = groups.map(() => null);
-    practiceSessionId = sessionCounter++;
+    // Unique, monotonically-increasing per session so history rows never collide
+    // across page loads (a per-load counter reused 1,2,3… and merged unrelated
+    // sessions under one GROUP BY session_id).
+    practiceSessionId = Date.now();
     return true;
 }
 

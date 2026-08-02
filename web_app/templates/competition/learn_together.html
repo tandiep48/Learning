@@ -11,7 +11,10 @@
         };
     </script>
     <link rel="stylesheet" href="/static/shared/styles.css?v=7">
-    <link rel="stylesheet" href="/static/competition/competition.css?v=3">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="/static/shared/multi_select.css?v=1">
+    <link rel="stylesheet" href="/static/vocab/vocab_training_batch.css?v=6">
+    <link rel="stylesheet" href="/static/competition/competition.css?v=4">
 </head>
 <body class="with-site-nav">
     {% include 'shared/site_nav.html' %}
@@ -28,30 +31,43 @@
                     <h2>{{ t('competition.create_room') }}</h2>
                     <div class="competition-form">
                         <label>
-                            {{ t('recommend.category') }}
-                            <select id="create-category">
-                                <option value="practice">{{ t('dashboard.exercise') }}</option>
-                                <option value="exam">{{ t('dashboard.exam') }}</option>
-                            </select>
-                        </label>
-                        <label>
                             HSK
                             <select id="create-level">
                                 <option value="">{{ t('vocab.select_hsk') }}</option>
+                                <option value="1">HSK 1</option>
+                                <option value="2">HSK 2</option>
+                                <option value="3">HSK 3</option>
+                                <option value="4">HSK 4</option>
+                                <option value="5">HSK 5</option>
+                                <option value="6">HSK 6</option>
                             </select>
                         </label>
                         <label>
                             {{ t('picker.lesson_prefix') }}
-                            <select id="create-lesson" disabled>
-                                <option value="">{{ t('competition.select_lesson') }}</option>
-                            </select>
+                            <div class="ms-dropdown" id="create-lesson-ms">
+                                <button type="button" class="ms-toggle" onclick="MultiSelect.toggle('create-lesson-ms')" disabled>
+                                    <span class="ms-label ms-placeholder"></span>
+                                    <i class="fa-solid fa-chevron-down ms-caret" aria-hidden="true"></i>
+                                </button>
+                                <div class="ms-panel" id="create-lesson-ms-panel"></div>
+                            </div>
+                        </label>
+                        <label>
+                            {{ t('picker.part_prefix') }}
+                            <div class="ms-dropdown" id="create-part-ms">
+                                <button type="button" class="ms-toggle" onclick="MultiSelect.toggle('create-part-ms')" disabled>
+                                    <span class="ms-label ms-placeholder"></span>
+                                    <i class="fa-solid fa-chevron-down ms-caret" aria-hidden="true"></i>
+                                </button>
+                                <div class="ms-panel" id="create-part-ms-panel"></div>
+                            </div>
                         </label>
                         <label>
                             {{ t('competition.max_users') }}
                             <input id="create-max-users" type="number" min="2" max="30" value="8">
                         </label>
                         <label>
-                            {{ t('competition.section_timer') }}
+                            {{ t('competition.time_limit') }}
                             <select id="create-timeout">
                                 <option value="5">{{ t('competition.minutes', n=5) }}</option>
                                 <option value="10">{{ t('competition.minutes', n=10) }}</option>
@@ -108,17 +124,23 @@
         <section id="screen-section" class="competition-screen">
             <div class="competition-room-bar">
                 <div>
-                    <span id="section-label" class="competition-label">{{ t('recommend.listening') }}</span>
-                    <strong id="question-counter">1 / 1</strong>
+                    <span class="competition-label">{{ t('competition.room_label') }}</span>
+                    <strong id="section-room-code">------</strong>
                 </div>
-                <div id="live-score" class="score-pill">{{ t('competition.points', n=0) }}</div>
+                <div class="competition-section-meta">
+                    <span id="competition-progress" class="competition-progress"></span>
+                    <div id="live-score" class="score-pill">{{ t('competition.points', n=0) }}</div>
+                </div>
             </div>
 
-            <div id="competition-question-card" class="competition-question-card"></div>
-            <div class="competition-actions">
-                <button id="submit-answer-btn" class="btn primary" onclick="submitAnswer()">{{ t('competition.submit_answer') }}</button>
-                <button id="next-question-btn" class="btn primary" onclick="nextQuestion()" style="display:none;">{{ t('reading.next') }}</button>
+            <div class="competition-play-grid">
+                <div id="competition-trainer" class="competition-trainer"></div>
+                <aside class="competition-scoreboard-panel">
+                    <h3>{{ t('competition.scoreboard') }}</h3>
+                    <div id="live-scoreboard" class="ranking-list"></div>
+                </aside>
             </div>
+            <div id="competition-action-bar" class="competition-action-bar"></div>
         </section>
 
         <section id="screen-waiting" class="competition-screen">
@@ -140,6 +162,8 @@
 
     <audio id="competition-audio" preload="auto"></audio>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
-    <script src="/static/competition/competition.js"></script>
+    <script src="/static/shared/multi_select.js?v=1"></script>
+    <script src="/static/vocab/vocab_trainer_core.js?v=1"></script>
+    <script src="/static/competition/competition.js?v=2"></script>
 </body>
 </html>

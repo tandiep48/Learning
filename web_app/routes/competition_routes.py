@@ -6,18 +6,14 @@ from flask_login import current_user, login_required
 
 from db import (
     create_competition_room,
-    get_competition_question_sets,
     get_competition_room_state,
     get_competition_scores,
     get_db_connection,
+    resolve_room_words,
 )
 
 
 competition_bp = Blueprint("competition", __name__, url_prefix="/api/competition")
-
-
-def normalize_category(value):
-    return value if value in ("practice", "exam") else "practice"
 
 
 def make_room_code(length=6):
@@ -25,31 +21,19 @@ def make_room_code(length=6):
     return "".join(random.choice(alphabet) for _ in range(length))
 
 
-@competition_bp.route("/question-sets", methods=["GET"])
-@login_required
-def question_sets():
-    category = normalize_category(request.args.get("category", "practice"))
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({"error": "Database unavailable"}), 503
-    try:
-        return jsonify({"category": category, "sets": get_competition_question_sets(conn, category)})
-    finally:
-        conn.close()
-
-
 @competition_bp.route("/rooms", methods=["POST"])
 @login_required
 def create_room():
     data = request.get_json(silent=True) or {}
-    category = normalize_category(data.get("category", "practice"))
-    progress = "all"
 
     try:
         level = int(data.get("level"))
-        lesson = int(data.get("lesson"))
     except (TypeError, ValueError):
-        return jsonify({"error": "level and lesson are required"}), 400
+        return jsonify({"error": "HSK level is required"}), 400
+
+    passage_ids = [str(p).strip() for p in (data.get("passage_ids") or []) if str(p).strip()]
+    if not passage_ids:
+        return jsonify({"error": "Select at least one lesson part"}), 400
 
     try:
         max_users = int(data.get("max_users", 8))
@@ -69,14 +53,9 @@ def create_room():
         return jsonify({"error": "Database unavailable"}), 503
 
     try:
-        available_sets = get_competition_question_sets(conn, category)
-        selected = [
-            item for item in available_sets
-            if int(item["level"]) == level
-            and int(item["lesson"]) == lesson
-        ]
-        if not selected:
-            return jsonify({"error": "Selected lesson was not found or lacks listening and reading sections"}), 404
+        words = resolve_room_words(conn, passage_ids)
+        if not words:
+            return jsonify({"error": "The selected parts have no vocabulary"}), 404
 
         room = None
         for _ in range(8):
@@ -85,10 +64,9 @@ def create_room():
                 conn,
                 room_code,
                 current_user.id,
-                category,
                 level,
-                lesson,
-                progress,
+                passage_ids,
+                len(words),
                 max_users,
                 section_timeout_minutes,
             )

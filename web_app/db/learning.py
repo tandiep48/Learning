@@ -374,7 +374,7 @@ def get_practice_history_sessions(conn, user_id, hsk_level=None, category=None,
         WHERE {' AND '.join(where)}
         GROUP BY session_id
         {having}
-        ORDER BY ended_at {order}
+        ORDER BY ended_at {order}, session_id {order}
         LIMIT %s OFFSET %s
     """
     try:

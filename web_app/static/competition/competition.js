@@ -1,12 +1,12 @@
+// Learn Together — a real-time vocabulary competition. The host picks HSK + lessons
+// + parts; every participant plays the shared vocab trainer flow (typing / listen
+// match / reading match) via VocabTrainer, scored live with a final ranking.
+
 let socket = null;
 let currentRoom = null;
 let currentSession = null;
-let currentQuestions = [];
-let currentQuestionIndex = 0;
-let currentAnswer = "";
-let questionStartMs = 0;
 let waitingUsers = new Set();
-let availableQuestionSets = [];
+let groupedPassages = {};        // lesson -> [{ passage_id, lesson, part }]
 
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof io !== 'function') {
@@ -16,10 +16,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     socket = io();
     bindSocketEvents();
-    loadQuestionSets();
 
-    document.getElementById('create-category')?.addEventListener('change', loadQuestionSets);
-    document.getElementById('create-level')?.addEventListener('change', populateLessonOptions);
+    MultiSelect.init('create-lesson-ms', t('vocab.select_lesson_option'), onLessonChange);
+    MultiSelect.init('create-part-ms', t('vocab.select_part_option'), () => {});
+
+    document.getElementById('create-level')?.addEventListener('change', onLevelChange);
     document.getElementById('chat-input')?.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') sendChat();
     });
@@ -54,33 +55,19 @@ function bindSocketEvents() {
         appendChat(message);
     });
 
-    socket.on('section_started', payload => {
+    socket.on('session_started', async payload => {
         currentSession = payload.session;
-        currentQuestions = currentSession.questions || [];
-        currentQuestionIndex = 0;
         waitingUsers = new Set();
-        renderQuestion();
+        document.getElementById('section-room-code').textContent = currentRoom?.room_code || '';
+        document.getElementById('competition-action-bar').innerHTML = '';
+        renderScoreList('live-scoreboard', currentSession.scores || []);
         showScreen('screen-section');
-    });
-
-    socket.on('answer_result', payload => {
-        const feedback = document.getElementById('answer-feedback');
-        if (!feedback) return;
-        if (payload.error) {
-            feedback.textContent = payload.error;
-            feedback.className = 'answer-feedback wrong';
-        } else {
-            feedback.textContent = payload.is_correct
-                ? t('competition.correct_points', { n: payload.points })
-                : t('competition.wrong_points');
-            feedback.className = `answer-feedback ${payload.is_correct ? 'correct' : 'wrong'}`;
-            document.getElementById('submit-answer-btn').style.display = 'none';
-            document.getElementById('next-question-btn').style.display = '';
-        }
+        await startTrainer();
     });
 
     socket.on('score_update', payload => {
         updateLiveScore(payload.scores || []);
+        renderScoreList('live-scoreboard', payload.scores || []);
         renderScoreList('waiting-scores', payload.scores || []);
     });
 
@@ -108,73 +95,75 @@ function showScreen(id) {
     document.getElementById(id)?.classList.add('active');
 }
 
-async function loadQuestionSets() {
-    const category = document.getElementById('create-category')?.value || 'practice';
-    const levelSelect = document.getElementById('create-level');
-    const lessonSelect = document.getElementById('create-lesson');
-    if (!levelSelect || !lessonSelect) return;
-    availableQuestionSets = [];
-    showSetupError('');
-    levelSelect.disabled = true;
-    levelSelect.innerHTML = `<option value="">${t('competition.loading')}</option>`;
-    lessonSelect.disabled = true;
-    lessonSelect.innerHTML = `<option value="">${t('competition.select_lesson')}</option>`;
+// ── Setup: HSK -> lessons -> parts selection (mirrors the vocab picker) ──────────
 
+async function onLevelChange() {
+    const level = document.getElementById('create-level')?.value || '';
+    MultiSelect.clear('create-lesson-ms');
+    MultiSelect.clear('create-part-ms');
+    groupedPassages = {};
+    if (!level) return;
+
+    showSetupError('');
     try {
-        const res = await fetch(`/api/competition/question-sets?category=${encodeURIComponent(category)}`);
+        const res = await fetch(`/api/lesson/passages?hsk_level=HSK${encodeURIComponent(level)}`);
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || t('competition.failed_load_sets'));
-        availableQuestionSets = data.sets || [];
-        const levels = [...new Set(availableQuestionSets.map(set => String(set.level)))].sort(numericSort);
-        levelSelect.innerHTML = `<option value="">${t('vocab.select_hsk')}</option>`;
-        levels.forEach(level => {
-            const option = document.createElement('option');
-            option.value = level;
-            option.textContent = `HSK ${level}`;
-            levelSelect.appendChild(option);
+        (data.passages || []).forEach(passage => {
+            const parts = String(passage.passage_id || '').split('_');
+            const lesson = parts.length >= 2 ? parts[1] : 'Other';
+            const part = parts.length >= 3 ? parts[2] : passage.passage_id;
+            if (!groupedPassages[lesson]) groupedPassages[lesson] = [];
+            groupedPassages[lesson].push({ ...passage, lesson, part });
         });
-        levelSelect.disabled = levels.length === 0;
-        if (!levels.length) {
-            levelSelect.innerHTML = `<option value="">${t('competition.no_hsk_sets_found')}</option>`;
-        }
+
+        const lessonOptions = Object.keys(groupedPassages).sort(numericSort).map(lesson => ({
+            value: lesson,
+            label: lesson === 'Other' ? t('vocab.other_label') : `${t('picker.lesson_prefix')} ${lesson}`,
+        }));
+        MultiSelect.setOptions('create-lesson-ms', lessonOptions);
+        if (!lessonOptions.length) showSetupError(t('vocab.no_lessons_found'));
     } catch (e) {
-        levelSelect.innerHTML = `<option value="">${t('competition.failed_to_load')}</option>`;
-        showSetupError(e.message);
+        showSetupError(t('picker.failed_load_lessons'));
     }
 }
 
-function populateLessonOptions() {
-    const level = document.getElementById('create-level')?.value || '';
-    const lessonSelect = document.getElementById('create-lesson');
-    if (!lessonSelect) return;
+function onLessonChange() {
+    const selectedLessons = MultiSelect.values('create-lesson-ms');
+    if (!selectedLessons.length) {
+        MultiSelect.clear('create-part-ms');
+        return;
+    }
 
-    lessonSelect.innerHTML = '<option value="">Select Lesson</option>';
-    const lessons = availableQuestionSets
-        .filter(set => String(set.level) === level)
-        .sort((a, b) => numericSort(a.lesson, b.lesson));
-
-    lessons.forEach(set => {
-        const option = document.createElement('option');
-        option.value = String(set.lesson);
-        option.textContent = `Lesson ${set.lesson} (${set.listening_count} listening, ${set.reading_count} reading)`;
-        lessonSelect.appendChild(option);
+    // Each part option carries its full passage_id; group parts by lesson when several
+    // lessons are selected so they stay distinguishable.
+    const showGroups = selectedLessons.length > 1;
+    const partOptions = [];
+    selectedLessons.sort(numericSort).forEach(lesson => {
+        const passages = groupedPassages[lesson];
+        if (!passages || !passages.length) return;
+        const groupLabel = lesson === 'Other' ? t('vocab.other_label') : `${t('picker.lesson_prefix')} ${lesson}`;
+        [...passages].sort((a, b) => Number(a.part) - Number(b.part)).forEach(passage => {
+            partOptions.push({
+                value: passage.passage_id,
+                label: `${t('picker.part_prefix')} ${passage.part}`,
+                group: showGroups ? groupLabel : null,
+            });
+        });
     });
-    lessonSelect.disabled = lessons.length === 0;
+    MultiSelect.setOptions('create-part-ms', partOptions);
 }
 
 async function createRoom() {
-    const category = document.getElementById('create-category')?.value || 'practice';
     const level = document.getElementById('create-level')?.value;
-    const lesson = document.getElementById('create-lesson')?.value;
-    if (!level || !lesson) {
-        showSetupError(t('competition.select_hsk_lesson_first'));
+    const passageIds = MultiSelect.values('create-part-ms');
+    if (!level || !passageIds.length) {
+        showSetupError(t('competition.select_hsk_lesson_part'));
         return;
     }
     showSetupError('');
     const body = {
-        category,
-        level,
-        lesson,
+        level: Number(level),
+        passage_ids: passageIds,
         max_users: document.getElementById('create-max-users').value,
         section_timeout_minutes: document.getElementById('create-timeout').value
     };
@@ -186,7 +175,7 @@ async function createRoom() {
     });
     const data = await res.json();
     if (!res.ok) {
-        alert(data.error || t('competition.could_not_create_room'));
+        showSetupError(data.error || t('competition.could_not_create_room'));
         return;
     }
     socket.emit('join_room', { room_code: data.room.room_code });
@@ -206,13 +195,19 @@ function leaveRoom() {
     showScreen('screen-setup');
 }
 
+// ── Lobby ────────────────────────────────────────────────────────────────────────
+
 function renderRoom(room) {
     document.getElementById('room-code-display').textContent = room.room_code;
+
+    const passageIds = room.passage_ids || [];
+    const lessonCount = new Set(passageIds.map(id => String(id).split('_')[1])).size;
     document.getElementById('room-summary').innerHTML = `
-        <div><strong>${escapeHtml(room.category === 'exam' ? t('dashboard.exam') : t('dashboard.exercise'))}</strong></div>
-        <div>HSK ${escapeHtml(room.level)} - ${t('picker.lesson_prefix')} ${escapeHtml(room.lesson)}</div>
+        <div><strong>HSK ${escapeHtml(room.level)}</strong></div>
+        <div>${escapeHtml(t('competition.lessons_parts_count', { lessons: lessonCount, parts: passageIds.length }))}</div>
+        <div>${escapeHtml(t('competition.words_count', { count: room.word_count || 0 }))}</div>
         <div>${escapeHtml(t('competition.users_count', { count: room.members?.length || 0, max: room.max_users }))}</div>
-        <div>${escapeHtml(t('competition.timer_per_section', { n: room.section_timeout_minutes }))}</div>
+        <div>${escapeHtml(t('competition.time_limit_value', { n: room.section_timeout_minutes }))}</div>
     `;
 
     const members = document.getElementById('member-list');
@@ -255,102 +250,73 @@ function startSession() {
     socket.emit('host_start_session', { room_code: currentRoom.room_code });
 }
 
-function renderQuestion() {
-    const question = currentQuestions[currentQuestionIndex];
-    if (!question) {
-        finishSection();
+// ── In-room trainer ──────────────────────────────────────────────────────────────
+
+async function startTrainer() {
+    const words = await resolveRoomWords();
+    const container = document.getElementById('competition-trainer');
+    if (!words.length) {
+        container.innerHTML = `<div class="competition-empty">${escapeHtml(t('competition.no_words'))}</div>`;
         return;
     }
-    currentAnswer = "";
-    questionStartMs = Date.now();
-
-    document.getElementById('section-label').textContent = sectionLabel(currentSession.current_section);
-    document.getElementById('question-counter').textContent = `${currentQuestionIndex + 1} / ${currentQuestions.length}`;
-    document.getElementById('submit-answer-btn').style.display = '';
-    document.getElementById('submit-answer-btn').disabled = false;
-    document.getElementById('next-question-btn').style.display = 'none';
-
-    const card = document.getElementById('competition-question-card');
-    const audioKeys = parseAudioKeys(question.audio_key);
-    const options = parseOptions(question.options);
-    const image = question.image || '';
-
-    let html = '';
-    if (audioKeys.length) {
-        html += `<button class="btn secondary" onclick="playCompetitionAudio('${escapeAttr(audioKeys[0])}')">${t('reading.play_audio')}</button>`;
-    }
-    if (question.content) {
-        html += `<div class="competition-content">${escapeHtml(question.content)}</div>`;
-    }
-    if (question.question && !isImageFilename(question.question)) {
-        html += `<div class="competition-question-text">${escapeHtml(question.question)}</div>`;
-    }
-    if (image) {
-        html += `<img class="competition-image" src="${imageUrl(question.level, image, question.category)}" alt="">`;
-    }
-
-    const optionEntries = Object.entries(options);
-    if (optionEntries.length) {
-        html += '<div class="competition-option-list">';
-        optionEntries.forEach(([key, value]) => {
-            const label = isImageFilename(String(value))
-                ? `<img class="competition-image" src="${imageUrl(question.level, value, question.category)}" alt="">`
-                : escapeHtml(String(value));
-            html += `
-                <label class="competition-option">
-                    <input type="radio" name="competition-answer" value="${escapeAttr(key)}" onchange="currentAnswer=this.value">
-                    <span>${label}</span>
-                </label>
-            `;
-        });
-        html += '</div>';
-    } else {
-        html += `<input class="competition-text-answer" id="competition-text-answer" type="text" placeholder="${t('competition.type_your_answer')}" autocomplete="off">`;
-    }
-    html += '<div id="answer-feedback" class="answer-feedback"></div>';
-    card.innerHTML = html;
-
-    const textInput = document.getElementById('competition-text-answer');
-    if (textInput) {
-        textInput.addEventListener('input', () => {
-            currentAnswer = textInput.value;
-        });
-        textInput.addEventListener('keydown', event => {
-            if (event.key === 'Enter') submitAnswer();
-        });
-        textInput.focus();
-    }
-}
-
-function submitAnswer() {
-    const question = currentQuestions[currentQuestionIndex];
-    if (!question || !currentSession || !currentAnswer.trim()) return;
-    document.getElementById('submit-answer-btn').disabled = true;
-    socket.emit('answer_submitted', {
-        room_code: currentRoom.room_code,
-        session_id: currentSession.id,
-        session_question_id: question.session_question_id,
-        user_answer: currentAnswer.trim(),
-        response_time_ms: Date.now() - questionStartMs
+    VocabTrainer.start({
+        container,
+        words,
+        onAnswer: emitVocabAnswer,
+        onProgress: updateTrainerProgress,
+        mountAction: mountCompetitionAction,
+        onFinish: finishTrainer,
     });
 }
 
-function nextQuestion() {
-    currentQuestionIndex += 1;
-    renderQuestion();
+async function resolveRoomWords() {
+    try {
+        const res = await fetch('/api/vocab/words', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ passage_ids: currentRoom?.passage_ids || [] })
+        });
+        const data = await res.json();
+        return Array.isArray(data.words) ? data.words.filter(w => w && w.word) : [];
+    } catch (e) {
+        return [];
+    }
 }
 
-function finishSection() {
-    socket.emit('section_finished', {
+function emitVocabAnswer(row, type, userAnswer, isCorrect, responseMs) {
+    if (!currentRoom || !currentSession) return;
+    socket.emit('vocab_answer', {
         room_code: currentRoom.room_code,
         session_id: currentSession.id,
-        section: currentSession.current_section
+        word: row.word,
+        activity_type: type,
+        is_correct: isCorrect,
+        response_time_ms: responseMs,
     });
-    document.getElementById('waiting-title').textContent = t('competition.section_complete', { section: sectionLabel(currentSession.current_section) });
-    document.getElementById('waiting-subtitle').textContent = t('competition.waiting_subtitle');
-    renderScoreList('waiting-scores', currentSession.scores || []);
+}
+
+function updateTrainerProgress({ groupIndex, totalGroups }) {
+    const el = document.getElementById('competition-progress');
+    if (el) el.textContent = t('vocab_trainer.group_counter', { current: groupIndex + 1, total: totalGroups });
+}
+
+function mountCompetitionAction(btn) {
+    const bar = document.getElementById('competition-action-bar');
+    if (!bar) return;
+    bar.querySelectorAll('.bt-primary-action').forEach(el => el.remove());
+    bar.appendChild(btn);
+}
+
+function finishTrainer() {
+    if (currentRoom && currentSession) {
+        socket.emit('participant_finished', { room_code: currentRoom.room_code, session_id: currentSession.id });
+    }
+    document.getElementById('waiting-title').textContent = t('competition.you_finished');
+    renderWaitingUsers();
     showScreen('screen-waiting');
 }
+
+// ── Scores / ranking ─────────────────────────────────────────────────────────────
 
 function updateLiveScore(scores) {
     const mine = scores.find(score => Number(score.user_id) === Number(window.currentUser.id));
@@ -370,8 +336,11 @@ function renderScoreList(targetId, scores) {
 }
 
 function renderWaitingUsers() {
-    const suffix = waitingUsers.size ? ` Finished: ${Array.from(waitingUsers).join(', ')}` : '';
-    document.getElementById('waiting-subtitle').textContent = `Waiting for the next section.${suffix}`;
+    const subtitle = document.getElementById('waiting-subtitle');
+    if (!subtitle) return;
+    subtitle.textContent = waitingUsers.size
+        ? t('competition.finished_list', { names: Array.from(waitingUsers).join(', ') })
+        : t('competition.waiting_others');
 }
 
 function renderRanking(scores) {
@@ -384,83 +353,22 @@ function returnToLobby() {
     showScreen('screen-lobby');
 }
 
-function playCompetitionAudio(key) {
-    const audio = document.getElementById('competition-audio');
-    const level = currentQuestions[currentQuestionIndex].level;
-    const category = currentQuestions[currentQuestionIndex].category || 'practice';
-    audio.src = `https://storage.googleapis.com/chinese-learning-audio-assets/question_bank/${category}/${category}-${level}/${key}.mp3`;
-    audio.play().catch(() => {});
-}
-
-function parseOptions(raw) {
-    if (!raw) return {};
-    if (typeof raw === 'object') return raw;
-    try {
-        const parsed = JSON.parse(raw);
-        return typeof parsed === 'object' && parsed ? parsed : {};
-    } catch (e) {
-        return {};
-    }
-}
-
-function parseAudioKeys(raw) {
-    if (!raw) return [];
-    if (Array.isArray(raw)) return raw;
-    if (typeof raw !== 'string') return [];
-    const text = raw.trim();
-    if (!text) return [];
-    if (text.startsWith('[')) {
-        try {
-            const parsed = JSON.parse(text);
-            return Array.isArray(parsed) ? parsed : [];
-        } catch (e) {
-            return [text];
-        }
-    }
-    return [text];
-}
-
-function imageUrl(level, filename, category) {
-    return `/practice_image/${level}/${filename}?category=${category || 'practice'}`;
-}
-
-function isImageFilename(value) {
-    return typeof value === 'string' && /\.(jpg|jpeg|png|gif|webp)$/i.test(value.trim());
-}
-
-function progressLabel(progress) {
-    if (!progress) return t('competition.questions_label');
-    const text = String(progress);
-    if (text.includes('-')) {
-        const [a, b] = text.split('-');
-        return t('recommend.questions_range', { a, b });
-    }
-    return t('recommend.question_single', { n: text });
-}
+// ── Helpers ──────────────────────────────────────────────────────────────────────
 
 function numericSort(a, b) {
+    if (a === 'Other') return 1;
+    if (b === 'Other') return -1;
     return Number(a) - Number(b) || String(a).localeCompare(String(b));
 }
 
 function showSetupError(message) {
     const error = document.getElementById('setup-error');
     if (!error) {
-        alert(message);
+        if (message) alert(message);
         return;
     }
     error.textContent = message || '';
     error.hidden = !message;
-}
-
-function titleCase(value) {
-    const text = String(value || '');
-    return text ? text.charAt(0).toUpperCase() + text.slice(1) : '';
-}
-
-function sectionLabel(value) {
-    if (value === 'listening') return t('recommend.listening');
-    if (value === 'reading') return t('recommend.reading');
-    return titleCase(value);
 }
 
 function escapeHtml(value) {
@@ -472,6 +380,13 @@ function escapeHtml(value) {
         .replace(/'/g, '&#039;');
 }
 
-function escapeAttr(value) {
-    return escapeHtml(value).replace(/`/g, '&#096;');
-}
+// Enter advances the current activity via its Check/Continue button (typing inputs
+// manage their own Enter), matching the solo trainer's keyboard flow.
+document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    if (!document.getElementById('screen-section')?.classList.contains('active')) return;
+    const active = document.activeElement;
+    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
+    const action = document.querySelector('#competition-action-bar .bt-primary-action:not([disabled])');
+    if (action) { e.preventDefault(); action.click(); }
+});

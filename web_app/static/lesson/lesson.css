@@ -4,7 +4,14 @@
     color: var(--primary);
     font-size: 22px;
     line-height: 1.4;
-    margin: 2px 0 14px;
+    margin: 0 0 14px;
+}
+
+/* Per-character feedback on the sentence being typed: only wrong characters
+   are marked, shown in red text. The extra selectors raise specificity above the
+   shared `#screen-training .task-card * { color: inherit }` rule. */
+#screen-training .task-card .typing-char.char-wrong {
+    color: #ef4444;
 }
 
 /* Larger typing box on the lesson trainer (scoped so the vocab trainer is unaffected) */

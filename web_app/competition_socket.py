@@ -3,16 +3,16 @@ from flask_socketio import emit, join_room as socket_join_room, leave_room as so
 
 from db import (
     add_competition_chat_message,
-    advance_competition_section,
-    competition_all_participants_finished_section,
+    competition_all_participants_finished,
+    finalize_competition_session,
     get_active_competition_session,
     get_competition_room_state,
     get_competition_scores,
     get_db_connection,
     join_competition_room,
     leave_competition_room,
-    mark_competition_section_finished,
-    record_competition_answer,
+    mark_competition_participant_finished,
+    record_competition_vocab_answer,
     start_competition_session,
 )
 
@@ -54,20 +54,19 @@ def emit_session_event(room_code, state):
         socketio.emit("ranking_update", {"scores": state.get("scores", [])}, to=room_code)
         broadcast_room_state(room_code)
     else:
-        socketio.emit("section_started", {"session": state}, to=room_code)
-        schedule_section_timeout(state)
+        socketio.emit("session_started", {"session": state}, to=room_code)
+        schedule_session_timeout(state)
 
 
-def schedule_section_timeout(session_state):
-    if not socketio or not session_state or session_state["status"] not in ("listening", "reading"):
+def schedule_session_timeout(session_state):
+    if not socketio or not session_state or session_state["status"] != "running":
         return
-    timeout_at = session_state.get("section_ends_at")
-    if not timeout_at:
+    if not session_state.get("section_ends_at"):
         return
-    socketio.start_background_task(section_timeout_task, session_state["id"], session_state["room_code"], session_state["current_section"])
+    socketio.start_background_task(session_timeout_task, session_state["id"], session_state["room_code"])
 
 
-def section_timeout_task(session_id, room_code, section):
+def session_timeout_task(session_id, room_code):
     socketio.sleep(60)
     while True:
         conn = get_db_connection()
@@ -75,7 +74,7 @@ def section_timeout_task(session_id, room_code, section):
             return
         try:
             state = get_active_competition_session(conn, room_code)
-            if not state or state["id"] != session_id or state["current_section"] != section or state["status"] not in ("listening", "reading"):
+            if not state or state["id"] != session_id or state["status"] != "running":
                 return
 
             from datetime import datetime, timezone
@@ -86,18 +85,18 @@ def section_timeout_task(session_id, room_code, section):
             if ends_at.tzinfo is None:
                 ends_at = ends_at.replace(tzinfo=timezone.utc)
             if datetime.now(timezone.utc) >= ends_at:
-                next_state = advance_competition_section(conn, session_id)
-                emit_session_event(room_code, next_state)
+                final_state = finalize_competition_session(conn, session_id)
+                emit_session_event(room_code, final_state)
                 return
         finally:
             conn.close()
         socketio.sleep(15)
 
 
-def maybe_advance_section(conn, room_code, session_id, section):
-    if competition_all_participants_finished_section(conn, session_id, section):
-        next_state = advance_competition_section(conn, session_id)
-        emit_session_event(room_code, next_state)
+def maybe_finalize(conn, room_code, session_id):
+    if competition_all_participants_finished(conn, session_id):
+        final_state = finalize_competition_session(conn, session_id)
+        emit_session_event(room_code, final_state)
 
 
 def register_handlers():
@@ -123,8 +122,8 @@ def register_handlers():
             emit("joined_room", {"room": state})
             socketio.emit("room_state", {"room": state}, to=room_code)
             active = get_active_competition_session(conn, room_code)
-            if active and active.get("status") in ("listening", "reading"):
-                emit("section_started", {"session": active})
+            if active and active.get("status") == "running":
+                emit("session_started", {"session": active})
             elif active and active.get("status") == "ranked":
                 emit("session_finished", {"session": active, "scores": active.get("scores", [])})
         finally:
@@ -184,8 +183,8 @@ def register_handlers():
         finally:
             conn.close()
 
-    @socketio.on("answer_submitted")
-    def handle_answer_submitted(data):
+    @socketio.on("vocab_answer")
+    def handle_vocab_answer(data):
         if not authenticated():
             emit_error("Login required")
             return
@@ -193,7 +192,6 @@ def register_handlers():
         room_code = str(payload.get("room_code") or "").strip().upper()
         try:
             session_id = int(payload.get("session_id"))
-            session_question_id = int(payload.get("session_question_id"))
         except (TypeError, ValueError):
             emit_error("Invalid answer payload")
             return
@@ -203,29 +201,24 @@ def register_handlers():
             emit_error("Database unavailable")
             return
         try:
-            result, error = record_competition_answer(
+            result, error = record_competition_vocab_answer(
                 conn,
                 session_id,
                 current_user.id,
-                session_question_id,
-                payload.get("user_answer"),
+                payload.get("word"),
+                payload.get("activity_type"),
+                payload.get("is_correct"),
                 payload.get("response_time_ms", 0),
             )
             if error:
-                emit("answer_result", {"error": error, "session_question_id": session_question_id})
+                # Duplicate / inactive answers are non-fatal; just don't broadcast.
                 return
-            emit("answer_result", {
-                "session_question_id": session_question_id,
-                "is_correct": result["is_correct"],
-                "points": result["points"],
-            })
             socketio.emit("score_update", {"scores": result["scores"]}, to=room_code)
-            maybe_advance_section(conn, room_code, session_id, result["section"])
         finally:
             conn.close()
 
-    @socketio.on("section_finished")
-    def handle_section_finished(data):
+    @socketio.on("participant_finished")
+    def handle_participant_finished(data):
         if not authenticated():
             emit_error("Login required")
             return
@@ -236,19 +229,18 @@ def register_handlers():
         except (TypeError, ValueError):
             emit_error("Invalid session")
             return
-        section = str(payload.get("section") or "")
         conn = get_db_connection()
         if not conn:
             emit_error("Database unavailable")
             return
         try:
-            mark_competition_section_finished(conn, session_id, current_user.id)
+            mark_competition_participant_finished(conn, session_id, current_user.id)
             socketio.emit("participant_waiting", {
                 "user_id": current_user.id,
                 "username": current_user.username,
-                "section": section,
             }, to=room_code)
-            maybe_advance_section(conn, room_code, session_id, section)
+            socketio.emit("score_update", {"scores": get_competition_scores(conn, session_id)}, to=room_code)
+            maybe_finalize(conn, room_code, session_id)
         finally:
             conn.close()
 
