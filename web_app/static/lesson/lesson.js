@@ -8,6 +8,7 @@ let lessonWideTrainingMeta = null;
 let isLessonPartFlow = false;
 let answerSubmitted = false;
 let skipButtonMode = 'skip';
+let typingTargetText = '';
 
 // Fetch passages on load
 window.onload = async () => {
@@ -141,7 +142,10 @@ function loadTask() {
     document.getElementById('task-counter').innerText = t('trainer.task_counter', { current: currentTaskIndex + 1, total });
 
     // Reset all areas
-    document.getElementById('word-display').style.display = 'none';
+    const wordDisplay = document.getElementById('word-display');
+    wordDisplay.style.display = 'none';
+    wordDisplay.style.marginBottom = '';
+    wordDisplay.removeAttribute('data-han-skip');
     document.getElementById('audio-controls').style.display = 'none';
     document.getElementById('mc-area').style.display = 'none';
     document.getElementById('mc-area').innerHTML = '';
@@ -159,6 +163,7 @@ function loadTask() {
     typingInput.oninput = () => {
         const activeTask = sessionData?.tasks?.[currentTaskIndex];
         if (!activeTask || activeTask.type !== 'typing' || answerSubmitted) return;
+        updateTypingHighlight(typingInput.value);
         if (typingInput.value.trim() === activeTask.correct_answer) {
             submitTyping();
         }
@@ -210,8 +215,7 @@ function loadTask() {
         setupMultipleChoice(task);
     } else if (task.type === "typing") {
         instructionEl.innerHTML = `<i class="fa-solid fa-keyboard" aria-hidden="true"></i><span>${escapeHtml(t('lesson.instruction_typing'))}</span>`;
-        document.getElementById('word-display').innerText = task.content;
-        document.getElementById('word-display').style.display = 'block';
+        renderTypingTarget(task);
         document.getElementById('typing-area').style.display = 'flex';
         document.getElementById('typing-input').focus();
     } else if (task.type === "reorder") {
@@ -468,6 +472,40 @@ function revealCorrectAnswer(task) {
 
 // The Chinese sentence is already shown for the learner to type, so after answering
 // we only reveal its pinyin (below the passage) — no separate "correct answer".
+// Render the sentence to copy as one span per character so the typing check can
+// highlight each character independently (green = correct, red = wrong).
+// data-han-skip keeps the shared HanText wrapper from merging the spans back.
+function renderTypingTarget(task) {
+    const el = document.getElementById('word-display');
+    typingTargetText = window.HanziSettings?.convertText?.(task.content || '') ?? (task.content || '');
+    el.textContent = '';
+    el.setAttribute('data-han-skip', '');
+    el.style.marginBottom = '10px';
+    const fragment = document.createDocumentFragment();
+    for (const ch of [...typingTargetText]) {
+        const span = document.createElement('span');
+        span.className = 'typing-char';
+        span.textContent = ch;
+        fragment.appendChild(span);
+    }
+    el.appendChild(fragment);
+    el.style.display = 'block';
+}
+
+// Compare the typed text against the target character by character and color each
+// target character based on the character typed at the same position.
+function updateTypingHighlight(value) {
+    const target = [...typingTargetText];
+    const typed = [...value];
+    const spans = document.getElementById('word-display').children;
+    for (let i = 0; i < spans.length; i++) {
+        spans[i].classList.remove('char-correct', 'char-wrong');
+        if (i < typed.length) {
+            spans[i].classList.add(typed[i] === target[i] ? 'char-correct' : 'char-wrong');
+        }
+    }
+}
+
 function showTypingPinyin(task) {
     const el = document.getElementById('passage-pinyin');
     if (!el || task.type !== 'typing' || !task.pinyin) return;
