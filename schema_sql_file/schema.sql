@@ -271,10 +271,12 @@ CREATE TABLE IF NOT EXISTS competition_rooms (
     id BIGSERIAL PRIMARY KEY,
     room_code VARCHAR(12) NOT NULL UNIQUE,
     host_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    category VARCHAR(20) NOT NULL DEFAULT 'practice',
+    category VARCHAR(20) NOT NULL DEFAULT 'vocab',
     level SMALLINT NOT NULL,
-    lesson INTEGER NOT NULL,
-    progress VARCHAR(30) NOT NULL,
+    lesson INTEGER,
+    progress VARCHAR(30),
+    passage_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+    word_count INTEGER NOT NULL DEFAULT 0,
     max_users SMALLINT NOT NULL DEFAULT 8,
     section_timeout_minutes SMALLINT NOT NULL DEFAULT 15,
     status VARCHAR(30) NOT NULL DEFAULT 'waiting',
@@ -396,6 +398,26 @@ ON competition_scores(session_id, total_points DESC, total_response_time_ms ASC)
 CREATE INDEX IF NOT EXISTS idx_competition_scores_user_created
 ON competition_scores(user_id, created_at);
 
+-- One row per (participant, word, activity type) for a vocab Learn Together session.
+-- The vocab flow scores each word once per activity (typing / listen / reading match),
+-- so this replaces the old section-based competition_session_questions/answers path.
+CREATE TABLE IF NOT EXISTS competition_vocab_answers (
+    id BIGSERIAL PRIMARY KEY,
+    session_id BIGINT NOT NULL REFERENCES competition_sessions(id) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    word TEXT NOT NULL,
+    activity_type VARCHAR(20) NOT NULL,
+    user_answer TEXT,
+    is_correct BOOLEAN NOT NULL,
+    response_time_ms INTEGER NOT NULL DEFAULT 0,
+    points INTEGER NOT NULL DEFAULT 0,
+    submitted_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (session_id, user_id, word, activity_type)
+);
+
+CREATE INDEX IF NOT EXISTS idx_competition_vocab_answers_session_user
+ON competition_vocab_answers(session_id, user_id);
+
 ALTER TABLE practice_record
 ADD COLUMN IF NOT EXISTS response_time_ms INTEGER;
 
@@ -417,3 +439,10 @@ ALTER TABLE lesson_lines ADD COLUMN IF NOT EXISTS flag SMALLINT DEFAULT 1;
 -- Percent-correct (0-100) recorded by the master lesson trainer; drives the
 -- lesson progress bar. NULL until a master round is run for the part.
 ALTER TABLE user_lesson_part_progress ADD COLUMN IF NOT EXISTS score_pct SMALLINT;
+
+-- Learn Together pivoted from exam sections to a vocabulary competition: rooms now
+-- carry the selected passages (HSK + lessons + parts) instead of a single lesson.
+ALTER TABLE competition_rooms ADD COLUMN IF NOT EXISTS passage_ids JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE competition_rooms ADD COLUMN IF NOT EXISTS word_count INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE competition_rooms ALTER COLUMN lesson DROP NOT NULL;
+ALTER TABLE competition_rooms ALTER COLUMN progress DROP NOT NULL;
