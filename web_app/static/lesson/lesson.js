@@ -257,26 +257,71 @@ function setupReorder(task) {
     targetContainer.innerHTML = '';
     currentReorderTokens = [];
 
+    // Rebuild the answer from the current DOM order of the target row, then auto-submit
+    // once it matches. Called after both click moves and drag reorders.
+    const syncReorder = () => {
+        currentReorderTokens = [...targetContainer.children].map(c => c.dataset.token);
+        if (reorderMatches(currentReorderTokens, task.tokens)) submitReorder();
+    };
+
     task.shuffled_tokens.forEach(token => {
         const chip = document.createElement('div');
         chip.className = 'chip lesson-reorder-chip';
         chip.innerText = token;
+        chip.dataset.token = token;
+        chip.draggable = true;
+
+        // Click still moves a chip between the source row and the answer row.
         chip.onclick = () => {
-            if (answerSubmitted) return;
-            if (chip.parentElement.id === 'reorder-source') {
-                targetContainer.appendChild(chip);
-                currentReorderTokens.push(token);
-            } else {
-                sourceContainer.appendChild(chip);
-                const idx = currentReorderTokens.indexOf(token);
-                if (idx > -1) currentReorderTokens.splice(idx, 1);
-            }
-            if (reorderMatches(currentReorderTokens, task.tokens)) {
-                submitReorder();
-            }
+            if (answerSubmitted || chip.dataset.dragged === '1') return;
+            if (chip.parentElement.id === 'reorder-source') targetContainer.appendChild(chip);
+            else sourceContainer.appendChild(chip);
+            syncReorder();
         };
+
+        // Drag lets the learner reposition a chip (or drop one in from the source row)
+        // without having to de-select and re-select.
+        chip.addEventListener('dragstart', () => {
+            if (answerSubmitted) return;
+            chip.classList.add('dragging');
+        });
+        chip.addEventListener('dragend', () => {
+            chip.classList.remove('dragging');
+            syncReorder();
+            // Suppress the click that fires right after a drag so it doesn't move the chip.
+            chip.dataset.dragged = '1';
+            setTimeout(() => { chip.dataset.dragged = ''; }, 0);
+        });
+
         sourceContainer.appendChild(chip);
     });
+
+    // While dragging over a row, slot the dragged chip in front of whichever chip the
+    // pointer is left of (or at the end of the row).
+    [sourceContainer, targetContainer].forEach(container => {
+        container.ondragover = (e) => {
+            if (answerSubmitted) return;
+            e.preventDefault();
+            const dragging = container.parentElement.querySelector('.lesson-reorder-chip.dragging')
+                || document.querySelector('.lesson-reorder-chip.dragging');
+            if (!dragging) return;
+            const after = getReorderDragAfter(container, e.clientX);
+            if (after == null) container.appendChild(dragging);
+            else container.insertBefore(dragging, after);
+        };
+    });
+}
+
+// Determine which chip the dragged chip should be inserted before, based on cursor X.
+function getReorderDragAfter(container, x) {
+    const chips = [...container.querySelectorAll('.lesson-reorder-chip:not(.dragging)')];
+    let closest = { offset: -Infinity, element: null };
+    chips.forEach(chip => {
+        const box = chip.getBoundingClientRect();
+        const offset = x - box.left - box.width / 2;
+        if (offset < 0 && offset > closest.offset) closest = { offset, element: chip };
+    });
+    return closest.element;
 }
 
 function playCurrentAudio() {
@@ -500,7 +545,10 @@ function updateTypingHighlight(value) {
     const spans = document.getElementById('word-display').children;
     for (let i = 0; i < spans.length; i++) {
         spans[i].classList.remove('char-correct', 'char-wrong');
-        if (i < typed.length) {
+        // Only judge a position once a Chinese character sits there — while typing
+        // pinyin/latin (IME composition) the field holds non-Chinese text that
+        // should not glow red.
+        if (i < typed.length && /[一-鿿]/.test(typed[i])) {
             spans[i].classList.add(typed[i] === target[i] ? 'char-correct' : 'char-wrong');
         }
     }
