@@ -16,7 +16,6 @@ Rule 2: Coding style need to be readable for human review
 2.5: For any code that relate to database always use SQLAlchemy query method. Avoid using standard SQL command if possible.
 
 Rule 3: You do not commit after you done coding
-3.1: Always pull latest code on the requested branch first
 
 Rule 4: You don't need to explain every action that you do. Only do the task and done.
 4.1: Only give the explanation if I ask you to do so.
@@ -27,7 +26,6 @@ Back-end: Python with Flask
 Database: PostgresSQL
 Front-end: HTML, CSS, JS with jinja as framework
 Query rule: Mix between SQLAlchemy and standard SQL command
-
 
 Future Plan for this project
 This project is planning to refractor to use NextJs as Front-end and keeping Flask as back-end only to reduce the navigation and render in Flask so there may have folder that is using for NextJs if possible please ignore those and only start working on those when requested.
@@ -47,25 +45,25 @@ Learning (folder)
 |-- env.example (example for environment)
 |
 |--schema_sql_file (folder)
-|     |
-|     |--schema.sql
+| |
+| |--schema.sql
 |
 |--scripts (folder)
-|     |
-|     |--run-dev.bat (run for our local only)
-|     |--run-dev.ps1
-|     |--run-pre-dev.ps1
-|     |--run-pre-dev.bat (run when new package is added inside requirements.txt)
-|     |--run-pre-prod.sh (run for production only)
-|     |--run-prod.sh (run when new package is added inside requirements.txt on production)
+| |
+| |--run-dev.bat (run for our local only)
+| |--run-dev.ps1
+| |--run-pre-dev.ps1
+| |--run-pre-dev.bat (run when new package is added inside requirements.txt)
+| |--run-pre-prod.sh (run for production only)
+| |--run-prod.sh (run when new package is added inside requirements.txt on production)
 |
 |--web_app
-|     |
-|     |--routes (folder contain python file for navigation)
-|     |--service (folder contain service python file)
-|     |--static (folder contain js and css file)
-|     |--template (folder contain html file)
-|     |--entity (folder for refractor plan only)
-|     |--models  (folder that contain model that use to transcript user speak into text)
-|     |--repository  (folder for refractor plan only)
-|     |--tests (folder for refractor plan only)
+| |
+| |--routes (folder contain python file for navigation)
+| |--service (folder contain service python file)
+| |--static (folder contain js and css file)
+| |--template (folder contain html file)
+| |--entity (folder for refractor plan only)
+| |--models (folder that contain model that use to transcript user speak into text)
+| |--repository (folder for refractor plan only)
+| |--tests (folder for refractor plan only)
