@@ -89,7 +89,7 @@
     "trainer": {
         "default_title": "Luyện Tập",
         "loading": "Đang tải...",
-        "quit_session_btn": "Thoát Phiên Học",
+        "quit_session_btn": "Thoát",
         "task_counter": "Nhiệm vụ {current}/{total}",
         "skip": "Bỏ Qua",
         "quit_modal_title": "Thoát Phiên Học?",

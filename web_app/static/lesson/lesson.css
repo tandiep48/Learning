@@ -23,13 +23,12 @@
 
 /* Lesson title / part heading in the trainer topbar */
 .trainer-subtitle {
-    margin-left: auto;
     align-self: center;
     font-size: 0.9rem;
     font-weight: 700;
     color: var(--text-muted);
     letter-spacing: 0.02em;
-    text-align: right;
+    text-align: center;
 }
 
 .trainer-subtitle:empty {
@@ -76,6 +75,12 @@
 
 .lesson-trainer-page #reorder-area .lesson-reorder-chip {
     font-size: var(--han-content-size, 20px);
+    cursor: grab;
+}
+
+.lesson-trainer-page #reorder-area .lesson-reorder-chip.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
 }
 
 .lesson-trainer-page #reorder-area .chip .han-text {

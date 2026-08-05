@@ -137,13 +137,31 @@ function updateProgress({ index, total, groupIndex, totalGroups }) {
             total: totalGroups
         });
     }
+    updateTrainerSubtitle();
+}
+
+// Show a "HSK · Lesson N · Part M" heading (lesson-part flow only) so the learner
+// knows which part they are training.
+function updateTrainerSubtitle() {
+    const el = document.getElementById('trainer-subtitle');
+    if (!el) return;
+    if (!currentTrainingPassageId) { el.textContent = ''; return; }
+    const parts = String(currentTrainingPassageId).split('_');
+    const hskRaw = parts[0] || '';
+    const hsk = hskRaw ? (hskRaw.startsWith('HSK') ? hskRaw : 'HSK' + hskRaw.replace(/^H/, '')) : '';
+    const lessonLabel = parts[1] ? `${t('picker.lesson_prefix')} ${parts[1]}` : '';
+    const partLabel = parts[2] ? `${t('picker.part_prefix')} ${parts[2]}` : '';
+    el.textContent = [hsk, lessonLabel, partLabel].filter(Boolean).join(' · ');
 }
 
 // ── Recording ───────────────────────────────────────────────────────────────────
 
-function recordAnswer(row, type, userAnswer, isCorrect) {
+function recordAnswer(row, type, userAnswer, isCorrect, responseMs, wrongAttempts = 0) {
+    // Matching now reports once on solve (always correct) with the mistake count; a word
+    // that needed a retry counts as missed, so mastery / retry-missed behave as before.
+    const clean = isCorrect && !wrongAttempts;
     totalAnswers++;
-    if (isCorrect) correctAnswers++;
+    if (clean) correctAnswers++;
     else missedWords.push(row);
 
     pendingRecords.push({
@@ -151,7 +169,7 @@ function recordAnswer(row, type, userAnswer, isCorrect) {
         word: row.word,
         round_num: isRetry ? 2 : 1,
         user_answer: userAnswer,
-        is_correct: isCorrect,
+        is_correct: clean,
         response_time_ms: 0,
         game_info: { pinyin: row.pinyin, meaning_en: row.meaning_en }
     });

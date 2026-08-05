@@ -336,16 +336,32 @@ def get_competition_session_state(conn, session_id):
         print(f"Database get_competition_session_state failed: {e}")
         return None
 
-def calculate_competition_points(is_correct, response_time_ms):
-    if not is_correct:
-        return 0
-    seconds = max(0, int(response_time_ms or 0) // 1000)
-    return 100 + max(0, 20 - seconds)
+# Per-mode scoring: base points + a time-decay speed bonus, minus a per-error penalty
+# on the matching modes. Time uses fractional seconds; typing is binary (an incorrect
+# submission scores nothing). See the scoring spec for the rationale behind each value.
+MODE_CONFIG = {
+    "typing":  {"base": 120, "max_bonus": 60, "decay": 5.0, "penalty_rate": 0.0},
+    "listen":  {"base": 100, "max_bonus": 50, "decay": 2.0, "penalty_rate": 0.10},
+    "meaning": {"base": 80,  "max_bonus": 40, "decay": 3.0, "penalty_rate": 0.10},
+}
 
-def record_competition_vocab_answer(conn, session_id, user_id, word, activity_type, is_correct, response_time_ms):
-    """Record one participant's answer for a word/activity, awarding points for a
-    correct answer (with a speed bonus). One-shot per (word, activity_type); the
-    client reports correctness, matching the solo trainer's trust model."""
+def calculate_competition_points(activity_type, is_correct, response_time_ms, wrong_attempts=0):
+    cfg = MODE_CONFIG.get(activity_type)
+    if not cfg:
+        return 0
+    # Typing accuracy is binary: an incorrect submission yields nothing.
+    if cfg["penalty_rate"] == 0.0 and not is_correct:
+        return 0
+    seconds = max(0.0, int(response_time_ms or 0) / 1000.0)
+    penalty = max(0, int(wrong_attempts or 0)) * (cfg["base"] * cfg["penalty_rate"])
+    bonus = max(0.0, cfg["max_bonus"] - (seconds * cfg["decay"]))
+    return max(0, round((cfg["base"] - penalty) + bonus))
+
+def record_competition_vocab_answer(conn, session_id, user_id, word, activity_type, is_correct, response_time_ms, wrong_attempts=0):
+    """Record one participant's answer for a word/activity, awarding points per the
+    per-mode scoring rules (speed bonus, minus per-error penalties on the matching
+    modes). One-shot per (word, activity_type); the client reports correctness, timing
+    and wrong-attempt count, matching the solo trainer's trust model."""
     if not conn:
         return None, "Database unavailable"
     word = str(word or "").strip()
@@ -365,7 +381,7 @@ def record_competition_vocab_answer(conn, session_id, user_id, word, activity_ty
                 return None, "Session is not active"
 
             is_correct = bool(is_correct)
-            points = calculate_competition_points(is_correct, response_time_ms)
+            points = calculate_competition_points(activity_type, is_correct, response_time_ms, wrong_attempts)
             cur.execute("""
                 INSERT INTO competition_vocab_answers
                     (session_id, user_id, word, activity_type, is_correct, response_time_ms, points)

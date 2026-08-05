@@ -89,7 +89,7 @@
     "trainer": {
         "default_title": "Training",
         "loading": "Loading...",
-        "quit_session_btn": "Quit Session",
+        "quit_session_btn": "Exit",
         "task_counter": "Task {current}/{total}",
         "skip": "Skip",
         "quit_modal_title": "Quit Session?",

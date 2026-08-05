@@ -4,7 +4,7 @@
 
 .trainer-topbar {
     display: flex;
-    justify-content: flex-start;
+    justify-content: center;
     width: 100%;
     margin-bottom: 16px;
     max-width: 980px;
@@ -12,8 +12,21 @@
     margin-right: auto;
 }
 
-.trainer-quit-btn {
-    width: auto;
+/* Quit lives in the bottom bar now; keep it pinned to the far left, and lay the
+   icon + label out on one line in white (the base .btn is a dark column). */
+.trainer-bottom-bar .trainer-quit-btn {
+    margin-right: auto;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-align: center;
+}
+
+.trainer-bottom-bar .trainer-quit-btn,
+.trainer-bottom-bar .trainer-quit-btn i,
+.trainer-bottom-bar .trainer-quit-btn span {
+    color: #ffffff !important;
 }
 
 .trainer-task-actions {

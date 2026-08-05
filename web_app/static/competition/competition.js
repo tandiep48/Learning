@@ -262,6 +262,7 @@ async function startTrainer() {
     VocabTrainer.start({
         container,
         words,
+        autoAdvance: true,   // competition: no Check/Next buttons — flow automatically
         onAnswer: emitVocabAnswer,
         onProgress: updateTrainerProgress,
         mountAction: mountCompetitionAction,
@@ -283,7 +284,7 @@ async function resolveRoomWords() {
     }
 }
 
-function emitVocabAnswer(row, type, userAnswer, isCorrect, responseMs) {
+function emitVocabAnswer(row, type, userAnswer, isCorrect, responseMs, wrongAttempts) {
     if (!currentRoom || !currentSession) return;
     socket.emit('vocab_answer', {
         room_code: currentRoom.room_code,
@@ -292,6 +293,7 @@ function emitVocabAnswer(row, type, userAnswer, isCorrect, responseMs) {
         activity_type: type,
         is_correct: isCorrect,
         response_time_ms: responseMs,
+        wrong_attempts: wrongAttempts || 0,
     });
 }
 

@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="/static/shared/success_popup.css">
     <link rel="stylesheet" href="/static/vocab/vocab.css?v=7">
-    <link rel="stylesheet" href="/static/vocab/vocab_training.css?v=8">
+    <link rel="stylesheet" href="/static/vocab/vocab_training.css?v=10">
     {% block extra_css %}{% endblock %}
 </head>
 
@@ -25,8 +25,6 @@
 
         <div id="screen-training" class="screen">
             <div class="trainer-topbar">
-                <button class="btn secondary trainer-quit-btn" onclick="confirmQuit()">{{ t('trainer.quit_session_btn')
-                    }}</button>
                 <div id="trainer-subtitle" class="trainer-subtitle"></div>
             </div>
 
@@ -47,6 +45,10 @@
             </div>
 
             <div class="trainer-bottom-bar">
+                <button class="btn secondary trainer-quit-btn" onclick="confirmQuit()">
+                    <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+                    <span>{{ t('trainer.quit_session_btn') }}</span>
+                </button>
                 <button id="btn-skip-task" class="btn secondary skip-bottom-btn" onclick="skipTask()">
                     {{ t('trainer.skip') }}
                 </button>

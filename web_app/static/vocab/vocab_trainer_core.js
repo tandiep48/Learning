@@ -112,8 +112,10 @@
         });
     }
 
-    function record(row, type, userAnswer, isCorrect) {
-        if (cfg.onAnswer) cfg.onAnswer(row, type, userAnswer, isCorrect, Date.now() - activityStartTime);
+    // responseMs is the per-item elapsed time; wrongAttempts is the number of failed
+    // tries before this item was completed (matching modes only).
+    function record(row, type, userAnswer, isCorrect, responseMs, wrongAttempts = 0) {
+        if (cfg.onAnswer) cfg.onAnswer(row, type, userAnswer, isCorrect, responseMs, wrongAttempts);
     }
 
     // ── Typing activity ─────────────────────────────────────────────────────────
@@ -149,16 +151,22 @@
         });
         wrap.appendChild(list);
 
-        const checkBtn = document.createElement('button');
-        checkBtn.className = 'btn primary bt-primary-action';
-        checkBtn.id = 'bt-check-btn';
-        checkBtn.innerText = t('vocab_trainer.check');
-        checkBtn.addEventListener('click', () => checkTypingGroup(activity, wrap, checkBtn));
+        // Auto-advance mode (competition) has no Check button: each word finalises as
+        // soon as it is typed correctly, and the group advances once all are done.
+        let checkBtn = null;
+        if (!cfg.autoAdvance) {
+            checkBtn = document.createElement('button');
+            checkBtn.className = 'btn primary bt-primary-action';
+            checkBtn.id = 'bt-check-btn';
+            checkBtn.innerText = t('vocab_trainer.check');
+            checkBtn.addEventListener('click', () => checkTypingGroup(activity, wrap, checkBtn));
+        }
 
         area.appendChild(wrap);
-        if (cfg.mountAction) cfg.mountAction(checkBtn);
+        if (checkBtn && cfg.mountAction) cfg.mountAction(checkBtn);
 
-        // Enter on the last input triggers the group check.
+        let autoSolved = 0;
+        // Enter on the last input triggers the group check (manual mode only).
         const inputs = wrap.querySelectorAll('.bt-type-input');
         inputs.forEach((input, idx) => {
             const row = activity.words[idx];
@@ -173,12 +181,23 @@
                 if (input.value.trim() === (row.word || '')) {
                     if (input.dataset.autoplayed !== '1') {
                         input.dataset.autoplayed = '1';
+                        // Stamp when this word was first completed, for per-word timing.
+                        input.dataset.completedAt = String(Date.now());
                         rowEl.classList.add('correct');
                         if (result) result.innerHTML = typingResultHtml(row, true);
                         playWordAudio(row.audio_key);
+                        if (cfg.autoAdvance) {
+                            // Lock the word in and score it; advance once the group is done.
+                            input.disabled = true;
+                            record(row, 'typing', input.value.trim(), true,
+                                Number(input.dataset.completedAt) - activityStartTime, 0);
+                            autoSolved++;
+                            if (autoSolved === activity.words.length) setTimeout(advanceActivity, 350);
+                        }
                     }
                 } else {
                     input.dataset.autoplayed = '';
+                    input.dataset.completedAt = '';
                     // Edited away from the answer before checking — hide the live reveal again.
                     if (rowEl.classList.contains('correct')) {
                         rowEl.classList.remove('correct');
@@ -191,7 +210,7 @@
                 e.preventDefault();
                 e.stopPropagation();   // don't let the global Enter handler also advance
                 if (idx < inputs.length - 1) inputs[idx + 1].focus();
-                else checkTypingGroup(activity, wrap, checkBtn);
+                else if (!cfg.autoAdvance) checkTypingGroup(activity, wrap, checkBtn);
             });
         });
         if (inputs[0]) inputs[0].focus();
@@ -220,7 +239,10 @@
             rowEl.classList.add(isCorrect ? 'correct' : 'incorrect');
             result.innerHTML = typingResultHtml(row, isCorrect);
 
-            record(row, 'typing', answer, isCorrect);
+            // Time from the word being shown to when it was first typed correctly
+            // (or to check time if never correct). Typing carries no error penalty.
+            const completedAt = Number(input.dataset.completedAt) || Date.now();
+            record(row, 'typing', answer, isCorrect, completedAt - activityStartTime, 0);
         });
 
         checkBtn.dataset.done = '1';
@@ -251,9 +273,12 @@
         rightCol.className = 'bt-match-col';
 
         const total = activity.words.length;
-        const recorded = new Set();
         let solved = 0;
         const selected = { left: null, right: null };
+        // Per left (anchor) word: when it was first selected, and how many mismatches
+        // it took before being solved. Time + penalties are scored per pair on solve.
+        const firstSelectedAt = {};
+        const wrongAttempts = {};
 
         activity.words.forEach(row => {
             leftCol.appendChild(makeMatchItem(row, 'left', matchCfg.leftKind));
@@ -266,19 +291,28 @@
         board.appendChild(rightCol);
         wrap.appendChild(board);
 
-        const continueBtn = document.createElement('button');
-        continueBtn.className = 'btn primary bt-primary-action';
-        continueBtn.innerText = t('lesson.continue');
-        continueBtn.disabled = true;
-        continueBtn.addEventListener('click', advanceActivity);
+        // Auto-advance mode (competition) has no Continue button: the board advances on
+        // its own the moment every pair is solved.
+        let continueBtn = null;
+        if (!cfg.autoAdvance) {
+            continueBtn = document.createElement('button');
+            continueBtn.className = 'btn primary bt-primary-action';
+            continueBtn.innerText = t('lesson.continue');
+            continueBtn.disabled = true;
+            continueBtn.addEventListener('click', advanceActivity);
+        }
 
         area.appendChild(wrap);
-        if (cfg.mountAction) cfg.mountAction(continueBtn);
+        if (continueBtn && cfg.mountAction) cfg.mountAction(continueBtn);
 
         function select(item) {
             if (item.classList.contains('solved')) return;
             const side = item.dataset.side;
             if (side === 'left' && matchCfg.leftKind === 'audio') playWordAudio(item.dataset.audioKey);
+            // Start this pair's clock the first time its source (left) card is picked.
+            if (side === 'left' && !firstSelectedAt[item.dataset.word]) {
+                firstSelectedAt[item.dataset.word] = Date.now();
+            }
 
             if (selected[side] === item) {                 // toggle off
                 item.classList.remove('selected');
@@ -299,12 +333,12 @@
             const correct = leftWord === rightItem.dataset.word;
             const row = wordByKey(activity.words, leftWord);
 
-            if (!recorded.has(leftWord)) {
-                recorded.add(leftWord);
-                record(row, matchCfg.db, rightItem.dataset.answer || '', correct);
-            }
-
             if (correct) {
+                // Record once, on solve: elapsed since the source card was first picked,
+                // plus the mismatches it took to get here (drives the error penalty).
+                const startedAt = firstSelectedAt[leftWord] || activityStartTime;
+                record(row, matchCfg.db, rightItem.dataset.answer || '', true,
+                    Date.now() - startedAt, wrongAttempts[leftWord] || 0);
                 [leftItem, rightItem].forEach(el => {
                     el.classList.remove('selected');
                     el.classList.add('solved');
@@ -312,8 +346,12 @@
                 selected.left = null;
                 selected.right = null;
                 solved++;
-                if (solved === total) continueBtn.disabled = false;
+                if (solved === total) {
+                    if (cfg.autoAdvance) setTimeout(advanceActivity, 500);
+                    else continueBtn.disabled = false;
+                }
             } else {
+                wrongAttempts[leftWord] = (wrongAttempts[leftWord] || 0) + 1;
                 [leftItem, rightItem].forEach(el => el.classList.add('wrong'));
                 const a = leftItem, b = rightItem;
                 selected.left = null;
