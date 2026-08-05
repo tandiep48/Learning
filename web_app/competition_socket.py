@@ -209,6 +209,7 @@ def register_handlers():
                 payload.get("activity_type"),
                 payload.get("is_correct"),
                 payload.get("response_time_ms", 0),
+                payload.get("wrong_attempts", 0),
             )
             if error:
                 # Duplicate / inactive answers are non-fatal; just don't broadcast.
