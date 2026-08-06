@@ -16,9 +16,9 @@ from __future__ import annotations
 from sqlalchemy.exc import IntegrityError
 
 from entity.database import SessionLocal
-from repository.passage_repository import PassageRepository
-from repository.vocab_repository import VocabRepository
-from repository.passage_vocabulary_repository import PassageVocabularyRepository
+from entity.passage.repository import PassageRepository
+from entity.vocabulary.repository import VocabRepository
+from entity.passage_vocabulary.repository import PassageVocabularyRepository
 
 
 # ---------------------------------------------------------------------------

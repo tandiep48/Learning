@@ -18,7 +18,7 @@ import re
 from sqlalchemy.exc import IntegrityError
 
 from entity.database import SessionLocal
-from repository.passage_repository import PassageRepository
+from entity.passage.repository import PassageRepository
 
 
 # ---------------------------------------------------------------------------

@@ -8,7 +8,7 @@ Extracted from the former monolithic db.py.
 
 from sqlalchemy import select, func, distinct, case, union_all, cast, BigInteger
 from entity.database import SessionLocal
-from entity.record_entity import VocabRecord, LessonRecord, PracticeRecord
+from entity.record.entity import VocabRecord, LessonRecord, PracticeRecord
 
 
 def get_learned_words(conn, user_id):

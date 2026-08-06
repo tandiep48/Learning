@@ -10,7 +10,7 @@ The service layer is responsible for hashing passwords before they reach here.
 from typing import Optional
 from sqlalchemy.orm import Session
 
-from entity.user_entity import User
+from entity.user.entity import User
 
 
 class UserRepository:

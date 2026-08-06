@@ -35,7 +35,7 @@ Example POST body:
 
 from flask import Blueprint, request, jsonify
 
-from service.passage_service import (
+from entity.passage.service import (
     PassageServiceError,
     list_passages,
     get_passage,

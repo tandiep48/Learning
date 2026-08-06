@@ -15,7 +15,7 @@ from __future__ import annotations
 from sqlalchemy.exc import IntegrityError
 
 from entity.database import SessionLocal
-from repository.question_repository import QuestionRepository
+from entity.question.repository import QuestionRepository
 
 
 # ---------------------------------------------------------------------------

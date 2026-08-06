@@ -10,7 +10,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
-from entity.vocabulary_entity import Vocabulary
+from entity.vocabulary.entity import Vocabulary
 
 
 class VocabRepository:

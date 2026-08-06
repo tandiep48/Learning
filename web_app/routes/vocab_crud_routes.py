@@ -17,7 +17,7 @@ Endpoints:
 
 from flask import Blueprint, request, jsonify
 
-from service.vocab_service import (
+from entity.vocabulary.service import (
     VocabServiceError,
     list_vocab,
     get_vocab,

@@ -16,7 +16,7 @@ Endpoints:
 
 from flask import Blueprint, request, jsonify
 
-from service.passage_vocabulary_service import (
+from entity.passage_vocabulary.service import (
     PassageVocabularyServiceError,
     list_passage_vocab,
     add_passage_vocab,

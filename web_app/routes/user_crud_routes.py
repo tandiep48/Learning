@@ -18,7 +18,7 @@ Endpoints:
 
 from flask import Blueprint, request, jsonify
 
-from service.user_service import (
+from entity.user.service import (
     UserServiceError,
     list_users,
     get_user,

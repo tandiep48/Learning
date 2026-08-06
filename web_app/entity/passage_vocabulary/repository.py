@@ -11,8 +11,8 @@ without a second lookup.
 
 from sqlalchemy.orm import Session
 
-from entity.passage_vocabulary_entity import PassageVocabulary
-from entity.vocabulary_entity import Vocabulary
+from entity.passage_vocabulary.entity import PassageVocabulary
+from entity.vocabulary.entity import Vocabulary
 
 
 class PassageVocabularyRepository:

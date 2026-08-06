@@ -9,7 +9,7 @@ No raw SQL strings — all queries go through the ORM session.
 from typing import Optional
 from sqlalchemy.orm import Session
 
-from entity.question_entity import Question
+from entity.question.entity import Question
 
 
 class QuestionRepository:
