@@ -27,11 +27,17 @@
         reading: { db: 'meaning', instruction: 'instruction_match_reading', leftKind: 'word',  rightKind: 'meaning' },
     };
 
+    // Keyboard shortcuts (opt-in via cfg.keyboardShortcuts): left/source cards are
+    // picked with 1-5, right/match cards with y-u-i-o-p, by their position in the column.
+    const LEFT_KEYS = ['1', '2', '3', '4', '5'];
+    const RIGHT_KEYS = ['y', 'u', 'i', 'o', 'p'];
+
     let cfg = null;                       // active start() config
     let activities = [];                  // flat list of { groupIndex, type, words }
     let currentActivityIndex = 0;
     let activityStartTime = 0;            // for per-answer response time
     let trainerAudio = null;
+    let matchKeyHandler = null;           // active match-board keydown listener, if any
 
     function start(config) {
         cfg = config;
@@ -77,6 +83,11 @@
 
     // ── Flow ────────────────────────────────────────────────────────────────────
     function renderActivity() {
+        // Tear down the previous board's keyboard shortcuts before leaving it.
+        if (matchKeyHandler) {
+            document.removeEventListener('keydown', matchKeyHandler);
+            matchKeyHandler = null;
+        }
         if (currentActivityIndex >= activities.length) {
             if (cfg.onFinish) cfg.onFinish();
             return;
@@ -280,16 +291,40 @@
         const firstSelectedAt = {};
         const wrongAttempts = {};
 
-        activity.words.forEach(row => {
-            leftCol.appendChild(makeMatchItem(row, 'left', matchCfg.leftKind));
+        activity.words.forEach((row, i) => {
+            leftCol.appendChild(makeMatchItem(row, 'left', matchCfg.leftKind, i));
         });
-        shuffle(activity.words.slice()).forEach(row => {
-            rightCol.appendChild(makeMatchItem(row, 'right', matchCfg.rightKind));
+        shuffle(activity.words.slice()).forEach((row, i) => {
+            rightCol.appendChild(makeMatchItem(row, 'right', matchCfg.rightKind, i));
         });
 
         board.appendChild(leftCol);
         board.appendChild(rightCol);
         wrap.appendChild(board);
+
+        // Keyboard shortcuts: 1-5 select a source card, y-u-i-o-p a match card (by
+        // column position). Only wired when enabled and while this board is on screen.
+        if (cfg.keyboardShortcuts) {
+            matchKeyHandler = (e) => {
+                const target = e.target;
+                if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+                const key = (e.key || '').toLowerCase();
+                let column = null;
+                let idx = LEFT_KEYS.indexOf(key);
+                if (idx >= 0) column = leftCol;
+                else {
+                    idx = RIGHT_KEYS.indexOf(key);
+                    if (idx >= 0) column = rightCol;
+                }
+                if (!column) return;
+                const item = column.children[idx];
+                if (item && !item.classList.contains('solved')) {
+                    e.preventDefault();
+                    select(item);
+                }
+            };
+            document.addEventListener('keydown', matchKeyHandler);
+        }
 
         // Auto-advance mode (competition) has no Continue button: the board advances on
         // its own the moment every pair is solved.
@@ -362,7 +397,7 @@
             }
         }
 
-        function makeMatchItem(row, side, kind) {
+        function makeMatchItem(row, side, kind, index) {
             const item = document.createElement('button');
             item.className = 'bt-match-item';
             item.dataset.side = side;
@@ -381,6 +416,16 @@
                 const meaning = row.meaning_vn || row.meaning_en || '';
                 item.dataset.answer = meaning;
                 item.innerText = meaning;
+            }
+            // Show the shortcut key badge when keyboard play is enabled. The item gets
+            // extra inline padding so the badge sits in a gutter, never over the content.
+            const keyChar = side === 'left' ? LEFT_KEYS[index] : RIGHT_KEYS[index];
+            if (cfg.keyboardShortcuts && keyChar) {
+                item.classList.add('bt-has-key');
+                const hint = document.createElement('span');
+                hint.className = 'bt-key-hint';
+                hint.textContent = keyChar.toUpperCase();
+                item.appendChild(hint);
             }
             item.addEventListener('click', () => select(item));
             return item;

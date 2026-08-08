@@ -20,7 +20,7 @@ List query params: page, page_size, category, level, lesson, skill, search
 
 from flask import Blueprint, request, jsonify
 
-from service.question_service import (
+from entity.question.service import (
     QuestionServiceError,
     list_questions,
     get_question,

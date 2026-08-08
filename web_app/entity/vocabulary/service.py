@@ -15,7 +15,7 @@ from __future__ import annotations
 from sqlalchemy.exc import IntegrityError
 
 from entity.database import SessionLocal
-from repository.vocab_repository import VocabRepository
+from entity.vocabulary.repository import VocabRepository
 
 
 # ---------------------------------------------------------------------------

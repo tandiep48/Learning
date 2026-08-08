@@ -14,8 +14,8 @@ Design note:
 from typing import Optional
 from sqlalchemy.orm import Session
 
-from entity.passage_entity import LessonPassage
-from entity.lesson_line_entity import LessonLine
+from entity.passage.entity import LessonPassage
+from entity.lesson_line.entity import LessonLine
 
 
 class PassageRepository:

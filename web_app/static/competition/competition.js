@@ -262,7 +262,8 @@ async function startTrainer() {
     VocabTrainer.start({
         container,
         words,
-        autoAdvance: true,   // competition: no Check/Next buttons — flow automatically
+        autoAdvance: true,        // competition: no Check/Next buttons — flow automatically
+        keyboardShortcuts: true,  // 1-5 pick source cards, y-u-i-o-p pick match cards
         onAnswer: emitVocabAnswer,
         onProgress: updateTrainerProgress,
         mountAction: mountCompetitionAction,

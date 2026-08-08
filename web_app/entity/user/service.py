@@ -19,7 +19,7 @@ from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash
 
 from entity.database import SessionLocal
-from repository.user_repository import UserRepository
+from entity.user.repository import UserRepository
 
 
 # ---------------------------------------------------------------------------

@@ -60,10 +60,9 @@ Learning (folder)
 |--web_app
 | |
 | |--routes (folder contain python file for navigation)
-| |--service (folder contain service python file)
+| |--service (folder contain shared service python file, e.g. i18n_service, gcs_service)
 | |--static (folder contain js and css file)
 | |--template (folder contain html file)
-| |--entity (folder for refractor plan only)
+| |--entity (refactor plan; grouped per model as entity/<model>/ with entity.py + repository.py + service.py; entity/database.py is the shared SQLAlchemy base/session)
 | |--models (folder that contain model that use to transcript user speak into text)
-| |--repository (folder for refractor plan only)
 | |--tests (folder for refractor plan only)

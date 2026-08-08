@@ -13,7 +13,7 @@ Schema reference (schema.sql):
 Note: `to_dict()` never exposes the password hash.
 """
 
-from sqlalchemy import Column, BigInteger, SmallInteger, String
+from sqlalchemy import Column, BigInteger, SmallInteger, String, Text
 from entity.database import Base
 
 
@@ -25,6 +25,11 @@ class User(Base):
     email = Column(String(50), nullable=False, unique=True)
     password = Column(String(255), nullable=False)
     level = Column(SmallInteger, nullable=True, default=1)
+    # Profile / preferences
+    avatar_path = Column(Text, nullable=True)
+    hanzi_font = Column(Text, nullable=True)
+    hanzi_script = Column(Text, nullable=True)
+    ui_language = Column(Text, nullable=True)
 
     def to_dict(self) -> dict:
         """Serialize to a plain dict for JSON responses (password excluded)."""
