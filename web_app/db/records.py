@@ -6,9 +6,22 @@ practice_record) — learned-word mastery and the dashboard time/words charts.
 Extracted from the former monolithic db.py.
 """
 
-from sqlalchemy import select, func, distinct, case, union_all, cast, BigInteger
+import json
+
+from sqlalchemy import select, func, distinct, case, union_all, cast, insert, BigInteger
 from entity.database import SessionLocal
 from entity.record.entity import VocabRecord, LessonRecord, PracticeRecord
+
+
+def _json_value(value):
+    """`vocab_records.game_info` is JSONB but callers pass a JSON string; parse it
+    so SQLAlchemy stores real JSON (matching the old psycopg2 text->jsonb cast)."""
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except (ValueError, TypeError):
+            return value
+    return value
 
 
 def get_learned_words(conn, user_id):
@@ -19,37 +32,47 @@ def get_learned_words(conn, user_id):
     if not conn:
         return []
 
-    query = """
-    WITH daily_attempts AS (
-        SELECT 
-            word,
-            DATE(updated_at) as attempt_date,
-            count(DISTINCT CASE WHEN is_correct = true THEN mode END) as successful_modes
-        FROM vocab_records
-        WHERE mode IN ('typing', 'listen', 'meaning')
-          AND round_num = 1
-          AND user_id = %s
-        GROUP BY word, DATE(updated_at)
-    ),
-    latest_status AS (
-        SELECT 
-            word,
-            successful_modes,
-            row_number() OVER (PARTITION BY word ORDER BY attempt_date DESC) as rn
-        FROM daily_attempts
-    )
-    SELECT word
-    FROM latest_status
-    WHERE rn = 1 AND successful_modes = 3;
-    """
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            cur.execute(query, (user_id,))
-            rows = cur.fetchall()
-            return [row[0] for row in rows]
+        # daily_attempts: per (word, day) how many of the 3 modes were correct in round 1.
+        successful_modes = func.count(
+            distinct(case((VocabRecord.is_correct.is_(True), VocabRecord.mode)))
+        ).label("successful_modes")
+        daily_attempts = (
+            select(
+                VocabRecord.word.label("word"),
+                func.date(VocabRecord.updated_at).label("attempt_date"),
+                successful_modes,
+            )
+            .where(
+                VocabRecord.mode.in_(["typing", "listen", "meaning"]),
+                VocabRecord.round_num == 1,
+                VocabRecord.user_id == user_id,
+            )
+            .group_by(VocabRecord.word, func.date(VocabRecord.updated_at))
+            .cte("daily_attempts")
+        )
+
+        # latest_status: keep each word's most recent day only.
+        rn = func.row_number().over(
+            partition_by=daily_attempts.c.word,
+            order_by=daily_attempts.c.attempt_date.desc(),
+        ).label("rn")
+        latest_status = select(
+            daily_attempts.c.word,
+            daily_attempts.c.successful_modes,
+            rn,
+        ).subquery("latest_status")
+
+        stmt = select(latest_status.c.word).where(
+            latest_status.c.rn == 1, latest_status.c.successful_modes == 3
+        )
+        return [row[0] for row in session.execute(stmt).all()]
     except Exception as e:
         print(f"⚠️ Database query failed (get_learned_words): {e}")
         return []
+    finally:
+        SessionLocal.remove()
 
 
 def get_learned_words_last_3_days(conn, user_id):
@@ -193,22 +216,28 @@ def get_time_learned_last_3_days(conn, user_id):
 def insert_learning_progress(conn, user_id, session_id, mode, word, round_num, game_info, user_answer, is_correct, response_time_ms, updated_at):
     if not conn:
         return
-        
-    query = """
-        INSERT INTO vocab_records 
-        (user_id, session_id, mode, word, round_num, game_info, user_answer, is_correct, response_time_ms, updated_at)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-    """
+
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            cur.execute(query, (
-                user_id, str(session_id), mode, word, round_num, 
-                game_info, user_answer, is_correct, response_time_ms, updated_at
-            ))
-        conn.commit()
+        session.execute(insert(VocabRecord).values(
+            user_id=user_id,
+            session_id=str(session_id),
+            mode=mode,
+            word=word,
+            round_num=round_num,
+            game_info=_json_value(game_info),
+            user_answer=user_answer,
+            is_correct=is_correct,
+            response_time_ms=response_time_ms,
+            updated_at=updated_at,
+        ))
+        session.commit()
     except Exception as e:
         print(f"⚠️ Database insert failed: {e}")
-        conn.rollback()
+        session.rollback()
+    finally:
+        SessionLocal.remove()
+
 
 def insert_learning_progress_batch(conn, user_id, session_id, records, updated_at):
     """
@@ -219,62 +248,81 @@ def insert_learning_progress_batch(conn, user_id, session_id, records, updated_a
     if not conn or not records:
         return
 
-    query = """
-        INSERT INTO vocab_records
-        (user_id, session_id, mode, word, round_num, game_info, user_answer, is_correct, response_time_ms, updated_at)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-    """
     rows = [
-        (
-            user_id, str(session_id), r.get("mode"), r.get("word"),
-            r.get("round_num", 1), r.get("game_info"), r.get("user_answer"),
-            r.get("is_correct"), r.get("response_time_ms", 0), updated_at,
-        )
+        {
+            "user_id": user_id,
+            "session_id": str(session_id),
+            "mode": r.get("mode"),
+            "word": r.get("word"),
+            "round_num": r.get("round_num", 1),
+            "game_info": _json_value(r.get("game_info")),
+            "user_answer": r.get("user_answer"),
+            "is_correct": r.get("is_correct"),
+            "response_time_ms": r.get("response_time_ms", 0),
+            "updated_at": updated_at,
+        }
         for r in records
     ]
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            cur.executemany(query, rows)
-        conn.commit()
+        session.execute(insert(VocabRecord), rows)  # multi-row insert
+        session.commit()
     except Exception as e:
         print(f"⚠️ Database batch insert failed: {e}")
-        conn.rollback()
+        session.rollback()
+    finally:
+        SessionLocal.remove()
+
 
 def insert_lesson_progress(conn, user_id, session_id, passage_id, line_id, mode, game_info, user_answer, is_correct, response_time_ms, updated_at):
     if not conn:
         return
-        
-    query = """
-        INSERT INTO lesson_records 
-        (user_id, session_id, passage_id, line_id, mode, game_info, user_answer, is_correct, response_time_ms, updated_at)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-    """
+
+    # lesson_records.game_info is TEXT — the JSON string is stored as-is.
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            cur.execute(query, (
-                user_id, str(session_id), passage_id, line_id, mode, 
-                game_info, user_answer, is_correct, response_time_ms, updated_at
-            ))
-        conn.commit()
+        session.execute(insert(LessonRecord).values(
+            user_id=user_id,
+            session_id=str(session_id),
+            passage_id=passage_id,
+            line_id=line_id,
+            mode=mode,
+            game_info=game_info,
+            user_answer=user_answer,
+            is_correct=is_correct,
+            response_time_ms=response_time_ms,
+            updated_at=updated_at,
+        ))
+        session.commit()
     except Exception as e:
         print(f"⚠️ Database lesson insert failed: {e}")
-        conn.rollback()
+        session.rollback()
+    finally:
+        SessionLocal.remove()
+
 
 def insert_practice_progress(conn, user_id, session_id, hsk_level, lesson, question_no, skill, question_type, user_answer, is_correct, response_time_ms=None, category='practice'):
     if not conn:
         return
-        
-    query = """
-        INSERT INTO practice_record 
-        (user_id, session_id, hsk_level, lesson, question_no, skill, question_type, user_answer, is_correct, response_time_ms, category)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-    """
+
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            cur.execute(query, (
-                user_id, str(session_id), hsk_level, str(lesson), question_no, skill, question_type, user_answer, is_correct, response_time_ms, category or 'practice'
-            ))
-        conn.commit()
+        session.execute(insert(PracticeRecord).values(
+            user_id=user_id,
+            session_id=str(session_id),
+            hsk_level=hsk_level,
+            lesson=str(lesson),
+            question_no=question_no,
+            skill=skill,
+            question_type=question_type,
+            user_answer=user_answer,
+            is_correct=is_correct,
+            response_time_ms=response_time_ms,
+            category=category or 'practice',
+        ))
+        session.commit()
     except Exception as e:
         print(f"⚠️ Database practice insert failed: {e}")
-        conn.rollback()
+        session.rollback()
+    finally:
+        SessionLocal.remove()
