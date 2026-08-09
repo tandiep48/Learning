@@ -1,11 +1,11 @@
 """
 db package
 -----------
-Database access split by domain. `from db import <name>` still resolves every
-former db.py function via the re-exports below.
+Database access split by domain, all on SQLAlchemy (see entity/database.py for
+the engine/session). `from db import <name>` resolves every query function via
+the re-exports below.
 """
 
-from db.connection import *  # noqa: F401,F403  (connection + DB config)
 from db.records import *    # noqa: F401,F403  (activity records / stats)
 from db.user import *       # noqa: F401,F403  (users / profile)
 from db.competition import *  # noqa: F401,F403  (learn-together / competition)

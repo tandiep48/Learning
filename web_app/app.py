@@ -37,7 +37,7 @@ from routes.question_crud_routes import question_crud_bp
 from routes.translation_routes import translation_bp
 from competition_socket import init_competition_socket
 from service.i18n_service import get_current_lang, get_translations, t as i18n_t, SUPPORTED_LANGUAGES
-from db import get_db_connection, update_user_ui_language
+from db import update_user_ui_language
 
 load_dotenv()
 

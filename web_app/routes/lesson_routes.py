@@ -14,7 +14,6 @@ from flask_login import login_required, current_user
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from db import (
-    get_db_connection,
     get_lesson_picker_progress,
     get_passages_summary,
     get_passage_content,
@@ -174,9 +173,7 @@ def log_lesson_event(user_id, session_id, passage_id, line_id, task_type,
 @lesson_bp.route('/passages', methods=['GET'])
 def get_passages():
     hsk_level = request.args.get('hsk_level')
-    conn = get_db_connection()
     passages = get_passages_summary(hsk_level)
-    conn.close()
     return jsonify({"passages": passages})
 
 
@@ -187,14 +184,7 @@ def get_picker_progress():
     if not hsk_level:
         return jsonify({"error": "hsk_level is required"}), 400
 
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({"error": "Database connection failed"}), 500
-
-    try:
-        return jsonify(get_lesson_picker_progress(current_user.id, hsk_level))
-    finally:
-        conn.close()
+    return jsonify(get_lesson_picker_progress(current_user.id, hsk_level))
 
 
 @lesson_bp.route('/part-complete', methods=['POST'])
@@ -229,26 +219,19 @@ def complete_lesson_part():
         completed = True
         store_score = None
 
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({"error": "Database connection failed"}), 500
-
-    try:
-        if not mark_lesson_part_completed(current_user.id, passage_id,
-                                          completed=completed, score_pct=store_score):
-            return jsonify({"error": "Could not save lesson progress"}), 500
-        # Only a perfect round grants mastery of the passage's words.
-        mastered = []
-        if is_perfect:
-            mastered = mark_passage_words_mastered(current_user.id, passage_id)
-        # Finishing a part may complete a lesson/level, so re-derive the HSK level.
-        new_level = recompute_user_level(current_user.id)
-        if new_level:
-            current_user.level = new_level
-        return jsonify({"status": "success", "passage_id": passage_id,
-                        "score_pct": score_pct, "mastered_words": mastered, "level": new_level})
-    finally:
-        conn.close()
+    if not mark_lesson_part_completed(current_user.id, passage_id,
+                                      completed=completed, score_pct=store_score):
+        return jsonify({"error": "Could not save lesson progress"}), 500
+    # Only a perfect round grants mastery of the passage's words.
+    mastered = []
+    if is_perfect:
+        mastered = mark_passage_words_mastered(current_user.id, passage_id)
+    # Finishing a part may complete a lesson/level, so re-derive the HSK level.
+    new_level = recompute_user_level(current_user.id)
+    if new_level:
+        current_user.level = new_level
+    return jsonify({"status": "success", "passage_id": passage_id,
+                    "score_pct": score_pct, "mastered_words": mastered, "level": new_level})
 
 @lesson_bp.route('/passage/<passage_id>', methods=['GET'])
 def get_passage_detail(passage_id):
@@ -259,9 +242,7 @@ def get_passage_detail(passage_id):
             "lines": [],
             "title": "Number",
         }})
-    conn = get_db_connection()
     passage = get_passage_content(passage_id)
-    conn.close()
     if not passage:
         return jsonify({"error": "Passage not found"}), 404
     return jsonify({"passage": passage})
@@ -270,9 +251,7 @@ def get_passage_detail(passage_id):
 def get_passage_vocab_api(passage_id):
     if is_number_part(passage_id):
         return jsonify({"passage_id": passage_id, "vocab": number_vocab_rows()})
-    conn = get_db_connection()
     vocab = get_passage_vocab(passage_id)
-    conn.close()
     return jsonify({"passage_id": passage_id, "vocab": vocab})
 
 @lesson_bp.route('/grammar/<passage_id>', methods=['GET'])
@@ -283,9 +262,7 @@ def get_passage_grammar(passage_id):
         lesson = parts[1]
 
         # Show every grammar rule in the lesson (all parts), not just this part.
-        conn = get_db_connection()
         grammar = get_grammar_for_lesson(hsk_level, lesson)
-        conn.close()
         return jsonify({"grammar": grammar})
     except Exception as e:
         return jsonify({"error": str(e)}), 400
@@ -301,17 +278,13 @@ def start_session():
     if not isinstance(passage_ids, list) or not passage_ids:
         return jsonify({"error": "passage_id or passage_ids is required"}), 400
     
-    conn = get_db_connection()
     passages = []
     for pid in passage_ids:
         passage = get_passage_content(pid)
         if passage:
             passages.append((pid, passage))
     if not passages:
-        conn.close()
         return jsonify({"error": "Passage not found"}), 404
-        
-    conn.close()
 
     line_items = []
     for pid, passage in passages:
@@ -449,20 +422,17 @@ def submit_lesson():
         tokens=tokens,
     )
 
-    db_conn = get_db_connection()
-    if db_conn:
-        insert_lesson_progress(
-            user_id=current_user.id,
-            session_id=session_id,
-            passage_id=passage_id,
-            line_id=line_id,
-            mode=mode,
-            game_info=json.dumps(game_info, ensure_ascii=False),
-            user_answer=user_answer,
-            is_correct=is_correct,
-            response_time_ms=response_time_ms,
-            updated_at=datetime.now()
-        )
-        db_conn.close()
+    insert_lesson_progress(
+        user_id=current_user.id,
+        session_id=session_id,
+        passage_id=passage_id,
+        line_id=line_id,
+        mode=mode,
+        game_info=json.dumps(game_info, ensure_ascii=False),
+        user_answer=user_answer,
+        is_correct=is_correct,
+        response_time_ms=response_time_ms,
+        updated_at=datetime.now()
+    )
 
     return jsonify({"status": "success"})
