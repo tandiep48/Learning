@@ -16,7 +16,7 @@ Schema (created by migrate_lessons.py):
     tokens          JSONB                  -- tokenised word list
 """
 
-from sqlalchemy import Column, Integer, String, Text, ForeignKey
+from sqlalchemy import Column, Integer, SmallInteger, String, Text, ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from entity.database import Base
@@ -39,6 +39,7 @@ class LessonLine(Base):
     translation_en = Column(Text, nullable=True)
     translation_vi = Column(Text, nullable=True)
     tokens = Column(JSONB, nullable=True)
+    flag = Column(SmallInteger, nullable=True)
 
     # Back-reference to the parent passage
     passage = relationship("LessonPassage", back_populates="lines")

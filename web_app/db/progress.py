@@ -7,47 +7,68 @@ and marking a passage's words mastered.
 Extracted from the former monolithic db.py.
 """
 
-import json
+import time
+from datetime import datetime, timezone
 
+from sqlalchemy import select, insert, func
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+from entity.database import SessionLocal
+from entity.passage.entity import LessonPassage
+from entity.lesson_line.entity import LessonLine  # noqa: F401  (registers LessonPassage.lines mapper)
+from entity.passage_vocabulary.entity import PassageVocabulary
+from entity.record.entity import VocabRecord
+from entity.user_lesson_part_progress.entity import UserLessonPartProgress
+from entity.user_learning_state.entity import UserLearningState
 from db.records import get_learned_words
 
 
 def set_recent_learning(conn, user_id, passage_id):
     if not conn or not passage_id:
         return False
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO user_learning_state (user_id, current_passage_id, updated_at)
-                VALUES (%s, %s, CURRENT_TIMESTAMP)
-                ON CONFLICT (user_id)
-                DO UPDATE SET current_passage_id = EXCLUDED.current_passage_id,
-                              updated_at = CURRENT_TIMESTAMP
-            """, (user_id, passage_id))
-        conn.commit()
+        stmt = pg_insert(UserLearningState).values(
+            user_id=user_id,
+            current_passage_id=passage_id,
+            updated_at=func.current_timestamp(),
+        )
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[UserLearningState.user_id],
+            set_={
+                "current_passage_id": stmt.excluded.current_passage_id,
+                "updated_at": func.current_timestamp(),
+            },
+        )
+        session.execute(stmt)
+        session.commit()
         return True
     except Exception as e:
         print(f"⚠️ Database set_recent_learning failed: {e}")
-        conn.rollback()
+        session.rollback()
         return False
+    finally:
+        SessionLocal.remove()
+
 
 def get_recent_learning(conn, user_id):
     if not conn:
         return None
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT current_passage_id, updated_at
-                FROM user_learning_state
-                WHERE user_id = %s
-            """, (user_id,))
-            row = cur.fetchone()
-            if not row:
-                return None
-            return {"passage_id": row[0], "updated_at": row[1].isoformat() if row[1] else None}
+        row = session.execute(
+            select(UserLearningState.current_passage_id, UserLearningState.updated_at)
+            .where(UserLearningState.user_id == user_id)
+        ).first()
+        if not row:
+            return None
+        return {"passage_id": row[0], "updated_at": row[1].isoformat() if row[1] else None}
     except Exception as e:
         print(f"⚠️ Database get_recent_learning failed: {e}")
         return None
+    finally:
+        SessionLocal.remove()
+
 
 def mark_lesson_part_completed(conn, user_id, passage_id, completed=True, score_pct=None):
     """Record lesson-trainer progress for a part.
@@ -57,59 +78,69 @@ def mark_lesson_part_completed(conn, user_id, passage_id, completed=True, score_
     """
     if not conn or not passage_id:
         return False
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO user_lesson_part_progress
-                    (user_id, passage_id, lesson_trainer_completed_at, score_pct, updated_at)
-                VALUES (%s, %s,
-                        CASE WHEN %s THEN CURRENT_TIMESTAMP ELSE NULL END,
-                        %s, CURRENT_TIMESTAMP)
-                ON CONFLICT (user_id, passage_id)
-                DO UPDATE SET
-                    lesson_trainer_completed_at = COALESCE(
-                        EXCLUDED.lesson_trainer_completed_at,
-                        user_lesson_part_progress.lesson_trainer_completed_at),
-                    score_pct = GREATEST(
-                        COALESCE(user_lesson_part_progress.score_pct, 0),
-                        COALESCE(EXCLUDED.score_pct, 0)),
-                    updated_at = CURRENT_TIMESTAMP
-            """, (user_id, passage_id, bool(completed), score_pct))
-        conn.commit()
+        tbl = UserLessonPartProgress
+        stmt = pg_insert(tbl).values(
+            user_id=user_id,
+            passage_id=passage_id,
+            lesson_trainer_completed_at=(func.current_timestamp() if completed else None),
+            score_pct=score_pct,
+            updated_at=func.current_timestamp(),
+        )
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[tbl.user_id, tbl.passage_id],
+            set_={
+                "lesson_trainer_completed_at": func.coalesce(
+                    stmt.excluded.lesson_trainer_completed_at,
+                    tbl.lesson_trainer_completed_at,
+                ),
+                "score_pct": func.greatest(
+                    func.coalesce(tbl.score_pct, 0),
+                    func.coalesce(stmt.excluded.score_pct, 0),
+                ),
+                "updated_at": func.current_timestamp(),
+            },
+        )
+        session.execute(stmt)
+        session.commit()
         return True
     except Exception as e:
         print(f"Database mark_lesson_part_completed failed: {e}")
-        conn.rollback()
+        session.rollback()
         return False
+    finally:
+        SessionLocal.remove()
+
 
 def get_lesson_picker_progress(conn, user_id, hsk_level):
     if not conn:
         return {"lessons": {}, "parts": {}}
 
+    session = SessionLocal()
     try:
         mastered_words = set(get_learned_words(conn, user_id))
 
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT p.passage_id, pv.cn
-                FROM lesson_passages p
-                LEFT JOIN passage_vocabulary pv ON pv.passage_id = p.passage_id
-                WHERE p.hsk_level = %s
-                ORDER BY p.passage_id, pv.cn
-            """, (hsk_level,))
-            vocab_rows = cur.fetchall()
+        vocab_rows = session.execute(
+            select(LessonPassage.passage_id, PassageVocabulary.cn)
+            .select_from(LessonPassage)
+            .outerjoin(PassageVocabulary, PassageVocabulary.passage_id == LessonPassage.passage_id)
+            .where(LessonPassage.hsk_level == hsk_level)
+            .order_by(LessonPassage.passage_id, PassageVocabulary.cn)
+        ).all()
 
-            cur.execute("""
-                SELECT passage_id, lesson_trainer_completed_at, score_pct
-                FROM user_lesson_part_progress
-                WHERE user_id = %s
-            """, (user_id,))
-            completed_passages = set()
-            part_scores = {}
-            for pid, completed_at, score in cur.fetchall():
-                part_scores[pid] = score or 0
-                if completed_at is not None:
-                    completed_passages.add(pid)
+        completed_passages = set()
+        part_scores = {}
+        for pid, completed_at, score in session.execute(
+            select(
+                UserLessonPartProgress.passage_id,
+                UserLessonPartProgress.lesson_trainer_completed_at,
+                UserLessonPartProgress.score_pct,
+            ).where(UserLessonPartProgress.user_id == user_id)
+        ).all():
+            part_scores[pid] = score or 0
+            if completed_at is not None:
+                completed_passages.add(pid)
 
         parts = {}
         lesson_words = {}
@@ -174,6 +205,8 @@ def get_lesson_picker_progress(conn, user_id, hsk_level):
     except Exception as e:
         print(f"Database get_lesson_picker_progress failed: {e}")
         return {"lessons": {}, "parts": {}}
+    finally:
+        SessionLocal.remove()
 
 
 def mark_passage_words_mastered(conn, user_id, passage_id):
@@ -187,10 +220,15 @@ def mark_passage_words_mastered(conn, user_id, passage_id):
     """
     if not conn or not passage_id:
         return 0
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            cur.execute("SELECT cn FROM passage_vocabulary WHERE passage_id = %s", (passage_id,))
-            words = [r[0] for r in cur.fetchall() if r[0]]
+        words = [
+            r[0]
+            for r in session.execute(
+                select(PassageVocabulary.cn).where(PassageVocabulary.passage_id == passage_id)
+            ).all()
+            if r[0]
+        ]
         if not words:
             return 0
 
@@ -199,25 +237,29 @@ def mark_passage_words_mastered(conn, user_id, passage_id):
         if not pending:
             return 0
 
-        import time
         session_id = int(time.time() * 1000)
-        game_info = json.dumps({"source": "lesson_trainer", "passage_id": passage_id},
-                               ensure_ascii=False)
+        game_info = {"source": "lesson_trainer", "passage_id": passage_id}
+        now = datetime.now(timezone.utc)  # one timestamp for the whole insert (like CURRENT_TIMESTAMP)
         rows = [
-            (user_id, session_id, mode, word, game_info)
+            {
+                "user_id": user_id,
+                "session_id": session_id,
+                "mode": mode,
+                "word": word,
+                "round_num": 1,
+                "is_correct": True,
+                "game_info": game_info,
+                "updated_at": now,
+            }
             for word in pending
-            for mode in ('typing', 'listen', 'meaning')
+            for mode in ("typing", "listen", "meaning")
         ]
-        with conn.cursor() as cur:
-            cur.executemany("""
-                INSERT INTO vocab_records
-                    (user_id, session_id, mode, word, round_num, is_correct,
-                     game_info, updated_at)
-                VALUES (%s, %s, %s, %s, 1, true, %s::jsonb, CURRENT_TIMESTAMP)
-            """, rows)
-        conn.commit()
+        session.execute(insert(VocabRecord), rows)
+        session.commit()
         return len(pending)
     except Exception as e:
         print(f"Database mark_passage_words_mastered failed: {e}")
-        conn.rollback()
+        session.rollback()
         return 0
+    finally:
+        SessionLocal.remove()
