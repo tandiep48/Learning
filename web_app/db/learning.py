@@ -7,17 +7,7 @@ unlearned / unsure / review / hard-word selections.
 Extracted from the former monolithic db.py.
 """
 
-from sqlalchemy import select, func, distinct, case, cast, and_, asc, desc, nullslast, Text, Date
-
-from entity.database import SessionLocal
-from entity.record.entity import VocabRecord, PracticeRecord
-from entity.vocabulary.entity import Vocabulary
-from entity.question.entity import Question
 from db.records import get_learned_words
-
-
-# Shared mastery CTE building blocks (3-mode round-1 rule, latest day per word).
-_MASTERY_MODES = ["typing", "listen", "meaning"]
 
 
 def get_mastered_words_with_recency(conn, user_id):
@@ -30,41 +20,38 @@ def get_mastered_words_with_recency(conn, user_id):
     if not conn:
         return []
 
-    session = SessionLocal()
+    query = """
+    WITH daily_attempts AS (
+        SELECT
+            word,
+            DATE(updated_at) AS attempt_date,
+            MAX(updated_at) AS learned_at,
+            COUNT(DISTINCT CASE WHEN is_correct = true THEN mode END) AS successful_modes
+        FROM vocab_records
+        WHERE mode IN ('typing', 'listen', 'meaning')
+          AND round_num = 1
+          AND user_id = %s
+        GROUP BY word, DATE(updated_at)
+    ),
+    latest_status AS (
+        SELECT
+            word,
+            learned_at,
+            successful_modes,
+            ROW_NUMBER() OVER (PARTITION BY word ORDER BY attempt_date DESC) AS rn
+        FROM daily_attempts
+    )
+    SELECT ls.word, ls.learned_at
+    FROM latest_status ls
+    WHERE ls.rn = 1 AND ls.successful_modes = 3;
+    """
     try:
-        successful_modes = func.count(
-            distinct(case((VocabRecord.is_correct.is_(True), VocabRecord.mode)))
-        ).label("successful_modes")
-        daily = (
-            select(
-                VocabRecord.word.label("word"),
-                func.date(VocabRecord.updated_at).label("attempt_date"),
-                func.max(VocabRecord.updated_at).label("learned_at"),
-                successful_modes,
-            )
-            .where(
-                VocabRecord.mode.in_(_MASTERY_MODES),
-                VocabRecord.round_num == 1,
-                VocabRecord.user_id == user_id,
-            )
-            .group_by(VocabRecord.word, func.date(VocabRecord.updated_at))
-            .cte("daily_attempts")
-        )
-        rn = func.row_number().over(
-            partition_by=daily.c.word, order_by=daily.c.attempt_date.desc()
-        ).label("rn")
-        latest = select(
-            daily.c.word, daily.c.learned_at, daily.c.successful_modes, rn
-        ).subquery("latest_status")
-        stmt = select(latest.c.word, latest.c.learned_at).where(
-            latest.c.rn == 1, latest.c.successful_modes == 3
-        )
-        return [{"word": r[0], "learned_at": r[1]} for r in session.execute(stmt).all()]
+        with conn.cursor() as cur:
+            cur.execute(query, (user_id,))
+            return [{"word": row[0], "learned_at": row[1]} for row in cur.fetchall()]
     except Exception as e:
         print(f"⚠️ Database query failed (get_mastered_words_with_recency): {e}")
         return []
-    finally:
-        SessionLocal.remove()
 
 def get_mastered_words_page(conn, user_id, page=1, page_size=24):
     """
@@ -76,55 +63,52 @@ def get_mastered_words_page(conn, user_id, page=1, page_size=24):
     if not conn:
         return {"rows": [], "page": 1, "page_size": page_size, "total": 0, "total_pages": 1}
 
-    session = SessionLocal()
+    base_cte = """
+    WITH daily_attempts AS (
+        SELECT
+            word,
+            DATE(updated_at) AS attempt_date,
+            MAX(updated_at) AS learned_at,
+            COUNT(DISTINCT CASE WHEN is_correct = true THEN mode END) AS successful_modes
+        FROM vocab_records
+        WHERE mode IN ('typing', 'listen', 'meaning')
+          AND round_num = 1
+          AND user_id = %s
+        GROUP BY word, DATE(updated_at)
+    ),
+    latest_status AS (
+        SELECT
+            word,
+            learned_at,
+            successful_modes,
+            ROW_NUMBER() OVER (PARTITION BY word ORDER BY attempt_date DESC) AS rn
+        FROM daily_attempts
+    ),
+    mastered AS (
+        SELECT word, learned_at
+        FROM latest_status
+        WHERE rn = 1 AND successful_modes = 3
+    )
+    """
+    count_query = base_cte + """
+    SELECT COUNT(*) FROM mastered;
+    """
+    rows_query = base_cte + """
+    SELECT m.word, m.learned_at, v.pinyin, v.meaning_vn, v.meaning_en, v.audio_key, v.hsk_level
+    FROM mastered m
+    LEFT JOIN vocabulary v ON v.cn = m.word
+    ORDER BY m.learned_at DESC NULLS LAST, m.word
+    LIMIT %s OFFSET %s;
+    """
     try:
-        successful_modes = func.count(
-            distinct(case((VocabRecord.is_correct.is_(True), VocabRecord.mode)))
-        ).label("successful_modes")
-        daily = (
-            select(
-                VocabRecord.word.label("word"),
-                func.date(VocabRecord.updated_at).label("attempt_date"),
-                func.max(VocabRecord.updated_at).label("learned_at"),
-                successful_modes,
-            )
-            .where(
-                VocabRecord.mode.in_(_MASTERY_MODES),
-                VocabRecord.round_num == 1,
-                VocabRecord.user_id == user_id,
-            )
-            .group_by(VocabRecord.word, func.date(VocabRecord.updated_at))
-            .cte("daily_attempts")
-        )
-        rn = func.row_number().over(
-            partition_by=daily.c.word, order_by=daily.c.attempt_date.desc()
-        ).label("rn")
-        latest = select(
-            daily.c.word, daily.c.learned_at, daily.c.successful_modes, rn
-        ).subquery("latest_status")
-        mastered = (
-            select(latest.c.word, latest.c.learned_at)
-            .where(latest.c.rn == 1, latest.c.successful_modes == 3)
-            .cte("mastered")
-        )
-
-        total = int(session.execute(select(func.count()).select_from(mastered)).scalar() or 0)
-        total_pages = max(1, (total + page_size - 1) // page_size)
-        page = min(page, total_pages)
-        offset = (page - 1) * page_size
-
-        rows = session.execute(
-            select(
-                mastered.c.word, mastered.c.learned_at,
-                Vocabulary.pinyin, Vocabulary.meaning_vn, Vocabulary.meaning_en,
-                Vocabulary.audio_key, Vocabulary.hsk_level,
-            )
-            .select_from(mastered)
-            .outerjoin(Vocabulary, Vocabulary.cn == mastered.c.word)
-            .order_by(nullslast(mastered.c.learned_at.desc()), mastered.c.word)
-            .limit(page_size)
-            .offset(offset)
-        ).all()
+        with conn.cursor() as cur:
+            cur.execute(count_query, (user_id,))
+            total = int(cur.fetchone()[0] or 0)
+            total_pages = max(1, (total + page_size - 1) // page_size)
+            page = min(page, total_pages)
+            offset = (page - 1) * page_size
+            cur.execute(rows_query, (user_id, page_size, offset))
+            rows = cur.fetchall()
 
         return {
             "rows": [
@@ -149,8 +133,6 @@ def get_mastered_words_page(conn, user_id, page=1, page_size=24):
     except Exception as e:
         print(f"⚠️ Database query failed (get_mastered_words_page): {e}")
         return {"rows": [], "page": 1, "page_size": page_size, "total": 0, "total_pages": 1}
-    finally:
-        SessionLocal.remove()
 
 
 def get_recommended_practices(conn, user_id, threshold=0.80, limit=None, status_filter=None):
@@ -357,53 +339,58 @@ def get_practice_history_sessions(conn, user_id, hsk_level=None, category=None,
 
     page = max(1, int(page or 1))
     page_size = min(50, max(1, int(page_size or 20)))
-    direction = asc if sort == 'oldest' else desc
-    ended_at = func.max(PracticeRecord.created_at)
+    order = "ASC" if sort == 'oldest' else "DESC"
 
-    where = [PracticeRecord.user_id == user_id]
+    where = ["user_id = %s"]
+    params = [user_id]
     if category in ('practice', 'exam'):
-        where.append(func.coalesce(PracticeRecord.category, 'practice') == category)
+        where.append("COALESCE(category, 'practice') = %s")
+        params.append(category)
 
     # Level can vary within a multi-lesson session, so keep the whole session (with its
     # full score) as long as it touched the requested level. Date matches the session's
     # end day. Both are HAVING conditions so session stats stay complete.
-    having = []
+    having_clauses = []
     if hsk_level is not None:
-        having.append(func.bool_or(PracticeRecord.hsk_level == hsk_level))
+        having_clauses.append("bool_or(hsk_level = %s)")
+        params.append(hsk_level)
     if date:
-        having.append(cast(ended_at, Date) == date)
+        having_clauses.append("MAX(created_at)::date = %s")
+        params.append(date)
+    having = ("HAVING " + " AND ".join(having_clauses)) if having_clauses else ""
 
-    stmt = (
-        select(
-            PracticeRecord.session_id,
-            ended_at.label("ended_at"),
-            func.count().label("total"),
-            func.sum(case((PracticeRecord.is_correct, 1), else_=0)).label("correct"),
-            func.array_agg(distinct(PracticeRecord.hsk_level)).label("levels"),
-            func.array_agg(distinct(PracticeRecord.lesson)).label("lessons"),
-            func.array_agg(distinct(func.coalesce(PracticeRecord.category, 'practice'))).label("categories"),
-        )
-        .where(and_(*where))
-        .group_by(PracticeRecord.session_id)
-    )
-    if having:
-        stmt = stmt.having(and_(*having))
-    # fetch one extra row to detect a next page
-    stmt = stmt.order_by(direction(ended_at), direction(PracticeRecord.session_id)).limit(page_size + 1).offset((page - 1) * page_size)
+    params.append(page_size + 1)          # fetch one extra to detect a next page
+    params.append((page - 1) * page_size)
 
-    session = SessionLocal()
+    sql = f"""
+        SELECT session_id,
+               MAX(created_at)                                   AS ended_at,
+               COUNT(*)                                          AS total,
+               SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)       AS correct,
+               ARRAY_AGG(DISTINCT hsk_level)                     AS levels,
+               ARRAY_AGG(DISTINCT lesson)                        AS lessons,
+               ARRAY_AGG(DISTINCT COALESCE(category, 'practice')) AS categories
+        FROM practice_record
+        WHERE {' AND '.join(where)}
+        GROUP BY session_id
+        {having}
+        ORDER BY ended_at {order}, session_id {order}
+        LIMIT %s OFFSET %s
+    """
     try:
-        rows = session.execute(stmt).all()
+        with conn.cursor() as cur:
+            cur.execute(sql, tuple(params))
+            rows = cur.fetchall()
         has_more = len(rows) > page_size
         rows = rows[:page_size]
         sessions = []
         for row in rows:
-            session_id, ended, total, correct, levels, lessons, categories = row
+            session_id, ended_at, total, correct, levels, lessons, categories = row
             total = total or 0
             correct = correct or 0
             sessions.append({
                 'session_id':   session_id,
-                'ended_at':     ended.isoformat() if ended else None,
+                'ended_at':     ended_at.isoformat() if ended_at else None,
                 'total':        total,
                 'correct':      correct,
                 'score_pct':    round(correct / total * 100, 1) if total else 0.0,
@@ -415,8 +402,6 @@ def get_practice_history_sessions(conn, user_id, hsk_level=None, category=None,
     except Exception as e:
         print(f"[WARN] get_practice_history_sessions failed: {e}")
         return [], False
-    finally:
-        SessionLocal.remove()
 
 
 def get_practice_session_detail(conn, user_id, session_id):
@@ -428,42 +413,31 @@ def get_practice_session_detail(conn, user_id, session_id):
     if not conn:
         return None
 
-    session = SessionLocal()
     try:
-        stmt = (
-            select(
-                PracticeRecord.hsk_level, PracticeRecord.lesson, PracticeRecord.question_no,
-                PracticeRecord.skill, PracticeRecord.question_type, PracticeRecord.user_answer,
-                PracticeRecord.is_correct, PracticeRecord.created_at,
-                func.coalesce(PracticeRecord.category, 'practice').label("category"),
-                Question.content, Question.question, Question.answer, Question.audio_key,
-                Question.image, Question.options, Question.progress,
-            )
-            .select_from(PracticeRecord)
-            .outerjoin(
-                Question,
-                and_(
-                    Question.level == PracticeRecord.hsk_level,
-                    cast(Question.lesson, Text) == cast(PracticeRecord.lesson, Text),
-                    Question.no == PracticeRecord.question_no,
-                    cast(Question.category, Text) == func.coalesce(PracticeRecord.category, 'practice'),
-                ),
-            )
-            .where(PracticeRecord.user_id == user_id, PracticeRecord.session_id == session_id)
-            .order_by(
-                PracticeRecord.hsk_level, PracticeRecord.lesson, Question.progress,
-                PracticeRecord.question_no, PracticeRecord.created_at,
-            )
-        )
-        cols = ['level', 'lesson', 'no', 'skill', 'type', 'user_answer',
-                'is_correct', 'answered_at', 'category', 'content', 'question',
-                'answer', 'audio_key', 'image', 'options', 'progress']
-        return [dict(zip(cols, r)) for r in session.execute(stmt).all()]
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT pr.hsk_level, pr.lesson, pr.question_no, pr.skill,
+                       pr.question_type, pr.user_answer, pr.is_correct, pr.created_at,
+                       COALESCE(pr.category, 'practice')                AS category,
+                       qb.content, qb.question, qb.answer, qb.audio_key,
+                       qb.image, qb.options, qb.progress
+                FROM practice_record pr
+                LEFT JOIN question_bank qb
+                  ON qb.level = pr.hsk_level
+                 AND qb.lesson::text = pr.lesson::text
+                 AND qb.no = pr.question_no
+                 AND qb.category::text = COALESCE(pr.category, 'practice')
+                WHERE pr.user_id = %s AND pr.session_id = %s
+                ORDER BY pr.hsk_level, pr.lesson, qb.progress, pr.question_no, pr.created_at
+            """, (user_id, session_id))
+            cols = ['level', 'lesson', 'no', 'skill', 'type', 'user_answer',
+                    'is_correct', 'answered_at', 'category', 'content', 'question',
+                    'answer', 'audio_key', 'image', 'options', 'progress']
+            rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+        return rows
     except Exception as e:
         print(f"[WARN] get_practice_session_detail failed: {e}")
         return None
-    finally:
-        SessionLocal.remove()
 
 
 def get_unlearned_words_from_db(conn, user_id):
@@ -475,40 +449,40 @@ def get_unlearned_words_from_db(conn, user_id):
     if not conn:
         return []
 
-    session = SessionLocal()
+    query = """
+with daily_attempts as (
+    -- Group attempts by word and date
+    select 
+        word, 
+        DATE(updated_at) as attempt_date,
+        count(distinct case when is_correct = true then mode end) as successful_modes
+    from vocab_records
+    where mode in ('typing', 'listen', 'meaning')
+      and round_num = 1
+      and user_id = %s
+    group by word, DATE(updated_at)
+),
+latest_status as (
+    -- Get the most recent day's result for each word
+    select 
+        word,
+        successful_modes,
+        row_number() over (partition by word order by attempt_date desc) as rn
+    from daily_attempts
+)
+-- Select words that haven't mastered all 3 modes on their most recent practice day
+select word
+from latest_status
+where rn = 1 and successful_modes < 3
+    """
     try:
-        successful_modes = func.count(
-            distinct(case((VocabRecord.is_correct.is_(True), VocabRecord.mode)))
-        ).label("successful_modes")
-        daily = (
-            select(
-                VocabRecord.word.label("word"),
-                func.date(VocabRecord.updated_at).label("attempt_date"),
-                successful_modes,
-            )
-            .where(
-                VocabRecord.mode.in_(_MASTERY_MODES),
-                VocabRecord.round_num == 1,
-                VocabRecord.user_id == user_id,
-            )
-            .group_by(VocabRecord.word, func.date(VocabRecord.updated_at))
-            .cte("daily_attempts")
-        )
-        rn = func.row_number().over(
-            partition_by=daily.c.word, order_by=daily.c.attempt_date.desc()
-        ).label("rn")
-        latest = select(
-            daily.c.word, daily.c.successful_modes, rn
-        ).subquery("latest_status")
-        stmt = select(latest.c.word).where(
-            latest.c.rn == 1, latest.c.successful_modes < 3
-        )
-        return [r[0] for r in session.execute(stmt).all()]
+        with conn.cursor() as cur:
+            cur.execute(query, (user_id,))
+            rows = cur.fetchall()
+            return [row[0] for row in rows]
     except Exception as e:
         print(f"⚠️ Database query failed (get_unlearned_words_from_db): {e}")
         return []
-    finally:
-        SessionLocal.remove()
 
 def get_unsure_words_from_db(conn, user_id):
     """
