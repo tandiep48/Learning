@@ -190,6 +190,7 @@
         "instruction_match_listen": "Play each audio and match it to the correct meaning:",
         "instruction_match_reading": "Match each word to its meaning:",
         "check": "Check",
+        "skip": "Skip",
         "instruction_meaning": "What is the meaning of this word?",
         "instruction_read": "Read and pronounce this word:",
         "correct_answer": "Correct Answer: {word}",

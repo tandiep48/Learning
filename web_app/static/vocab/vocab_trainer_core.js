@@ -176,13 +176,21 @@
         area.appendChild(wrap);
         if (checkBtn && cfg.mountAction) cfg.mountAction(checkBtn);
 
+        // Auto-advance (competition) locks each word in as it is solved; a shared counter
+        // advances the group once every word is either typed correctly or skipped.
         let autoSolved = 0;
+        function autoComplete() {
+            autoSolved++;
+            if (autoSolved === activity.words.length) setTimeout(advanceActivity, 350);
+        }
+
         // Enter on the last input triggers the group check (manual mode only).
         const inputs = wrap.querySelectorAll('.bt-type-input');
         inputs.forEach((input, idx) => {
             const row = activity.words[idx];
             const rowEl = input.closest('.bt-type-row');
             const result = rowEl.querySelector('.bt-type-result');
+            let skipBtn = null;
             // Answers must be typed — block paste and drag-drop into the field.
             input.addEventListener('paste', (e) => e.preventDefault());
             input.addEventListener('drop', (e) => e.preventDefault());
@@ -200,10 +208,10 @@
                         if (cfg.autoAdvance) {
                             // Lock the word in and score it; advance once the group is done.
                             input.disabled = true;
+                            if (skipBtn) skipBtn.remove();
                             record(row, 'typing', input.value.trim(), true,
                                 Number(input.dataset.completedAt) - activityStartTime, 0);
-                            autoSolved++;
-                            if (autoSolved === activity.words.length) setTimeout(advanceActivity, 350);
+                            autoComplete();
                         }
                     }
                 } else {
@@ -223,6 +231,28 @@
                 if (idx < inputs.length - 1) inputs[idx + 1].focus();
                 else if (!cfg.autoAdvance) checkTypingGroup(activity, wrap, checkBtn);
             });
+
+            // Competition has no Check button, so a per-word Skip lets a learner move past
+            // a word they don't know: it's recorded as incorrect (no points), the answer is
+            // revealed, and it counts toward completing the group.
+            if (cfg.autoAdvance) {
+                skipBtn = document.createElement('button');
+                skipBtn.type = 'button';
+                skipBtn.className = 'btn bt-type-skip';
+                skipBtn.innerText = t('vocab_trainer.skip');
+                skipBtn.addEventListener('click', () => {
+                    if (input.disabled) return;
+                    input.disabled = true;
+                    rowEl.classList.remove('correct');
+                    rowEl.classList.add('incorrect');
+                    if (result) result.innerHTML = typingResultHtml(row, false);
+                    record(row, 'typing', input.value.trim(), false,
+                        Date.now() - activityStartTime, 0);
+                    skipBtn.remove();
+                    autoComplete();
+                });
+                rowEl.appendChild(skipBtn);
+            }
         });
         if (inputs[0]) inputs[0].focus();
     }

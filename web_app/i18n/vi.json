@@ -190,6 +190,7 @@
         "instruction_match_listen": "Phát từng âm thanh và ghép với nghĩa đúng:",
         "instruction_match_reading": "Ghép mỗi từ với nghĩa của nó:",
         "check": "Kiểm tra",
+        "skip": "Bỏ qua",
         "instruction_meaning": "Nghĩa của từ này là gì?",
         "instruction_read": "Đọc và phát âm từ này:",
         "correct_answer": "Đáp Án Đúng: {word}",
