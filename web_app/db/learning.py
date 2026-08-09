@@ -27,15 +27,13 @@ from db.records import get_learned_words
 _MASTERY_MODES = ["typing", "listen", "meaning"]
 
 
-def get_mastered_words_with_recency(conn, user_id):
+def get_mastered_words_with_recency(user_id):
     """
     Returns mastered words with the timestamp of the latest mastered learning day
     (word + learned_at only). Uses the same 3-mode round-1 mastery rule as
     get_learned_words(). Kept lightweight — no vocabulary join — since callers only
     need the word and its recency; per-word details come from get_mastered_words_page().
     """
-    if not conn:
-        return []
 
     session = SessionLocal()
     try:
@@ -73,15 +71,13 @@ def get_mastered_words_with_recency(conn, user_id):
     finally:
         SessionLocal.remove()
 
-def get_mastered_words_page(conn, user_id, page=1, page_size=24):
+def get_mastered_words_page(user_id, page=1, page_size=24):
     """
     Returns one page of mastered words with the timestamp of the latest mastered learning day.
     Uses the same 3-mode round-1 mastery rule as get_learned_words().
     """
     page_size = min(100, max(1, int(page_size or 24)))
     page = max(1, int(page or 1))
-    if not conn:
-        return {"rows": [], "page": 1, "page_size": page_size, "total": 0, "total_pages": 1}
 
     session = SessionLocal()
     try:
@@ -160,7 +156,7 @@ def get_mastered_words_page(conn, user_id, page=1, page_size=24):
         SessionLocal.remove()
 
 
-def get_recommended_practices(conn, user_id, threshold=0.80, limit=None, status_filter=None):
+def get_recommended_practices(user_id, threshold=0.80, limit=None, status_filter=None):
     """
     Returns practice progress groups the user is ready for.
     Uses question_bank + learning_units + vocab_records — NO CSV loading.
@@ -173,8 +169,6 @@ def get_recommended_practices(conn, user_id, threshold=0.80, limit=None, status_
       {level, lesson, progress, skill, type, category, status, unit_ids,
        total_words, known_words, coverage, coverage_pct, matched_words, question_count}
     """
-    if not conn:
-        return []
 
     session = SessionLocal()
     try:
@@ -392,7 +386,7 @@ def get_recommended_practices(conn, user_id, threshold=0.80, limit=None, status_
         SessionLocal.remove()
 
 
-def get_practice_history_sessions(conn, user_id, hsk_level=None, category=None,
+def get_practice_history_sessions(user_id, hsk_level=None, category=None,
                                   date=None, sort='recent', page=1, page_size=20):
     """
     List a user's past practice/exam sessions for the review page, with optional
@@ -402,8 +396,6 @@ def get_practice_history_sessions(conn, user_id, hsk_level=None, category=None,
     Returns (sessions, has_more). has_more lets the caller do prev/next paging without a
     separate COUNT query (we fetch one extra row and trim it). Scoped to user_id.
     """
-    if not conn:
-        return [], False
 
     page = max(1, int(page or 1))
     page_size = min(50, max(1, int(page_size or 20)))
@@ -469,14 +461,12 @@ def get_practice_history_sessions(conn, user_id, hsk_level=None, category=None,
         SessionLocal.remove()
 
 
-def get_practice_session_detail(conn, user_id, session_id):
+def get_practice_session_detail(user_id, session_id):
     """
     Full detail for one of the user's sessions: every answered question joined back
     to question_bank so the review page can show the prompt, options, correct answer
     and the user's own answer. Scoped to user_id so users only see their own records.
     """
-    if not conn:
-        return None
 
     session = SessionLocal()
     try:
@@ -516,14 +506,12 @@ def get_practice_session_detail(conn, user_id, session_id):
         SessionLocal.remove()
 
 
-def get_unlearned_words_from_db(conn, user_id):
+def get_unlearned_words_from_db(user_id):
 
     """
     Returns a list of words from the user's history that have NOT been fully learned 
     (less than 3 distinct correct modes in round 1).
     """
-    if not conn:
-        return []
 
     session = SessionLocal()
     try:
@@ -560,15 +548,13 @@ def get_unlearned_words_from_db(conn, user_id):
     finally:
         SessionLocal.remove()
 
-def get_unsure_words_from_db(conn, user_id):
+def get_unsure_words_from_db(user_id):
     """
     Returns learned words the user answers slowly. For each mastered word, response times are
     z-scored per mode against the baseline of all the user's mastered words on their latest
     mastery day; words whose average z-score >= 1.0 are "unsure". Only meaningful once the user
     has mastered >= 50 words — returns [] below that, to keep the baseline stable.
     """
-    if not conn:
-        return []
 
     session = SessionLocal()
     try:
@@ -672,7 +658,7 @@ def get_unsure_words_from_db(conn, user_id):
     finally:
         SessionLocal.remove()
 
-def get_review_words(conn, user_id):
+def get_review_words(user_id):
     """
     Combines unsure + unlearned words into one prioritized review list.
 
@@ -684,11 +670,9 @@ def get_review_words(conn, user_id):
     Returns a list of {"word": str, "reason": str}, critical first; within each tier the
     original ordering from the source functions is preserved.
     """
-    if not conn:
-        return []
 
-    unsure_list = get_unsure_words_from_db(conn, user_id)
-    unlearned_list = get_unlearned_words_from_db(conn, user_id)
+    unsure_list = get_unsure_words_from_db(user_id)
+    unlearned_list = get_unlearned_words_from_db(user_id)
 
     unsure_set = set(unsure_list)
     unlearned_set = set(unlearned_list)
@@ -720,19 +704,17 @@ def get_review_words(conn, user_id):
 
     return result
 
-def get_review_words_flat(conn, user_id):
+def get_review_words_flat(user_id):
     """
     Same as get_review_words() but returns a plain prioritized list of word strings
     (critical > unsure > incomplete).
     """
-    return [entry["word"] for entry in get_review_words(conn, user_id)]
+    return [entry["word"] for entry in get_review_words(user_id)]
 
-def get_hard_semantic_learned_words(conn, user_id):
+def get_hard_semantic_learned_words(user_id):
     """
     Returns a list of learned words (by the given user) but difficult in semantic.
     """
-    if not conn:
-        return []
 
     session = SessionLocal()
     try:
@@ -767,12 +749,10 @@ def get_hard_semantic_learned_words(conn, user_id):
     finally:
         SessionLocal.remove()
 
-def get_hard_stroke_learned_words(conn, user_id):
+def get_hard_stroke_learned_words(user_id):
     """
     Returns a list of learned words (by the given user) but difficult in strokes.
     """
-    if not conn:
-        return []
 
     session = SessionLocal()
     try:

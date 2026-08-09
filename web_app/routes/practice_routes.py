@@ -279,7 +279,6 @@ def get_recommendations():
 
     try:
         groups = get_recommended_practices(
-            db_conn,
             current_user.id,
             threshold=0.80,
             limit=limit,
@@ -390,7 +389,7 @@ def get_practice_history():
 
     try:
         sessions, has_more = get_practice_history_sessions(
-            db_conn, current_user.id,
+            current_user.id,
             hsk_level=hsk_level, category=category, date=date, sort=sort, page=page,
         )
     finally:
@@ -409,7 +408,7 @@ def get_practice_history_detail(session_id):
         return jsonify({'error': 'Database unavailable'}), 503
 
     try:
-        rows = get_practice_session_detail(db_conn, current_user.id, session_id)
+        rows = get_practice_session_detail(current_user.id, session_id)
     finally:
         db_conn.close()
 

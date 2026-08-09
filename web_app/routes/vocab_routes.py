@@ -375,9 +375,9 @@ def get_vocab_table():
             return jsonify({"error": "Database connection failed."}), 500
         try:
             if table_mode == "unlearn":
-                words = get_unlearned_words_from_db(db_conn, current_user.id)
+                words = get_unlearned_words_from_db(current_user.id)
             else:
-                words = get_unsure_words_from_db(db_conn, current_user.id)
+                words = get_unsure_words_from_db(current_user.id)
         finally:
             db_conn.close()
 
@@ -465,7 +465,7 @@ def get_review_list():
     if not db_conn:
         return jsonify({"error": "Database connection failed."}), 500
     try:
-        words = get_review_words_flat(db_conn, current_user.id)
+        words = get_review_words_flat(current_user.id)
     finally:
         db_conn.close()
 
@@ -528,13 +528,13 @@ def preview_mode():
     
     words = []
     if mode == "2":
-        words = get_unlearned_words_from_db(db_conn, current_user.id)
+        words = get_unlearned_words_from_db(current_user.id)
     elif mode == "3":
-        words = get_unsure_words_from_db(db_conn, current_user.id)
+        words = get_unsure_words_from_db(current_user.id)
     elif mode == "4":
-        words = get_hard_semantic_learned_words(db_conn, current_user.id)
+        words = get_hard_semantic_learned_words(current_user.id)
     elif mode == "5":
-        words = get_hard_stroke_learned_words(db_conn, current_user.id)
+        words = get_hard_stroke_learned_words(current_user.id)
     elif mode == "6":
         passage_id = data.get("passage_id")
         passage_vocab = number_vocab_rows() if is_number_part(passage_id) else get_passage_vocab(passage_id)

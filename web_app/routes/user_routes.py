@@ -194,7 +194,7 @@ def learned_vocab_page():
 
     conn = get_db_connection()
     try:
-        result = get_mastered_words_page(conn, current_user.id, page, page_size)
+        result = get_mastered_words_page(current_user.id, page, page_size)
     finally:
         if conn:
             conn.close()
@@ -210,9 +210,9 @@ def dashboard_vocab_buckets():
     if not conn:
         return jsonify({"error": "Database unavailable"}), 503
     try:
-        unsure_words = get_unsure_words_from_db(conn, current_user.id)
-        unlearned_words = get_unlearned_words_from_db(conn, current_user.id)
-        recent = get_mastered_words_page(conn, current_user.id, 1, limit)
+        unsure_words = get_unsure_words_from_db(current_user.id)
+        unlearned_words = get_unlearned_words_from_db(current_user.id)
+        recent = get_mastered_words_page(current_user.id, 1, limit)
         buckets = {
             "unsure": {
                 "key": "unsure",
