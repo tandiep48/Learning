@@ -297,6 +297,44 @@ def get_passage_vocab(passage_id):
         SessionLocal.remove()
 
 
+def get_vocabulary_by_words(words):
+    """Vocabulary rows for a set of Chinese words (used by the dashboard word cards)."""
+    words = [w for w in (words or []) if w]
+    if not words:
+        return []
+    session = SessionLocal()
+    try:
+        rows = session.execute(
+            select(
+                Vocabulary.cn, Vocabulary.pinyin, Vocabulary.meaning_vn,
+                Vocabulary.meaning_en, Vocabulary.audio_key, Vocabulary.hsk_level,
+            ).where(Vocabulary.cn.in_(words))
+        ).all()
+        return [
+            {
+                "word": r[0], "pinyin": r[1], "meaning_vn": r[2],
+                "meaning_en": r[3], "audio_key": r[4], "hsk_level": r[5],
+            }
+            for r in rows
+        ]
+    finally:
+        SessionLocal.remove()
+
+
+def get_lesson_passage_ids_like(pattern):
+    """Passage ids matching a LIKE pattern (e.g. 'H1_2_%'), ordered."""
+    session = SessionLocal()
+    try:
+        rows = session.execute(
+            select(LessonPassage.passage_id)
+            .where(LessonPassage.passage_id.like(pattern))
+            .order_by(LessonPassage.passage_id)
+        ).all()
+        return [r[0] for r in rows]
+    finally:
+        SessionLocal.remove()
+
+
 def get_grammar_for_lesson(hsk_level, lesson):
     """All grammar rules for a whole lesson (every part), ordered by insertion id.
     The caller splits the flat list into sections at each type=1 row."""

@@ -201,6 +201,86 @@ def get_time_learned_last_3_days(user_id):
 
 
 # ---------------------------------------------------------------------------
+# Aggregates for the dashboard global-stats + recent-lesson panels.
+# ---------------------------------------------------------------------------
+
+def _record_totals(model, user_id):
+    """(count, total_response_time_ms) across one activity table for a user."""
+    session = SessionLocal()
+    try:
+        row = session.execute(
+            select(
+                func.count(),
+                cast(func.coalesce(func.sum(model.response_time_ms), 0), BigInteger),
+            ).where(model.user_id == user_id)
+        ).first()
+        return (int(row[0] or 0), int(row[1] or 0))
+    except Exception as e:
+        print(f"⚠️ Database query failed (_record_totals): {e}")
+        return (0, 0)
+    finally:
+        SessionLocal.remove()
+
+
+def get_vocab_record_totals(user_id):
+    return _record_totals(VocabRecord, user_id)
+
+
+def get_lesson_record_totals(user_id):
+    return _record_totals(LessonRecord, user_id)
+
+
+def get_practice_record_totals_by_category(user_id):
+    """[(category, count, time_ms), ...] over practice_record for a user."""
+    session = SessionLocal()
+    try:
+        cat = func.coalesce(PracticeRecord.category, "practice")
+        rows = session.execute(
+            select(
+                cat,
+                func.count(),
+                cast(func.coalesce(func.sum(PracticeRecord.response_time_ms), 0), BigInteger),
+            )
+            .where(PracticeRecord.user_id == user_id)
+            .group_by(cat)
+        ).all()
+        return [(str(r[0]), int(r[1] or 0), int(r[2] or 0)) for r in rows]
+    except Exception as e:
+        print(f"⚠️ Database query failed (get_practice_record_totals_by_category): {e}")
+        return []
+    finally:
+        SessionLocal.remove()
+
+
+def get_lesson_progress_by_mode(user_id, passage_ids):
+    """Per-mode attempt/correct/time totals over lesson_records for the given passages."""
+    if not passage_ids:
+        return []
+    session = SessionLocal()
+    try:
+        rows = session.execute(
+            select(
+                LessonRecord.mode,
+                func.count().label("attempts"),
+                func.coalesce(func.sum(case((LessonRecord.is_correct, 1), else_=0)), 0).label("correct"),
+                cast(func.coalesce(func.sum(LessonRecord.response_time_ms), 0), BigInteger).label("time_ms"),
+            )
+            .where(LessonRecord.user_id == user_id, LessonRecord.passage_id.in_(passage_ids))
+            .group_by(LessonRecord.mode)
+            .order_by(LessonRecord.mode)
+        ).all()
+        return [
+            {"mode": r[0], "attempts": int(r[1] or 0), "correct": int(r[2] or 0), "time_ms": int(r[3] or 0)}
+            for r in rows
+        ]
+    except Exception as e:
+        print(f"⚠️ Database query failed (get_lesson_progress_by_mode): {e}")
+        return []
+    finally:
+        SessionLocal.remove()
+
+
+# ---------------------------------------------------------------------------
 # Writes — record a user's answers into the activity tables.
 # ---------------------------------------------------------------------------
 

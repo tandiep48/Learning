@@ -9,13 +9,19 @@ from werkzeug.utils import secure_filename
 
 from service.i18n_service import t
 from db import (
-    get_db_connection,
+    get_learned_words,
     get_learned_words_last_3_days,
     get_time_learned_last_3_days,
     get_mastered_words_page,
     get_unlearned_words_from_db,
     get_unsure_words_from_db,
     get_passage_vocab,
+    get_vocabulary_by_words,
+    get_lesson_passage_ids_like,
+    get_lesson_progress_by_mode,
+    get_vocab_record_totals,
+    get_lesson_record_totals,
+    get_practice_record_totals_by_category,
     get_profile_summary,
     get_recent_learning,
     recompute_user_level,
@@ -117,32 +123,15 @@ def paginate_dashboard_rows(rows, page, page_size):
     return rows[start:start + page_size], total, total_pages, page
 
 
-def dashboard_rows_for_words(conn, words, limit=5):
+def dashboard_rows_for_words(words, limit=5):
     ordered_words = [word for word in words if word]
-    if not conn or not ordered_words:
+    if not ordered_words:
         return []
-    try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT cn, pinyin, meaning_vn, meaning_en, audio_key, hsk_level
-                FROM vocabulary
-                WHERE cn = ANY(%s)
-            """, (ordered_words,))
-            by_word = {
-                row[0]: normalize_dashboard_vocab_row({
-                    "word": row[0],
-                    "pinyin": row[1],
-                    "meaning_vn": row[2],
-                    "meaning_en": row[3],
-                    "audio_key": row[4],
-                    "hsk_level": row[5],
-                })
-                for row in cur.fetchall()
-            }
-        return [by_word[word] for word in ordered_words if word in by_word][:limit]
-    except Exception as e:
-        print(f"Dashboard vocabulary lookup failed: {e}")
-        return []
+    by_word = {
+        row["word"]: normalize_dashboard_vocab_row(row)
+        for row in get_vocabulary_by_words(ordered_words)
+    }
+    return [by_word[word] for word in ordered_words if word in by_word][:limit]
 
 
 def format_dashboard_duration(ms):
@@ -165,17 +154,12 @@ def profile_page():
 @user_bp.route('/api/user/profile-summary', methods=['GET'])
 @login_required
 def profile_summary():
-    conn = get_db_connection()
-    try:
-        # Backfill / refresh the stored HSK level from lesson-trainer progress on view,
-        # so existing users get an accurate level without needing a fresh completion.
-        new_level = recompute_user_level(current_user.id)
-        if new_level:
-            current_user.level = new_level
-        summary = get_profile_summary(current_user.id)
-    finally:
-        if conn:
-            conn.close()
+    # Backfill / refresh the stored HSK level from lesson-trainer progress on view,
+    # so existing users get an accurate level without needing a fresh completion.
+    new_level = recompute_user_level(current_user.id)
+    if new_level:
+        current_user.level = new_level
+    summary = get_profile_summary(current_user.id)
     summary["user"] = serialize_current_user()
     return jsonify(summary)
 
@@ -192,12 +176,7 @@ def learned_vocab_page():
     except (TypeError, ValueError):
         page_size = 24
 
-    conn = get_db_connection()
-    try:
-        result = get_mastered_words_page(current_user.id, page, page_size)
-    finally:
-        if conn:
-            conn.close()
+    result = get_mastered_words_page(current_user.id, page, page_size)
     result["rows"] = [normalize_dashboard_vocab_row(row) for row in result.get("rows", [])]
     return jsonify(result)
 
@@ -206,39 +185,32 @@ def learned_vocab_page():
 @login_required
 def dashboard_vocab_buckets():
     limit = 5
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({"error": "Database unavailable"}), 503
-    try:
-        unsure_words = get_unsure_words_from_db(current_user.id)
-        unlearned_words = get_unlearned_words_from_db(current_user.id)
-        recent = get_mastered_words_page(current_user.id, 1, limit)
-        buckets = {
-            "unsure": {
-                "key": "unsure",
-                "title": t('dashboard.bucket_unsure'),
-                "mode": "unsure",
-                "total": len(unsure_words),
-                "rows": dashboard_rows_for_words(conn, unsure_words, limit),
-            },
-            "unlearn": {
-                "key": "unlearn",
-                "title": t('dashboard.bucket_unlearned'),
-                "mode": "unlearn",
-                "total": len(unlearned_words),
-                "rows": dashboard_rows_for_words(conn, unlearned_words, limit),
-            },
-            "recent": {
-                "key": "recent",
-                "title": t('dashboard.bucket_recent'),
-                "mode": "recent",
-                "total": recent.get("total", 0),
-                "rows": [normalize_dashboard_vocab_row(row) for row in recent.get("rows", [])],
-            },
-        }
-    finally:
-        if conn:
-            conn.close()
+    unsure_words = get_unsure_words_from_db(current_user.id)
+    unlearned_words = get_unlearned_words_from_db(current_user.id)
+    recent = get_mastered_words_page(current_user.id, 1, limit)
+    buckets = {
+        "unsure": {
+            "key": "unsure",
+            "title": t('dashboard.bucket_unsure'),
+            "mode": "unsure",
+            "total": len(unsure_words),
+            "rows": dashboard_rows_for_words(unsure_words, limit),
+        },
+        "unlearn": {
+            "key": "unlearn",
+            "title": t('dashboard.bucket_unlearned'),
+            "mode": "unlearn",
+            "total": len(unlearned_words),
+            "rows": dashboard_rows_for_words(unlearned_words, limit),
+        },
+        "recent": {
+            "key": "recent",
+            "title": t('dashboard.bucket_recent'),
+            "mode": "recent",
+            "total": recent.get("total", 0),
+            "rows": [normalize_dashboard_vocab_row(row) for row in recent.get("rows", [])],
+        },
+    }
     return jsonify({"buckets": buckets, "order": ["unsure", "unlearn", "recent"]})
 
 
@@ -257,13 +229,7 @@ def recent_learning_set():
     if not passage_id:
         return jsonify({"error": "passage_id is required"}), 400
 
-    conn = get_db_connection()
-    try:
-        ok = set_recent_learning(current_user.id, passage_id)
-    finally:
-        if conn:
-            conn.close()
-
+    ok = set_recent_learning(current_user.id, passage_id)
     if not ok:
         return jsonify({"error": "Could not save recent learning"}), 500
     return jsonify({"status": "success", "recent": {"passage_id": passage_id}})
@@ -272,12 +238,7 @@ def recent_learning_set():
 @user_bp.route('/api/user/hanzi-font', methods=['GET'])
 @login_required
 def hanzi_font_get():
-    conn = get_db_connection()
-    try:
-        font = get_user_hanzi_font(current_user.id)
-    finally:
-        if conn:
-            conn.close()
+    font = get_user_hanzi_font(current_user.id)
     current_user.hanzi_font = font or DEFAULT_HANZI_FONT
     return jsonify({"hanzi_font": current_user.hanzi_font})
 
@@ -290,14 +251,7 @@ def hanzi_font_set():
     if font not in ALLOWED_HANZI_FONTS:
         return jsonify({"error": "Invalid Hanzi font."}), 400
 
-    conn = get_db_connection()
-    try:
-        ok = update_user_hanzi_font(current_user.id, font)
-    finally:
-        if conn:
-            conn.close()
-
-    if not ok:
+    if not update_user_hanzi_font(current_user.id, font):
         return jsonify({"error": "Could not save Hanzi font."}), 500
 
     current_user.hanzi_font = font
@@ -307,12 +261,7 @@ def hanzi_font_set():
 @user_bp.route('/api/user/hanzi-script', methods=['GET'])
 @login_required
 def hanzi_script_get():
-    conn = get_db_connection()
-    try:
-        script = get_user_hanzi_script(current_user.id)
-    finally:
-        if conn:
-            conn.close()
+    script = get_user_hanzi_script(current_user.id)
     current_user.hanzi_script = script or DEFAULT_HANZI_SCRIPT
     return jsonify({"hanzi_script": current_user.hanzi_script})
 
@@ -325,14 +274,7 @@ def hanzi_script_set():
     if script not in ALLOWED_HANZI_SCRIPTS:
         return jsonify({"error": "Invalid Hanzi script."}), 400
 
-    conn = get_db_connection()
-    try:
-        ok = update_user_hanzi_script(current_user.id, script)
-    finally:
-        if conn:
-            conn.close()
-
-    if not ok:
+    if not update_user_hanzi_script(current_user.id, script):
         return jsonify({"error": "Could not save Hanzi script."}), 500
 
     current_user.hanzi_script = script
@@ -342,12 +284,7 @@ def hanzi_script_set():
 @user_bp.route('/api/user/ui-language', methods=['GET'])
 @login_required
 def ui_language_get():
-    conn = get_db_connection()
-    try:
-        lang = get_user_ui_language(current_user.id)
-    finally:
-        if conn:
-            conn.close()
+    lang = get_user_ui_language(current_user.id)
     current_user.ui_language = lang or DEFAULT_UI_LANGUAGE
     return jsonify({"ui_language": current_user.ui_language})
 
@@ -360,14 +297,7 @@ def ui_language_set():
     if lang not in ALLOWED_UI_LANGUAGES:
         return jsonify({"error": "Invalid UI language."}), 400
 
-    conn = get_db_connection()
-    try:
-        ok = update_user_ui_language(current_user.id, lang)
-    finally:
-        if conn:
-            conn.close()
-
-    if not ok:
+    if not update_user_ui_language(current_user.id, lang):
         return jsonify({"error": "Could not save UI language."}), 500
 
     current_user.ui_language = lang
@@ -387,233 +317,131 @@ def dashboard_current_lesson():
         page_size = 5
     page_size = min(5, max(5, page_size))
 
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({"error": "Database unavailable"}), 503
+    recent = get_recent_learning(current_user.id)
+    if not recent or not recent.get("passage_id"):
+        return jsonify({"has_recent": False, "recent": None})
 
-    try:
-        recent = get_recent_learning(current_user.id)
-        if not recent or not recent.get("passage_id"):
-            return jsonify({"has_recent": False, "recent": None})
+    parsed = parse_dashboard_passage_id(recent["passage_id"])
+    if not parsed:
+        return jsonify({"error": "Recent lesson has an unsupported passage id."}), 400
 
-        parsed = parse_dashboard_passage_id(recent["passage_id"])
-        if not parsed:
-            return jsonify({"error": "Recent lesson has an unsupported passage id."}), 400
+    lesson_pattern = f"{parsed['passage_prefix']}_{parsed['lesson']}_%"
+    passage_ids = get_lesson_passage_ids_like(lesson_pattern)
+    if not passage_ids:
+        passage_ids = [recent["passage_id"]]
 
-        lesson_pattern = f"{parsed['passage_prefix']}_{parsed['lesson']}_%"
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT passage_id
-                FROM lesson_passages
-                WHERE passage_id LIKE %s
-                ORDER BY passage_id
-            """, (lesson_pattern,))
-            passage_ids = [row[0] for row in cur.fetchall()]
+    vocab_rows = []
+    seen_words = set()
+    for passage_id in passage_ids:
+        for row in get_passage_vocab(passage_id):
+            normalized = normalize_dashboard_vocab_row(row)
+            word = normalized.get("word")
+            if word and word not in seen_words:
+                vocab_rows.append(normalized)
+                seen_words.add(word)
 
-        if not passage_ids:
-            passage_ids = [recent["passage_id"]]
+    page_rows, total, total_pages, page = paginate_dashboard_rows(vocab_rows, page, page_size)
 
-        vocab_rows = []
-        seen_words = set()
-        for passage_id in passage_ids:
-            for row in get_passage_vocab(passage_id):
-                normalized = normalize_dashboard_vocab_row(row)
-                word = normalized.get("word")
-                if word and word not in seen_words:
-                    vocab_rows.append(normalized)
-                    seen_words.add(word)
-
-        page_rows, total, total_pages, page = paginate_dashboard_rows(vocab_rows, page, page_size)
-
-        mode_names = {1: "meaning", 2: "typing", 3: "reorder", 4: "listening"}
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT mode,
-                       COUNT(*) AS attempts,
-                       COALESCE(SUM(CASE WHEN is_correct THEN 1 ELSE 0 END), 0) AS correct,
-                       COALESCE(SUM(response_time_ms), 0)::bigint AS time_ms
-                FROM lesson_records
-                WHERE user_id = %s
-                  AND passage_id = ANY(%s)
-                GROUP BY mode
-                ORDER BY mode
-            """, (current_user.id, passage_ids))
-            progress_modes = []
-            for row in cur.fetchall():
-                attempts = int(row[1] or 0)
-                correct = int(row[2] or 0)
-                time_ms = int(row[3] or 0)
-                progress_modes.append({
-                    "mode": mode_names.get(row[0], str(row[0])),
-                    "attempts": attempts,
-                    "correct": correct,
-                    "accuracy_pct": round((correct / attempts) * 100) if attempts else 0,
-                    "time_ms": time_ms,
-                    "time_label": format_dashboard_duration(time_ms),
-                })
-
-        total_attempts = sum(item["attempts"] for item in progress_modes)
-        total_correct = sum(item["correct"] for item in progress_modes)
-        total_time_ms = sum(item["time_ms"] for item in progress_modes)
-
-        return jsonify({
-            "has_recent": True,
-            "recent": recent,
-            "lesson": {
-                "passage_id": recent["passage_id"],
-                "hsk_level": parsed["hsk_level"],
-                "level": parsed["level"],
-                "lesson": parsed["lesson"],
-                "part": parsed["part"],
-                "passage_ids": passage_ids,
-                "updated_at": recent.get("updated_at"),
-            },
-            "vocab": {
-                "rows": page_rows,
-                "page": page,
-                "page_size": page_size,
-                "total": total,
-                "total_pages": total_pages,
-            },
-            "progress": {
-                "modes": progress_modes,
-                "attempts": total_attempts,
-                "correct": total_correct,
-                "accuracy_pct": round((total_correct / total_attempts) * 100) if total_attempts else 0,
-                "time_ms": total_time_ms,
-                "time_label": format_dashboard_duration(total_time_ms),
-            },
+    mode_names = {1: "meaning", 2: "typing", 3: "reorder", 4: "listening"}
+    progress_modes = []
+    for row in get_lesson_progress_by_mode(current_user.id, passage_ids):
+        attempts = row["attempts"]
+        correct = row["correct"]
+        time_ms = row["time_ms"]
+        progress_modes.append({
+            "mode": mode_names.get(row["mode"], str(row["mode"])),
+            "attempts": attempts,
+            "correct": correct,
+            "accuracy_pct": round((correct / attempts) * 100) if attempts else 0,
+            "time_ms": time_ms,
+            "time_label": format_dashboard_duration(time_ms),
         })
-    finally:
-        conn.close()
+
+    total_attempts = sum(item["attempts"] for item in progress_modes)
+    total_correct = sum(item["correct"] for item in progress_modes)
+    total_time_ms = sum(item["time_ms"] for item in progress_modes)
+
+    return jsonify({
+        "has_recent": True,
+        "recent": recent,
+        "lesson": {
+            "passage_id": recent["passage_id"],
+            "hsk_level": parsed["hsk_level"],
+            "level": parsed["level"],
+            "lesson": parsed["lesson"],
+            "part": parsed["part"],
+            "passage_ids": passage_ids,
+            "updated_at": recent.get("updated_at"),
+        },
+        "vocab": {
+            "rows": page_rows,
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": total_pages,
+        },
+        "progress": {
+            "modes": progress_modes,
+            "attempts": total_attempts,
+            "correct": total_correct,
+            "accuracy_pct": round((total_correct / total_attempts) * 100) if total_attempts else 0,
+            "time_ms": total_time_ms,
+            "time_label": format_dashboard_duration(total_time_ms),
+        },
+    })
 
 
 @user_bp.route('/api/user/global-stats', methods=['GET'])
 @login_required
 def global_stats():
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({"error": "Database unavailable"}), 503
+    buckets = {
+        "exercise":       {"questions": 0, "time_ms": 0},
+        "exam":           {"questions": 0, "time_ms": 0},
+        "lesson_trainer": {"questions": 0, "time_ms": 0},
+        "vocab_trainer":  {"questions": 0, "time_ms": 0},
+    }
 
-    try:
-        buckets = {
-            "exercise":       {"questions": 0, "time_ms": 0},
-            "exam":           {"questions": 0, "time_ms": 0},
-            "lesson_trainer": {"questions": 0, "time_ms": 0},
-            "vocab_trainer":  {"questions": 0, "time_ms": 0},
-        }
+    # vocab_records (vocab trainer)
+    v_count, v_ms = get_vocab_record_totals(current_user.id)
+    buckets["vocab_trainer"]["questions"] = v_count
+    buckets["vocab_trainer"]["time_ms"] = v_ms
 
-        # ── vocab_records (vocab trainer) ────────────────────────────────────
-        try:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT COUNT(*), COALESCE(SUM(response_time_ms), 0)::bigint
-                    FROM vocab_records
-                    WHERE user_id = %s
-                """, (current_user.id,))
-                row = cur.fetchone()
-                buckets["vocab_trainer"]["questions"] = int(row[0] or 0)
-                buckets["vocab_trainer"]["time_ms"]   = int(row[1] or 0)
-        except Exception as e:
-            print(f"⚠️ global_stats vocab_records failed: {e}")
+    # lesson_records (lesson trainer)
+    l_count, l_ms = get_lesson_record_totals(current_user.id)
+    buckets["lesson_trainer"]["questions"] = l_count
+    buckets["lesson_trainer"]["time_ms"] = l_ms
 
-        # ── lesson_records (lesson trainer) ──────────────────────────────────
-        try:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT COUNT(*), COALESCE(SUM(response_time_ms), 0)::bigint
-                    FROM lesson_records
-                    WHERE user_id = %s
-                """, (current_user.id,))
-                row = cur.fetchone()
-                buckets["lesson_trainer"]["questions"] = int(row[0] or 0)
-                buckets["lesson_trainer"]["time_ms"]   = int(row[1] or 0)
-        except Exception as e:
-            print(f"⚠️ global_stats lesson_records failed: {e}")
+    # practice_record (exercise + exam)
+    for cat, count, time_ms in get_practice_record_totals_by_category(current_user.id):
+        key = "exam" if str(cat).lower() == "exam" else "exercise"
+        buckets[key]["questions"] += count
+        buckets[key]["time_ms"] += time_ms
 
-        # ── practice_record (exercise + exam) ────────────────────────────────
-        try:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT COALESCE(category, 'practice') AS cat,
-                           COUNT(*),
-                           COALESCE(SUM(response_time_ms), 0)::bigint
-                    FROM practice_record
-                    WHERE user_id = %s
-                    GROUP BY COALESCE(category, 'practice')
-                """, (current_user.id,))
-                for row in cur.fetchall():
-                    cat = str(row[0]).lower()
-                    key = "exam" if cat == "exam" else "exercise"
-                    buckets[key]["questions"] += int(row[1] or 0)
-                    buckets[key]["time_ms"]   += int(row[2] or 0)
-        except Exception as e:
-            print(f"⚠️ global_stats practice_record failed: {e}")
+    # mastered words (same 3-mode round-1 rule as get_learned_words)
+    total_words = len(get_learned_words(current_user.id))
 
-        # ── mastered words (3-mode success, round 1) ─────────────────────────
-        total_words = 0
-        try:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    WITH daily AS (
-                        SELECT word,
-                               DATE(updated_at) AS day,
-                               COUNT(DISTINCT CASE WHEN is_correct = true THEN mode END) AS ok_modes
-                        FROM vocab_records
-                        WHERE user_id = %s
-                          AND mode IN ('typing', 'listen', 'meaning')
-                          AND round_num = 1
-                        GROUP BY word, DATE(updated_at)
-                    ),
-                    latest AS (
-                        SELECT word, ok_modes,
-                               ROW_NUMBER() OVER (PARTITION BY word ORDER BY day DESC) AS rn
-                        FROM daily
-                    )
-                    SELECT COUNT(*) FROM latest WHERE rn = 1 AND ok_modes = 3
-                """, (current_user.id,))
-                total_words = int(cur.fetchone()[0] or 0)
-        except Exception as e:
-            print(f"⚠️ global_stats mastered words failed: {e}")
+    total_time_ms = sum(b["time_ms"] for b in buckets.values())
+    for key, b in buckets.items():
+        b["time_label"] = format_dashboard_duration(b["time_ms"])
 
-        # ── totals ────────────────────────────────────────────────────────────
-        total_time_ms = sum(b["time_ms"] for b in buckets.values())
-
-        for key, b in buckets.items():
-            b["time_label"] = format_dashboard_duration(b["time_ms"])
-
-        return jsonify({
-            "total_time_ms":    total_time_ms,
-            "total_time_label": format_dashboard_duration(total_time_ms),
-            "total_words":      total_words,
-            "buckets":          buckets,
-        })
-    finally:
-        conn.close()
+    return jsonify({
+        "total_time_ms":    total_time_ms,
+        "total_time_label": format_dashboard_duration(total_time_ms),
+        "total_words":      total_words,
+        "buckets":          buckets,
+    })
 
 
 @user_bp.route('/api/user/learned-words-last-3-days', methods=['GET'])
 @login_required
 def learned_words_last_3_days():
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({"error": "Database unavailable"}), 503
-    try:
-        return jsonify({"days": get_learned_words_last_3_days(current_user.id)})
-    finally:
-        conn.close()
+    return jsonify({"days": get_learned_words_last_3_days(current_user.id)})
 
 
 @user_bp.route('/api/user/time-learned-last-3-days', methods=['GET'])
 @login_required
 def time_learned_last_3_days():
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({"error": "Database unavailable"}), 503
-    try:
-        return jsonify({"days": get_time_learned_last_3_days(current_user.id)})
-    finally:
-        conn.close()
+    return jsonify({"days": get_time_learned_last_3_days(current_user.id)})
 
 
 @user_bp.route('/api/user/change-password', methods=['POST'])
@@ -630,14 +458,7 @@ def change_password():
         return jsonify({"error": "Username does not match the logged-in account."}), 403
 
     password_hash = generate_password_hash(new_password)
-    conn = get_db_connection()
-    try:
-        ok = update_user_password(current_user.id, password_hash)
-    finally:
-        if conn:
-            conn.close()
-
-    if not ok:
+    if not update_user_password(current_user.id, password_hash):
         return jsonify({"error": "Could not update password."}), 500
 
     return jsonify({"status": "success"})
@@ -679,14 +500,7 @@ def upload_avatar():
     except Exception as e:
         return jsonify({"error": f"Avatar upload failed: {e}"}), 500
 
-    conn = get_db_connection()
-    try:
-        ok = update_user_avatar_path(current_user.id, object_name)
-    finally:
-        if conn:
-            conn.close()
-
-    if not ok:
+    if not update_user_avatar_path(current_user.id, object_name):
         return jsonify({"error": "Avatar uploaded but profile could not be updated"}), 500
 
     current_user.avatar_path = object_name
