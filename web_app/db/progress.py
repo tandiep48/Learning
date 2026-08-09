@@ -23,8 +23,8 @@ from entity.user_learning_state.entity import UserLearningState
 from db.records import get_learned_words
 
 
-def set_recent_learning(conn, user_id, passage_id):
-    if not conn or not passage_id:
+def set_recent_learning(user_id, passage_id):
+    if not passage_id:
         return False
     session = SessionLocal()
     try:
@@ -51,9 +51,7 @@ def set_recent_learning(conn, user_id, passage_id):
         SessionLocal.remove()
 
 
-def get_recent_learning(conn, user_id):
-    if not conn:
-        return None
+def get_recent_learning(user_id):
     session = SessionLocal()
     try:
         row = session.execute(
@@ -70,13 +68,13 @@ def get_recent_learning(conn, user_id):
         SessionLocal.remove()
 
 
-def mark_lesson_part_completed(conn, user_id, passage_id, completed=True, score_pct=None):
+def mark_lesson_part_completed(user_id, passage_id, completed=True, score_pct=None):
     """Record lesson-trainer progress for a part.
     - completed=True stamps lesson_trainer_completed_at (binary "done").
     - score_pct (0-100, from the master trainer) is kept as the highest value seen,
       so progress never decreases. Passing None leaves the existing score untouched.
     """
-    if not conn or not passage_id:
+    if not passage_id:
         return False
     session = SessionLocal()
     try:
@@ -113,10 +111,7 @@ def mark_lesson_part_completed(conn, user_id, passage_id, completed=True, score_
         SessionLocal.remove()
 
 
-def get_lesson_picker_progress(conn, user_id, hsk_level):
-    if not conn:
-        return {"lessons": {}, "parts": {}}
-
+def get_lesson_picker_progress(user_id, hsk_level):
     session = SessionLocal()
     try:
         mastered_words = set(get_learned_words(user_id))
@@ -209,7 +204,7 @@ def get_lesson_picker_progress(conn, user_id, hsk_level):
         SessionLocal.remove()
 
 
-def mark_passage_words_mastered(conn, user_id, passage_id):
+def mark_passage_words_mastered(user_id, passage_id):
     """
     Record that the user mastered every vocabulary word of a passage by completing its
     lesson-trainer part at 100%. Writes the same 3-mode (typing/listen/meaning), round-1,
@@ -218,7 +213,7 @@ def mark_passage_words_mastered(conn, user_id, passage_id):
     Words already mastered are skipped so replays don't pile up duplicate records.
     Returns the count of newly mastered words.
     """
-    if not conn or not passage_id:
+    if not passage_id:
         return 0
     session = SessionLocal()
     try:

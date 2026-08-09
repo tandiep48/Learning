@@ -245,12 +245,7 @@ def dashboard_vocab_buckets():
 @user_bp.route('/api/user/recent-learning', methods=['GET'])
 @login_required
 def recent_learning_get():
-    conn = get_db_connection()
-    try:
-        recent = get_recent_learning(conn, current_user.id)
-    finally:
-        if conn:
-            conn.close()
+    recent = get_recent_learning(current_user.id)
     return jsonify({"recent": recent})
 
 
@@ -264,7 +259,7 @@ def recent_learning_set():
 
     conn = get_db_connection()
     try:
-        ok = set_recent_learning(conn, current_user.id, passage_id)
+        ok = set_recent_learning(current_user.id, passage_id)
     finally:
         if conn:
             conn.close()
@@ -397,7 +392,7 @@ def dashboard_current_lesson():
         return jsonify({"error": "Database unavailable"}), 503
 
     try:
-        recent = get_recent_learning(conn, current_user.id)
+        recent = get_recent_learning(current_user.id)
         if not recent or not recent.get("passage_id"):
             return jsonify({"has_recent": False, "recent": None})
 

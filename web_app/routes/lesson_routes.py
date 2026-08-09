@@ -192,7 +192,7 @@ def get_picker_progress():
         return jsonify({"error": "Database connection failed"}), 500
 
     try:
-        return jsonify(get_lesson_picker_progress(conn, current_user.id, hsk_level))
+        return jsonify(get_lesson_picker_progress(current_user.id, hsk_level))
     finally:
         conn.close()
 
@@ -234,13 +234,13 @@ def complete_lesson_part():
         return jsonify({"error": "Database connection failed"}), 500
 
     try:
-        if not mark_lesson_part_completed(conn, current_user.id, passage_id,
+        if not mark_lesson_part_completed(current_user.id, passage_id,
                                           completed=completed, score_pct=store_score):
             return jsonify({"error": "Could not save lesson progress"}), 500
         # Only a perfect round grants mastery of the passage's words.
         mastered = []
         if is_perfect:
-            mastered = mark_passage_words_mastered(conn, current_user.id, passage_id)
+            mastered = mark_passage_words_mastered(current_user.id, passage_id)
         # Finishing a part may complete a lesson/level, so re-derive the HSK level.
         new_level = recompute_user_level(current_user.id)
         if new_level:
