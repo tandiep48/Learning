@@ -31,7 +31,7 @@ def _level_passes(level, lesson_pct, word_pct):
     return False
 
 
-def recompute_user_level(conn, user_id):
+def recompute_user_level(user_id):
     """
     Derive and (if higher) persist the user's HSK level from lesson-trainer progress.
     For each level compute lesson% (completed parts / total parts across ALL lessons at
@@ -39,9 +39,6 @@ def recompute_user_level(conn, user_id):
     per-band pass rule in _level_passes. The user jumps to (highest passed level + 1),
     capped at HSK 6, and the level never decreases. Returns the resulting level.
     """
-    if not conn:
-        return None
-
     session = SessionLocal()
     try:
         learned = get_learned_words(user_id)
@@ -130,9 +127,7 @@ def recompute_user_level(conn, user_id):
         SessionLocal.remove()
 
 
-def update_user_avatar_path(conn, user_id, avatar_path):
-    if not conn:
-        return False
+def update_user_avatar_path(user_id, avatar_path):
     session = SessionLocal()
     try:
         session.execute(update(User).where(User.id == user_id).values(avatar_path=avatar_path))
@@ -176,57 +171,35 @@ def _update_user_setting(user_id, **values):
         SessionLocal.remove()
 
 
-def get_user_hanzi_font(conn, user_id):
-    if not conn:
-        return "Noto Sans"
+def get_user_hanzi_font(user_id):
     return _get_user_setting(user_id, User.hanzi_font, "Noto Sans")
 
 
-def update_user_hanzi_font(conn, user_id, hanzi_font):
-    if not conn:
-        return False
+def update_user_hanzi_font(user_id, hanzi_font):
     return _update_user_setting(user_id, hanzi_font=hanzi_font)
 
 
-def get_user_hanzi_script(conn, user_id):
-    if not conn:
-        return "simplified"
+def get_user_hanzi_script(user_id):
     return _get_user_setting(user_id, User.hanzi_script, "simplified")
 
 
-def update_user_hanzi_script(conn, user_id, hanzi_script):
-    if not conn:
-        return False
+def update_user_hanzi_script(user_id, hanzi_script):
     return _update_user_setting(user_id, hanzi_script=hanzi_script)
 
 
-def get_user_ui_language(conn, user_id):
-    if not conn:
-        return "en"
+def get_user_ui_language(user_id):
     return _get_user_setting(user_id, User.ui_language, "en")
 
 
-def update_user_ui_language(conn, user_id, ui_language):
-    if not conn:
-        return False
+def update_user_ui_language(user_id, ui_language):
     return _update_user_setting(user_id, ui_language=ui_language)
 
 
-def update_user_password(conn, user_id, password_hash):
-    if not conn:
-        return False
+def update_user_password(user_id, password_hash):
     return _update_user_setting(user_id, password=password_hash)
 
 
-def get_profile_summary(conn, user_id):
-    if not conn:
-        return {
-            "time_totals_ms": {"vocab": 0, "lesson": 0, "practice": 0, "exam": 0},
-            "vocab_mode_time_ms": [],
-            "lesson_mode_time_ms": [],
-            "practice_skill_time_ms": []
-        }
-
+def get_profile_summary(user_id):
     summary = {
         "time_totals_ms": {"vocab": 0, "lesson": 0, "practice": 0, "exam": 0},
         "vocab_mode_time_ms": [],

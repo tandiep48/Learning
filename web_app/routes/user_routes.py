@@ -169,10 +169,10 @@ def profile_summary():
     try:
         # Backfill / refresh the stored HSK level from lesson-trainer progress on view,
         # so existing users get an accurate level without needing a fresh completion.
-        new_level = recompute_user_level(conn, current_user.id)
+        new_level = recompute_user_level(current_user.id)
         if new_level:
             current_user.level = new_level
-        summary = get_profile_summary(conn, current_user.id)
+        summary = get_profile_summary(current_user.id)
     finally:
         if conn:
             conn.close()
@@ -279,7 +279,7 @@ def recent_learning_set():
 def hanzi_font_get():
     conn = get_db_connection()
     try:
-        font = get_user_hanzi_font(conn, current_user.id)
+        font = get_user_hanzi_font(current_user.id)
     finally:
         if conn:
             conn.close()
@@ -297,7 +297,7 @@ def hanzi_font_set():
 
     conn = get_db_connection()
     try:
-        ok = update_user_hanzi_font(conn, current_user.id, font)
+        ok = update_user_hanzi_font(current_user.id, font)
     finally:
         if conn:
             conn.close()
@@ -314,7 +314,7 @@ def hanzi_font_set():
 def hanzi_script_get():
     conn = get_db_connection()
     try:
-        script = get_user_hanzi_script(conn, current_user.id)
+        script = get_user_hanzi_script(current_user.id)
     finally:
         if conn:
             conn.close()
@@ -332,7 +332,7 @@ def hanzi_script_set():
 
     conn = get_db_connection()
     try:
-        ok = update_user_hanzi_script(conn, current_user.id, script)
+        ok = update_user_hanzi_script(current_user.id, script)
     finally:
         if conn:
             conn.close()
@@ -349,7 +349,7 @@ def hanzi_script_set():
 def ui_language_get():
     conn = get_db_connection()
     try:
-        lang = get_user_ui_language(conn, current_user.id)
+        lang = get_user_ui_language(current_user.id)
     finally:
         if conn:
             conn.close()
@@ -367,7 +367,7 @@ def ui_language_set():
 
     conn = get_db_connection()
     try:
-        ok = update_user_ui_language(conn, current_user.id, lang)
+        ok = update_user_ui_language(current_user.id, lang)
     finally:
         if conn:
             conn.close()
@@ -637,7 +637,7 @@ def change_password():
     password_hash = generate_password_hash(new_password)
     conn = get_db_connection()
     try:
-        ok = update_user_password(conn, current_user.id, password_hash)
+        ok = update_user_password(current_user.id, password_hash)
     finally:
         if conn:
             conn.close()
@@ -686,7 +686,7 @@ def upload_avatar():
 
     conn = get_db_connection()
     try:
-        ok = update_user_avatar_path(conn, current_user.id, object_name)
+        ok = update_user_avatar_path(current_user.id, object_name)
     finally:
         if conn:
             conn.close()

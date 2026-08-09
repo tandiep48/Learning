@@ -242,7 +242,7 @@ def complete_lesson_part():
         if is_perfect:
             mastered = mark_passage_words_mastered(conn, current_user.id, passage_id)
         # Finishing a part may complete a lesson/level, so re-derive the HSK level.
-        new_level = recompute_user_level(conn, current_user.id)
+        new_level = recompute_user_level(current_user.id)
         if new_level:
             current_user.level = new_level
         return jsonify({"status": "success", "passage_id": passage_id,

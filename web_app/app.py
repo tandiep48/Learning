@@ -101,12 +101,7 @@ def set_ui_language(lang):
     if lang in SUPPORTED_LANGUAGES:
         session['ui_language'] = lang
         if current_user.is_authenticated:
-            conn = get_db_connection()
-            try:
-                update_user_ui_language(conn, current_user.id, lang)
-            finally:
-                if conn:
-                    conn.close()
+            update_user_ui_language(current_user.id, lang)
             current_user.ui_language = lang
     return redirect(request.referrer or url_for('index'))
 
