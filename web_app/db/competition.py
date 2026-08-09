@@ -7,7 +7,20 @@ Extracted from the former monolithic db.py.
 """
 
 import json
-from psycopg2.extras import Json
+
+from sqlalchemy import select, update, func, case, and_, literal, literal_column
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+from entity.database import SessionLocal
+from entity.user.entity import User
+from entity.competition.entity import (
+    CompetitionRoom,
+    CompetitionRoomMember,
+    CompetitionChatMessage,
+    CompetitionSession,
+    CompetitionScore,
+    CompetitionVocabAnswer,
+)
 
 
 def resolve_room_words(conn, passage_ids):
@@ -30,204 +43,218 @@ def resolve_room_words(conn, passage_ids):
 def create_competition_room(conn, room_code, host_user_id, level, passage_ids, word_count, max_users, section_timeout_minutes):
     if not conn:
         return None
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO competition_rooms
-                    (room_code, host_user_id, category, level, passage_ids, word_count,
-                     max_users, section_timeout_minutes, status)
-                VALUES (%s, %s, 'vocab', %s, %s, %s, %s, %s, 'waiting')
-                RETURNING id
-            """, (room_code, host_user_id, level, Json(list(passage_ids)), word_count,
-                  max_users, section_timeout_minutes))
-            room_id = cur.fetchone()[0]
-            cur.execute("""
-                INSERT INTO competition_room_members (room_id, user_id, role, status)
-                VALUES (%s, %s, 'host', 'online')
-                ON CONFLICT (room_id, user_id)
-                DO UPDATE SET role = 'host', status = 'online',
-                              left_at = NULL, last_seen_at = CURRENT_TIMESTAMP
-            """, (room_id, host_user_id))
-        conn.commit()
+        room_id = session.execute(
+            pg_insert(CompetitionRoom)
+            .values(
+                room_code=room_code, host_user_id=host_user_id, category="vocab",
+                level=level, passage_ids=list(passage_ids), word_count=word_count,
+                max_users=max_users, section_timeout_minutes=section_timeout_minutes,
+                status="waiting",
+            )
+            .returning(CompetitionRoom.id)
+        ).scalar_one()
+        session.execute(
+            pg_insert(CompetitionRoomMember)
+            .values(room_id=room_id, user_id=host_user_id, role="host", status="online")
+            .on_conflict_do_update(
+                index_elements=["room_id", "user_id"],
+                set_={
+                    "role": "host", "status": "online",
+                    "left_at": None, "last_seen_at": func.now(),
+                },
+            )
+        )
+        session.commit()
         return get_competition_room_by_code(conn, room_code)
     except Exception as e:
         print(f"Database create_competition_room failed: {e}")
-        conn.rollback()
+        session.rollback()
         return None
+    finally:
+        SessionLocal.remove()
 
 def get_competition_room_by_code(conn, room_code):
     if not conn or not room_code:
         return None
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT id, room_code, host_user_id, level, passage_ids, word_count,
-                       max_users, section_timeout_minutes, status, created_at, updated_at
-                FROM competition_rooms
-                WHERE room_code = %s
-            """, (str(room_code).upper(),))
-            row = cur.fetchone()
-            if not row:
-                return None
-            passage_ids = row[4]
-            if isinstance(passage_ids, str):
-                passage_ids = json.loads(passage_ids)
-            return {
-                "id": row[0],
-                "room_code": row[1],
-                "host_user_id": row[2],
-                "level": row[3],
-                "passage_ids": passage_ids or [],
-                "word_count": row[5],
-                "max_users": row[6],
-                "section_timeout_minutes": row[7],
-                "status": row[8],
-                "created_at": row[9].isoformat() if row[9] else None,
-                "updated_at": row[10].isoformat() if row[10] else None,
-            }
+        r = CompetitionRoom
+        row = session.execute(
+            select(
+                r.id, r.room_code, r.host_user_id, r.level, r.passage_ids, r.word_count,
+                r.max_users, r.section_timeout_minutes, r.status, r.created_at, r.updated_at,
+            )
+            .where(r.room_code == str(room_code).upper())
+        ).first()
+        if not row:
+            return None
+        passage_ids = row[4]
+        if isinstance(passage_ids, str):
+            passage_ids = json.loads(passage_ids)
+        return {
+            "id": row[0],
+            "room_code": row[1],
+            "host_user_id": row[2],
+            "level": row[3],
+            "passage_ids": passage_ids or [],
+            "word_count": row[5],
+            "max_users": row[6],
+            "section_timeout_minutes": row[7],
+            "status": row[8],
+            "created_at": row[9].isoformat() if row[9] else None,
+            "updated_at": row[10].isoformat() if row[10] else None,
+        }
     except Exception as e:
         print(f"Database get_competition_room_by_code failed: {e}")
         return None
+    finally:
+        SessionLocal.remove()
 
 def join_competition_room(conn, room_code, user_id):
     room = get_competition_room_by_code(conn, room_code)
     if not conn or not room:
         return None, "Room not found"
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT COUNT(*)
-                FROM competition_room_members
-                WHERE room_id = %s AND status != 'left'
-            """, (room["id"],))
-            active_count = int(cur.fetchone()[0] or 0)
-            cur.execute("""
-                SELECT 1 FROM competition_room_members
-                WHERE room_id = %s AND user_id = %s
-            """, (room["id"], user_id))
-            already_member = cur.fetchone() is not None
-            if not already_member and active_count >= int(room["max_users"] or 8):
-                return None, "Room is full"
+        m = CompetitionRoomMember
+        active_count = int(session.execute(
+            select(func.count()).select_from(m)
+            .where(m.room_id == room["id"], m.status != "left")
+        ).scalar() or 0)
+        already_member = session.execute(
+            select(m.id).where(m.room_id == room["id"], m.user_id == user_id)
+        ).first() is not None
+        if not already_member and active_count >= int(room["max_users"] or 8):
+            return None, "Room is full"
 
-            role = 'host' if int(room["host_user_id"]) == int(user_id) else 'participant'
-            cur.execute("""
-                INSERT INTO competition_room_members (room_id, user_id, role, status)
-                VALUES (%s, %s, %s, 'online')
-                ON CONFLICT (room_id, user_id)
-                DO UPDATE SET status = 'online', left_at = NULL,
-                              last_seen_at = CURRENT_TIMESTAMP
-            """, (room["id"], user_id, role))
-        conn.commit()
+        role = 'host' if int(room["host_user_id"]) == int(user_id) else 'participant'
+        session.execute(
+            pg_insert(m)
+            .values(room_id=room["id"], user_id=user_id, role=role, status="online")
+            .on_conflict_do_update(
+                index_elements=["room_id", "user_id"],
+                set_={"status": "online", "left_at": None, "last_seen_at": func.now()},
+            )
+        )
+        session.commit()
         return get_competition_room_state(conn, room_code), None
     except Exception as e:
         print(f"Database join_competition_room failed: {e}")
-        conn.rollback()
+        session.rollback()
         return None, "Could not join room"
+    finally:
+        SessionLocal.remove()
 
 def leave_competition_room(conn, room_code, user_id):
     room = get_competition_room_by_code(conn, room_code)
     if not conn or not room:
         return False
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                UPDATE competition_room_members
-                SET status = 'left', left_at = CURRENT_TIMESTAMP,
-                    last_seen_at = CURRENT_TIMESTAMP
-                WHERE room_id = %s AND user_id = %s
-            """, (room["id"], user_id))
-        conn.commit()
+        m = CompetitionRoomMember
+        session.execute(
+            update(m)
+            .where(m.room_id == room["id"], m.user_id == user_id)
+            .values(status="left", left_at=func.now(), last_seen_at=func.now())
+        )
+        session.commit()
         return True
     except Exception as e:
         print(f"Database leave_competition_room failed: {e}")
-        conn.rollback()
+        session.rollback()
         return False
+    finally:
+        SessionLocal.remove()
 
 def get_competition_room_state(conn, room_code):
     room = get_competition_room_by_code(conn, room_code)
     if not conn or not room:
         return None
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT m.user_id, u.username, m.role, m.status, m.joined_at
-                FROM competition_room_members m
-                JOIN users u ON u.id = m.user_id
-                WHERE m.room_id = %s AND m.status != 'left'
-                ORDER BY CASE WHEN m.role = 'host' THEN 0 ELSE 1 END, m.joined_at
-            """, (room["id"],))
-            members = [
-                {
-                    "user_id": row[0],
-                    "username": row[1],
-                    "role": row[2],
-                    "status": row[3],
-                    "joined_at": row[4].isoformat() if row[4] else None,
-                }
-                for row in cur.fetchall()
-            ]
-            cur.execute("""
-                SELECT c.id, c.user_id, u.username, c.message, c.created_at
-                FROM competition_chat_messages c
-                JOIN users u ON u.id = c.user_id
-                WHERE c.room_id = %s
-                ORDER BY c.created_at DESC
-                LIMIT 50
-            """, (room["id"],))
-            chat = [
-                {
-                    "id": row[0],
-                    "user_id": row[1],
-                    "username": row[2],
-                    "message": row[3],
-                    "created_at": row[4].isoformat() if row[4] else None,
-                }
-                for row in reversed(cur.fetchall())
-            ]
-            cur.execute("""
-                SELECT id, status, current_section, section_started_at, section_ends_at,
-                       started_at, finished_at
-                FROM competition_sessions
-                WHERE room_id = %s
-                ORDER BY id DESC
-                LIMIT 1
-            """, (room["id"],))
-            session_row = cur.fetchone()
-            session = None
-            if session_row:
-                session = {
-                    "id": session_row[0],
-                    "status": session_row[1],
-                    "current_section": session_row[2],
-                    "section_started_at": session_row[3].isoformat() if session_row[3] else None,
-                    "section_ends_at": session_row[4].isoformat() if session_row[4] else None,
-                    "started_at": session_row[5].isoformat() if session_row[5] else None,
-                    "finished_at": session_row[6].isoformat() if session_row[6] else None,
-                }
+        m = CompetitionRoomMember
+        members = [
+            {
+                "user_id": row[0],
+                "username": row[1],
+                "role": row[2],
+                "status": row[3],
+                "joined_at": row[4].isoformat() if row[4] else None,
+            }
+            for row in session.execute(
+                select(m.user_id, User.username, m.role, m.status, m.joined_at)
+                .select_from(m).join(User, User.id == m.user_id)
+                .where(m.room_id == room["id"], m.status != "left")
+                .order_by(case((m.role == "host", 0), else_=1), m.joined_at)
+            ).all()
+        ]
+
+        c = CompetitionChatMessage
+        chat = [
+            {
+                "id": row[0],
+                "user_id": row[1],
+                "username": row[2],
+                "message": row[3],
+                "created_at": row[4].isoformat() if row[4] else None,
+            }
+            for row in reversed(session.execute(
+                select(c.id, c.user_id, User.username, c.message, c.created_at)
+                .select_from(c).join(User, User.id == c.user_id)
+                .where(c.room_id == room["id"])
+                .order_by(c.created_at.desc())
+                .limit(50)
+            ).all())
+        ]
+
+        s = CompetitionSession
+        session_row = session.execute(
+            select(s.id, s.status, s.current_section, s.section_started_at,
+                   s.section_ends_at, s.started_at, s.finished_at)
+            .where(s.room_id == room["id"])
+            .order_by(s.id.desc())
+            .limit(1)
+        ).first()
+        session_state = None
+        if session_row:
+            session_state = {
+                "id": session_row[0],
+                "status": session_row[1],
+                "current_section": session_row[2],
+                "section_started_at": session_row[3].isoformat() if session_row[3] else None,
+                "section_ends_at": session_row[4].isoformat() if session_row[4] else None,
+                "started_at": session_row[5].isoformat() if session_row[5] else None,
+                "finished_at": session_row[6].isoformat() if session_row[6] else None,
+            }
         room["members"] = members
         room["chat"] = chat
-        room["session"] = session
+        room["session"] = session_state
         return room
     except Exception as e:
         print(f"Database get_competition_room_state failed: {e}")
         return None
+    finally:
+        SessionLocal.remove()
 
 def add_competition_chat_message(conn, room_code, user_id, message):
     room = get_competition_room_by_code(conn, room_code)
     text = str(message or "").strip()[:1000]
     if not conn or not room or not text:
         return None
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO competition_chat_messages (room_id, user_id, message)
-                VALUES (%s, %s, %s)
-                RETURNING id, created_at
-            """, (room["id"], user_id, text))
-            row = cur.fetchone()
-            cur.execute("SELECT username FROM users WHERE id = %s", (user_id,))
-            user_row = cur.fetchone()
-        conn.commit()
+        c = CompetitionChatMessage
+        row = session.execute(
+            pg_insert(c)
+            .values(room_id=room["id"], user_id=user_id, message=text)
+            .returning(c.id, c.created_at)
+        ).first()
+        user_row = session.execute(
+            select(User.username).where(User.id == user_id)
+        ).first()
+        session.commit()
         return {
             "id": row[0],
             "user_id": user_id,
@@ -237,8 +264,10 @@ def add_competition_chat_message(conn, room_code, user_id, message):
         }
     except Exception as e:
         print(f"Database add_competition_chat_message failed: {e}")
-        conn.rollback()
+        session.rollback()
         return None
+    finally:
+        SessionLocal.remove()
 
 def start_competition_session(conn, room_code, host_user_id):
     room = get_competition_room_by_code(conn, room_code)
@@ -251,90 +280,99 @@ def start_competition_session(conn, room_code, host_user_id):
     if not room.get("passage_ids"):
         return None, "No vocabulary selected"
 
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                UPDATE competition_rooms
-                SET status = 'running', updated_at = CURRENT_TIMESTAMP
-                WHERE id = %s
-            """, (room["id"],))
-            cur.execute("""
-                INSERT INTO competition_sessions
-                    (room_id, status, current_section, section_started_at, section_ends_at,
-                     started_at)
-                VALUES (
-                    %s, 'running', 'vocab', CURRENT_TIMESTAMP,
-                    CURRENT_TIMESTAMP + (%s || ' minutes')::interval,
-                    CURRENT_TIMESTAMP
-                )
-                RETURNING id
-            """, (room["id"], int(room["section_timeout_minutes"] or 15)))
-            session_id = cur.fetchone()[0]
+        session.execute(
+            update(CompetitionRoom)
+            .where(CompetitionRoom.id == room["id"])
+            .values(status="running", updated_at=func.now())
+        )
+        minutes = int(room["section_timeout_minutes"] or 15)
+        session_id = session.execute(
+            pg_insert(CompetitionSession)
+            .values(
+                room_id=room["id"], status="running", current_section="vocab",
+                section_started_at=func.now(),
+                section_ends_at=func.now() + literal_column("interval '1 minute'") * minutes,
+                started_at=func.now(),
+            )
+            .returning(CompetitionSession.id)
+        ).scalar_one()
 
-            cur.execute("""
-                INSERT INTO competition_scores (session_id, user_id)
-                SELECT %s, user_id
-                FROM competition_room_members
-                WHERE room_id = %s AND status != 'left'
-                ON CONFLICT (session_id, user_id) DO NOTHING
-            """, (session_id, room["id"]))
-        conn.commit()
+        session.execute(
+            pg_insert(CompetitionScore)
+            .from_select(
+                ["session_id", "user_id"],
+                select(literal(session_id), CompetitionRoomMember.user_id)
+                .where(
+                    CompetitionRoomMember.room_id == room["id"],
+                    CompetitionRoomMember.status != "left",
+                ),
+            )
+            .on_conflict_do_nothing(index_elements=["session_id", "user_id"])
+        )
+        session.commit()
         return get_competition_session_state(conn, session_id), None
     except Exception as e:
         print(f"Database start_competition_session failed: {e}")
-        conn.rollback()
+        session.rollback()
         return None, "Could not start session"
+    finally:
+        SessionLocal.remove()
 
 def get_active_competition_session(conn, room_code):
     room = get_competition_room_by_code(conn, room_code)
     if not conn or not room:
         return None
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT id
-                FROM competition_sessions
-                WHERE room_id = %s
-                ORDER BY id DESC
-                LIMIT 1
-            """, (room["id"],))
-            row = cur.fetchone()
-            return get_competition_session_state(conn, row[0]) if row else None
+        row = session.execute(
+            select(CompetitionSession.id)
+            .where(CompetitionSession.room_id == room["id"])
+            .order_by(CompetitionSession.id.desc())
+            .limit(1)
+        ).first()
+        return get_competition_session_state(conn, row[0]) if row else None
     except Exception as e:
         print(f"Database get_active_competition_session failed: {e}")
         return None
+    finally:
+        SessionLocal.remove()
 
 def get_competition_session_state(conn, session_id):
     if not conn or not session_id:
         return None
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT s.id, s.room_id, r.room_code, s.status, s.current_section,
-                       s.section_started_at, s.section_ends_at, s.started_at, s.finished_at
-                FROM competition_sessions s
-                JOIN competition_rooms r ON r.id = s.room_id
-                WHERE s.id = %s
-            """, (session_id,))
-            row = cur.fetchone()
-            if not row:
-                return None
-            state = {
-                "id": row[0],
-                "room_id": row[1],
-                "room_code": row[2],
-                "status": row[3],
-                "current_section": row[4],
-                "section_started_at": row[5].isoformat() if row[5] else None,
-                "section_ends_at": row[6].isoformat() if row[6] else None,
-                "started_at": row[7].isoformat() if row[7] else None,
-                "finished_at": row[8].isoformat() if row[8] else None,
-            }
-            state["scores"] = get_competition_scores(conn, session_id)
-            return state
+        s = CompetitionSession
+        row = session.execute(
+            select(
+                s.id, s.room_id, CompetitionRoom.room_code, s.status, s.current_section,
+                s.section_started_at, s.section_ends_at, s.started_at, s.finished_at,
+            )
+            .select_from(s).join(CompetitionRoom, CompetitionRoom.id == s.room_id)
+            .where(s.id == session_id)
+        ).first()
+        if not row:
+            return None
+        state = {
+            "id": row[0],
+            "room_id": row[1],
+            "room_code": row[2],
+            "status": row[3],
+            "current_section": row[4],
+            "section_started_at": row[5].isoformat() if row[5] else None,
+            "section_ends_at": row[6].isoformat() if row[6] else None,
+            "started_at": row[7].isoformat() if row[7] else None,
+            "finished_at": row[8].isoformat() if row[8] else None,
+        }
+        state["scores"] = get_competition_scores(conn, session_id)
+        return state
     except Exception as e:
         print(f"Database get_competition_session_state failed: {e}")
         return None
+    finally:
+        SessionLocal.remove()
 
 # Per-mode scoring: base points + a time-decay speed bonus, minus a per-error penalty
 # on the matching modes. Time uses fractional seconds; typing is binary (an incorrect
@@ -368,39 +406,53 @@ def record_competition_vocab_answer(conn, session_id, user_id, word, activity_ty
     activity_type = str(activity_type or "").strip()
     if not word or activity_type not in ("typing", "listen", "meaning"):
         return None, "Invalid answer payload"
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            # Only accept answers while the session is running and the user is a scored participant.
-            cur.execute("""
-                SELECT 1
-                FROM competition_sessions s
-                JOIN competition_scores sc ON sc.session_id = s.id AND sc.user_id = %s
-                WHERE s.id = %s AND s.status = 'running'
-            """, (user_id, session_id))
-            if not cur.fetchone():
-                return None, "Session is not active"
+        # Only accept answers while the session is running and the user is a scored participant.
+        active = session.execute(
+            select(literal(1))
+            .select_from(CompetitionSession)
+            .join(
+                CompetitionScore,
+                and_(
+                    CompetitionScore.session_id == CompetitionSession.id,
+                    CompetitionScore.user_id == user_id,
+                ),
+            )
+            .where(CompetitionSession.id == session_id, CompetitionSession.status == "running")
+        ).first()
+        if not active:
+            return None, "Session is not active"
 
-            is_correct = bool(is_correct)
-            points = calculate_competition_points(activity_type, is_correct, response_time_ms, wrong_attempts)
-            cur.execute("""
-                INSERT INTO competition_vocab_answers
-                    (session_id, user_id, word, activity_type, is_correct, response_time_ms, points)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (session_id, user_id, word, activity_type) DO NOTHING
-                RETURNING id
-            """, (session_id, user_id, word, activity_type, is_correct,
-                  int(response_time_ms or 0), points))
-            inserted = cur.fetchone()
-            if not inserted:
-                return None, "Answer already submitted"
-            cur.execute("""
-                UPDATE competition_scores
-                SET total_points = total_points + %s,
-                    total_response_time_ms = total_response_time_ms + %s,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE session_id = %s AND user_id = %s
-            """, (points, int(response_time_ms or 0), session_id, user_id))
-        conn.commit()
+        is_correct = bool(is_correct)
+        points = calculate_competition_points(activity_type, is_correct, response_time_ms, wrong_attempts)
+        inserted = session.execute(
+            pg_insert(CompetitionVocabAnswer)
+            .values(
+                session_id=session_id, user_id=user_id, word=word,
+                activity_type=activity_type, is_correct=is_correct,
+                response_time_ms=int(response_time_ms or 0), points=points,
+            )
+            .on_conflict_do_nothing(
+                index_elements=["session_id", "user_id", "word", "activity_type"]
+            )
+            .returning(CompetitionVocabAnswer.id)
+        ).first()
+        if not inserted:
+            return None, "Answer already submitted"
+        session.execute(
+            update(CompetitionScore)
+            .where(
+                CompetitionScore.session_id == session_id,
+                CompetitionScore.user_id == user_id,
+            )
+            .values(
+                total_points=CompetitionScore.total_points + points,
+                total_response_time_ms=CompetitionScore.total_response_time_ms + int(response_time_ms or 0),
+                updated_at=func.now(),
+            )
+        )
+        session.commit()
         return {
             "is_correct": is_correct,
             "points": points,
@@ -408,73 +460,85 @@ def record_competition_vocab_answer(conn, session_id, user_id, word, activity_ty
         }, None
     except Exception as e:
         print(f"Database record_competition_vocab_answer failed: {e}")
-        conn.rollback()
+        session.rollback()
         return None, "Could not record answer"
+    finally:
+        SessionLocal.remove()
 
 def get_competition_scores(conn, session_id):
     if not conn or not session_id:
         return []
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT sc.user_id, u.username, sc.listening_points, sc.reading_points,
-                       sc.total_points, sc.total_response_time_ms, sc.rank, sc.finished_at
-                FROM competition_scores sc
-                JOIN users u ON u.id = sc.user_id
-                WHERE sc.session_id = %s
-                ORDER BY sc.total_points DESC, sc.total_response_time_ms ASC, u.username
-            """, (session_id,))
-            return [
-                {
-                    "user_id": row[0],
-                    "username": row[1],
-                    "listening_points": row[2],
-                    "reading_points": row[3],
-                    "total_points": row[4],
-                    "total_response_time_ms": row[5],
-                    "rank": row[6],
-                    "finished_at": row[7].isoformat() if row[7] else None,
-                }
-                for row in cur.fetchall()
-            ]
+        sc = CompetitionScore
+        return [
+            {
+                "user_id": row[0],
+                "username": row[1],
+                "listening_points": row[2],
+                "reading_points": row[3],
+                "total_points": row[4],
+                "total_response_time_ms": row[5],
+                "rank": row[6],
+                "finished_at": row[7].isoformat() if row[7] else None,
+            }
+            for row in session.execute(
+                select(
+                    sc.user_id, User.username, sc.listening_points, sc.reading_points,
+                    sc.total_points, sc.total_response_time_ms, sc.rank, sc.finished_at,
+                )
+                .select_from(sc).join(User, User.id == sc.user_id)
+                .where(sc.session_id == session_id)
+                .order_by(sc.total_points.desc(), sc.total_response_time_ms.asc(), User.username)
+            ).all()
+        ]
     except Exception as e:
         print(f"Database get_competition_scores failed: {e}")
         return []
+    finally:
+        SessionLocal.remove()
 
 def mark_competition_participant_finished(conn, session_id, user_id):
     if not conn:
         return False
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                UPDATE competition_scores
-                SET finished_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-                WHERE session_id = %s AND user_id = %s AND finished_at IS NULL
-            """, (session_id, user_id))
-        conn.commit()
+        sc = CompetitionScore
+        session.execute(
+            update(sc)
+            .where(sc.session_id == session_id, sc.user_id == user_id, sc.finished_at.is_(None))
+            .values(finished_at=func.now(), updated_at=func.now())
+        )
+        session.commit()
         return True
     except Exception as e:
         print(f"Database mark_competition_participant_finished failed: {e}")
-        conn.rollback()
+        session.rollback()
         return False
+    finally:
+        SessionLocal.remove()
 
 def competition_all_participants_finished(conn, session_id):
     """True when every scored participant has reported finishing their run."""
     if not conn:
         return False
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT COUNT(*) AS total,
-                       COUNT(*) FILTER (WHERE finished_at IS NOT NULL) AS done
-                FROM competition_scores
-                WHERE session_id = %s
-            """, (session_id,))
-            total, done = cur.fetchone()
-            return bool(total) and int(total) == int(done or 0)
+        sc = CompetitionScore
+        row = session.execute(
+            select(
+                func.count().label("total"),
+                func.count().filter(sc.finished_at.isnot(None)).label("done"),
+            )
+            .where(sc.session_id == session_id)
+        ).first()
+        total, done = row[0], row[1]
+        return bool(total) and int(total) == int(done or 0)
     except Exception as e:
         print(f"Database competition_all_participants_finished failed: {e}")
         return False
+    finally:
+        SessionLocal.remove()
 
 def finalize_competition_session(conn, session_id):
     """Rank participants, mark the session ranked and free the room back to waiting.
@@ -485,39 +549,46 @@ def finalize_competition_session(conn, session_id):
         return None
     if state["status"] == "ranked":
         return state
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                UPDATE competition_sessions
-                SET status = 'ranked', finished_at = CURRENT_TIMESTAMP
-                WHERE id = %s
-            """, (session_id,))
-            cur.execute("""
-                WITH ranked AS (
-                    SELECT id,
-                           ROW_NUMBER() OVER (
-                               ORDER BY total_points DESC,
-                                        total_response_time_ms ASC,
-                                        COALESCE(finished_at, CURRENT_TIMESTAMP) ASC
-                           ) AS next_rank
-                    FROM competition_scores
-                    WHERE session_id = %s
-                )
-                UPDATE competition_scores sc
-                SET rank = ranked.next_rank,
-                    updated_at = CURRENT_TIMESTAMP
-                FROM ranked
-                WHERE sc.id = ranked.id
-            """, (session_id,))
-            cur.execute("""
-                UPDATE competition_rooms r
-                SET status = 'waiting', updated_at = CURRENT_TIMESTAMP
-                FROM competition_sessions s
-                WHERE s.id = %s AND r.id = s.room_id
-            """, (session_id,))
-        conn.commit()
+        sc = CompetitionScore
+        session.execute(
+            update(CompetitionSession)
+            .where(CompetitionSession.id == session_id)
+            .values(status="ranked", finished_at=func.now())
+        )
+        ranked = (
+            select(
+                sc.id,
+                func.row_number().over(
+                    order_by=[
+                        sc.total_points.desc(),
+                        sc.total_response_time_ms.asc(),
+                        func.coalesce(sc.finished_at, func.now()).asc(),
+                    ]
+                ).label("next_rank"),
+            )
+            .where(sc.session_id == session_id)
+            .subquery("ranked")
+        )
+        session.execute(
+            update(sc)
+            .where(sc.id == ranked.c.id)
+            .values(rank=ranked.c.next_rank, updated_at=func.now())
+        )
+        session.execute(
+            update(CompetitionRoom)
+            .where(
+                CompetitionSession.id == session_id,
+                CompetitionRoom.id == CompetitionSession.room_id,
+            )
+            .values(status="waiting", updated_at=func.now())
+        )
+        session.commit()
         return get_competition_session_state(conn, session_id)
     except Exception as e:
         print(f"Database finalize_competition_session failed: {e}")
-        conn.rollback()
+        session.rollback()
         return None
+    finally:
+        SessionLocal.remove()

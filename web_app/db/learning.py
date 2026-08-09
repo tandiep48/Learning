@@ -7,12 +7,19 @@ unlearned / unsure / review / hard-word selections.
 Extracted from the former monolithic db.py.
 """
 
-from sqlalchemy import select, func, distinct, case, cast, and_, asc, desc, nullslast, Text, Date
+from sqlalchemy import (
+    select, func, distinct, case, cast, and_, or_, any_, bindparam,
+    asc, desc, nullslast, Text, Date, Float, Integer, String,
+)
+from sqlalchemy.dialects.postgresql import ARRAY
 
 from entity.database import SessionLocal
 from entity.record.entity import VocabRecord, PracticeRecord
 from entity.vocabulary.entity import Vocabulary
 from entity.question.entity import Question
+from entity.learning_unit.entity import LearningUnit
+from entity.chinese_stroke_info.entity import ChineseStrokeInfo
+from entity.sematic_difficulty.entity import SemanticDifficulty
 from db.records import get_learned_words
 
 
@@ -169,45 +176,58 @@ def get_recommended_practices(conn, user_id, threshold=0.80, limit=None, status_
     if not conn:
         return []
 
+    session = SessionLocal()
     try:
         # 1. Every mastered word (3-mode round-1 rule). No recency or HSK-level bias —
         #    the whole mastered set drives coverage.
         mastered = get_learned_words(conn, user_id)
         if not mastered:
             return []
+        mastered_list = list(mastered)
 
         # 2. Coverage per (category, level, lesson, progress) across the whole practice/exam
         #    bank. Dedupe to distinct (group, word) pairs first so the aggregate is a plain
         #    COUNT(*) over distinct words (hash-aggregatable) — avoids the disk-spilling sort
         #    that COUNT(DISTINCT)/ARRAY_AGG(DISTINCT) forces. matched_words holds only the
-        #    user's mastered words for that group.
-        coverage_sql = """
-            WITH group_words AS (
-                SELECT DISTINCT qb.category, qb.level, qb.lesson, qb.progress, lu.unique_word
-                FROM question_bank qb
-                JOIN learning_units lu ON lu.unit_id = qb.unit_id
-                WHERE qb.category IN ('practice', 'exam')
+        #    user's mastered words for that group. `= ANY(:array)` keeps the mastered set as a
+        #    single bound array param rather than an expanded IN-list.
+        group_words = (
+            select(
+                Question.category, Question.level, Question.lesson,
+                Question.progress, LearningUnit.unique_word,
             )
-            SELECT
-                category, level, lesson, progress,
-                COUNT(*)                                                     AS total_words,
-                COUNT(*) FILTER (WHERE unique_word = ANY(%s))                AS known_words,
-                ARRAY_AGG(unique_word) FILTER (WHERE unique_word = ANY(%s))  AS matched_words
-            FROM group_words
-            GROUP BY category, level, lesson, progress
-        """
-        with conn.cursor() as cur:
-            cur.execute(coverage_sql, (list(mastered), list(mastered)))
-            group_coverage = {
-                (row[0], row[1], row[2], row[3]): {
-                    'total_words': row[4],
-                    'known_words': row[5],
-                    'coverage': row[5] / row[4],
-                    'matched_words': row[6] or []
-                }
-                for row in cur.fetchall()
-                if row[4] > 0
+            .select_from(Question)
+            .join(LearningUnit, LearningUnit.unit_id == Question.unit_id)
+            .where(Question.category.in_(["practice", "exam"]))
+            .distinct()
+            .cte("group_words")
+        )
+        known = group_words.c.unique_word == any_(
+            bindparam("mastered", value=mastered_list, type_=ARRAY(String))
+        )
+        coverage_stmt = (
+            select(
+                group_words.c.category, group_words.c.level, group_words.c.lesson,
+                group_words.c.progress,
+                func.count().label("total_words"),
+                func.count().filter(known).label("known_words"),
+                func.array_agg(group_words.c.unique_word).filter(known).label("matched_words"),
+            )
+            .group_by(
+                group_words.c.category, group_words.c.level,
+                group_words.c.lesson, group_words.c.progress,
+            )
+        )
+        group_coverage = {
+            (row[0], row[1], row[2], row[3]): {
+                'total_words': row[4],
+                'known_words': row[5],
+                'coverage': row[5] / row[4],
+                'matched_words': row[6] or []
             }
+            for row in session.execute(coverage_stmt).all()
+            if row[4] > 0
+        }
 
         # 3. Filter groups meeting threshold
         ready_keys = {k for k, d in group_coverage.items() if d['coverage'] >= threshold}
@@ -219,49 +239,75 @@ def get_recommended_practices(conn, user_id, threshold=0.80, limit=None, status_
         #    entire practice history on every call.
         ready_levels = list({k[1] for k in ready_keys})
         ready_lessons = list({str(k[2]) for k in ready_keys})
-        with conn.cursor() as cur:
-            cur.execute("""
-                WITH session_results AS (
-                    SELECT
-                           COALESCE(pr.category, qb.category::text, 'practice') AS category,
-                           pr.hsk_level,
-                           pr.lesson,
-                           qb.progress,
-                           pr.session_id,
-                           SUM(CASE WHEN is_correct THEN 1 ELSE 0 END)::float / COUNT(*) AS pct,
-                           MAX(pr.created_at) AS session_end
-                    FROM practice_record pr
-                    LEFT JOIN question_bank qb
-                      ON qb.level = pr.hsk_level
-                     AND qb.lesson::text = pr.lesson::text
-                     AND qb.no = pr.question_no
-                     AND qb.category::text = COALESCE(pr.category, 'practice')
-                    WHERE pr.user_id = %s
-                      AND pr.hsk_level = ANY(%s)
-                      AND pr.lesson = ANY(%s)
-                    GROUP BY COALESCE(pr.category, qb.category::text, 'practice'),
-                             pr.hsk_level, pr.lesson, qb.progress, pr.session_id
+
+        # Per-session score, categorised the same way the practice screen records it.
+        cat_expr = func.coalesce(
+            PracticeRecord.category, cast(Question.category, Text), "practice"
+        )
+        pct_expr = (
+            cast(func.sum(case((PracticeRecord.is_correct, 1), else_=0)), Float)
+            / func.count()
+        )
+        session_results = (
+            select(
+                cat_expr.label("category"),
+                PracticeRecord.hsk_level.label("hsk_level"),
+                PracticeRecord.lesson.label("lesson"),
+                Question.progress.label("progress"),
+                PracticeRecord.session_id.label("session_id"),
+                pct_expr.label("pct"),
+                func.max(PracticeRecord.created_at).label("session_end"),
+            )
+            .select_from(PracticeRecord)
+            .outerjoin(
+                Question,
+                and_(
+                    Question.level == PracticeRecord.hsk_level,
+                    cast(Question.lesson, Text) == cast(PracticeRecord.lesson, Text),
+                    Question.no == PracticeRecord.question_no,
+                    cast(Question.category, Text) == func.coalesce(PracticeRecord.category, "practice"),
                 ),
-                latest AS (
-                    SELECT category, hsk_level, lesson, progress, pct,
-                           ROW_NUMBER() OVER (
-                               PARTITION BY category, hsk_level, lesson, progress
-                               ORDER BY session_end DESC
-                           ) AS rn
-                    FROM session_results
-                )
-                SELECT category, hsk_level, lesson, progress, pct
-                FROM latest
-                WHERE rn = 1
-            """, (user_id, ready_levels, ready_lessons))
-            lesson_status = {}
-            for r in cur.fetchall():
-                cat, lvl, les, prog, pct = r[0], r[1], r[2], r[3], r[4]
-                key = (cat, lvl, int(les) if str(les).isdigit() else les, prog)
-                if pct == 1.0:
-                    lesson_status[key] = "Finish and success"
-                else:
-                    lesson_status[key] = "Finish and fail"
+            )
+            .where(
+                PracticeRecord.user_id == user_id,
+                PracticeRecord.hsk_level == any_(
+                    bindparam("levels", value=ready_levels, type_=ARRAY(Integer))
+                ),
+                PracticeRecord.lesson == any_(
+                    bindparam("lessons", value=ready_lessons, type_=ARRAY(String))
+                ),
+            )
+            .group_by(
+                cat_expr, PracticeRecord.hsk_level, PracticeRecord.lesson,
+                Question.progress, PracticeRecord.session_id,
+            )
+            .cte("session_results")
+        )
+        rn = func.row_number().over(
+            partition_by=[
+                session_results.c.category, session_results.c.hsk_level,
+                session_results.c.lesson, session_results.c.progress,
+            ],
+            order_by=session_results.c.session_end.desc(),
+        ).label("rn")
+        latest = select(
+            session_results.c.category, session_results.c.hsk_level,
+            session_results.c.lesson, session_results.c.progress,
+            session_results.c.pct, rn,
+        ).cte("latest")
+        status_stmt = select(
+            latest.c.category, latest.c.hsk_level, latest.c.lesson,
+            latest.c.progress, latest.c.pct,
+        ).where(latest.c.rn == 1)
+
+        lesson_status = {}
+        for r in session.execute(status_stmt).all():
+            cat, lvl, les, prog, pct = r[0], r[1], r[2], r[3], r[4]
+            key = (cat, lvl, int(les) if str(les).isdigit() else les, prog)
+            if pct == 1.0:
+                lesson_status[key] = "Finish and success"
+            else:
+                lesson_status[key] = "Finish and fail"
 
         # 5. Build lightweight summaries before fetching question payloads.
         summaries = []
@@ -295,33 +341,35 @@ def get_recommended_practices(conn, user_id, threshold=0.80, limit=None, status_
         # Fetch only lightweight per-group metadata (count + representative skill/type +
         # unit ids). The full question payloads aren't needed here — the practice screen
         # loads them on demand — so we avoid pulling every question's TEXT/JSONB columns.
-        where_clauses = []
-        params = []
-        for item in summaries:
-            where_clauses.append("(category = %s AND level = %s AND lesson = %s AND progress = %s)")
-            params.extend([item['category'], item['level'], item['lesson'], item['progress']])
-
-        meta_sql = f"""
-            SELECT category, level, lesson, progress,
-                   COUNT(*)                                AS question_count,
-                   MODE() WITHIN GROUP (ORDER BY skill)    AS skill,
-                   MIN(type)                               AS type,
-                   ARRAY_AGG(DISTINCT unit_id)             AS unit_ids
-            FROM question_bank
-            WHERE {' OR '.join(where_clauses)}
-            GROUP BY category, level, lesson, progress
-        """
-        with conn.cursor() as cur:
-            cur.execute(meta_sql, params)
-            meta_by_key = {
-                (r[0], r[1], r[2], r[3]): {
-                    'question_count': r[4],
-                    'skill':          r[5] or 'listening',
-                    'type':           r[6],
-                    'unit_ids':       sorted(r[7] or []),
-                }
-                for r in cur.fetchall()
+        group_conds = or_(*[
+            and_(
+                Question.category == item['category'],
+                Question.level == item['level'],
+                Question.lesson == item['lesson'],
+                Question.progress == item['progress'],
+            )
+            for item in summaries
+        ])
+        meta_stmt = (
+            select(
+                Question.category, Question.level, Question.lesson, Question.progress,
+                func.count().label("question_count"),
+                func.mode().within_group(Question.skill).label("skill"),
+                func.min(Question.type).label("type"),
+                func.array_agg(distinct(Question.unit_id)).label("unit_ids"),
+            )
+            .where(group_conds)
+            .group_by(Question.category, Question.level, Question.lesson, Question.progress)
+        )
+        meta_by_key = {
+            (r[0], r[1], r[2], r[3]): {
+                'question_count': r[4],
+                'skill':          r[5] or 'listening',
+                'type':           r[6],
+                'unit_ids':       sorted(r[7] or []),
             }
+            for r in session.execute(meta_stmt).all()
+        }
 
         results = []
         for item in summaries:
@@ -340,6 +388,8 @@ def get_recommended_practices(conn, user_id, threshold=0.80, limit=None, status_
     except Exception as e:
         print(f"[WARN] get_recommended_practices failed: {e}")
         return []
+    finally:
+        SessionLocal.remove()
 
 
 def get_practice_history_sessions(conn, user_id, hsk_level=None, category=None,
@@ -520,80 +570,107 @@ def get_unsure_words_from_db(conn, user_id):
     if not conn:
         return []
 
-    query = """
-WITH daily_attempts AS (
-    SELECT
-        word,
-        DATE(updated_at) AS attempt_date,
-        COUNT(DISTINCT CASE WHEN is_correct THEN mode END) AS successful_modes
-    FROM vocab_records
-    WHERE user_id = %s
-      AND round_num = 1
-      AND mode IN ('typing', 'listen', 'meaning')
-    GROUP BY word, DATE(updated_at)
-),
-latest_status AS (
-    SELECT
-        word,
-        attempt_date,
-        successful_modes,
-        ROW_NUMBER() OVER (PARTITION BY word ORDER BY attempt_date DESC) AS rn
-    FROM daily_attempts
-),
-learned_words AS (
-    SELECT word, attempt_date
-    FROM latest_status
-    WHERE rn = 1 AND successful_modes = 3
-),
-mastered_count AS (
-    SELECT COUNT(*) AS total_mastered FROM learned_words
-),
-latest_records AS (
-    SELECT v.word, v.mode, v.response_time_ms
-    FROM vocab_records v
-    JOIN learned_words l
-      ON v.word = l.word
-     AND DATE(v.updated_at) = l.attempt_date
-    WHERE v.user_id = %s
-      AND v.round_num = 1
-      AND v.is_correct = true
-      AND v.mode IN ('typing', 'listen', 'meaning')
-),
-stats AS (
-    SELECT
-        mode,
-        AVG(response_time_ms) AS avg_rt,
-        NULLIF(STDDEV(response_time_ms), 0) AS std_rt
-    FROM latest_records
-    GROUP BY mode
-),
-z_scores AS (
-    SELECT
-        lr.word,
-        lr.mode,
-        (lr.response_time_ms - s.avg_rt) / s.std_rt AS z_score
-    FROM latest_records lr
-    JOIN stats s ON lr.mode = s.mode
-    WHERE s.std_rt IS NOT NULL
-)
-SELECT
-    z.word,
-    AVG(z.z_score) AS avg_z_score
-FROM z_scores z
-CROSS JOIN mastered_count mc
-WHERE mc.total_mastered >= 50
-GROUP BY z.word
-HAVING AVG(z.z_score) >= 1.0
-ORDER BY avg_z_score DESC;
-    """
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            cur.execute(query, (user_id, user_id))
-            rows = cur.fetchall()
-            return [row[0] for row in rows]
+        # daily_attempts: distinct correct modes per (word, day) in round 1.
+        successful_modes = func.count(
+            distinct(case((VocabRecord.is_correct.is_(True), VocabRecord.mode)))
+        ).label("successful_modes")
+        daily = (
+            select(
+                VocabRecord.word.label("word"),
+                func.date(VocabRecord.updated_at).label("attempt_date"),
+                successful_modes,
+            )
+            .where(
+                VocabRecord.user_id == user_id,
+                VocabRecord.round_num == 1,
+                VocabRecord.mode.in_(_MASTERY_MODES),
+            )
+            .group_by(VocabRecord.word, func.date(VocabRecord.updated_at))
+            .cte("daily_attempts")
+        )
+
+        # latest_status: most recent attempt day per word.
+        rn = func.row_number().over(
+            partition_by=daily.c.word, order_by=daily.c.attempt_date.desc()
+        ).label("rn")
+        latest = select(
+            daily.c.word, daily.c.attempt_date, daily.c.successful_modes, rn
+        ).cte("latest_status")
+
+        # learned_words: words mastered (all 3 modes) on their latest day.
+        learned = (
+            select(latest.c.word, latest.c.attempt_date)
+            .where(latest.c.rn == 1, latest.c.successful_modes == 3)
+            .cte("learned_words")
+        )
+
+        # Global gate: only meaningful once >= 50 words are mastered.
+        total_mastered = select(func.count()).select_from(learned).scalar_subquery()
+
+        # latest_records: correct answers for those words on their mastery day.
+        latest_records = (
+            select(
+                VocabRecord.word.label("word"),
+                VocabRecord.mode.label("mode"),
+                VocabRecord.response_time_ms.label("response_time_ms"),
+            )
+            .select_from(VocabRecord)
+            .join(
+                learned,
+                and_(
+                    VocabRecord.word == learned.c.word,
+                    func.date(VocabRecord.updated_at) == learned.c.attempt_date,
+                ),
+            )
+            .where(
+                VocabRecord.user_id == user_id,
+                VocabRecord.round_num == 1,
+                VocabRecord.is_correct.is_(True),
+                VocabRecord.mode.in_(_MASTERY_MODES),
+            )
+            .cte("latest_records")
+        )
+
+        # stats: response-time baseline per mode (sample stddev, NULL if zero).
+        stats = (
+            select(
+                latest_records.c.mode.label("mode"),
+                func.avg(latest_records.c.response_time_ms).label("avg_rt"),
+                func.nullif(func.stddev(latest_records.c.response_time_ms), 0).label("std_rt"),
+            )
+            .group_by(latest_records.c.mode)
+            .cte("stats")
+        )
+
+        # z_scores: per-word/mode z-score against the baseline.
+        z_scores = (
+            select(
+                latest_records.c.word.label("word"),
+                latest_records.c.mode.label("mode"),
+                ((latest_records.c.response_time_ms - stats.c.avg_rt) / stats.c.std_rt).label("z_score"),
+            )
+            .select_from(latest_records)
+            .join(stats, latest_records.c.mode == stats.c.mode)
+            .where(stats.c.std_rt.isnot(None))
+            .cte("z_scores")
+        )
+
+        avg_z = func.avg(z_scores.c.z_score).label("avg_z_score")
+        stmt = (
+            select(z_scores.c.word, avg_z)
+            .where(total_mastered >= 50)
+            .group_by(z_scores.c.word)
+            .having(func.avg(z_scores.c.z_score) >= 1.0)
+            .order_by(avg_z.desc())
+        )
+        return [r[0] for r in session.execute(stmt).all()]
     except Exception as e:
         print(f"⚠️ Database query failed (get_unsure_words_from_db): {e}")
         return []
+    finally:
+        SessionLocal.remove()
 
 def get_review_words(conn, user_id):
     """
@@ -657,30 +734,38 @@ def get_hard_semantic_learned_words(conn, user_id):
     if not conn:
         return []
 
-    query = """
-    WITH learned_words AS (
-        SELECT word
-        FROM vocab_records 
-        WHERE is_correct IS TRUE
-          AND user_id = %s
-        GROUP BY word
-        HAVING COUNT(*) >= 3
-    )
-    SELECT a.word, b.id AS word_id, c.strokes_difficult_cn, d.sematic_difficulty
-    FROM learned_words a
-    LEFT JOIN chinese_dict b ON a.word = b.cn
-    LEFT JOIN chinese_stroke_info c ON a.word = c.cn
-    LEFT JOIN sematic_diffculty d ON b.id = d.word_id
-    ORDER BY d.sematic_difficulty DESC NULLS LAST;
-    """
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            cur.execute(query, (user_id,))
-            rows = cur.fetchall()
-            return [row[0] for row in rows]
+        # Words answered correctly at least 3 times (any mode/round).
+        learned = (
+            select(VocabRecord.word.label("word"))
+            .where(VocabRecord.is_correct.is_(True), VocabRecord.user_id == user_id)
+            .group_by(VocabRecord.word)
+            .having(func.count() >= 3)
+            .cte("learned_words")
+        )
+        # vocabulary bridges word -> id -> sematic_diffculty.word_id
+        # (the old query referenced a non-existent `chinese_dict`; vocabulary is the intended table).
+        stmt = (
+            select(learned.c.word)
+            .select_from(learned)
+            .outerjoin(Vocabulary, learned.c.word == Vocabulary.cn)
+            .outerjoin(SemanticDifficulty, Vocabulary.id == SemanticDifficulty.word_id)
+            .order_by(nullslast(SemanticDifficulty.sematic_difficulty.desc()))
+        )
+        # sematic_diffculty has duplicate word_id rows, so dedup while keeping order.
+        seen = set()
+        words = []
+        for (word,) in session.execute(stmt).all():
+            if word not in seen:
+                seen.add(word)
+                words.append(word)
+        return words
     except Exception as e:
         print(f"⚠️ Database query failed (get_hard_semantic_learned_words): {e}")
         return []
+    finally:
+        SessionLocal.remove()
 
 def get_hard_stroke_learned_words(conn, user_id):
     """
@@ -689,28 +774,26 @@ def get_hard_stroke_learned_words(conn, user_id):
     if not conn:
         return []
 
-    query = """
-    WITH learned_words AS (
-        SELECT word
-        FROM vocab_records 
-        WHERE is_correct IS TRUE
-          AND user_id = %s
-        GROUP BY word
-        HAVING COUNT(*) >= 3
-    )
-    SELECT a.word, b.id AS word_id, c.strokes_difficult_cn, d.sematic_difficulty, 
-           (c.strokes_difficult_cn * d.sematic_difficulty) AS total_difficulty
-    FROM learned_words a
-    LEFT JOIN chinese_dict b ON a.word = b.cn
-    LEFT JOIN chinese_stroke_info c ON a.word = c.cn
-    LEFT JOIN sematic_diffculty d ON b.id = d.word_id
-    ORDER BY c.strokes_difficult_cn DESC NULLS LAST;
-    """
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            cur.execute(query, (user_id,))
-            rows = cur.fetchall()
-            return [row[0] for row in rows]
+        # Words answered correctly at least 3 times (any mode/round).
+        learned = (
+            select(VocabRecord.word.label("word"))
+            .where(VocabRecord.is_correct.is_(True), VocabRecord.user_id == user_id)
+            .group_by(VocabRecord.word)
+            .having(func.count() >= 3)
+            .cte("learned_words")
+        )
+        # Ordered by stroke difficulty; only chinese_stroke_info feeds the ordering.
+        stmt = (
+            select(learned.c.word)
+            .select_from(learned)
+            .outerjoin(ChineseStrokeInfo, learned.c.word == ChineseStrokeInfo.cn)
+            .order_by(nullslast(ChineseStrokeInfo.strokes_difficult_cn.desc()))
+        )
+        return [r[0] for r in session.execute(stmt).all()]
     except Exception as e:
         print(f"⚠️ Database query failed (get_hard_stroke_learned_words): {e}")
         return []
+    finally:
+        SessionLocal.remove()
