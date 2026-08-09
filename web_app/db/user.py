@@ -6,7 +6,7 @@ hanzi font & script, UI language, password, and profile time summary.
 Extracted from the former monolithic db.py.
 """
 
-from sqlalchemy import select, update, func, distinct, cast, and_, Integer, BigInteger
+from sqlalchemy import select, update, insert, func, distinct, cast, and_, or_, Integer, BigInteger
 
 from entity.database import SessionLocal
 from entity.user.entity import User
@@ -16,6 +16,72 @@ from entity.passage_vocabulary.entity import PassageVocabulary
 from entity.user_lesson_part_progress.entity import UserLessonPartProgress
 from entity.record.entity import VocabRecord, LessonRecord, PracticeRecord
 from db.records import get_learned_words
+
+
+# ---------------------------------------------------------------------------
+# Authentication / account lookups (used by auth_routes + Flask-Login).
+# ---------------------------------------------------------------------------
+
+def _fetch_user_auth(where_clause):
+    """Return a user's auth/profile fields as a dict (or None) for the given filter."""
+    session = SessionLocal()
+    try:
+        row = session.execute(
+            select(
+                User.id, User.username, User.email, User.password, User.level,
+                User.avatar_path, User.hanzi_font, User.hanzi_script, User.ui_language,
+            ).where(where_clause)
+        ).first()
+        if not row:
+            return None
+        return {
+            "id": row[0], "username": row[1], "email": row[2], "password": row[3],
+            "level": row[4], "avatar_path": row[5], "hanzi_font": row[6],
+            "hanzi_script": row[7], "ui_language": row[8],
+        }
+    except Exception as e:
+        print(f"Database _fetch_user_auth failed: {e}")
+        return None
+    finally:
+        SessionLocal.remove()
+
+
+def get_user_auth_by_username(username):
+    return _fetch_user_auth(User.username == username)
+
+
+def get_user_auth_by_id(user_id):
+    return _fetch_user_auth(User.id == user_id)
+
+
+def username_or_email_exists(username, email):
+    session = SessionLocal()
+    try:
+        return session.execute(
+            select(User.id).where(or_(User.username == username, User.email == email))
+        ).first() is not None
+    except Exception as e:
+        # Fail safe: treat as existing so we never insert a duplicate on error.
+        print(f"Database username_or_email_exists failed: {e}")
+        return True
+    finally:
+        SessionLocal.remove()
+
+
+def create_user(username, email, password_hash, level=1):
+    session = SessionLocal()
+    try:
+        session.execute(insert(User).values(
+            username=username, email=email, password=password_hash, level=level
+        ))
+        session.commit()
+        return True
+    except Exception as e:
+        print(f"Database create_user failed: {e}")
+        session.rollback()
+        return False
+    finally:
+        SessionLocal.remove()
 
 
 def _level_passes(level, lesson_pct, word_pct):
