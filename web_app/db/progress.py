@@ -119,7 +119,7 @@ def get_lesson_picker_progress(conn, user_id, hsk_level):
 
     session = SessionLocal()
     try:
-        mastered_words = set(get_learned_words(conn, user_id))
+        mastered_words = set(get_learned_words(user_id))
 
         vocab_rows = session.execute(
             select(LessonPassage.passage_id, PassageVocabulary.cn)
@@ -232,7 +232,7 @@ def mark_passage_words_mastered(conn, user_id, passage_id):
         if not words:
             return 0
 
-        already = set(get_learned_words(conn, user_id))
+        already = set(get_learned_words(user_id))
         pending = [w for w in words if w not in already]
         if not pending:
             return 0

@@ -582,7 +582,6 @@ def submit_progress():
     db_conn = get_db_connection()
     if db_conn:
         insert_learning_progress(
-            conn=db_conn,
             user_id=current_user.id,
             session_id=session_id,
             mode=mode,
@@ -629,7 +628,6 @@ def submit_progress_batch():
     db_conn = get_db_connection()
     if db_conn:
         insert_learning_progress_batch(
-            conn=db_conn,
             user_id=current_user.id,
             session_id=session_id,
             records=prepared,

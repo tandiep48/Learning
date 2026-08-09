@@ -44,7 +44,7 @@ def recompute_user_level(conn, user_id):
 
     session = SessionLocal()
     try:
-        learned = get_learned_words(conn, user_id)
+        learned = get_learned_words(user_id)
 
         # Level number parsed from the passage_id prefix, e.g. "H1_2_3" -> 1.
         lvl = cast(

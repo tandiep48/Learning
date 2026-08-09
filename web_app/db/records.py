@@ -24,14 +24,11 @@ def _json_value(value):
     return value
 
 
-def get_learned_words(conn, user_id):
+def get_learned_words(user_id):
     """
     Returns a list of words that have been fully learned by the given user
     (3 correct modes in round 1).
     """
-    if not conn:
-        return []
-
     session = SessionLocal()
     try:
         # daily_attempts: per (word, day) how many of the 3 modes were correct in round 1.
@@ -75,7 +72,7 @@ def get_learned_words(conn, user_id):
         SessionLocal.remove()
 
 
-def get_learned_words_last_3_days(conn, user_id):
+def get_learned_words_last_3_days(user_id):
     """
     Cumulative running total of fully-learned words as of each of the 3 most
     recent mastery days.
@@ -86,9 +83,6 @@ def get_learned_words_last_3_days(conn, user_id):
     most recent mastery days are returned oldest -> newest for a Chart.js chart:
         [{"date": "2026-07-24", "count": 120}, {"date": "2026-07-25", "count": 132}, ...]
     """
-    if not conn:
-        return []
-
     session = SessionLocal()
     try:
         # daily_attempts: per (word, day) how many of the 3 modes were correct in round 1.
@@ -157,7 +151,7 @@ def get_learned_words_last_3_days(conn, user_id):
         SessionLocal.remove()
 
 
-def get_time_learned_last_3_days(conn, user_id):
+def get_time_learned_last_3_days(user_id):
     """
     Total learning time per day for the 3 most recent active days.
 
@@ -168,9 +162,6 @@ def get_time_learned_last_3_days(conn, user_id):
     milliseconds and minutes, ready for a Chart.js bar chart:
         [{"date": "2026-07-24", "ms": 3900000, "minutes": 65}, ...]
     """
-    if not conn:
-        return []
-
     session = SessionLocal()
     try:
         # Union the per-answer times across the three activity tables.
@@ -213,10 +204,7 @@ def get_time_learned_last_3_days(conn, user_id):
 # Writes — record a user's answers into the activity tables.
 # ---------------------------------------------------------------------------
 
-def insert_learning_progress(conn, user_id, session_id, mode, word, round_num, game_info, user_answer, is_correct, response_time_ms, updated_at):
-    if not conn:
-        return
-
+def insert_learning_progress(user_id, session_id, mode, word, round_num, game_info, user_answer, is_correct, response_time_ms, updated_at):
     session = SessionLocal()
     try:
         session.execute(insert(VocabRecord).values(
@@ -239,13 +227,13 @@ def insert_learning_progress(conn, user_id, session_id, mode, word, round_num, g
         SessionLocal.remove()
 
 
-def insert_learning_progress_batch(conn, user_id, session_id, records, updated_at):
+def insert_learning_progress_batch(user_id, session_id, records, updated_at):
     """
     Bulk-insert several vocab_records rows in one round-trip. Each record is a dict with keys:
     mode, word, round_num, game_info (JSON string), user_answer, is_correct, response_time_ms.
     Used by the batch vocab trainer, which submits a whole group's answers at once.
     """
-    if not conn or not records:
+    if not records:
         return
 
     rows = [
@@ -274,10 +262,7 @@ def insert_learning_progress_batch(conn, user_id, session_id, records, updated_a
         SessionLocal.remove()
 
 
-def insert_lesson_progress(conn, user_id, session_id, passage_id, line_id, mode, game_info, user_answer, is_correct, response_time_ms, updated_at):
-    if not conn:
-        return
-
+def insert_lesson_progress(user_id, session_id, passage_id, line_id, mode, game_info, user_answer, is_correct, response_time_ms, updated_at):
     # lesson_records.game_info is TEXT — the JSON string is stored as-is.
     session = SessionLocal()
     try:
@@ -301,10 +286,7 @@ def insert_lesson_progress(conn, user_id, session_id, passage_id, line_id, mode,
         SessionLocal.remove()
 
 
-def insert_practice_progress(conn, user_id, session_id, hsk_level, lesson, question_no, skill, question_type, user_answer, is_correct, response_time_ms=None, category='practice'):
-    if not conn:
-        return
-
+def insert_practice_progress(user_id, session_id, hsk_level, lesson, question_no, skill, question_type, user_answer, is_correct, response_time_ms=None, category='practice'):
     session = SessionLocal()
     try:
         session.execute(insert(PracticeRecord).values(

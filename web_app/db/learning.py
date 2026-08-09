@@ -180,7 +180,7 @@ def get_recommended_practices(conn, user_id, threshold=0.80, limit=None, status_
     try:
         # 1. Every mastered word (3-mode round-1 rule). No recency or HSK-level bias —
         #    the whole mastered set drives coverage.
-        mastered = get_learned_words(conn, user_id)
+        mastered = get_learned_words(user_id)
         if not mastered:
             return []
         mastered_list = list(mastered)

@@ -604,7 +604,7 @@ def learned_words_last_3_days():
     if not conn:
         return jsonify({"error": "Database unavailable"}), 503
     try:
-        return jsonify({"days": get_learned_words_last_3_days(conn, current_user.id)})
+        return jsonify({"days": get_learned_words_last_3_days(current_user.id)})
     finally:
         conn.close()
 
@@ -616,7 +616,7 @@ def time_learned_last_3_days():
     if not conn:
         return jsonify({"error": "Database unavailable"}), 503
     try:
-        return jsonify({"days": get_time_learned_last_3_days(conn, current_user.id)})
+        return jsonify({"days": get_time_learned_last_3_days(current_user.id)})
     finally:
         conn.close()
 

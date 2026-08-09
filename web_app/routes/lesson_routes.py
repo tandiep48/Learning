@@ -452,7 +452,6 @@ def submit_lesson():
     db_conn = get_db_connection()
     if db_conn:
         insert_lesson_progress(
-            conn=db_conn,
             user_id=current_user.id,
             session_id=session_id,
             passage_id=passage_id,

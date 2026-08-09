@@ -237,7 +237,6 @@ def submit_practice():
     if db_conn:
         for ans in user_answers:
             insert_practice_progress(
-                conn=db_conn,
                 user_id=current_user.id,
                 session_id=session_id,
                 hsk_level=ans.get("hsk_level", hsk_level),
