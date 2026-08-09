@@ -14,15 +14,15 @@ from flask_login import login_required, current_user
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from db import (
-    get_db_connection,
     insert_learning_progress,
     insert_learning_progress_batch,
     get_unlearned_words_from_db,
     get_unsure_words_from_db,
     get_review_words_flat,
-    get_hard_semantic_learned_words, 
+    get_hard_semantic_learned_words,
     get_hard_stroke_learned_words,
     get_course_vocab,
+    get_vocabulary_by_words,
     has_vocab_history,
     get_vocab_lessons,
     get_passage_vocab
@@ -191,9 +191,7 @@ def normalize_vocab_row(row):
     }
 
 def get_full_lesson_records():
-    conn = get_db_connection()
     df = get_course_vocab()
-    conn.close()
     if not df.empty:
         return df[['word','pinyin','meaning_en','meaning_vn', 'audio_key', 'level']].dropna(subset=['word']).drop_duplicates(subset=['word']).reset_index(drop=True)
     return pd.DataFrame()
@@ -254,30 +252,20 @@ def lookup_batch():
             missing.append(w)
 
     if missing:
-        conn = get_db_connection()
-        if conn:
-            try:
-                with conn.cursor() as cur:
-                    cur.execute("""
-                        SELECT cn, pinyin, meaning_vn, meaning_en, audio_key
-                        FROM vocabulary WHERE cn = ANY(%s)
-                    """, (missing,))
-                    found = set()
-                    for row in cur.fetchall():
-                        entry = {
-                            "pinyin": row[1],
-                            "meaning_vn": row[2],
-                            "meaning_en": row[3],
-                            "audio_key": row[4],
-                        }
-                        _word_cache[row[0]] = entry
-                        result[row[0]] = entry
-                        found.add(row[0])
-                    for w in missing:
-                        if w not in found:
-                            _word_cache[w] = None
-            finally:
-                conn.close()
+        found = set()
+        for row in get_vocabulary_by_words(missing):
+            entry = {
+                "pinyin": row["pinyin"],
+                "meaning_vn": row["meaning_vn"],
+                "meaning_en": row["meaning_en"],
+                "audio_key": row["audio_key"],
+            }
+            _word_cache[row["word"]] = entry
+            result[row["word"]] = entry
+            found.add(row["word"])
+        for w in missing:
+            if w not in found:
+                _word_cache[w] = None
 
     return jsonify(result)
 
@@ -338,20 +326,14 @@ def get_vocab_table():
                 "passage_id": None
             })
 
-        db_conn = get_db_connection()
-        if not db_conn:
-            return jsonify({"error": "Database connection failed."}), 500
-        try:
-            seen = set()
-            for pid in passage_ids:
-                for row in get_passage_vocab(pid):
-                    normalized = normalize_vocab_row(row)
-                    word = normalized.get("word")
-                    if word and word not in seen:
-                        seen.add(word)
-                        rows.append(normalized)
-        finally:
-            db_conn.close()
+        seen = set()
+        for pid in passage_ids:
+            for row in get_passage_vocab(pid):
+                normalized = normalize_vocab_row(row)
+                word = normalized.get("word")
+                if word and word not in seen:
+                    seen.add(word)
+                    rows.append(normalized)
         passage_id = passage_ids[0] if len(passage_ids) == 1 else None
 
     elif table_mode == "free":
@@ -370,16 +352,10 @@ def get_vocab_table():
             rows = [normalize_vocab_row(row) for row in level_df.to_dict("records")]
 
     elif table_mode in ("unlearn", "unsure"):
-        db_conn = get_db_connection()
-        if not db_conn:
-            return jsonify({"error": "Database connection failed."}), 500
-        try:
-            if table_mode == "unlearn":
-                words = get_unlearned_words_from_db(current_user.id)
-            else:
-                words = get_unsure_words_from_db(current_user.id)
-        finally:
-            db_conn.close()
+        if table_mode == "unlearn":
+            words = get_unlearned_words_from_db(current_user.id)
+        else:
+            words = get_unsure_words_from_db(current_user.id)
 
         subset_df = get_records_for_words(words)
         if not subset_df.empty:
@@ -429,16 +405,10 @@ def resolve_words():
             collected.append(word)
 
     if passage_ids:
-        db_conn = get_db_connection()
-        if not db_conn:
-            return jsonify({"error": "Database connection failed."}), 500
-        try:
-            for pid in passage_ids:
-                rows = number_vocab_rows() if is_number_part(pid) else get_passage_vocab(pid)
-                for row in rows:
-                    add(row.get("cn"))
-        finally:
-            db_conn.close()
+        for pid in passage_ids:
+            rows = number_vocab_rows() if is_number_part(pid) else get_passage_vocab(pid)
+            for row in rows:
+                add(row.get("cn"))
 
     for word in words:
         add(word)
@@ -461,14 +431,7 @@ def get_review_list():
 
     empty = {"rows": [], "page": 1, "page_size": page_size, "total": 0, "total_pages": 1}
 
-    db_conn = get_db_connection()
-    if not db_conn:
-        return jsonify({"error": "Database connection failed."}), 500
-    try:
-        words = get_review_words_flat(current_user.id)
-    finally:
-        db_conn.close()
-
+    words = get_review_words_flat(current_user.id)
     if not words:
         return jsonify(empty)
 
@@ -490,11 +453,7 @@ def get_review_list():
 @login_required
 def check_has_history():
     """Returns whether the current user has any vocab learning history."""
-    db_conn = get_db_connection()
-    if not db_conn:
-        return jsonify({"has_history": False})
     result = has_vocab_history(current_user.id)
-    db_conn.close()
     return jsonify({"has_history": result})
 
 @vocab_bp.route('/lessons/<hsk_level>', methods=['GET'])
@@ -504,13 +463,7 @@ def get_lessons_for_level(hsk_level):
     # Normalize: H1 -> HSK1
     hsk_level = normalize_hsk_level(hsk_level)
 
-    db_conn = get_db_connection()
-    if not db_conn:
-        return jsonify({"error": "Database connection failed."}), 500
-
     lessons = get_vocab_lessons(hsk_level)
-    db_conn.close()
-
     if not lessons:
         return jsonify({"error": f"No vocabulary found for {hsk_level}."}), 404
 
@@ -521,10 +474,6 @@ def get_lessons_for_level(hsk_level):
 def preview_mode():
     data = request.json
     mode = str(data.get("mode"))
-    
-    db_conn = get_db_connection()
-    if not db_conn:
-        return jsonify({"error": "Database connection failed."}), 500
     
     words = []
     if mode == "2":
@@ -540,11 +489,8 @@ def preview_mode():
         passage_vocab = number_vocab_rows() if is_number_part(passage_id) else get_passage_vocab(passage_id)
         words = [w["cn"] for w in passage_vocab]
     else:
-        db_conn.close()
         return jsonify({"error": "Invalid preview mode."}), 400
-        
-    db_conn.close()
-    
+
     if not words:
         return jsonify({"words": []})
         
@@ -579,21 +525,18 @@ def submit_progress():
     response_time_ms = data.get("response_time_ms", 0)
     game_info = data.get("game_info", "{}")
     
-    db_conn = get_db_connection()
-    if db_conn:
-        insert_learning_progress(
-            user_id=current_user.id,
-            session_id=session_id,
-            mode=mode,
-            word=word,
-            round_num=round_num,
-            game_info=json.dumps(game_info, ensure_ascii=False),
-            user_answer=user_answer,
-            is_correct=is_correct,
-            response_time_ms=response_time_ms,
-            updated_at=datetime.now()
-        )
-        db_conn.close()
+    insert_learning_progress(
+        user_id=current_user.id,
+        session_id=session_id,
+        mode=mode,
+        word=word,
+        round_num=round_num,
+        game_info=json.dumps(game_info, ensure_ascii=False),
+        user_answer=user_answer,
+        is_correct=is_correct,
+        response_time_ms=response_time_ms,
+        updated_at=datetime.now()
+    )
 
     return jsonify({"status": "success"})
 
@@ -625,15 +568,12 @@ def submit_progress_batch():
     if not prepared:
         return jsonify({"status": "success", "inserted": 0})
 
-    db_conn = get_db_connection()
-    if db_conn:
-        insert_learning_progress_batch(
-            user_id=current_user.id,
-            session_id=session_id,
-            records=prepared,
-            updated_at=datetime.now(),
-        )
-        db_conn.close()
+    insert_learning_progress_batch(
+        user_id=current_user.id,
+        session_id=session_id,
+        records=prepared,
+        updated_at=datetime.now(),
+    )
 
     return jsonify({"status": "success", "inserted": len(prepared)})
 
