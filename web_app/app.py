@@ -1,4 +1,22 @@
 import os
+
+# --- Eventlet cooperation for psycopg2 -------------------------------------
+# In production the app runs under `gunicorn -k eventlet`: the whole worker is a
+# single OS thread of cooperative greenlets. psycopg2 is a C extension that does
+# NOT yield to the eventlet hub on its own, so a single DB call would block every
+# other request in the worker until it returns (this caused the gateway timeouts).
+# psycogreen registers a wait-callback that makes psycopg2 cooperate. It must run
+# before any database connection is opened, so it lives at the very top — and only
+# when eventlet has actually monkey-patched the process (never in plain threading
+# dev, where it is unnecessary).
+try:
+    import eventlet.patcher
+    if eventlet.patcher.is_monkey_patched("socket"):
+        from psycogreen.eventlet import patch_psycopg
+        patch_psycopg()
+except Exception:
+    pass
+
 import secrets
 from dotenv import load_dotenv
 from flask import Flask, render_template, redirect, url_for, request, send_from_directory, session
