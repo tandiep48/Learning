@@ -23,12 +23,12 @@ from entity.competition.entity import (
 )
 
 
-def resolve_room_words(conn, passage_ids):
+def resolve_room_words(passage_ids):
     """Union the vocabulary of the selected passages into a deduped word list
     (rows as returned by get_passage_vocab, keyed by 'cn'). Shared by room
     creation (word count) and answer validation."""
     from db.content import get_passage_vocab
-    if not conn or not passage_ids:
+    if not passage_ids:
         return []
     collected = []
     seen = set()
@@ -40,9 +40,7 @@ def resolve_room_words(conn, passage_ids):
                 collected.append(row)
     return collected
 
-def create_competition_room(conn, room_code, host_user_id, level, passage_ids, word_count, max_users, section_timeout_minutes):
-    if not conn:
-        return None
+def create_competition_room(room_code, host_user_id, level, passage_ids, word_count, max_users, section_timeout_minutes):
     session = SessionLocal()
     try:
         room_id = session.execute(
@@ -67,7 +65,7 @@ def create_competition_room(conn, room_code, host_user_id, level, passage_ids, w
             )
         )
         session.commit()
-        return get_competition_room_by_code(conn, room_code)
+        return get_competition_room_by_code(room_code)
     except Exception as e:
         print(f"Database create_competition_room failed: {e}")
         session.rollback()
@@ -75,8 +73,8 @@ def create_competition_room(conn, room_code, host_user_id, level, passage_ids, w
     finally:
         SessionLocal.remove()
 
-def get_competition_room_by_code(conn, room_code):
-    if not conn or not room_code:
+def get_competition_room_by_code(room_code):
+    if not room_code:
         return None
     session = SessionLocal()
     try:
@@ -112,9 +110,9 @@ def get_competition_room_by_code(conn, room_code):
     finally:
         SessionLocal.remove()
 
-def join_competition_room(conn, room_code, user_id):
-    room = get_competition_room_by_code(conn, room_code)
-    if not conn or not room:
+def join_competition_room(room_code, user_id):
+    room = get_competition_room_by_code(room_code)
+    if not room:
         return None, "Room not found"
     session = SessionLocal()
     try:
@@ -139,7 +137,7 @@ def join_competition_room(conn, room_code, user_id):
             )
         )
         session.commit()
-        return get_competition_room_state(conn, room_code), None
+        return get_competition_room_state(room_code), None
     except Exception as e:
         print(f"Database join_competition_room failed: {e}")
         session.rollback()
@@ -147,9 +145,9 @@ def join_competition_room(conn, room_code, user_id):
     finally:
         SessionLocal.remove()
 
-def leave_competition_room(conn, room_code, user_id):
-    room = get_competition_room_by_code(conn, room_code)
-    if not conn or not room:
+def leave_competition_room(room_code, user_id):
+    room = get_competition_room_by_code(room_code)
+    if not room:
         return False
     session = SessionLocal()
     try:
@@ -168,9 +166,9 @@ def leave_competition_room(conn, room_code, user_id):
     finally:
         SessionLocal.remove()
 
-def get_competition_room_state(conn, room_code):
-    room = get_competition_room_by_code(conn, room_code)
-    if not conn or not room:
+def get_competition_room_state(room_code):
+    room = get_competition_room_by_code(room_code)
+    if not room:
         return None
     session = SessionLocal()
     try:
@@ -238,10 +236,10 @@ def get_competition_room_state(conn, room_code):
     finally:
         SessionLocal.remove()
 
-def add_competition_chat_message(conn, room_code, user_id, message):
-    room = get_competition_room_by_code(conn, room_code)
+def add_competition_chat_message(room_code, user_id, message):
+    room = get_competition_room_by_code(room_code)
     text = str(message or "").strip()[:1000]
-    if not conn or not room or not text:
+    if not room or not text:
         return None
     session = SessionLocal()
     try:
@@ -269,9 +267,9 @@ def add_competition_chat_message(conn, room_code, user_id, message):
     finally:
         SessionLocal.remove()
 
-def start_competition_session(conn, room_code, host_user_id):
-    room = get_competition_room_by_code(conn, room_code)
-    if not conn or not room:
+def start_competition_session(room_code, host_user_id):
+    room = get_competition_room_by_code(room_code)
+    if not room:
         return None, "Room not found"
     if int(room["host_user_id"]) != int(host_user_id):
         return None, "Only the host can start"
@@ -312,7 +310,7 @@ def start_competition_session(conn, room_code, host_user_id):
             .on_conflict_do_nothing(index_elements=["session_id", "user_id"])
         )
         session.commit()
-        return get_competition_session_state(conn, session_id), None
+        return get_competition_session_state(session_id), None
     except Exception as e:
         print(f"Database start_competition_session failed: {e}")
         session.rollback()
@@ -320,9 +318,9 @@ def start_competition_session(conn, room_code, host_user_id):
     finally:
         SessionLocal.remove()
 
-def get_active_competition_session(conn, room_code):
-    room = get_competition_room_by_code(conn, room_code)
-    if not conn or not room:
+def get_active_competition_session(room_code):
+    room = get_competition_room_by_code(room_code)
+    if not room:
         return None
     session = SessionLocal()
     try:
@@ -332,15 +330,15 @@ def get_active_competition_session(conn, room_code):
             .order_by(CompetitionSession.id.desc())
             .limit(1)
         ).first()
-        return get_competition_session_state(conn, row[0]) if row else None
+        return get_competition_session_state(row[0]) if row else None
     except Exception as e:
         print(f"Database get_active_competition_session failed: {e}")
         return None
     finally:
         SessionLocal.remove()
 
-def get_competition_session_state(conn, session_id):
-    if not conn or not session_id:
+def get_competition_session_state(session_id):
+    if not session_id:
         return None
     session = SessionLocal()
     try:
@@ -366,7 +364,7 @@ def get_competition_session_state(conn, session_id):
             "started_at": row[7].isoformat() if row[7] else None,
             "finished_at": row[8].isoformat() if row[8] else None,
         }
-        state["scores"] = get_competition_scores(conn, session_id)
+        state["scores"] = get_competition_scores(session_id)
         return state
     except Exception as e:
         print(f"Database get_competition_session_state failed: {e}")
@@ -395,13 +393,11 @@ def calculate_competition_points(activity_type, is_correct, response_time_ms, wr
     bonus = max(0.0, cfg["max_bonus"] - (seconds * cfg["decay"]))
     return max(0, round((cfg["base"] - penalty) + bonus))
 
-def record_competition_vocab_answer(conn, session_id, user_id, word, activity_type, is_correct, response_time_ms, wrong_attempts=0):
+def record_competition_vocab_answer(session_id, user_id, word, activity_type, is_correct, response_time_ms, wrong_attempts=0):
     """Record one participant's answer for a word/activity, awarding points per the
     per-mode scoring rules (speed bonus, minus per-error penalties on the matching
     modes). One-shot per (word, activity_type); the client reports correctness, timing
     and wrong-attempt count, matching the solo trainer's trust model."""
-    if not conn:
-        return None, "Database unavailable"
     word = str(word or "").strip()
     activity_type = str(activity_type or "").strip()
     if not word or activity_type not in ("typing", "listen", "meaning"):
@@ -456,7 +452,7 @@ def record_competition_vocab_answer(conn, session_id, user_id, word, activity_ty
         return {
             "is_correct": is_correct,
             "points": points,
-            "scores": get_competition_scores(conn, session_id),
+            "scores": get_competition_scores(session_id),
         }, None
     except Exception as e:
         print(f"Database record_competition_vocab_answer failed: {e}")
@@ -465,8 +461,8 @@ def record_competition_vocab_answer(conn, session_id, user_id, word, activity_ty
     finally:
         SessionLocal.remove()
 
-def get_competition_scores(conn, session_id):
-    if not conn or not session_id:
+def get_competition_scores(session_id):
+    if not session_id:
         return []
     session = SessionLocal()
     try:
@@ -498,9 +494,7 @@ def get_competition_scores(conn, session_id):
     finally:
         SessionLocal.remove()
 
-def mark_competition_participant_finished(conn, session_id, user_id):
-    if not conn:
-        return False
+def mark_competition_participant_finished(session_id, user_id):
     session = SessionLocal()
     try:
         sc = CompetitionScore
@@ -518,10 +512,8 @@ def mark_competition_participant_finished(conn, session_id, user_id):
     finally:
         SessionLocal.remove()
 
-def competition_all_participants_finished(conn, session_id):
+def competition_all_participants_finished(session_id):
     """True when every scored participant has reported finishing their run."""
-    if not conn:
-        return False
     session = SessionLocal()
     try:
         sc = CompetitionScore
@@ -540,12 +532,12 @@ def competition_all_participants_finished(conn, session_id):
     finally:
         SessionLocal.remove()
 
-def finalize_competition_session(conn, session_id):
+def finalize_competition_session(session_id):
     """Rank participants, mark the session ranked and free the room back to waiting.
     Called when everyone has finished or the room timer expires. Idempotent: a
     session already ranked is returned as-is."""
-    state = get_competition_session_state(conn, session_id)
-    if not conn or not state:
+    state = get_competition_session_state(session_id)
+    if not state:
         return None
     if state["status"] == "ranked":
         return state
@@ -585,7 +577,7 @@ def finalize_competition_session(conn, session_id):
             .values(status="waiting", updated_at=func.now())
         )
         session.commit()
-        return get_competition_session_state(conn, session_id)
+        return get_competition_session_state(session_id)
     except Exception as e:
         print(f"Database finalize_competition_session failed: {e}")
         session.rollback()
