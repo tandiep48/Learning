@@ -7,7 +7,7 @@ vocabulary and grammar.
 Extracted from the former monolithic db.py.
 """
 
-from sqlalchemy import select, func, distinct, cast, and_, Integer
+from sqlalchemy import select, func, distinct, cast, and_, or_, Integer
 from sqlalchemy.orm import aliased
 
 from entity.database import SessionLocal
@@ -19,6 +19,94 @@ from entity.record.entity import VocabRecord
 from entity.translation.entity import Translation
 from entity.grammar_rule.entity import GrammarRule
 from entity.grammar_context.entity import GrammarContext
+from entity.question.entity import Question
+
+
+# Columns returned for practice/exam question rows (question_bank).
+_QUESTION_COLS = [
+    "level", "lesson", "no", "skill", "type", "content", "question",
+    "answer", "audio_key", "image", "options", "progress", "unit_id", "category",
+]
+
+
+def _question_select():
+    return select(
+        Question.level, Question.lesson, Question.no, Question.skill, Question.type,
+        Question.content, Question.question, Question.answer, Question.audio_key,
+        Question.image, Question.options, Question.progress, Question.unit_id,
+        Question.category,
+    )
+
+
+def list_practice_lessons(category, level):
+    """Distinct lessons available for a practice/exam level, as strings."""
+    session = SessionLocal()
+    try:
+        rows = session.execute(
+            select(distinct(Question.lesson))
+            .where(Question.category == category, Question.level == level)
+            .order_by(Question.lesson)
+        ).all()
+        return [str(r[0]) for r in rows]
+    finally:
+        SessionLocal.remove()
+
+
+def get_practice_questions(category, level, lesson):
+    """All questions for one (category, level, lesson), ordered by question no."""
+    session = SessionLocal()
+    try:
+        rows = session.execute(
+            _question_select()
+            .where(Question.category == category, Question.level == level, Question.lesson == lesson)
+            .order_by(Question.no)
+        ).all()
+        return [dict(zip(_QUESTION_COLS, r)) for r in rows]
+    finally:
+        SessionLocal.remove()
+
+
+def get_practice_progress_group(category, level, lesson, progress):
+    """All questions for one (category, level, lesson, progress) group, ordered by no."""
+    session = SessionLocal()
+    try:
+        rows = session.execute(
+            _question_select()
+            .where(
+                Question.category == category, Question.level == level,
+                Question.lesson == lesson, Question.progress == progress,
+            )
+            .order_by(Question.no)
+        ).all()
+        return [dict(zip(_QUESTION_COLS, r)) for r in rows]
+    finally:
+        SessionLocal.remove()
+
+
+def get_practice_questions_multi(items):
+    """Questions for several (category, level, lesson, progress) groups at once.
+    `items` is a list of dicts with those keys; ordered by level, lesson, progress, no."""
+    conds = [
+        and_(
+            Question.category == item.get("category", "practice"),
+            Question.level == item["level"],
+            Question.lesson == item["lesson"],
+            Question.progress == item["progress"],
+        )
+        for item in items
+    ]
+    if not conds:
+        return []
+    session = SessionLocal()
+    try:
+        rows = session.execute(
+            _question_select()
+            .where(or_(*conds))
+            .order_by(Question.level, Question.lesson, Question.progress, Question.no)
+        ).all()
+        return [dict(zip(_QUESTION_COLS, r)) for r in rows]
+    finally:
+        SessionLocal.remove()
 
 
 def get_passages_summary(hsk_level=None):

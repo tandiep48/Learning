@@ -5,8 +5,10 @@ import ast
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from db import (
-    get_db_connection, insert_practice_progress, get_recommended_practices,
+    insert_practice_progress, get_recommended_practices,
     get_practice_history_sessions, get_practice_session_detail,
+    list_practice_lessons, get_practice_questions, get_practice_questions_multi,
+    get_practice_progress_group,
 )
 
 # sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -55,22 +57,8 @@ def get_practice_lessons(number):
     category = request.args.get('category', 'practice')
     if category not in ('practice', 'exam'):
         category = 'practice'
-    db_conn = get_db_connection()
-    if not db_conn:
-        return jsonify({'error': 'Database unavailable'}), 503
 
-    try:
-        with db_conn.cursor() as cur:
-            cur.execute("""
-                SELECT DISTINCT lesson
-                FROM question_bank
-                WHERE category = %s AND level = %s
-                ORDER BY lesson
-            """, (category, number))
-            lessons = [str(row[0]) for row in cur.fetchall()]
-    finally:
-        db_conn.close()
-
+    lessons = list_practice_lessons(category, number)
     if not lessons:
         return jsonify({'error': f'No lessons found for {category} {number}'}), 404
 
@@ -83,25 +71,8 @@ def get_practice_details(number, lesson_id):
     category = request.args.get('category', 'practice')
     if category not in ('practice', 'exam'):
         category = 'practice'
-    db_conn = get_db_connection()
-    if not db_conn:
-        return jsonify({'error': 'Database unavailable'}), 503
 
-    try:
-        with db_conn.cursor() as cur:
-            cur.execute("""
-                SELECT level, lesson, no, skill, type, content, question,
-                       answer, audio_key, image, options, progress, unit_id, category
-                FROM question_bank
-                WHERE category = %s AND level = %s AND lesson = %s
-                ORDER BY no
-            """, (category, number, lesson_id))
-            cols = ['level', 'lesson', 'no', 'skill', 'type', 'content', 'question',
-                    'answer', 'audio_key', 'image', 'options', 'progress', 'unit_id', 'category']
-            rows = [dict(zip(cols, r)) for r in cur.fetchall()]
-    finally:
-        db_conn.close()
-
+    rows = get_practice_questions(category, number, lesson_id)
     if not rows:
         return jsonify({'error': f'No {category} questions found for lesson {lesson_id}'}), 404
 
@@ -150,33 +121,7 @@ def get_practice_multi():
     if not items:
         return jsonify({'error': 'No items selected'}), 400
 
-    db_conn = get_db_connection()
-    if not db_conn:
-        return jsonify({'error': 'Database unavailable'}), 503
-
-    try:
-        where_clauses = []
-        params = []
-        for item in items:
-            where_clauses.append("(category = %s AND level = %s AND lesson = %s AND progress = %s)")
-            params.extend([item.get('category', 'practice'), item['level'], item['lesson'], item['progress']])
-
-        questions_sql = f"""
-            SELECT level, lesson, no, skill, type, content, question,
-                   answer, audio_key, image, options, progress, unit_id, category
-            FROM question_bank
-            WHERE {' OR '.join(where_clauses)}
-            ORDER BY level, lesson, progress, no
-        """
-        
-        with db_conn.cursor() as cur:
-            cur.execute(questions_sql, params)
-            cols = ['level', 'lesson', 'no', 'skill', 'type', 'content', 'question',
-                    'answer', 'audio_key', 'image', 'options', 'progress', 'unit_id', 'category']
-            rows = [dict(zip(cols, r)) for r in cur.fetchall()]
-    finally:
-        db_conn.close()
-
+    rows = get_practice_questions_multi(items)
     if not rows:
         return jsonify({'error': 'No questions found for the selected items'}), 404
 
@@ -232,25 +177,22 @@ def submit_practice():
     hsk_level = data.get("hsk_level")
     lesson = data.get("lesson")
     user_answers = data.get("answers", []) # list of { question_no, skill, type, user_answer, is_correct }
-    
-    db_conn = get_db_connection()
-    if db_conn:
-        for ans in user_answers:
-            insert_practice_progress(
-                user_id=current_user.id,
-                session_id=session_id,
-                hsk_level=ans.get("hsk_level", hsk_level),
-                lesson=str(ans.get("lesson", lesson)),
-                question_no=ans.get("question_no"),
-                skill=ans.get("skill"),
-                question_type=ans.get("type"),
-                user_answer=ans.get("user_answer"),
-                is_correct=ans.get("is_correct"),
-                response_time_ms=ans.get("response_time_ms"),
-                category=ans.get("category", "practice")
-            )
-        db_conn.close()
-        
+
+    for ans in user_answers:
+        insert_practice_progress(
+            user_id=current_user.id,
+            session_id=session_id,
+            hsk_level=ans.get("hsk_level", hsk_level),
+            lesson=str(ans.get("lesson", lesson)),
+            question_no=ans.get("question_no"),
+            skill=ans.get("skill"),
+            question_type=ans.get("type"),
+            user_answer=ans.get("user_answer"),
+            is_correct=ans.get("is_correct"),
+            response_time_ms=ans.get("response_time_ms"),
+            category=ans.get("category", "practice")
+        )
+
     return jsonify({"status": "success"})
 
 
@@ -272,20 +214,13 @@ def get_recommendations():
             limit = min(requested_limit, 50)
     except (TypeError, ValueError):
         limit = None
-    
-    db_conn = get_db_connection()
-    if not db_conn:
-        return jsonify({'error': 'Database unavailable'}), 503
 
-    try:
-        groups = get_recommended_practices(
-            current_user.id,
-            threshold=0.80,
-            limit=limit,
-            status_filter=status_filter,
-        )
-    finally:
-        db_conn.close()
+    groups = get_recommended_practices(
+        current_user.id,
+        threshold=0.80,
+        limit=limit,
+        status_filter=status_filter,
+    )
 
     # groups carry lightweight metadata only; the practice screen loads full questions
     # on demand, so the card just needs the question count.
@@ -319,27 +254,9 @@ def get_progress_group(level, lesson, progress):
     """Return all questions for a specific progress group from question_bank."""
     category = request.args.get('category', 'practice')
 
-    db_conn = get_db_connection()
-    if not db_conn:
-        return jsonify({'error': 'Database unavailable'}), 503
-
-    try:
-        with db_conn.cursor() as cur:
-            cur.execute("""
-                SELECT no, skill, type, content, question, answer,
-                       audio_key, image, options, progress, unit_id, level, category
-                FROM question_bank
-                WHERE category = %s AND level = %s
-                  AND lesson = %s AND progress = %s
-                ORDER BY no
-            """, (category, level, lesson, progress))
-            cols = ['no','skill','type','content','question','answer',
-                    'audio_key','image','options','progress','unit_id','level','category']
-            questions = [dict(zip(cols, r)) for r in cur.fetchall()]
-            for q in questions:
-                q['audio_key'] = parse_audio_key(q['audio_key'])
-    finally:
-        db_conn.close()
+    questions = get_practice_progress_group(category, level, lesson, progress)
+    for q in questions:
+        q['audio_key'] = parse_audio_key(q['audio_key'])
 
     if not questions:
         return jsonify({'error': 'Group not found'}), 404
@@ -383,17 +300,10 @@ def get_practice_history():
     except (TypeError, ValueError):
         page = 1
 
-    db_conn = get_db_connection()
-    if not db_conn:
-        return jsonify({'error': 'Database unavailable'}), 503
-
-    try:
-        sessions, has_more = get_practice_history_sessions(
-            current_user.id,
-            hsk_level=hsk_level, category=category, date=date, sort=sort, page=page,
-        )
-    finally:
-        db_conn.close()
+    sessions, has_more = get_practice_history_sessions(
+        current_user.id,
+        hsk_level=hsk_level, category=category, date=date, sort=sort, page=page,
+    )
 
     return jsonify({'sessions': sessions, 'page': page, 'has_more': has_more})
 
@@ -403,15 +313,7 @@ def get_practice_history():
 def get_practice_history_detail(session_id):
     """Return every answered question in one of the current user's sessions,
     with full question detail and the user's own answer."""
-    db_conn = get_db_connection()
-    if not db_conn:
-        return jsonify({'error': 'Database unavailable'}), 503
-
-    try:
-        rows = get_practice_session_detail(current_user.id, session_id)
-    finally:
-        db_conn.close()
-
+    rows = get_practice_session_detail(current_user.id, session_id)
     if not rows:
         return jsonify({'error': 'Session not found'}), 404
 
