@@ -33,7 +33,7 @@ def resolve_room_words(conn, passage_ids):
     collected = []
     seen = set()
     for pid in passage_ids:
-        for row in get_passage_vocab(conn, pid):
+        for row in get_passage_vocab(pid):
             cn = row.get("cn")
             if cn and cn not in seen:
                 seen.add(cn)

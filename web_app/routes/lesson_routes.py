@@ -175,7 +175,7 @@ def log_lesson_event(user_id, session_id, passage_id, line_id, task_type,
 def get_passages():
     hsk_level = request.args.get('hsk_level')
     conn = get_db_connection()
-    passages = get_passages_summary(conn, hsk_level)
+    passages = get_passages_summary(hsk_level)
     conn.close()
     return jsonify({"passages": passages})
 
@@ -260,7 +260,7 @@ def get_passage_detail(passage_id):
             "title": "Number",
         }})
     conn = get_db_connection()
-    passage = get_passage_content(conn, passage_id)
+    passage = get_passage_content(passage_id)
     conn.close()
     if not passage:
         return jsonify({"error": "Passage not found"}), 404
@@ -271,7 +271,7 @@ def get_passage_vocab_api(passage_id):
     if is_number_part(passage_id):
         return jsonify({"passage_id": passage_id, "vocab": number_vocab_rows()})
     conn = get_db_connection()
-    vocab = get_passage_vocab(conn, passage_id)
+    vocab = get_passage_vocab(passage_id)
     conn.close()
     return jsonify({"passage_id": passage_id, "vocab": vocab})
 
@@ -284,7 +284,7 @@ def get_passage_grammar(passage_id):
 
         # Show every grammar rule in the lesson (all parts), not just this part.
         conn = get_db_connection()
-        grammar = get_grammar_for_lesson(conn, hsk_level, lesson)
+        grammar = get_grammar_for_lesson(hsk_level, lesson)
         conn.close()
         return jsonify({"grammar": grammar})
     except Exception as e:
@@ -304,7 +304,7 @@ def start_session():
     conn = get_db_connection()
     passages = []
     for pid in passage_ids:
-        passage = get_passage_content(conn, pid)
+        passage = get_passage_content(pid)
         if passage:
             passages.append((pid, passage))
     if not passages:

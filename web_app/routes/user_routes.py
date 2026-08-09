@@ -421,7 +421,7 @@ def dashboard_current_lesson():
         vocab_rows = []
         seen_words = set()
         for passage_id in passage_ids:
-            for row in get_passage_vocab(conn, passage_id):
+            for row in get_passage_vocab(passage_id):
                 normalized = normalize_dashboard_vocab_row(row)
                 word = normalized.get("word")
                 if word and word not in seen_words:

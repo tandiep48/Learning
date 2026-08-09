@@ -192,7 +192,7 @@ def normalize_vocab_row(row):
 
 def get_full_lesson_records():
     conn = get_db_connection()
-    df = get_course_vocab(conn)
+    df = get_course_vocab()
     conn.close()
     if not df.empty:
         return df[['word','pinyin','meaning_en','meaning_vn', 'audio_key', 'level']].dropna(subset=['word']).drop_duplicates(subset=['word']).reset_index(drop=True)
@@ -344,7 +344,7 @@ def get_vocab_table():
         try:
             seen = set()
             for pid in passage_ids:
-                for row in get_passage_vocab(db_conn, pid):
+                for row in get_passage_vocab(pid):
                     normalized = normalize_vocab_row(row)
                     word = normalized.get("word")
                     if word and word not in seen:
@@ -434,7 +434,7 @@ def resolve_words():
             return jsonify({"error": "Database connection failed."}), 500
         try:
             for pid in passage_ids:
-                rows = number_vocab_rows() if is_number_part(pid) else get_passage_vocab(db_conn, pid)
+                rows = number_vocab_rows() if is_number_part(pid) else get_passage_vocab(pid)
                 for row in rows:
                     add(row.get("cn"))
         finally:
@@ -493,7 +493,7 @@ def check_has_history():
     db_conn = get_db_connection()
     if not db_conn:
         return jsonify({"has_history": False})
-    result = has_vocab_history(db_conn, current_user.id)
+    result = has_vocab_history(current_user.id)
     db_conn.close()
     return jsonify({"has_history": result})
 
@@ -508,7 +508,7 @@ def get_lessons_for_level(hsk_level):
     if not db_conn:
         return jsonify({"error": "Database connection failed."}), 500
 
-    lessons = get_vocab_lessons(db_conn, hsk_level)
+    lessons = get_vocab_lessons(hsk_level)
     db_conn.close()
 
     if not lessons:
@@ -537,7 +537,7 @@ def preview_mode():
         words = get_hard_stroke_learned_words(db_conn, current_user.id)
     elif mode == "6":
         passage_id = data.get("passage_id")
-        passage_vocab = number_vocab_rows() if is_number_part(passage_id) else get_passage_vocab(db_conn, passage_id)
+        passage_vocab = number_vocab_rows() if is_number_part(passage_id) else get_passage_vocab(passage_id)
         words = [w["cn"] for w in passage_vocab]
     else:
         db_conn.close()

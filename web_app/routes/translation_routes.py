@@ -19,7 +19,7 @@ def get_lesson_translation():
     if not conn:
         return jsonify({"error": "Database connection failed"}), 500
     try:
-        translations = get_lesson_translations(conn, hsk_level, lesson)
+        translations = get_lesson_translations(hsk_level, lesson)
         return jsonify({"translations": translations})
     finally:
         conn.close()

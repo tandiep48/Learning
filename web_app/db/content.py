@@ -21,9 +21,7 @@ from entity.grammar_rule.entity import GrammarRule
 from entity.grammar_context.entity import GrammarContext
 
 
-def get_passages_summary(conn, hsk_level=None):
-    if not conn:
-        return []
+def get_passages_summary(hsk_level=None):
     session = SessionLocal()
     try:
         q = (
@@ -46,11 +44,9 @@ def get_passages_summary(conn, hsk_level=None):
         SessionLocal.remove()
 
 
-def get_lesson_translations(conn, hsk_level, lesson):
+def get_lesson_translations(hsk_level, lesson):
     """Return every translation row for one lesson, e.g. HSK1 + lesson 2 -> 'H1_2_%'.
     Ordered by the trailing index numerically so H1_2_10 follows H1_2_9, not H1_2_1."""
-    if not conn:
-        return []
     digits = "".join(ch for ch in str(hsk_level or "") if ch.isdigit())
     lesson_num = "".join(ch for ch in str(lesson or "") if ch.isdigit())
     if not digits or not lesson_num:
@@ -69,9 +65,7 @@ def get_lesson_translations(conn, hsk_level, lesson):
         SessionLocal.remove()
 
 
-def get_passage_content(conn, passage_id):
-    if not conn:
-        return None
+def get_passage_content(passage_id):
     session = SessionLocal()
     try:
         hsk_level = session.execute(
@@ -109,10 +103,8 @@ def get_passage_content(conn, passage_id):
         SessionLocal.remove()
 
 
-def get_course_vocab(conn):
+def get_course_vocab():
     import pandas as pd
-    if not conn:
-        return pd.DataFrame()
     session = SessionLocal()
     try:
         rows = session.execute(
@@ -129,10 +121,8 @@ def get_course_vocab(conn):
         SessionLocal.remove()
 
 
-def has_vocab_history(conn, user_id):
+def has_vocab_history(user_id):
     """Returns True if the user has any vocab_records entries."""
-    if not conn:
-        return False
     session = SessionLocal()
     try:
         return session.execute(
@@ -145,14 +135,12 @@ def has_vocab_history(conn, user_id):
         SessionLocal.remove()
 
 
-def get_vocab_lessons(conn, hsk_level, lesson_size=10):
+def get_vocab_lessons(hsk_level, lesson_size=10):
     """
     Returns a list of lesson groups for a given HSK level.
     Each lesson contains lesson_size words.
     Returns: [{lesson: 1, start_idx: 0, end_idx: 9, word_count: 10, preview: ['你','好',...]}, ...]
     """
-    if not conn:
-        return []
     session = SessionLocal()
     try:
         words = [
@@ -179,9 +167,7 @@ def get_vocab_lessons(conn, hsk_level, lesson_size=10):
         SessionLocal.remove()
 
 
-def get_all_vn_meanings(conn):
-    if not conn:
-        return []
+def get_all_vn_meanings():
     session = SessionLocal()
     try:
         rows = session.execute(
@@ -194,10 +180,8 @@ def get_all_vn_meanings(conn):
         SessionLocal.remove()
 
 
-def get_passage_vocab(conn, passage_id):
+def get_passage_vocab(passage_id):
     """Return vocabulary words linked to a passage via passage_vocabulary."""
-    if not conn:
-        return []
     session = SessionLocal()
     try:
         rows = session.execute(
@@ -225,7 +209,7 @@ def get_passage_vocab(conn, passage_id):
         SessionLocal.remove()
 
 
-def get_grammar_for_lesson(conn, hsk_level, lesson):
+def get_grammar_for_lesson(hsk_level, lesson):
     """All grammar rules for a whole lesson (every part), ordered by insertion id.
     The caller splits the flat list into sections at each type=1 row."""
     session = SessionLocal()
