@@ -332,7 +332,6 @@ function playCurrentAudio() {
         setCurrentAudioButtonPlaying(false);
         return;
     }
-    audioEl.currentTime = 0;
     playTrainerAudio(audioEl);
 }
 
@@ -341,9 +340,9 @@ function setCurrentAudioButtonPlaying(playing) {
     const icon = button?.querySelector('.fa-solid');
     if (!button || !icon) return;
     icon.classList.toggle('fa-play', !playing);
-    icon.classList.toggle('fa-stop', playing);
+    icon.classList.toggle('fa-pause', playing);
     icon.classList.toggle('play-icon', !playing);
-    button.title = playing ? t('lesson.stop_audio') : t('lesson.play_audio');
+    button.title = playing ? t('lesson.pause_audio') : t('lesson.play_audio');
     button.setAttribute('aria-label', button.title);
 }
 
