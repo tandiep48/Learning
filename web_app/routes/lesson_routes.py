@@ -23,6 +23,8 @@ from db import (
     mark_lesson_part_completed,
     mark_passage_words_mastered,
     recompute_user_level,
+    get_books_summary,
+    get_book_lessons,
 )
 from number_part import NUMBER_PART_ID, is_number_part, number_vocab_rows
 
@@ -187,6 +189,21 @@ def get_picker_progress():
     return jsonify(get_lesson_picker_progress(current_user.id, hsk_level))
 
 
+@lesson_bp.route('/books', methods=['GET'])
+@login_required
+def list_books():
+    return jsonify({"books": get_books_summary(current_user.id)})
+
+
+@lesson_bp.route('/book/<code>', methods=['GET'])
+@login_required
+def get_book(code):
+    detail = get_book_lessons(current_user.id, code)
+    if detail is None:
+        return jsonify({"error": "Book not found"}), 404
+    return jsonify(detail)
+
+
 @lesson_bp.route('/part-complete', methods=['POST'])
 @login_required
 def complete_lesson_part():
@@ -222,12 +239,17 @@ def complete_lesson_part():
     if not mark_lesson_part_completed(current_user.id, passage_id,
                                       completed=completed, score_pct=store_score):
         return jsonify({"error": "Could not save lesson progress"}), 500
+
+    # Topic-book parts (passage_id like "AML_1_1") have no vocab and don't feed the HSK
+    # level, so skip word mastery and the level recompute for them.
+    is_hsk_passage = bool(re.match(r'^H\d', passage_id or ""))
+
     # Only a perfect round grants mastery of the passage's words.
     mastered = []
-    if is_perfect:
+    if is_perfect and is_hsk_passage:
         mastered = mark_passage_words_mastered(current_user.id, passage_id)
     # Finishing a part may complete a lesson/level, so re-derive the HSK level.
-    new_level = recompute_user_level(current_user.id)
+    new_level = recompute_user_level(current_user.id) if is_hsk_passage else None
     if new_level:
         current_user.level = new_level
     return jsonify({"status": "success", "passage_id": passage_id,
@@ -322,7 +344,8 @@ def start_session():
             "options": m_options,
             "correct_answer": correct_meaning,
             "audio_key": line.get("audio_key"),
-            "hsk_level": passage.get("hsk_level")
+            "hsk_level": passage.get("hsk_level"),
+            "book_code": passage.get("book_code")
         })
 
         pools["listening"].append({
@@ -333,7 +356,8 @@ def start_session():
             "correct_answer": correct_meaning,
             "audio_key": line.get("audio_key"),
             "content": line["content"],  # provided for reveal
-            "hsk_level": passage.get("hsk_level")
+            "hsk_level": passage.get("hsk_level"),
+            "book_code": passage.get("book_code")
         })
 
         tokens = line.get("tokens", [])
@@ -349,7 +373,8 @@ def start_session():
                 "shuffled_tokens": shuffled_tokens,
                 "correct_answer": "".join(tokens),
                 "audio_key": line.get("audio_key"),
-                "hsk_level": passage.get("hsk_level")
+                "hsk_level": passage.get("hsk_level"),
+            "book_code": passage.get("book_code")
             })
 
         pools["typing"].append({
@@ -360,7 +385,8 @@ def start_session():
             "correct_answer": line["content"],
             "audio_key": line.get("audio_key"),
             "pinyin": line.get("pinyin", ""),
-            "hsk_level": passage.get("hsk_level")
+            "hsk_level": passage.get("hsk_level"),
+            "book_code": passage.get("book_code")
         })
 
     # Target count depends on the mode (part vs master) and the lesson's HSK level.

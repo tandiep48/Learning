@@ -204,6 +204,106 @@ def get_lesson_picker_progress(user_id, hsk_level):
         SessionLocal.remove()
 
 
+def _lesson_sort_key(value):
+    """Numeric-aware sort key so lesson/part '2' comes before '10' (not string order)."""
+    s = str(value)
+    return (0, int(s)) if s.isdigit() else (1, s)
+
+
+def get_books_summary(user_id):
+    """One row per topic book (book_code) with cover URL and the user's completion counts.
+    Books have no vocab, so this is passage/part based only."""
+    session = SessionLocal()
+    try:
+        rows = session.execute(
+            select(LessonPassage.passage_id, LessonPassage.book_code)
+            .where(LessonPassage.book_code.isnot(None))
+        ).all()
+
+        completed = {
+            pid for (pid,) in session.execute(
+                select(UserLessonPartProgress.passage_id).where(
+                    UserLessonPartProgress.user_id == user_id,
+                    UserLessonPartProgress.lesson_trainer_completed_at.isnot(None),
+                )
+            ).all()
+        }
+
+        books = {}
+        for passage_id, code in rows:
+            book = books.setdefault(code, {
+                "book_code": code,
+                "cover_url": f"/lesson-cover/{code}",
+                "part_count": 0,
+                "done_count": 0,
+                "_lessons": set(),
+            })
+            id_parts = str(passage_id).split("_")
+            book["_lessons"].add(id_parts[1] if len(id_parts) >= 2 else "Other")
+            book["part_count"] += 1
+            if passage_id in completed:
+                book["done_count"] += 1
+
+        result = []
+        for book in books.values():
+            book["lesson_count"] = len(book.pop("_lessons"))
+            result.append(book)
+        result.sort(key=lambda b: b["book_code"])
+        return result
+    finally:
+        SessionLocal.remove()
+
+
+def get_book_lessons(user_id, book_code):
+    """Lessons → parts for one book, each part carrying the user's completion/progress.
+    Returns None if the book has no passages (unknown code)."""
+    session = SessionLocal()
+    try:
+        rows = session.execute(
+            select(LessonPassage.passage_id)
+            .where(LessonPassage.book_code == book_code)
+        ).all()
+        if not rows:
+            return None
+
+        progress = {
+            pid: (completed_at is not None, score or 0)
+            for pid, completed_at, score in session.execute(
+                select(
+                    UserLessonPartProgress.passage_id,
+                    UserLessonPartProgress.lesson_trainer_completed_at,
+                    UserLessonPartProgress.score_pct,
+                ).where(UserLessonPartProgress.user_id == user_id)
+            ).all()
+        }
+
+        lessons = {}
+        for (passage_id,) in rows:
+            id_parts = str(passage_id).split("_")
+            lesson_num = id_parts[1] if len(id_parts) >= 2 else "Other"
+            part_num = id_parts[2] if len(id_parts) >= 3 else "1"
+            done, score = progress.get(passage_id, (False, 0))
+            lesson = lessons.setdefault(lesson_num, {"lesson": lesson_num, "parts": []})
+            lesson["parts"].append({
+                "passage_id": passage_id,
+                "part": part_num,
+                "completed": done,
+                "progress_pct": max(100 if done else 0, score),
+            })
+
+        ordered = []
+        for lesson_num in sorted(lessons, key=_lesson_sort_key):
+            lesson = lessons[lesson_num]
+            lesson["parts"].sort(key=lambda p: _lesson_sort_key(p["part"]))
+            lesson["part_count"] = len(lesson["parts"])
+            lesson["done_count"] = sum(1 for p in lesson["parts"] if p["completed"])
+            ordered.append(lesson)
+
+        return {"book_code": book_code, "lessons": ordered}
+    finally:
+        SessionLocal.remove()
+
+
 def mark_passage_words_mastered(user_id, passage_id):
     """
     Record that the user mastered every vocabulary word of a passage by completing its

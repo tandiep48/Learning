@@ -156,13 +156,13 @@ def get_lesson_translations(hsk_level, lesson):
 def get_passage_content(passage_id):
     session = SessionLocal()
     try:
-        hsk_level = session.execute(
-            select(LessonPassage.hsk_level).where(LessonPassage.passage_id == passage_id)
-        ).scalar_one_or_none()
-        if hsk_level is None and not session.execute(
-            select(LessonPassage.passage_id).where(LessonPassage.passage_id == passage_id)
-        ).first():
+        meta = session.execute(
+            select(LessonPassage.hsk_level, LessonPassage.book_code)
+            .where(LessonPassage.passage_id == passage_id)
+        ).first()
+        if meta is None:
             return None
+        hsk_level, book_code = meta[0], meta[1]
 
         rows = session.execute(
             select(
@@ -186,7 +186,8 @@ def get_passage_content(passage_id):
             }
             for r in rows
         ]
-        return {"passage_id": passage_id, "hsk_level": hsk_level, "lines": lines}
+        return {"passage_id": passage_id, "hsk_level": hsk_level,
+                "book_code": book_code, "lines": lines}
     finally:
         SessionLocal.remove()
 

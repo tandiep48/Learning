@@ -243,6 +243,11 @@ def serve_lesson_image(hsk, filename):
         formatted_filename = hsk.upper() + formatted_filename[len(hsk):]
     return redirect(f"{GCS_BUCKET_URL}/lesson_images/{hsk.upper()}/{formatted_filename}")
 
+@app.route('/lesson-cover/<code>')
+def serve_lesson_cover(code):
+    # Cover image for a topic "book" lesson, e.g. /lesson-cover/AML -> lesson_cover/AML.png
+    return redirect(f"{GCS_BUCKET_URL}/lesson_cover/{code.upper()}.png")
+
 if __name__ == '__main__':
     debug_mode = os.getenv('FLASK_DEBUG', '').lower() in ('1', 'true', 'yes', 'on')
     port = int(os.getenv('PORT', 5000))
