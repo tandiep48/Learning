@@ -125,6 +125,136 @@ function formatPassageContext(passageId) {
     return `${hsk} - ${lesson} - ${part}`;
 }
 
+// ─── Books tab ──────────────────────────────────────────────────────────────
+let booksLoaded = false;
+let currentBook = null;   // { book_code, lessons: [...] }
+
+function switchLearningTab(tab) {
+    const isBooks = tab === 'books';
+    document.getElementById('tab-hsk').hidden = isBooks;
+    document.getElementById('tab-books').hidden = !isBooks;
+    document.getElementById('learning-tab-hsk').classList.toggle('active', !isBooks);
+    document.getElementById('learning-tab-books').classList.toggle('active', isBooks);
+    if (isBooks && !booksLoaded) {
+        loadBooks();
+    }
+}
+
+async function loadBooks() {
+    booksLoaded = true;
+    const grid = document.getElementById('books-grid');
+    try {
+        const res = await fetch('/api/lesson/books');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'load failed');
+        const books = data.books || [];
+        if (books.length === 0) {
+            grid.innerHTML = `<p style="color:var(--text-muted); text-align:center;">${t('books.no_books_found')}</p>`;
+            return;
+        }
+        grid.innerHTML = '';
+        books.forEach(book => {
+            const card = document.createElement('div');
+            card.className = 'book-card';
+            const lessons = t('books.lessons_count', { count: book.lesson_count });
+            let parts = t('books.parts_count', { count: book.part_count });
+            if (book.done_count > 0) parts += ` · ${book.done_count}/${book.part_count}`;
+            card.innerHTML = `
+                <div class="book-card-img-wrap">
+                    <img class="book-card-img" src="${escapeHtml(book.cover_url)}" alt="${escapeHtml(book.book_code)}" loading="lazy">
+                </div>
+                <div class="book-card-body">
+                    <div class="book-card-title">${escapeHtml(book.book_code)}</div>
+                    <div class="book-card-count">${escapeHtml(lessons)}</div>
+                    <div class="book-card-count">${escapeHtml(parts)}</div>
+                </div>`;
+            card.addEventListener('click', () => openBook(book.book_code));
+            grid.appendChild(card);
+        });
+    } catch (e) {
+        console.warn('Could not load books', e);
+        grid.innerHTML = `<p style="color:var(--danger); text-align:center;">${t('books.failed_load_books')}</p>`;
+    }
+}
+
+async function openBook(code) {
+    const list = document.getElementById('books-lesson-list');
+    document.getElementById('books-lessons-title').textContent = code;
+    document.getElementById('books-lessons-cover').src = `/lesson-cover/${encodeURIComponent(code)}`;
+    list.innerHTML = `<p style="color:var(--text-muted); text-align:center;">${t('books.loading_lessons')}</p>`;
+    showBookScreen('lessons');
+    try {
+        const res = await fetch(`/api/lesson/book/${encodeURIComponent(code)}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'load failed');
+        currentBook = data;
+        renderBookLessons();
+    } catch (e) {
+        console.warn('Could not load book', e);
+        list.innerHTML = `<p style="color:var(--danger); text-align:center;">${t('books.failed_load_lessons')}</p>`;
+    }
+}
+
+function renderBookLessons() {
+    const list = document.getElementById('books-lesson-list');
+    const lessons = currentBook?.lessons || [];
+    document.getElementById('books-lessons-sub').textContent =
+        t('books.lessons_count', { count: lessons.length });
+    list.innerHTML = '';
+    lessons.forEach(lesson => {
+        const card = document.createElement('div');
+        card.className = 'lesson-card';
+        const title = `${t('picker.lesson_prefix')} ${lesson.lesson}`;
+        let count = t('books.parts_count', { count: lesson.part_count });
+        if (lesson.done_count > 0) count += ` · ${lesson.done_count}/${lesson.part_count}`;
+        card.innerHTML = `
+            <div class="lesson-card-body">
+                <div class="lesson-card-title">${escapeHtml(title)}</div>
+                <div class="lesson-card-count">${escapeHtml(count)}</div>
+            </div>`;
+        card.addEventListener('click', () => openBookLesson(lesson));
+        list.appendChild(card);
+    });
+}
+
+function openBookLesson(lesson) {
+    document.getElementById('books-parts-title').textContent =
+        `${currentBook.book_code} · ${t('picker.lesson_prefix')} ${lesson.lesson}`;
+    const list = document.getElementById('books-part-list');
+    list.innerHTML = '';
+    (lesson.parts || []).forEach(part => {
+        const btn = document.createElement('div');
+        btn.className = 'part-list-item';
+        const partName = `${t('picker.part_prefix')} ${part.part}`;
+        const done = part.completed
+            ? `<span class="book-part-done">✓ ${escapeHtml(t('books.completed'))}</span>`
+            : '';
+        btn.innerHTML = `<div class="part-list-title">${escapeHtml(partName)} ${done}</div>`;
+        btn.addEventListener('click', () => {
+            // Open the reading/lesson summary (sentence view) first, like HSK parts.
+            window.location.href =
+                `/reading?passage_id=${encodeURIComponent(part.passage_id)}&mode=lesson-learner&flow=lesson-part`;
+        });
+        list.appendChild(btn);
+    });
+    showBookScreen('parts');
+}
+
+function showBookScreen(name) {
+    document.getElementById('books-screen-grid').hidden = name !== 'grid';
+    document.getElementById('books-screen-lessons').hidden = name !== 'lessons';
+    document.getElementById('books-screen-parts').hidden = name !== 'parts';
+}
+
+function showBooksGrid() { showBookScreen('grid'); }
+function showBookLessons() { showBookScreen('lessons'); }
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+    ));
+}
+
 async function saveRecentLearning() {
     if (!selectedPassage?.passage_id) return;
     try {

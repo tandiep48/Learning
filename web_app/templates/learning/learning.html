@@ -6,24 +6,78 @@
     <title>{{ t('nav.learning') }}</title>
     <link rel="stylesheet" href="/static/shared/styles.css?v=7">
     <link rel="stylesheet" href="/static/shared/passage_picker.css?v=8">
-    <link rel="stylesheet" href="/static/learning/learning.css?v=3">
+    <link rel="stylesheet" href="/static/learning/learning.css?v=4">
 </head>
 <body class="with-site-nav">
     {% include 'shared/site_nav.html' %}
     <div class="learning-container">
-        <section id="learning-recent-panel" class="learning-recent-panel" style="display:none;">
-            <div>
-                <h2>{{ t('learning.recent_lesson') }}</h2>
-                <p id="learning-recent-context" class="subtitle">{{ t('dashboard.continue_subtitle') }}</p>
-            </div>
-            <button class="btn primary learning-continue-btn" onclick="continueRecentLesson()">{{ t('lesson.continue') }}</button>
-        </section>
+        <div class="learning-tabs" role="tablist">
+            <button type="button" id="learning-tab-hsk" class="learning-tab active" role="tab"
+                onclick="switchLearningTab('hsk')">{{ t('books.tab_hsk') }}</button>
+            <button type="button" id="learning-tab-books" class="learning-tab" role="tab"
+                onclick="switchLearningTab('books')">{{ t('books.tab_books') }}</button>
+        </div>
 
-        {% include 'shared/passage_picker.html' %}
+        <div id="tab-hsk" class="learning-tab-panel">
+            <section id="learning-recent-panel" class="learning-recent-panel" style="display:none;">
+                <div>
+                    <h2>{{ t('learning.recent_lesson') }}</h2>
+                    <p id="learning-recent-context" class="subtitle">{{ t('dashboard.continue_subtitle') }}</p>
+                </div>
+                <button class="btn primary learning-continue-btn" onclick="continueRecentLesson()">{{ t('lesson.continue') }}</button>
+            </section>
+
+            {% include 'shared/passage_picker.html' %}
+        </div>
+
+        <div id="tab-books" class="learning-tab-panel" hidden>
+            <!-- SCREEN: Book grid -->
+            <div id="books-screen-grid" class="books-screen">
+                <h1>{{ t('books.select_book') }}</h1>
+                <p class="subtitle">{{ t('books.choose_book_subtitle') }}</p>
+                <div id="books-grid" class="books-grid">
+                    <p style="color:var(--text-muted); text-align:center;">{{ t('books.loading_books') }}</p>
+                </div>
+            </div>
+
+            <!-- SCREEN: Book lessons -->
+            <div id="books-screen-lessons" class="books-screen" hidden>
+                <div class="picker-toolbar-section">
+                    <button type="button" class="picker-back-button" onclick="showBooksGrid()">&larr; {{ t('books.back_to_books') }}</button>
+                </div>
+                <div class="picker-header-section">
+                    <div class="picker-header-col1">
+                        <img id="books-lessons-cover" src="" alt="">
+                    </div>
+                    <div class="picker-header-col2">
+                        <h2 id="books-lessons-title">{{ t('books.select_lesson') }}</h2>
+                        <p id="books-lessons-sub" class="subtitle"></p>
+                    </div>
+                </div>
+                <div class="picker-cards-section">
+                    <div id="books-lesson-list" class="lesson-list"></div>
+                </div>
+            </div>
+
+            <!-- SCREEN: Book parts -->
+            <div id="books-screen-parts" class="books-screen" hidden>
+                <div class="picker-toolbar-section">
+                    <button type="button" class="picker-back-button" onclick="showBookLessons()">&larr; {{ t('books.back_to_lessons') }}</button>
+                </div>
+                <div class="picker-header-section">
+                    <div class="picker-header-col2">
+                        <h2 id="books-parts-title">{{ t('books.select_part') }}</h2>
+                    </div>
+                </div>
+                <div class="picker-cards-section">
+                    <div id="books-part-list" class="part-list"></div>
+                </div>
+            </div>
+        </div>
 
     </div>
 
     <script src="/static/shared/passage_picker.js?v=15"></script>
-    <script src="/static/learning/learning.js?v=3"></script>
+    <script src="/static/learning/learning.js?v=4"></script>
 </body>
 </html>

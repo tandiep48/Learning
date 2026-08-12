@@ -160,6 +160,24 @@
         "translation_btn": "Dịch",
         "grammar_btn": "Ngữ Pháp"
     },
+    "books": {
+        "tab_hsk": "Bài Học HSK",
+        "tab_books": "Sách",
+        "select_book": "Chọn Sách",
+        "choose_book_subtitle": "Chọn một cuốn sách để xem các bài học",
+        "back_to_books": "Về Danh Sách Sách",
+        "back_to_lessons": "Về Danh Sách Bài",
+        "select_lesson": "Chọn Bài",
+        "select_part": "Chọn Phần",
+        "loading_books": "Đang tải sách...",
+        "loading_lessons": "Đang tải bài học...",
+        "no_books_found": "Chưa có sách nào.",
+        "failed_load_books": "Không tải được sách.",
+        "failed_load_lessons": "Không tải được bài học.",
+        "lessons_count": "{count} bài",
+        "parts_count": "{count} phần",
+        "completed": "Hoàn thành"
+    },
     "translation": {
         "page_title": "Dịch",
         "lesson_label": "Bài",

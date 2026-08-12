@@ -160,6 +160,24 @@
         "translation_btn": "Translation",
         "grammar_btn": "Grammar"
     },
+    "books": {
+        "tab_hsk": "HSK Lessons",
+        "tab_books": "Books",
+        "select_book": "Select a Book",
+        "choose_book_subtitle": "Pick a book to see its lessons",
+        "back_to_books": "Back to Books",
+        "back_to_lessons": "Back to Lessons",
+        "select_lesson": "Select Lesson",
+        "select_part": "Select Part",
+        "loading_books": "Loading books...",
+        "loading_lessons": "Loading lessons...",
+        "no_books_found": "No books available.",
+        "failed_load_books": "Failed to load books.",
+        "failed_load_lessons": "Failed to load lessons.",
+        "lessons_count": "{count} lesson(s)",
+        "parts_count": "{count} part(s)",
+        "completed": "Completed"
+    },
     "translation": {
         "page_title": "Translation",
         "lesson_label": "Lesson",
