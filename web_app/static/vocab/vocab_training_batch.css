@@ -90,25 +90,6 @@
     opacity: 0.85;
 }
 
-/* Competition-only per-word Skip: subtle by default, turns danger-toned on hover. */
-.bt-type-skip {
-    align-self: center;
-    padding: 4px 14px;
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    background: transparent;
-    border: 1px solid var(--border-soft, #d7e3c6);
-    border-radius: 8px;
-    cursor: pointer;
-    transition: color 0.2s, border-color 0.2s, background-color 0.2s;
-}
-
-.bt-type-skip:hover {
-    color: var(--danger);
-    border-color: var(--danger);
-    background: color-mix(in srgb, var(--danger) 6%, transparent);
-}
-
 .bt-type-result {
     font-size: 0.95rem;
     text-align: center;

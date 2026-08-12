@@ -385,8 +385,8 @@ def calculate_competition_points(activity_type, is_correct, response_time_ms, wr
     cfg = MODE_CONFIG.get(activity_type)
     if not cfg:
         return 0
-    # Typing accuracy is binary: an incorrect submission yields nothing.
-    if cfg["penalty_rate"] == 0.0 and not is_correct:
+    # An incorrect or skipped answer never scores, in any mode.
+    if not is_correct:
         return 0
     seconds = max(0.0, int(response_time_ms or 0) / 1000.0)
     penalty = max(0, int(wrong_attempts or 0)) * (cfg["base"] * cfg["penalty_rate"])
