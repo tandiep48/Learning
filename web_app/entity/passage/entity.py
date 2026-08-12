@@ -3,9 +3,10 @@ entity/passage_entity.py
 -------------------------
 SQLAlchemy ORM model for the `lesson_passages` table.
 
-After migration (migrate_lessons.py) the table has only two columns:
-    passage_id  VARCHAR(100) PRIMARY KEY   -- e.g. "H1_1_1"
-    hsk_level   VARCHAR(10)               -- e.g. "HSK1"
+Columns:
+    passage_id  VARCHAR(100) PRIMARY KEY   -- e.g. "H1_1_1" or "AML_1_1"
+    hsk_level   VARCHAR(10)                -- e.g. "HSK1"; NULL for book lessons
+    book_code   VARCHAR(20)                -- e.g. "AML" for topic books; NULL for HSK
 
 The lesson content lives in the related `lesson_lines` table
 (see lesson_line_entity.py).
@@ -21,6 +22,8 @@ class LessonPassage(Base):
 
     passage_id = Column(String(100), primary_key=True)
     hsk_level = Column(String(10), nullable=True)
+    # Set for topic "book" lessons (e.g. "AML"); NULL for regular HSK passages.
+    book_code = Column(String(20), nullable=True)
 
     # One passage → many lines (cascade delete mirrors DB ON DELETE CASCADE)
     lines = relationship(
@@ -36,6 +39,7 @@ class LessonPassage(Base):
         data = {
             "passage_id": self.passage_id,
             "hsk_level": self.hsk_level,
+            "book_code": self.book_code,
         }
         if include_lines:
             data["lines"] = [line.to_dict() for line in self.lines]
