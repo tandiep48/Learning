@@ -113,9 +113,8 @@ function renderPassage() {
         lineDiv.className = 'reading-line';
 
         let audioHTML = '';
-        if (line.audio_key) {
-            const hskLevel = currentPassage.hsk_level || 'H1';
-            const src = `/lesson_audio/${hskLevel}/${line.audio_key}.mp3`;
+        const src = getLessonAudioSrc(line);
+        if (src) {
             audioHTML = `<button class="audio-btn" onclick="playAudio('${src}')" title="${t('reading.play_audio')}" aria-label="${t('reading.play_audio')}"><i class="fa-solid fa-volume-high" aria-hidden="true"></i></button>`;
         }
 
@@ -152,12 +151,12 @@ let lineAutoPlayIndex = 0;
 
 function collectLineAudioItems() {
     if (!currentPassage?.lines) return [];
-    const hskLevel = currentPassage.hsk_level || 'H1';
     const lineDivs = document.querySelectorAll('#reading-content .reading-line');
     const items = [];
     currentPassage.lines.forEach((line, i) => {
-        if (line.audio_key) {
-            items.push({ src: `/lesson_audio/${hskLevel}/${line.audio_key}.mp3`, el: lineDivs[i] || null });
+        const src = getLessonAudioSrc(line);
+        if (src) {
+            items.push({ src, el: lineDivs[i] || null });
         }
     });
     return items;
@@ -465,6 +464,10 @@ function getCurrentLessonLine() {
 
 function getLessonAudioSrc(line) {
     if (!line?.audio_key) return '';
+    // Book lessons store audio under a per-book folder, not an HSK level.
+    if (currentPassage?.book_code) {
+        return `/lesson_audio/${currentPassage.book_code}/${line.audio_key}.mp3`;
+    }
     const rawLevel = String(currentPassage?.hsk_level || 'HSK1');
     const hskLevel = rawLevel.startsWith('HSK') ? rawLevel : `HSK${rawLevel.replace(/^H/i, '')}`;
     return `/lesson_audio/${hskLevel}/${line.audio_key}.mp3`;
@@ -480,7 +483,8 @@ function renderLessonSummary() {
         const learnButton = ensureLessonSummaryLearnButton(actionFooter);
         const learnLabel = learnButton?.querySelector('span');
         const trainLabel = actionFooter.querySelector('.vl-train-btn:not(.vl-learn-btn) span');
-        if (learnButton) learnButton.style.display = '';
+        // Books have no curated vocab, so hide the word-cards "Learn" action for them.
+        if (learnButton) learnButton.style.display = currentPassage?.book_code ? 'none' : '';
         if (learnLabel) learnLabel.textContent = t('reading.learn_this_lesson');
         if (trainLabel) trainLabel.textContent = t('reading.train_this_lesson');
     }

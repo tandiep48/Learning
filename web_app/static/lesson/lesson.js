@@ -190,11 +190,16 @@ function loadTask() {
     setCurrentAudioButtonPlaying(false);
     if (audioEl) audioEl.pause();
     if (task.audio_key) {
-        let hskLevel = task.hsk_level || 'HSK1';
-        if (!hskLevel.startsWith('HSK')) {
-            hskLevel = 'HSK' + hskLevel.replace('H', '');
+        if (task.book_code) {
+            // Book lessons store audio under a per-book folder, not an HSK level.
+            audioEl.src = `/lesson_audio/${task.book_code}/${task.audio_key}.mp3`;
+        } else {
+            let hskLevel = task.hsk_level || 'HSK1';
+            if (!hskLevel.startsWith('HSK')) {
+                hskLevel = 'HSK' + hskLevel.replace('H', '');
+            }
+            audioEl.src = `/lesson_audio/${hskLevel}/${task.audio_key}.mp3`;
         }
-        audioEl.src = `/lesson_audio/${hskLevel}/${task.audio_key}.mp3`;
     } else {
         audioEl.removeAttribute('src');
     }
