@@ -190,11 +190,16 @@ function loadTask() {
     setCurrentAudioButtonPlaying(false);
     if (audioEl) audioEl.pause();
     if (task.audio_key) {
-        let hskLevel = task.hsk_level || 'HSK1';
-        if (!hskLevel.startsWith('HSK')) {
-            hskLevel = 'HSK' + hskLevel.replace('H', '');
+        if (task.book_code) {
+            // Book lessons store audio under a per-book folder, not an HSK level.
+            audioEl.src = `/lesson_audio/${task.book_code}/${task.audio_key}.mp3`;
+        } else {
+            let hskLevel = task.hsk_level || 'HSK1';
+            if (!hskLevel.startsWith('HSK')) {
+                hskLevel = 'HSK' + hskLevel.replace('H', '');
+            }
+            audioEl.src = `/lesson_audio/${hskLevel}/${task.audio_key}.mp3`;
         }
-        audioEl.src = `/lesson_audio/${hskLevel}/${task.audio_key}.mp3`;
     } else {
         audioEl.removeAttribute('src');
     }
@@ -332,7 +337,6 @@ function playCurrentAudio() {
         setCurrentAudioButtonPlaying(false);
         return;
     }
-    audioEl.currentTime = 0;
     playTrainerAudio(audioEl);
 }
 
@@ -341,9 +345,9 @@ function setCurrentAudioButtonPlaying(playing) {
     const icon = button?.querySelector('.fa-solid');
     if (!button || !icon) return;
     icon.classList.toggle('fa-play', !playing);
-    icon.classList.toggle('fa-stop', playing);
+    icon.classList.toggle('fa-pause', playing);
     icon.classList.toggle('play-icon', !playing);
-    button.title = playing ? t('lesson.stop_audio') : t('lesson.play_audio');
+    button.title = playing ? t('lesson.pause_audio') : t('lesson.play_audio');
     button.setAttribute('aria-label', button.title);
 }
 

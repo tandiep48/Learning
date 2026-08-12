@@ -8,7 +8,6 @@ from db import (
     create_competition_room,
     get_competition_room_state,
     get_competition_scores,
-    get_db_connection,
     resolve_room_words,
 )
 
@@ -48,60 +47,40 @@ def create_room():
     if section_timeout_minutes not in (5, 10, 15, 20):
         section_timeout_minutes = 15
 
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({"error": "Database unavailable"}), 503
+    words = resolve_room_words(passage_ids)
+    if not words:
+        return jsonify({"error": "The selected parts have no vocabulary"}), 404
 
-    try:
-        words = resolve_room_words(conn, passage_ids)
-        if not words:
-            return jsonify({"error": "The selected parts have no vocabulary"}), 404
+    room = None
+    for _ in range(8):
+        room_code = make_room_code()
+        room = create_competition_room(
+            room_code,
+            current_user.id,
+            level,
+            passage_ids,
+            len(words),
+            max_users,
+            section_timeout_minutes,
+        )
+        if room:
+            break
+    if not room:
+        return jsonify({"error": "Could not create room"}), 500
 
-        room = None
-        for _ in range(8):
-            room_code = make_room_code()
-            room = create_competition_room(
-                conn,
-                room_code,
-                current_user.id,
-                level,
-                passage_ids,
-                len(words),
-                max_users,
-                section_timeout_minutes,
-            )
-            if room:
-                break
-        if not room:
-            return jsonify({"error": "Could not create room"}), 500
-
-        return jsonify({"room": get_competition_room_state(conn, room["room_code"])})
-    finally:
-        conn.close()
+    return jsonify({"room": get_competition_room_state(room["room_code"])})
 
 
 @competition_bp.route("/rooms/<room_code>", methods=["GET"])
 @login_required
 def room_detail(room_code):
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({"error": "Database unavailable"}), 503
-    try:
-        room = get_competition_room_state(conn, room_code.upper())
-        if not room:
-            return jsonify({"error": "Room not found"}), 404
-        return jsonify({"room": room})
-    finally:
-        conn.close()
+    room = get_competition_room_state(room_code.upper())
+    if not room:
+        return jsonify({"error": "Room not found"}), 404
+    return jsonify({"room": room})
 
 
 @competition_bp.route("/sessions/<int:session_id>/results", methods=["GET"])
 @login_required
 def session_results(session_id):
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({"error": "Database unavailable"}), 503
-    try:
-        return jsonify({"session_id": session_id, "scores": get_competition_scores(conn, session_id)})
-    finally:
-        conn.close()
+    return jsonify({"session_id": session_id, "scores": get_competition_scores(session_id)})

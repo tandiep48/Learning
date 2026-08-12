@@ -7,121 +7,237 @@ vocabulary and grammar.
 Extracted from the former monolithic db.py.
 """
 
+from sqlalchemy import select, func, distinct, cast, and_, or_, Integer
+from sqlalchemy.orm import aliased
 
-def get_passages_summary(conn, hsk_level=None):
-    if not conn: return []
-    query = """
-        SELECT p.passage_id, p.hsk_level, count(l.id) as line_count 
-        FROM lesson_passages p
-        LEFT JOIN lesson_lines l ON p.passage_id = l.passage_id
-    """
-    params = ()
-    if hsk_level:
-        query += " WHERE p.hsk_level = %s"
-        params = (hsk_level,)
-    query += " GROUP BY p.passage_id, p.hsk_level ORDER BY p.passage_id"
-    
-    with conn.cursor() as cur:
-        cur.execute(query, params)
-        rows = cur.fetchall()
+from entity.database import SessionLocal
+from entity.passage.entity import LessonPassage
+from entity.lesson_line.entity import LessonLine
+from entity.vocabulary.entity import Vocabulary
+from entity.passage_vocabulary.entity import PassageVocabulary
+from entity.record.entity import VocabRecord
+from entity.translation.entity import Translation
+from entity.grammar_rule.entity import GrammarRule
+from entity.grammar_context.entity import GrammarContext
+from entity.question.entity import Question
+
+
+# Columns returned for practice/exam question rows (question_bank).
+_QUESTION_COLS = [
+    "level", "lesson", "no", "skill", "type", "content", "question",
+    "answer", "audio_key", "image", "options", "progress", "unit_id", "category",
+]
+
+
+def _question_select():
+    return select(
+        Question.level, Question.lesson, Question.no, Question.skill, Question.type,
+        Question.content, Question.question, Question.answer, Question.audio_key,
+        Question.image, Question.options, Question.progress, Question.unit_id,
+        Question.category,
+    )
+
+
+def list_practice_lessons(category, level):
+    """Distinct lessons available for a practice/exam level, as strings."""
+    session = SessionLocal()
+    try:
+        rows = session.execute(
+            select(distinct(Question.lesson))
+            .where(Question.category == category, Question.level == level)
+            .order_by(Question.lesson)
+        ).all()
+        return [str(r[0]) for r in rows]
+    finally:
+        SessionLocal.remove()
+
+
+def get_practice_questions(category, level, lesson):
+    """All questions for one (category, level, lesson), ordered by question no."""
+    session = SessionLocal()
+    try:
+        rows = session.execute(
+            _question_select()
+            .where(Question.category == category, Question.level == level, Question.lesson == lesson)
+            .order_by(Question.no)
+        ).all()
+        return [dict(zip(_QUESTION_COLS, r)) for r in rows]
+    finally:
+        SessionLocal.remove()
+
+
+def get_practice_progress_group(category, level, lesson, progress):
+    """All questions for one (category, level, lesson, progress) group, ordered by no."""
+    session = SessionLocal()
+    try:
+        rows = session.execute(
+            _question_select()
+            .where(
+                Question.category == category, Question.level == level,
+                Question.lesson == lesson, Question.progress == progress,
+            )
+            .order_by(Question.no)
+        ).all()
+        return [dict(zip(_QUESTION_COLS, r)) for r in rows]
+    finally:
+        SessionLocal.remove()
+
+
+def get_practice_questions_multi(items):
+    """Questions for several (category, level, lesson, progress) groups at once.
+    `items` is a list of dicts with those keys; ordered by level, lesson, progress, no."""
+    conds = [
+        and_(
+            Question.category == item.get("category", "practice"),
+            Question.level == item["level"],
+            Question.lesson == item["lesson"],
+            Question.progress == item["progress"],
+        )
+        for item in items
+    ]
+    if not conds:
+        return []
+    session = SessionLocal()
+    try:
+        rows = session.execute(
+            _question_select()
+            .where(or_(*conds))
+            .order_by(Question.level, Question.lesson, Question.progress, Question.no)
+        ).all()
+        return [dict(zip(_QUESTION_COLS, r)) for r in rows]
+    finally:
+        SessionLocal.remove()
+
+
+def get_passages_summary(hsk_level=None):
+    session = SessionLocal()
+    try:
+        q = (
+            select(
+                LessonPassage.passage_id,
+                LessonPassage.hsk_level,
+                func.count(LessonLine.id).label("line_count"),
+            )
+            .select_from(LessonPassage)
+            .outerjoin(LessonLine, LessonPassage.passage_id == LessonLine.passage_id)
+        )
+        if hsk_level:
+            q = q.where(LessonPassage.hsk_level == hsk_level)
+        q = q.group_by(LessonPassage.passage_id, LessonPassage.hsk_level).order_by(
+            LessonPassage.passage_id
+        )
+        rows = session.execute(q).all()
         return [{"passage_id": r[0], "hsk_level": r[1], "line_count": r[2]} for r in rows]
+    finally:
+        SessionLocal.remove()
 
-def get_lesson_translations(conn, hsk_level, lesson):
+
+def get_lesson_translations(hsk_level, lesson):
     """Return every translation row for one lesson, e.g. HSK1 + lesson 2 -> 'H1_2_%'.
     Ordered by the trailing index numerically so H1_2_10 follows H1_2_9, not H1_2_1."""
-    if not conn:
-        return []
     digits = "".join(ch for ch in str(hsk_level or "") if ch.isdigit())
     lesson_num = "".join(ch for ch in str(lesson or "") if ch.isdigit())
     if not digits or not lesson_num:
         return []
     prefix = f"H{digits}_{lesson_num}_"
-    query = """
-        SELECT translation_id, cn, vn, en
-        FROM translation
-        WHERE translation_id LIKE %s
-        ORDER BY (split_part(translation_id, '_', 3))::int
-    """
-    with conn.cursor() as cur:
-        cur.execute(query, (prefix + "%",))
-        rows = cur.fetchall()
-        return [{"translation_id": r[0], "cn": r[1], "vn": r[2], "en": r[3]} for r in rows]
 
-def get_passage_content(conn, passage_id):
-    if not conn: return None
-    with conn.cursor() as cur:
-        cur.execute("SELECT hsk_level FROM lesson_passages WHERE passage_id = %s", (passage_id,))
-        row = cur.fetchone()
-        if not row:
+    session = SessionLocal()
+    try:
+        rows = session.execute(
+            select(Translation.translation_id, Translation.cn, Translation.vn, Translation.en)
+            .where(Translation.translation_id.like(prefix + "%"))
+            .order_by(cast(func.split_part(Translation.translation_id, "_", 3), Integer))
+        ).all()
+        return [{"translation_id": r[0], "cn": r[1], "vn": r[2], "en": r[3]} for r in rows]
+    finally:
+        SessionLocal.remove()
+
+
+def get_passage_content(passage_id):
+    session = SessionLocal()
+    try:
+        meta = session.execute(
+            select(LessonPassage.hsk_level, LessonPassage.book_code)
+            .where(LessonPassage.passage_id == passage_id)
+        ).first()
+        if meta is None:
             return None
-        hsk_level = row[0]
-        
-        cur.execute("""
-            SELECT line_id, speaker, content, pinyin, audio_key, translation_en, translation_vi, tokens, flag
-            FROM lesson_lines
-            WHERE passage_id = %s
-            ORDER BY line_id
-        """, (passage_id,))
-        lines = []
-        for r in cur.fetchall():
-            lines.append({
+        hsk_level, book_code = meta[0], meta[1]
+
+        rows = session.execute(
+            select(
+                LessonLine.line_id, LessonLine.speaker, LessonLine.content, LessonLine.pinyin,
+                LessonLine.audio_key, LessonLine.translation_en, LessonLine.translation_vi,
+                LessonLine.tokens, LessonLine.flag,
+            )
+            .where(LessonLine.passage_id == passage_id)
+            .order_by(LessonLine.line_id)
+        ).all()
+        lines = [
+            {
                 "line_id": r[0],
                 "speaker": r[1],
                 "content": r[2],
                 "pinyin": r[3],
                 "audio_key": r[4],
-                "translations": {
-                    "en": r[5],
-                    "vi": r[6]
-                },
+                "translations": {"en": r[5], "vi": r[6]},
                 "tokens": r[7] if r[7] else [],
-                "flag": 1 if r[8] is None else r[8]
-            })
-            
-        return {
-            "passage_id": passage_id,
-            "hsk_level": hsk_level,
-            "lines": lines
-        }
+                "flag": 1 if r[8] is None else r[8],
+            }
+            for r in rows
+        ]
+        return {"passage_id": passage_id, "hsk_level": hsk_level,
+                "book_code": book_code, "lines": lines}
+    finally:
+        SessionLocal.remove()
 
-def get_course_vocab(conn):
+
+def get_course_vocab():
     import pandas as pd
-    if not conn: return pd.DataFrame()
-    with conn.cursor() as cur:
-        cur.execute("SELECT cn as word, pinyin, meaning_vn, meaning_en, audio_key, hsk_level as level FROM vocabulary ORDER BY hsk_level, id")
-        rows = cur.fetchall()
-        df = pd.DataFrame(rows, columns=['word', 'pinyin', 'meaning_vn', 'meaning_en', 'audio_key', 'level'])
-        return df
-
-def has_vocab_history(conn, user_id):
-    """Returns True if the user has any vocab_records entries."""
-    if not conn:
-        return False
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            cur.execute("SELECT 1 FROM vocab_records WHERE user_id = %s LIMIT 1", (user_id,))
-            return cur.fetchone() is not None
+        rows = session.execute(
+            select(
+                Vocabulary.cn, Vocabulary.pinyin, Vocabulary.meaning_vn,
+                Vocabulary.meaning_en, Vocabulary.audio_key, Vocabulary.hsk_level,
+            ).order_by(Vocabulary.hsk_level, Vocabulary.id)
+        ).all()
+        return pd.DataFrame(
+            [tuple(r) for r in rows],
+            columns=["word", "pinyin", "meaning_vn", "meaning_en", "audio_key", "level"],
+        )
+    finally:
+        SessionLocal.remove()
+
+
+def has_vocab_history(user_id):
+    """Returns True if the user has any vocab_records entries."""
+    session = SessionLocal()
+    try:
+        return session.execute(
+            select(VocabRecord.id).where(VocabRecord.user_id == user_id).limit(1)
+        ).first() is not None
     except Exception as e:
         print(f"⚠️ Database query failed (has_vocab_history): {e}")
         return False
+    finally:
+        SessionLocal.remove()
 
-def get_vocab_lessons(conn, hsk_level, lesson_size=10):
+
+def get_vocab_lessons(hsk_level, lesson_size=10):
     """
     Returns a list of lesson groups for a given HSK level.
     Each lesson contains lesson_size words.
     Returns: [{lesson: 1, start_idx: 0, end_idx: 9, word_count: 10, preview: ['你','好',...]}, ...]
     """
-    import pandas as pd
-    if not conn:
-        return []
+    session = SessionLocal()
     try:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT cn FROM vocabulary WHERE hsk_level = %s ORDER BY id",
-                (hsk_level,)
-            )
-            rows = cur.fetchall()
-        words = [r[0] for r in rows]
+        words = [
+            r[0]
+            for r in session.execute(
+                select(Vocabulary.cn).where(Vocabulary.hsk_level == hsk_level).order_by(Vocabulary.id)
+            ).all()
+        ]
         lessons = []
         for i in range(0, len(words), lesson_size):
             chunk = words[i:i + lesson_size]
@@ -130,70 +246,131 @@ def get_vocab_lessons(conn, hsk_level, lesson_size=10):
                 "start_idx": i,
                 "end_idx": i + len(chunk) - 1,
                 "word_count": len(chunk),
-                "preview": chunk[:4]  # first 4 words as preview
+                "preview": chunk[:4],  # first 4 words as preview
             })
         return lessons
     except Exception as e:
         print(f"⚠️ Database query failed (get_vocab_lessons): {e}")
         return []
+    finally:
+        SessionLocal.remove()
 
-def get_all_vn_meanings(conn):
-    if not conn: return []
-    with conn.cursor() as cur:
-        cur.execute("SELECT DISTINCT meaning_vn FROM vocabulary WHERE meaning_vn IS NOT NULL AND meaning_vn != ''")
-        rows = cur.fetchall()
+
+def get_all_vn_meanings():
+    session = SessionLocal()
+    try:
+        rows = session.execute(
+            select(distinct(Vocabulary.meaning_vn)).where(
+                Vocabulary.meaning_vn.isnot(None), Vocabulary.meaning_vn != ""
+            )
+        ).all()
         return [r[0] for r in rows]
+    finally:
+        SessionLocal.remove()
 
-def get_passage_vocab(conn, passage_id):
+
+def get_passage_vocab(passage_id):
     """Return vocabulary words linked to a passage via passage_vocabulary."""
-    if not conn: return []
-    with conn.cursor() as cur:
-        cur.execute("""
-            SELECT v.cn, v.pinyin, v.meaning_vn, v.meaning_en, v.audio_key, v.hsk_level
-            FROM passage_vocabulary pv
-            JOIN vocabulary v ON v.cn = pv.cn
-            WHERE pv.passage_id = %s
-            ORDER BY v.cn
-        """, (passage_id,))
-        rows = cur.fetchall()
+    session = SessionLocal()
+    try:
+        rows = session.execute(
+            select(
+                Vocabulary.cn, Vocabulary.pinyin, Vocabulary.meaning_vn,
+                Vocabulary.meaning_en, Vocabulary.audio_key, Vocabulary.hsk_level,
+            )
+            .select_from(PassageVocabulary)
+            .join(Vocabulary, Vocabulary.cn == PassageVocabulary.cn)
+            .where(PassageVocabulary.passage_id == passage_id)
+            .order_by(Vocabulary.cn)
+        ).all()
         return [
             {
-                "cn":          r[0],
-                "pinyin":      r[1] or "",
-                "meaning_vn":  r[2] or "",
-                "meaning_en":  r[3] or "",
-                "audio_key":   r[4] or "",
-                "hsk_level":   r[5] or ""
+                "cn": r[0],
+                "pinyin": r[1] or "",
+                "meaning_vn": r[2] or "",
+                "meaning_en": r[3] or "",
+                "audio_key": r[4] or "",
+                "hsk_level": r[5] or "",
             }
             for r in rows
         ]
+    finally:
+        SessionLocal.remove()
 
-def get_grammar_for_lesson(conn, hsk_level, lesson):
+
+def get_vocabulary_by_words(words):
+    """Vocabulary rows for a set of Chinese words (used by the dashboard word cards)."""
+    words = [w for w in (words or []) if w]
+    if not words:
+        return []
+    session = SessionLocal()
+    try:
+        rows = session.execute(
+            select(
+                Vocabulary.cn, Vocabulary.pinyin, Vocabulary.meaning_vn,
+                Vocabulary.meaning_en, Vocabulary.audio_key, Vocabulary.hsk_level,
+            ).where(Vocabulary.cn.in_(words))
+        ).all()
+        return [
+            {
+                "word": r[0], "pinyin": r[1], "meaning_vn": r[2],
+                "meaning_en": r[3], "audio_key": r[4], "hsk_level": r[5],
+            }
+            for r in rows
+        ]
+    finally:
+        SessionLocal.remove()
+
+
+def get_lesson_passage_ids_like(pattern):
+    """Passage ids matching a LIKE pattern (e.g. 'H1_2_%'), ordered."""
+    session = SessionLocal()
+    try:
+        rows = session.execute(
+            select(LessonPassage.passage_id)
+            .where(LessonPassage.passage_id.like(pattern))
+            .order_by(LessonPassage.passage_id)
+        ).all()
+        return [r[0] for r in rows]
+    finally:
+        SessionLocal.remove()
+
+
+def get_grammar_for_lesson(hsk_level, lesson):
     """All grammar rules for a whole lesson (every part), ordered by insertion id.
     The caller splits the flat list into sections at each type=1 row."""
+    session = SessionLocal()
     try:
-        prefix = f'H{hsk_level}-{lesson}-%'
-        with conn.cursor() as cur:
-            cur.execute('''
-                SELECT r.grammar_id, r.type, r.vietnamese_content, r.english_content,
-                       c_vn.content_json AS vn_context,
-                       c_en.content_json AS en_context
-                FROM grammar_rule r
-                LEFT JOIN grammar_context c_vn ON r.vietnamese_content = c_vn.grammar_id AND r.type = 4
-                LEFT JOIN grammar_context c_en ON r.english_content = c_en.grammar_id AND r.type = 4
-                WHERE r.grammar_id LIKE %s
-                ORDER BY r.id ASC
-            ''', (prefix,))
-            cols = ['grammar_id', 'type', 'vietnamese_content', 'english_content', 'vn_context', 'en_context']
-            results = []
-            for row in cur.fetchall():
-                d = dict(zip(cols, row))
-                if d.get('vn_context') is None:
-                    d.pop('vn_context', None)
-                if d.get('en_context') is None:
-                    d.pop('en_context', None)
-                results.append(d)
-            return results
+        prefix = f"H{hsk_level}-{lesson}-%"
+        c_vn = aliased(GrammarContext)
+        c_en = aliased(GrammarContext)
+        rows = session.execute(
+            select(
+                GrammarRule.grammar_id,
+                GrammarRule.type,
+                GrammarRule.vietnamese_content,
+                GrammarRule.english_content,
+                c_vn.content_json.label("vn_context"),
+                c_en.content_json.label("en_context"),
+            )
+            .select_from(GrammarRule)
+            .outerjoin(c_vn, and_(GrammarRule.vietnamese_content == c_vn.grammar_id, GrammarRule.type == 4))
+            .outerjoin(c_en, and_(GrammarRule.english_content == c_en.grammar_id, GrammarRule.type == 4))
+            .where(GrammarRule.grammar_id.like(prefix))
+            .order_by(GrammarRule.id.asc())
+        ).all()
+        cols = ["grammar_id", "type", "vietnamese_content", "english_content", "vn_context", "en_context"]
+        results = []
+        for row in rows:
+            d = dict(zip(cols, row))
+            if d.get("vn_context") is None:
+                d.pop("vn_context", None)
+            if d.get("en_context") is None:
+                d.pop("en_context", None)
+            results.append(d)
+        return results
     except Exception as e:
-        print(f'[WARN] get_grammar_for_lesson failed: {e}')
+        print(f"[WARN] get_grammar_for_lesson failed: {e}")
         return []
+    finally:
+        SessionLocal.remove()

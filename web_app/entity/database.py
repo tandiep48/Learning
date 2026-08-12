@@ -10,6 +10,7 @@ db.py so that both layers can coexist without interference.
 import os
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
+from sqlalchemy.pool import NullPool
 from sqlalchemy.orm import declarative_base, scoped_session, sessionmaker
 
 load_dotenv()
@@ -28,13 +29,20 @@ DATABASE_URL = (
 )
 
 # ---------------------------------------------------------------------------
-# Engine — connection pool shared across all SQLAlchemy operations
+# Engine
 # ---------------------------------------------------------------------------
+# The app serves websockets under `gunicorn -k eventlet`: one OS thread runs many
+# cooperative greenlets. A shared, capped QueuePool (pool_size/max_overflow) is a
+# trap there — a greenlet blocked in psycopg2 holds a pooled connection without
+# yielding, so under load the pool starves and every request times out (504).
+#
+# NullPool opens and closes a real connection per checkout (like the former
+# psycopg2-per-request model): no shared cap to starve, no connections pinned
+# across greenlets. Combined with the psycogreen patch in app.py (which makes
+# psycopg2 yield to the eventlet hub), DB calls no longer freeze the worker.
 engine = create_engine(
     DATABASE_URL,
-    pool_pre_ping=True,   # verify connections before checkout
-    pool_size=5,
-    max_overflow=10,
+    poolclass=NullPool,
     echo=False,           # set True during development to log SQL
 )
 

@@ -446,3 +446,9 @@ ALTER TABLE competition_rooms ADD COLUMN IF NOT EXISTS passage_ids JSONB NOT NUL
 ALTER TABLE competition_rooms ADD COLUMN IF NOT EXISTS word_count INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE competition_rooms ALTER COLUMN lesson DROP NOT NULL;
 ALTER TABLE competition_rooms ALTER COLUMN progress DROP NOT NULL;
+
+-- Topic "book" lessons (cover-book import) reuse lesson_passages/lesson_lines. book_code
+-- tags a passage as belonging to a book (e.g. 'AML'); NULL for regular HSK passages. The
+-- passage_id already encodes {CODE}_{lesson}_{part}, so this is just a fast, explicit filter.
+ALTER TABLE lesson_passages ADD COLUMN IF NOT EXISTS book_code VARCHAR(20);
+CREATE INDEX IF NOT EXISTS idx_passages_book ON lesson_passages(book_code);

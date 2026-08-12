@@ -1,0 +1,1 @@
+# competition model package

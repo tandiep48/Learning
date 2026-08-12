@@ -1,4 +1,22 @@
 import os
+
+# --- Eventlet cooperation for psycopg2 -------------------------------------
+# In production the app runs under `gunicorn -k eventlet`: the whole worker is a
+# single OS thread of cooperative greenlets. psycopg2 is a C extension that does
+# NOT yield to the eventlet hub on its own, so a single DB call would block every
+# other request in the worker until it returns (this caused the gateway timeouts).
+# psycogreen registers a wait-callback that makes psycopg2 cooperate. It must run
+# before any database connection is opened, so it lives at the very top — and only
+# when eventlet has actually monkey-patched the process (never in plain threading
+# dev, where it is unnecessary).
+try:
+    import eventlet.patcher
+    if eventlet.patcher.is_monkey_patched("socket"):
+        from psycogreen.eventlet import patch_psycopg
+        patch_psycopg()
+except Exception:
+    pass
+
 import secrets
 from dotenv import load_dotenv
 from flask import Flask, render_template, redirect, url_for, request, send_from_directory, session
@@ -19,7 +37,7 @@ from routes.question_crud_routes import question_crud_bp
 from routes.translation_routes import translation_bp
 from competition_socket import init_competition_socket
 from service.i18n_service import get_current_lang, get_translations, t as i18n_t, SUPPORTED_LANGUAGES
-from db import get_db_connection, update_user_ui_language
+from db import update_user_ui_language
 
 load_dotenv()
 
@@ -83,12 +101,7 @@ def set_ui_language(lang):
     if lang in SUPPORTED_LANGUAGES:
         session['ui_language'] = lang
         if current_user.is_authenticated:
-            conn = get_db_connection()
-            try:
-                update_user_ui_language(conn, current_user.id, lang)
-            finally:
-                if conn:
-                    conn.close()
+            update_user_ui_language(current_user.id, lang)
             current_user.ui_language = lang
     return redirect(request.referrer or url_for('index'))
 
@@ -229,6 +242,11 @@ def serve_lesson_image(hsk, filename):
     if formatted_filename.startswith(hsk.lower()):
         formatted_filename = hsk.upper() + formatted_filename[len(hsk):]
     return redirect(f"{GCS_BUCKET_URL}/lesson_images/{hsk.upper()}/{formatted_filename}")
+
+@app.route('/lesson-cover/<code>')
+def serve_lesson_cover(code):
+    # Cover image for a topic "book" lesson, e.g. /lesson-cover/AML -> lesson_cover/AML.png
+    return redirect(f"{GCS_BUCKET_URL}/lesson_cover/{code.upper()}.png")
 
 if __name__ == '__main__':
     debug_mode = os.getenv('FLASK_DEBUG', '').lower() in ('1', 'true', 'yes', 'on')

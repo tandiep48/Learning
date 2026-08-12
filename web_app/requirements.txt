@@ -6,6 +6,7 @@ eventlet
 gunicorn
 pandas
 psycopg2-binary
+psycogreen
 pypinyin
 pytest
 python-dotenv

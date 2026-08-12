@@ -21,6 +21,7 @@ from sqlalchemy import (
     Text,
     Boolean,
     DateTime,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from entity.database import Base
@@ -29,7 +30,8 @@ from entity.database import Base
 class VocabRecord(Base):
     __tablename__ = "vocab_records"
 
-    id = Column(UUID(as_uuid=True), primary_key=True)
+    # DB generates the id (schema: DEFAULT uuid_generate_v4()).
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     user_id = Column(BigInteger)
     session_id = Column(BigInteger)
     mode = Column(String(50))
