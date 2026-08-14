@@ -25,7 +25,9 @@ from db import (
     get_vocabulary_by_words,
     has_vocab_history,
     get_vocab_lessons,
-    get_passage_vocab
+    get_passage_vocab,
+    get_passage_book_code,
+    get_user_saved_vocab
 )
 from number_part import is_number_part, number_vocab_rows
 from entity.user_saved_word.service import (
@@ -455,7 +457,14 @@ def resolve_words():
 
     if passage_ids:
         for pid in passage_ids:
-            rows = number_vocab_rows() if is_number_part(pid) else get_passage_vocab(pid)
+            if is_number_part(pid):
+                rows = number_vocab_rows()
+            else:
+                rows = get_passage_vocab(pid)
+                # Book lessons keep their words in the user's personal list, not
+                # passage_vocabulary — fold those in so the trainer can run.
+                if get_passage_book_code(pid):
+                    rows = rows + get_user_saved_vocab(current_user.id, pid)
             for row in rows:
                 add(row.get("cn"))
 
