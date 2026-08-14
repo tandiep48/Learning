@@ -263,6 +263,21 @@ CREATE TABLE IF NOT EXISTS user_lesson_part_progress (
 CREATE INDEX IF NOT EXISTS idx_user_lesson_part_progress_user
 ON user_lesson_part_progress(user_id);
 
+-- Personal word list: words a user saved from a passage (e.g. tapping a
+-- character in a book-cover lesson summary). cn must already exist in
+-- vocabulary, so only known words are saved. These rows are unioned into the
+-- passage word summary for book lessons.
+CREATE TABLE IF NOT EXISTS user_saved_word (
+    user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+    passage_id VARCHAR(100) REFERENCES lesson_passages(passage_id) ON DELETE CASCADE,
+    cn VARCHAR(100) REFERENCES vocabulary(cn) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, passage_id, cn)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_saved_word_user_passage
+ON user_saved_word(user_id, passage_id);
+
 -- ==========================================
 -- Learn Together / Competitive Mode
 -- ==========================================
