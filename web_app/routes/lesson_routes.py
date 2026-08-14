@@ -18,6 +18,8 @@ from db import (
     get_passages_summary,
     get_passage_content,
     get_passage_vocab,
+    get_passage_book_code,
+    get_user_saved_vocab,
     get_grammar_for_lesson,
     insert_lesson_progress,
     mark_lesson_part_completed,
@@ -274,6 +276,17 @@ def get_passage_vocab_api(passage_id):
     if is_number_part(passage_id):
         return jsonify({"passage_id": passage_id, "vocab": number_vocab_rows()})
     vocab = get_passage_vocab(passage_id)
+
+    # Book-cover lessons have no curated vocab, so fold in the current user's
+    # personal saved words (deduped by cn). Regular HSK summaries are untouched.
+    if current_user.is_authenticated and get_passage_book_code(passage_id):
+        seen = {row["cn"] for row in vocab}
+        for row in get_user_saved_vocab(current_user.id, passage_id):
+            if row["cn"] not in seen:
+                seen.add(row["cn"])
+                vocab.append(row)
+        vocab.sort(key=lambda r: r["cn"])
+
     return jsonify({"passage_id": passage_id, "vocab": vocab})
 
 @lesson_bp.route('/grammar/<passage_id>', methods=['GET'])
