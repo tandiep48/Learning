@@ -28,6 +28,12 @@ from db import (
     get_passage_vocab
 )
 from number_part import is_number_part, number_vocab_rows
+from entity.user_saved_word.service import (
+    list_saved_vocab,
+    add_saved_word,
+    remove_saved_word,
+    UserSavedWordServiceError,
+)
 
 
 vocab_bp = Blueprint('vocab', __name__, url_prefix='/api/vocab')
@@ -372,6 +378,49 @@ def get_vocab_table():
         "total_pages": total_pages,
         "passage_id": passage_id
     })
+
+@vocab_bp.route('/saved', methods=['GET'])
+@login_required
+def list_saved_words():
+    """Return the Chinese words the current user saved for a passage."""
+    passage_id = (request.args.get("passage_id") or "").strip()
+    if not passage_id:
+        return jsonify({"error": "passage_id is required."}), 400
+    rows = list_saved_vocab(current_user.id, passage_id)
+    return jsonify({"passage_id": passage_id, "words": [r["cn"] for r in rows]})
+
+
+@vocab_bp.route('/saved', methods=['POST'])
+@login_required
+def add_saved_word_route():
+    """Save a known vocabulary word to the user's personal list for a passage."""
+    data = request.json or {}
+    passage_id = (data.get("passage_id") or "").strip()
+    cn = (data.get("cn") or "").strip()
+    if not passage_id:
+        return jsonify({"error": "passage_id is required."}), 400
+    try:
+        result = add_saved_word(current_user.id, passage_id, cn)
+        return jsonify(result), 201
+    except UserSavedWordServiceError as e:
+        return jsonify({"error": e.message}), e.status_code
+
+
+@vocab_bp.route('/saved', methods=['DELETE'])
+@login_required
+def remove_saved_word_route():
+    """Remove a word from the user's personal list for a passage."""
+    data = request.json or {}
+    passage_id = (data.get("passage_id") or "").strip()
+    cn = (data.get("cn") or "").strip()
+    if not passage_id:
+        return jsonify({"error": "passage_id is required."}), 400
+    try:
+        result = remove_saved_word(current_user.id, passage_id, cn)
+        return jsonify(result), 200
+    except UserSavedWordServiceError as e:
+        return jsonify({"error": e.message}), e.status_code
+
 
 @vocab_bp.route('/flashcards', methods=['POST'])
 @login_required

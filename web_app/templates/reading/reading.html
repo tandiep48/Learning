@@ -179,6 +179,10 @@
                     <i class="fa-solid fa-pen-nib"></i>
                     <span>{{ t('widgets.stroke') }}</span>
                 </button>
+                <button id="word-popup-save-btn" class="word-popup-btn" onclick="toggleSavedWord()" style="display:none;">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>{{ t('widgets.add_to_list') }}</span>
+                </button>
             </div>
             <div id="word-popup-stroke-area" class="word-popup-stroke-area" style="display:none;">
                 <div id="word-stroke-tabs" class="stroke-char-tabs"></div>
@@ -204,8 +208,8 @@
     <script src="/static/shared/passage_picker.js?v=15"></script>
     <script src="/static/shared/passage_label.js"></script>
     <script src="/static/shared/han_text.js?v=4"></script>
-    <script src="/static/reading/reading.js?v=30"></script>
-    <script src="/static/shared/sidebar.js?v=10"></script>
+    <script src="/static/reading/reading.js?v=31"></script>
+    <script src="/static/shared/sidebar.js?v=11"></script>
 </body>
 
 </html>

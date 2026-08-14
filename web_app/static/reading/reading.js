@@ -16,6 +16,7 @@ let lessonSpeakingChunks = [];
 let lessonSpeakingTimer = null;
 let lessonSpeakingAttemptId = 0;
 let currentNumberPracticeRows = [];
+let savedWords = new Set();
 const LESSON_SPEAKING_MAX_MS = 15000;
 var NUMBER_PART_ID = window.NUMBER_PART_ID || 'H1_5_99';
 window.NUMBER_PART_ID = NUMBER_PART_ID;
@@ -88,6 +89,7 @@ async function loadPassage(passage_id) {
         const data = await res.json();
         if (!res.ok) { alert(data.error || t('reading.failed_load_passage')); goHome(); return; }
         currentPassage = data.passage;
+        loadSavedWords();
         if (isLessonLearnerMode) {
             renderLessonSummary();
             switchScreen('screen-lesson-summary');
@@ -1199,7 +1201,63 @@ function showWordPopup(word) {
     document.getElementById('word-stroke-tabs').innerHTML = '';
     document.getElementById('word-stroke-container').innerHTML = '';
     document.getElementById('word-popup-stroke-btn').classList.remove('active');
+    updateSaveWordBtn(word, notFound);
     document.getElementById('word-popup-overlay').classList.add('open');
+}
+
+// ── Personal word list (book lessons only) ─────────────────────────────────────
+async function loadSavedWords() {
+    savedWords = new Set();
+    if (!currentPassage?.book_code || !currentPassage?.passage_id) return;
+    try {
+        const res = await fetch(`/api/vocab/saved?passage_id=${encodeURIComponent(currentPassage.passage_id)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        savedWords = new Set(data.words || []);
+    } catch (_) { /* leave empty on failure */ }
+}
+
+function updateSaveWordBtn(word, notFound) {
+    const btn = document.getElementById('word-popup-save-btn');
+    if (!btn) return;
+    // Only offer saving for book lessons and words known to the vocabulary.
+    if (!currentPassage?.book_code || notFound) {
+        btn.style.display = 'none';
+        return;
+    }
+    btn.style.display = '';
+    renderSaveWordBtn(savedWords.has(word));
+}
+
+function renderSaveWordBtn(saved) {
+    const btn = document.getElementById('word-popup-save-btn');
+    if (!btn) return;
+    btn.classList.toggle('active', saved);
+    btn.querySelector('i').className = saved ? 'fa-solid fa-check' : 'fa-solid fa-plus';
+    btn.querySelector('span').textContent = saved ? t('widgets.added') : t('widgets.add_to_list');
+}
+
+async function toggleSavedWord() {
+    const word = _popupWord;
+    if (!word || !currentPassage?.passage_id) return;
+    const btn = document.getElementById('word-popup-save-btn');
+    const wasSaved = savedWords.has(word);
+    if (btn) btn.disabled = true;
+    try {
+        const res = await fetch('/api/vocab/saved', {
+            method: wasSaved ? 'DELETE' : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ passage_id: currentPassage.passage_id, cn: word }),
+        });
+        if (res.ok) {
+            if (wasSaved) savedWords.delete(word);
+            else savedWords.add(word);
+            renderSaveWordBtn(!wasSaved);
+        }
+    } catch (_) { /* keep previous state on failure */ }
+    finally {
+        if (btn) btn.disabled = false;
+    }
 }
 
 function closeWordPopup() {

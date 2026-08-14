@@ -33,7 +33,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (autoPassageId) {
-        if (showParts) {
+        if (isBookPassageId(autoPassageId)) {
+            // Book passages are "<book_code>_<lesson>_<part>" (e.g. AML_1_1), not HSK
+            // levels — route to the book's part list instead of the HSK picker.
+            openBookForPassage(autoPassageId);
+        } else if (showParts) {
             openSelectedPassageForParts(autoPassageId);
         } else {
             openSelectedPassage(autoPassageId);
@@ -42,6 +46,11 @@ document.addEventListener('DOMContentLoaded', () => {
         loadRecentLearning();
     }
 });
+
+function isBookPassageId(passageId) {
+    const prefix = String(passageId || '').split('_')[0];
+    return !!prefix && !/^H\d+$/i.test(prefix);
+}
 
 async function openSelectedPassageForParts(passageId) {
     const parts = String(passageId || '').split('_');
@@ -174,6 +183,19 @@ async function loadBooks() {
     } catch (e) {
         console.warn('Could not load books', e);
         grid.innerHTML = `<p style="color:var(--danger); text-align:center;">${t('books.failed_load_books')}</p>`;
+    }
+}
+
+async function openBookForPassage(passageId) {
+    const parts = String(passageId || '').split('_');
+    const bookCode = parts[0];
+    const lessonNum = parts.length >= 2 ? parts[1] : null;
+    booksLoaded = true;
+    switchLearningTab('books');
+    await openBook(bookCode);
+    if (lessonNum && currentBook?.lessons) {
+        const lesson = currentBook.lessons.find(l => String(l.lesson) === String(lessonNum));
+        if (lesson) openBookLesson(lesson);
     }
 }
 

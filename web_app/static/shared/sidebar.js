@@ -13,6 +13,13 @@ function isNumberPart(passageId) {
     return String(passageId || '') === NUMBER_PART_ID;
 }
 
+function isBookPassageId(passageId) {
+    // Book passages are "<book_code>_<lesson>_<part>" (e.g. AML_1_1); the prefix
+    // is a book code, not an "H<level>" HSK level.
+    const prefix = String(passageId || '').split('_')[0];
+    return !!prefix && !/^H\d+$/i.test(prefix);
+}
+
 function sidebarEscapeHtml(value) {
     return String(value ?? '')
         .replace(/&/g, '&amp;')
@@ -157,6 +164,10 @@ async function loadSidebarParts(passageId) {
         return;
     }
 
+    if (isBookPassageId(passageId)) {
+        return loadSidebarBookParts(partsContainer, passageId);
+    }
+
     const hskLevelCode = partsStr[0]; // e.g. H1
     const lessonNum = partsStr[1];
     const hskLevel = SIDEBAR_HSK_MAP[hskLevelCode] || hskLevelCode;
@@ -201,6 +212,34 @@ async function loadSidebarParts(passageId) {
 
     } catch (e) {
         console.error('Sidebar parts load failed', e);
+        partsContainer.innerHTML = `<div class="sidebar-loader">${t('sidebar.failed_load_parts')}</div>`;
+    }
+}
+
+async function loadSidebarBookParts(partsContainer, passageId) {
+    const pStr = passageId.split('_');
+    const bookCode = pStr[0];
+    const lessonNum = pStr[1];
+    try {
+        const res = await fetch(`/api/lesson/book/${encodeURIComponent(bookCode)}`);
+        const data = await res.json();
+        const lesson = (data.lessons || []).find(l => String(l.lesson) === String(lessonNum));
+        const parts = (lesson?.parts || [])
+            .slice()
+            .sort((a, b) => (parseInt(a.part) || 0) - (parseInt(b.part) || 0));
+
+        if (!parts.length) {
+            partsContainer.innerHTML = `<div class="sidebar-loader">${t('sidebar.no_parts_found')}</div>`;
+            return;
+        }
+
+        // Book parts show no mini-stats — pass null progress so renderPartStep
+        // renders just the part label.
+        partsContainer.innerHTML = parts
+            .map(p => renderPartStep(p, passageId, null))
+            .join('');
+    } catch (e) {
+        console.error('Sidebar book parts load failed', e);
         partsContainer.innerHTML = `<div class="sidebar-loader">${t('sidebar.failed_load_parts')}</div>`;
     }
 }

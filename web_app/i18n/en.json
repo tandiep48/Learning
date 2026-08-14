@@ -251,6 +251,8 @@
         "reset": "Reset",
         "listen": "Listen",
         "stroke": "Stroke",
+        "add_to_list": "Add to list",
+        "added": "Added",
         "close": "Close",
         "loading": "Loading...",
         "vocab_panel_aria": "Lesson vocabulary",
