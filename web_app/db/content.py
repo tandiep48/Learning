@@ -15,6 +15,7 @@ from entity.passage.entity import LessonPassage
 from entity.lesson_line.entity import LessonLine
 from entity.vocabulary.entity import Vocabulary
 from entity.passage_vocabulary.entity import PassageVocabulary
+from entity.user_saved_word.entity import UserSavedWord
 from entity.record.entity import VocabRecord
 from entity.translation.entity import Translation
 from entity.grammar_rule.entity import GrammarRule
@@ -281,6 +282,51 @@ def get_passage_vocab(passage_id):
             .select_from(PassageVocabulary)
             .join(Vocabulary, Vocabulary.cn == PassageVocabulary.cn)
             .where(PassageVocabulary.passage_id == passage_id)
+            .order_by(Vocabulary.cn)
+        ).all()
+        return [
+            {
+                "cn": r[0],
+                "pinyin": r[1] or "",
+                "meaning_vn": r[2] or "",
+                "meaning_en": r[3] or "",
+                "audio_key": r[4] or "",
+                "hsk_level": r[5] or "",
+            }
+            for r in rows
+        ]
+    finally:
+        SessionLocal.remove()
+
+
+def get_passage_book_code(passage_id):
+    """Return a passage's book_code (e.g. 'AML'), or None for regular HSK passages."""
+    session = SessionLocal()
+    try:
+        row = session.execute(
+            select(LessonPassage.book_code)
+            .where(LessonPassage.passage_id == passage_id)
+        ).first()
+        return row[0] if row else None
+    finally:
+        SessionLocal.remove()
+
+
+def get_user_saved_vocab(user_id, passage_id):
+    """Vocabulary rows a user saved for a passage via user_saved_word."""
+    session = SessionLocal()
+    try:
+        rows = session.execute(
+            select(
+                Vocabulary.cn, Vocabulary.pinyin, Vocabulary.meaning_vn,
+                Vocabulary.meaning_en, Vocabulary.audio_key, Vocabulary.hsk_level,
+            )
+            .select_from(UserSavedWord)
+            .join(Vocabulary, Vocabulary.cn == UserSavedWord.cn)
+            .where(
+                UserSavedWord.user_id == user_id,
+                UserSavedWord.passage_id == passage_id,
+            )
             .order_by(Vocabulary.cn)
         ).all()
         return [
