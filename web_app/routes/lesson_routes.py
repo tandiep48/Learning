@@ -29,6 +29,7 @@ from db import (
     get_book_lessons,
 )
 from number_part import NUMBER_PART_ID, is_number_part, number_vocab_rows
+from service.i18n_service import get_current_lang
 
 lesson_bp = Blueprint('lesson', __name__, url_prefix='/api/lesson')
 
@@ -177,7 +178,7 @@ def log_lesson_event(user_id, session_id, passage_id, line_id, task_type,
 @lesson_bp.route('/passages', methods=['GET'])
 def get_passages():
     hsk_level = request.args.get('hsk_level')
-    passages = get_passages_summary(hsk_level)
+    passages = get_passages_summary(hsk_level, get_current_lang())
     return jsonify({"passages": passages})
 
 
@@ -194,13 +195,13 @@ def get_picker_progress():
 @lesson_bp.route('/books', methods=['GET'])
 @login_required
 def list_books():
-    return jsonify({"books": get_books_summary(current_user.id)})
+    return jsonify({"books": get_books_summary(current_user.id, get_current_lang())})
 
 
 @lesson_bp.route('/book/<code>', methods=['GET'])
 @login_required
 def get_book(code):
-    detail = get_book_lessons(current_user.id, code)
+    detail = get_book_lessons(current_user.id, code, get_current_lang())
     if detail is None:
         return jsonify({"error": "Book not found"}), 404
     return jsonify(detail)
