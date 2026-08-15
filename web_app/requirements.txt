@@ -5,6 +5,7 @@ flask-login
 eventlet
 gunicorn
 pandas
+openpyxl
 psycopg2-binary
 psycogreen
 pypinyin
