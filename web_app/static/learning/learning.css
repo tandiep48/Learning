@@ -170,6 +170,12 @@ body {
     color: var(--text-muted);
 }
 
+.lesson-card-sub {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+}
+
 .book-part-done {
     color: var(--primary);
     font-size: 0.85rem;
