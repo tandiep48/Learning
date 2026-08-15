@@ -28,9 +28,8 @@
     };
 
     // Keyboard shortcuts (opt-in via cfg.keyboardShortcuts): left/source cards are
-    // picked with 1-5, right/match cards with y-u-i-o-p, by their position in the column.
+    // picked with 1-5, by their position in the column.
     const LEFT_KEYS = ['1', '2', '3', '4', '5'];
-    const RIGHT_KEYS = ['y', 'u', 'i', 'o', 'p'];
 
     let cfg = null;                       // active start() config
     let activities = [];                  // flat list of { groupIndex, type, words }
@@ -359,10 +358,7 @@
                 let column = null;
                 let idx = LEFT_KEYS.indexOf(key);
                 if (idx >= 0) column = leftCol;
-                else {
-                    idx = RIGHT_KEYS.indexOf(key);
-                    if (idx >= 0) column = rightCol;
-                }
+                
                 if (!column) return;
                 const item = column.children[idx];
                 if (item && !item.classList.contains('solved')) {
