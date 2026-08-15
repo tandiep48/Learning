@@ -467,3 +467,15 @@ ALTER TABLE competition_rooms ALTER COLUMN progress DROP NOT NULL;
 -- passage_id already encodes {CODE}_{lesson}_{part}, so this is just a fast, explicit filter.
 ALTER TABLE lesson_passages ADD COLUMN IF NOT EXISTS book_code VARCHAR(20);
 CREATE INDEX IF NOT EXISTS idx_passages_book ON lesson_passages(book_code);
+
+-- Per-book metadata (name shown on the Books tab); imported from content_info.xlsx.
+CREATE TABLE IF NOT EXISTS books (
+    book_code VARCHAR(20) PRIMARY KEY,
+    name_en   VARCHAR(200),
+    name_vn   VARCHAR(200)
+);
+
+-- Per-lesson title (localized), keyed on the lesson's part-1 passage. NULL for
+-- passages without a title (e.g. book part 2, or un-titled HSK parts).
+ALTER TABLE lesson_passages ADD COLUMN IF NOT EXISTS title_en VARCHAR(255);
+ALTER TABLE lesson_passages ADD COLUMN IF NOT EXISTS title_vn VARCHAR(255);
