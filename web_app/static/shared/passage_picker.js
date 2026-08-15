@@ -167,6 +167,15 @@ const Picker = {
         }
     },
 
+    _lessonTitle(lessonNum) {
+        // Lesson title = the part-1 passage's title (fall back to any part that has one).
+        const parts = this.groupedPassages[lessonNum] || [];
+        const part1 = parts.find(p => (p.passage_id.split('_')[2] === '1'));
+        if (part1 && part1.title) return part1.title;
+        const any = parts.find(p => p.title);
+        return any ? any.title : '';
+    },
+
     renderLessons() {
         const container = document.getElementById('picker-lesson-list');
         container.innerHTML = '';
@@ -206,13 +215,20 @@ const Picker = {
                    </div>`
                 : '';
 
+            const lessonLabel = prefix + lessonNum;
+            const lessonTitle = this._lessonTitle(lessonNum);
+            const titleBlock = lessonTitle
+                ? `<div class="lesson-card-title">${this.escapeHtml(lessonTitle)}</div>
+                   <div class="lesson-card-sub">${this.escapeHtml(lessonLabel)}</div>`
+                : `<div class="lesson-card-title">${this.escapeHtml(lessonLabel)}</div>`;
+
             card.innerHTML = `
                 <div class="lesson-card-img-wrap">
-                    <img class="lesson-card-img" src="${imgPath}" alt="${this.escapeHtml(prefix + lessonNum)}" loading="lazy"
+                    <img class="lesson-card-img" src="${imgPath}" alt="${this.escapeHtml(lessonLabel)}" loading="lazy"
                          onerror="this.parentElement.style.display='none'">
                 </div>
                 <div class="lesson-card-body">
-                    <div class="lesson-card-title">${this.escapeHtml(prefix + lessonNum)}</div>
+                    ${titleBlock}
                     ${progressHtml}
                     <div class="lesson-card-count">${countLabel}</div>
                 </div>
@@ -274,8 +290,10 @@ const Picker = {
                    </div>`
                 : '';
 
+            // Show the part's title; fall back to "Part N" only when it has none.
+            const partLabel = p.title || partName;
             btn.innerHTML = `
-                <div class="part-list-title">${this.escapeHtml(partName)}</div>
+                <div class="part-list-title">${this.escapeHtml(partLabel)}</div>
                 ${progressHtml}
             `;
 
