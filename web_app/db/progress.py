@@ -15,6 +15,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from entity.database import SessionLocal
 from entity.passage.entity import LessonPassage
+from entity.book.entity import Book
 from entity.lesson_line.entity import LessonLine  # noqa: F401  (registers LessonPassage.lines mapper)
 from entity.passage_vocabulary.entity import PassageVocabulary
 from entity.record.entity import VocabRecord
@@ -210,15 +211,29 @@ def _lesson_sort_key(value):
     return (0, int(s)) if s.isdigit() else (1, s)
 
 
-def get_books_summary(user_id):
-    """One row per topic book (book_code) with cover URL and the user's completion counts.
-    Books have no vocab, so this is passage/part based only."""
+def _pick_lang(en, vn, lang):
+    """Localized text: Vietnamese for 'vi', else English; each falls back to the other."""
+    if lang == "vi":
+        return vn or en
+    return en or vn
+
+
+def get_books_summary(user_id, lang="en"):
+    """One row per topic book (book_code) with localized name, cover URL and the user's
+    completion counts. Books have no vocab, so this is passage/part based only."""
     session = SessionLocal()
     try:
         rows = session.execute(
             select(LessonPassage.passage_id, LessonPassage.book_code)
             .where(LessonPassage.book_code.isnot(None))
         ).all()
+
+        names = {
+            code: _pick_lang(name_en, name_vn, lang)
+            for code, name_en, name_vn in session.execute(
+                select(Book.book_code, Book.name_en, Book.name_vn)
+            ).all()
+        }
 
         completed = {
             pid for (pid,) in session.execute(
@@ -233,6 +248,7 @@ def get_books_summary(user_id):
         for passage_id, code in rows:
             book = books.setdefault(code, {
                 "book_code": code,
+                "name": names.get(code) or code,
                 "cover_url": f"/lesson-cover/{code}",
                 "part_count": 0,
                 "done_count": 0,
@@ -254,17 +270,20 @@ def get_books_summary(user_id):
         SessionLocal.remove()
 
 
-def get_book_lessons(user_id, book_code):
-    """Lessons → parts for one book, each part carrying the user's completion/progress.
-    Returns None if the book has no passages (unknown code)."""
+def get_book_lessons(user_id, book_code, lang="en"):
+    """Lessons → parts for one book, each lesson carrying its localized title and each part
+    the user's completion/progress. Returns None if the book has no passages (unknown code)."""
     session = SessionLocal()
     try:
         rows = session.execute(
-            select(LessonPassage.passage_id)
+            select(LessonPassage.passage_id, LessonPassage.title_en, LessonPassage.title_vn)
             .where(LessonPassage.book_code == book_code)
         ).all()
         if not rows:
             return None
+
+        book = session.get(Book, book_code)
+        book_name = _pick_lang(book.name_en, book.name_vn, lang) if book else book_code
 
         progress = {
             pid: (completed_at is not None, score or 0)
@@ -278,12 +297,16 @@ def get_book_lessons(user_id, book_code):
         }
 
         lessons = {}
-        for (passage_id,) in rows:
+        for passage_id, title_en, title_vn in rows:
             id_parts = str(passage_id).split("_")
             lesson_num = id_parts[1] if len(id_parts) >= 2 else "Other"
             part_num = id_parts[2] if len(id_parts) >= 3 else "1"
             done, score = progress.get(passage_id, (False, 0))
-            lesson = lessons.setdefault(lesson_num, {"lesson": lesson_num, "parts": []})
+            lesson = lessons.setdefault(lesson_num, {"lesson": lesson_num, "title": None, "parts": []})
+            # The title lives on the part-1 passage; take it whenever present.
+            title = _pick_lang(title_en, title_vn, lang)
+            if title and not lesson["title"]:
+                lesson["title"] = title
             lesson["parts"].append({
                 "passage_id": passage_id,
                 "part": part_num,
@@ -299,7 +322,7 @@ def get_book_lessons(user_id, book_code):
             lesson["done_count"] = sum(1 for p in lesson["parts"] if p["completed"])
             ordered.append(lesson)
 
-        return {"book_code": book_code, "lessons": ordered}
+        return {"book_code": book_code, "book_name": book_name, "lessons": ordered}
     finally:
         SessionLocal.remove()
 

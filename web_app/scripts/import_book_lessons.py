@@ -36,6 +36,7 @@ sys.path.insert(0, _WEBAPP)
 from entity.database import SessionLocal                # noqa: E402
 from entity.passage.entity import LessonPassage         # noqa: E402
 from entity.lesson_line.entity import LessonLine        # noqa: E402
+from entity.book.entity import Book                      # noqa: E402
 
 # The 15 books that have a matching cover image; only these are imported.
 BOOK_CODES = [
@@ -97,9 +98,69 @@ def replace_passage(session, code, passage):
     return is_new, len(lines)
 
 
+def _sheet_index(ws):
+    """Return (header->col-index map, remaining row iterator) for a worksheet."""
+    rows = ws.iter_rows(values_only=True)
+    header = next(rows)
+    return {name: i for i, name in enumerate(header)}, rows
+
+
+def import_metadata(session, xlsx_path, codeset):
+    """Upsert book names (book_info sheet, limited to `codeset`) and lesson titles
+    (lesson_info sheet, for EVERY existing passage — HSK and books). Returns
+    (books_upserted, titles_set).
+
+    NOTE: the lesson_info EN/VN columns are laid out differently per source:
+      * book rows (prefix in BOOK_CODES) have them SWAPPED — `title_vn` holds
+        English and `title_en` holds Vietnamese;
+      * HSK rows are labeled correctly — `title_vn` is Vietnamese, `title_en` English.
+    They are mapped to the right language below.
+    """
+    import openpyxl
+    bookset = set(BOOK_CODES)
+    wb = openpyxl.load_workbook(xlsx_path, read_only=True, data_only=True)
+    try:
+        bi_idx, bi_rows = _sheet_index(wb["book_info"])
+        books_n = 0
+        for r in bi_rows:
+            code = r[bi_idx["prefix"]]
+            if code not in codeset:
+                continue
+            name_en = r[bi_idx["book_name_en"]]
+            name_vn = r[bi_idx["book_name_vn"]]
+            book = session.get(Book, code)
+            if book is None:
+                session.add(Book(book_code=code, name_en=name_en, name_vn=name_vn))
+            else:
+                book.name_en, book.name_vn = name_en, name_vn
+            books_n += 1
+
+        # Titles are a general lesson feature: set them on any passage that already
+        # exists (HSK per-part titles + book per-lesson titles).
+        li_idx, li_rows = _sheet_index(wb["lesson_info"])
+        titles_n = 0
+        for r in li_rows:
+            pid = r[li_idx["passage_id"]]
+            if not isinstance(pid, str):
+                continue
+            row = session.get(LessonPassage, pid)
+            if row is None:
+                continue
+            col_vn, col_en = r[li_idx["title_vn"]], r[li_idx["title_en"]]
+            if pid.split("_")[0] in bookset:
+                row.title_en, row.title_vn = col_vn, col_en   # book columns are swapped
+            else:
+                row.title_en, row.title_vn = col_en, col_vn   # HSK columns are correct
+            titles_n += 1
+        return books_n, titles_n
+    finally:
+        wb.close()
+
+
 def main():
     parser = argparse.ArgumentParser(description="Import cover-book lessons into lesson_passages/lesson_lines.")
     parser.add_argument("--source", default=DEFAULT_SOURCE, help=f"folder holding {{CODE}}.json (default: {DEFAULT_SOURCE})")
+    parser.add_argument("--xlsx", default="", help="content_info.xlsx for book names + lesson titles (default: <source>/../content_info.xlsx)")
     parser.add_argument("--codes", default="", help="comma-separated subset of book codes (default: all 15)")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--dry-run", action="store_true", help="show what would change, write nothing")
@@ -115,7 +176,13 @@ def main():
     else:
         codes = list(BOOK_CODES)
 
+    xlsx_path = args.xlsx or os.path.normpath(
+        os.path.join(args.source, "..", "content_info.xlsx")
+    )
+    has_xlsx = os.path.isfile(xlsx_path)
+
     print(f"source : {args.source}")
+    print(f"xlsx   : {xlsx_path}" + ("" if has_xlsx else "  (NOT FOUND — names/titles skipped)"))
     print(f"books  : {len(codes)} ({', '.join(codes)})")
     print()
 
@@ -152,8 +219,18 @@ def main():
               f"new={grand_new}  replace={grand_passages - grand_new}")
 
         if args.dry_run:
+            print("metadata: book names + lesson titles will import from the xlsx on --apply."
+                  if has_xlsx else "metadata: no xlsx found — book names/lesson titles skipped.")
             print("dry-run: nothing was written.")
             return
+
+        # Titles update the passages just added above; flush so import_metadata sees them.
+        if has_xlsx:
+            session.flush()
+            books_n, titles_n = import_metadata(session, xlsx_path, set(codes))
+            print(f"metadata: books={books_n}  lesson_titles={titles_n}")
+        else:
+            print("metadata: no xlsx found — book names/lesson titles skipped.")
 
         session.commit()
         print("Applied: book lessons imported.")

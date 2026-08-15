@@ -135,8 +135,8 @@ function formatPassageContext(passageId) {
 }
 
 // ─── Books tab ──────────────────────────────────────────────────────────────
-let booksLoaded = false;
-let currentBook = null;   // { book_code, lessons: [...] }
+let booksLoadPromise = null;   // cached grid load so it runs once and can be awaited
+let currentBook = null;        // { book_code, lessons: [...] }
 
 function switchLearningTab(tab) {
     const isBooks = tab === 'books';
@@ -144,13 +144,22 @@ function switchLearningTab(tab) {
     document.getElementById('tab-books').hidden = !isBooks;
     document.getElementById('learning-tab-hsk').classList.toggle('active', !isBooks);
     document.getElementById('learning-tab-books').classList.toggle('active', isBooks);
-    if (isBooks && !booksLoaded) {
-        loadBooks();
+    if (isBooks) {
+        ensureBooksLoaded();
     }
 }
 
+// Load the cover grid at most once. Returns the same promise so callers (tab
+// switch and the deep-link path) can await a populated grid before overlaying
+// the lesson/part screens.
+function ensureBooksLoaded() {
+    if (!booksLoadPromise) {
+        booksLoadPromise = loadBooks();
+    }
+    return booksLoadPromise;
+}
+
 async function loadBooks() {
-    booksLoaded = true;
     const grid = document.getElementById('books-grid');
     try {
         const res = await fetch('/api/lesson/books');
@@ -173,7 +182,7 @@ async function loadBooks() {
                     <img class="book-card-img" src="${escapeHtml(book.cover_url)}" alt="${escapeHtml(book.book_code)}" loading="lazy">
                 </div>
                 <div class="book-card-body">
-                    <div class="book-card-title">${escapeHtml(book.book_code)}</div>
+                    <div class="book-card-title">${escapeHtml(book.name || book.book_code)}</div>
                     <div class="book-card-count">${escapeHtml(lessons)}</div>
                     <div class="book-card-count">${escapeHtml(parts)}</div>
                 </div>`;
@@ -183,6 +192,7 @@ async function loadBooks() {
     } catch (e) {
         console.warn('Could not load books', e);
         grid.innerHTML = `<p style="color:var(--danger); text-align:center;">${t('books.failed_load_books')}</p>`;
+        booksLoadPromise = null;   // allow a retry on the next tab switch
     }
 }
 
@@ -190,8 +200,9 @@ async function openBookForPassage(passageId) {
     const parts = String(passageId || '').split('_');
     const bookCode = parts[0];
     const lessonNum = parts.length >= 2 ? parts[1] : null;
-    booksLoaded = true;
     switchLearningTab('books');
+    // Populate the cover grid first so backing out from the part list shows it.
+    await ensureBooksLoaded();
     await openBook(bookCode);
     if (lessonNum && currentBook?.lessons) {
         const lesson = currentBook.lessons.find(l => String(l.lesson) === String(lessonNum));
@@ -210,6 +221,7 @@ async function openBook(code) {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'load failed');
         currentBook = data;
+        document.getElementById('books-lessons-title').textContent = data.book_name || code;
         renderBookLessons();
     } catch (e) {
         console.warn('Could not load book', e);
@@ -226,12 +238,16 @@ function renderBookLessons() {
     lessons.forEach(lesson => {
         const card = document.createElement('div');
         card.className = 'lesson-card';
-        const title = `${t('picker.lesson_prefix')} ${lesson.lesson}`;
+        const label = `${t('picker.lesson_prefix')} ${lesson.lesson}`;
+        // Show the lesson title when present, with "Lesson N" as the sub-label.
+        const title = lesson.title || label;
+        const sub = lesson.title ? label : '';
         let count = t('books.parts_count', { count: lesson.part_count });
         if (lesson.done_count > 0) count += ` · ${lesson.done_count}/${lesson.part_count}`;
         card.innerHTML = `
             <div class="lesson-card-body">
                 <div class="lesson-card-title">${escapeHtml(title)}</div>
+                ${sub ? `<div class="lesson-card-sub">${escapeHtml(sub)}</div>` : ''}
                 <div class="lesson-card-count">${escapeHtml(count)}</div>
             </div>`;
         card.addEventListener('click', () => openBookLesson(lesson));
@@ -240,8 +256,9 @@ function renderBookLessons() {
 }
 
 function openBookLesson(lesson) {
-    document.getElementById('books-parts-title').textContent =
-        `${currentBook.book_code} · ${t('picker.lesson_prefix')} ${lesson.lesson}`;
+    const bookLabel = currentBook.book_name || currentBook.book_code;
+    const lessonLabel = lesson.title || `${t('picker.lesson_prefix')} ${lesson.lesson}`;
+    document.getElementById('books-parts-title').textContent = `${bookLabel} · ${lessonLabel}`;
     const list = document.getElementById('books-part-list');
     list.innerHTML = '';
     (lesson.parts || []).forEach(part => {

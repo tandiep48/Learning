@@ -110,7 +110,7 @@ def get_practice_questions_multi(items):
         SessionLocal.remove()
 
 
-def get_passages_summary(hsk_level=None):
+def get_passages_summary(hsk_level=None, lang="en"):
     session = SessionLocal()
     try:
         q = (
@@ -118,17 +118,28 @@ def get_passages_summary(hsk_level=None):
                 LessonPassage.passage_id,
                 LessonPassage.hsk_level,
                 func.count(LessonLine.id).label("line_count"),
+                LessonPassage.title_en,
+                LessonPassage.title_vn,
             )
             .select_from(LessonPassage)
             .outerjoin(LessonLine, LessonPassage.passage_id == LessonLine.passage_id)
         )
         if hsk_level:
             q = q.where(LessonPassage.hsk_level == hsk_level)
-        q = q.group_by(LessonPassage.passage_id, LessonPassage.hsk_level).order_by(
-            LessonPassage.passage_id
-        )
+        q = q.group_by(
+            LessonPassage.passage_id, LessonPassage.hsk_level,
+            LessonPassage.title_en, LessonPassage.title_vn,
+        ).order_by(LessonPassage.passage_id)
         rows = session.execute(q).all()
-        return [{"passage_id": r[0], "hsk_level": r[1], "line_count": r[2]} for r in rows]
+        return [
+            {
+                "passage_id": r[0],
+                "hsk_level": r[1],
+                "line_count": r[2],
+                "title": (r[4] or r[3]) if lang == "vi" else (r[3] or r[4]),
+            }
+            for r in rows
+        ]
     finally:
         SessionLocal.remove()
 
