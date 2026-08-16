@@ -487,7 +487,7 @@
             }
             // Show the shortcut key badge when keyboard play is enabled. The item gets
             // extra inline padding so the badge sits in a gutter, never over the content.
-            const keyChar = side === 'left' ? LEFT_KEYS[index] : RIGHT_KEYS[index];
+            const keyChar = side === 'left' ? LEFT_KEYS[index] : null;
             if (cfg.keyboardShortcuts && keyChar) {
                 item.classList.add('bt-has-key');
                 const hint = document.createElement('span');
