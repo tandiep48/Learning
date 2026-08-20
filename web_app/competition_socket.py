@@ -11,8 +11,10 @@ from db import (
     join_competition_room,
     leave_competition_room,
     mark_competition_participant_finished,
+    record_competition_lesson_answer,
     record_competition_vocab_answer,
     start_competition_session,
+    update_competition_room,
 )
 
 
@@ -131,6 +133,19 @@ def register_handlers():
         if chat:
             socketio.emit("chat_message", chat, to=room_code)
 
+    @socketio.on("host_edit_room")
+    def handle_host_edit_room(data):
+        if not authenticated():
+            emit_error("Login required")
+            return
+        room_code = str((data or {}).get("room_code") or "").strip().upper()
+        state, error = update_competition_room(room_code, current_user.id, data or {})
+        if error:
+            emit_error(error)
+            return
+        broadcast_room_state(room_code)
+        emit("room_settings_saved", {"room": state})
+
     @socketio.on("host_start_session")
     def handle_host_start_session(data):
         if not authenticated():
@@ -162,6 +177,33 @@ def register_handlers():
             current_user.id,
             payload.get("word"),
             payload.get("activity_type"),
+            payload.get("is_correct"),
+            payload.get("response_time_ms", 0),
+            payload.get("wrong_attempts", 0),
+        )
+        if error:
+            # Duplicate / inactive answers are non-fatal; just don't broadcast.
+            return
+        socketio.emit("score_update", {"scores": result["scores"]}, to=room_code)
+
+    @socketio.on("lesson_answer")
+    def handle_lesson_answer(data):
+        if not authenticated():
+            emit_error("Login required")
+            return
+        payload = data or {}
+        room_code = str(payload.get("room_code") or "").strip().upper()
+        try:
+            session_id = int(payload.get("session_id"))
+        except (TypeError, ValueError):
+            emit_error("Invalid answer payload")
+            return
+
+        result, error = record_competition_lesson_answer(
+            session_id,
+            current_user.id,
+            payload.get("item_key"),
+            payload.get("task_type"),
             payload.get("is_correct"),
             payload.get("response_time_ms", 0),
             payload.get("wrong_attempts", 0),

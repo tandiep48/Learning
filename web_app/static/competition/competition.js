@@ -7,6 +7,7 @@ let currentRoom = null;
 let currentSession = null;
 let waitingUsers = new Set();
 let groupedPassages = {};        // lesson -> [{ passage_id, lesson, part }]
+let editing = false;             // host editing an existing room's settings in place
 
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof io !== 'function') {
@@ -20,6 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
     MultiSelect.init('create-lesson-ms', t('vocab.select_lesson_option'), onLessonChange);
     MultiSelect.init('create-part-ms', t('vocab.select_part_option'), () => {});
 
+    document.getElementById('create-mode')?.addEventListener('change', onModeChange);
+    onModeChange();
     document.getElementById('create-level')?.addEventListener('change', onLevelChange);
     document.getElementById('chat-input')?.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') sendChat();
@@ -49,6 +52,12 @@ function bindSocketEvents() {
         if (!payload?.room) return;
         currentRoom = payload.room;
         renderRoom(payload.room);
+    });
+
+    socket.on('room_settings_saved', payload => {
+        if (payload?.room) currentRoom = payload.room;
+        exitEditMode();
+        showScreen('screen-lobby');
     });
 
     socket.on('chat_message', message => {
@@ -95,7 +104,23 @@ function showScreen(id) {
     document.getElementById(id)?.classList.add('active');
 }
 
-// ── Setup: HSK -> lessons -> parts selection (mirrors the vocab picker) ──────────
+// ── Setup: mode / type + HSK -> lessons -> parts selection ───────────────────────
+
+// Maps the room's vocab skill focus onto the trainer's internal activity types.
+const VOCAB_ACTIVITY_MAP = {
+    all: ['typing', 'listen', 'reading'],
+    typing: ['typing'],
+    listening: ['listen'],
+    reading: ['reading'],
+};
+
+// The Type (skill focus) selector only applies to the Vocabulary competition; the
+// Lesson trainer always runs its full task mix, so hide Type when Lesson is picked.
+function onModeChange() {
+    const mode = document.getElementById('create-mode')?.value || 'vocab';
+    const typeField = document.getElementById('create-type-field');
+    if (typeField) typeField.style.display = mode === 'lesson' ? 'none' : '';
+}
 
 async function onLevelChange() {
     const level = document.getElementById('create-level')?.value || '';
@@ -153,20 +178,37 @@ function onLessonChange() {
     MultiSelect.setOptions('create-part-ms', partOptions);
 }
 
-async function createRoom() {
+// The primary setup button either creates a new room or, when the host is editing an
+// existing one, saves the changes over the socket without leaving the room.
+function submitRoom() {
+    if (editing) saveRoomSettings();
+    else createRoom();
+}
+
+// Read + validate the setup form into a room-settings payload (shared by create/edit).
+// Returns null (and shows an error) when the required fields are missing.
+function collectRoomBody() {
     const level = document.getElementById('create-level')?.value;
     const passageIds = MultiSelect.values('create-part-ms');
     if (!level || !passageIds.length) {
         showSetupError(t('competition.select_hsk_lesson_part'));
-        return;
+        return null;
     }
     showSetupError('');
-    const body = {
+    const mode = document.getElementById('create-mode')?.value || 'vocab';
+    return {
+        category: mode,
+        activity_type: mode === 'vocab' ? (document.getElementById('create-type')?.value || 'all') : 'all',
         level: Number(level),
         passage_ids: passageIds,
         max_users: document.getElementById('create-max-users').value,
         section_timeout_minutes: document.getElementById('create-timeout').value
     };
+}
+
+async function createRoom() {
+    const body = collectRoomBody();
+    if (!body) return;
 
     const res = await fetch('/api/competition/rooms', {
         method: 'POST',
@@ -181,6 +223,63 @@ async function createRoom() {
     socket.emit('join_room', { room_code: data.room.room_code });
 }
 
+// ── Host: edit an existing room's settings in place ──────────────────────────────
+
+// Reopen the setup form pre-filled with the current room, in edit mode. The host stays
+// in the room the whole time; saving broadcasts the new settings to everyone.
+async function editRoomSettings() {
+    if (!currentRoom) return;
+    editing = true;
+    showSetupError('');
+
+    document.getElementById('create-mode').value = currentRoom.category || 'vocab';
+    onModeChange();
+    document.getElementById('create-type').value = currentRoom.activity_type || 'all';
+    document.getElementById('create-level').value = String(currentRoom.level || '');
+    document.getElementById('create-max-users').value = currentRoom.max_users || 8;
+    document.getElementById('create-timeout').value = String(currentRoom.section_timeout_minutes || 15);
+
+    // Rebuild lesson/part options for the level, then re-check the room's current picks.
+    await onLevelChange();
+    const passageIds = currentRoom.passage_ids || [];
+    const lessons = Array.from(new Set(passageIds.map(id => String(id).split('_')[1])));
+    MultiSelect.setValues('create-lesson-ms', lessons);
+    onLessonChange();
+    MultiSelect.setValues('create-part-ms', passageIds);
+
+    enterEditMode();
+    showScreen('screen-setup');
+}
+
+function saveRoomSettings() {
+    if (!currentRoom) return;
+    const body = collectRoomBody();
+    if (!body) return;
+    socket.emit('host_edit_room', { room_code: currentRoom.room_code, ...body });
+}
+
+function cancelEdit() {
+    exitEditMode();
+    showScreen('screen-lobby');
+}
+
+// Swap the setup screen between "create a room" and "edit this room" affordances.
+function enterEditMode() {
+    editing = true;
+    document.getElementById('create-submit-btn').textContent = t('competition.save_changes');
+    document.getElementById('edit-cancel-btn').style.display = '';
+    const joinPanel = document.getElementById('join-panel');
+    if (joinPanel) joinPanel.style.display = 'none';
+}
+
+function exitEditMode() {
+    editing = false;
+    document.getElementById('create-submit-btn').textContent = t('competition.create_room');
+    document.getElementById('edit-cancel-btn').style.display = 'none';
+    const joinPanel = document.getElementById('join-panel');
+    if (joinPanel) joinPanel.style.display = '';
+}
+
 function joinRoomFromInput() {
     const code = document.getElementById('join-room-code').value.trim().toUpperCase();
     if (!code) return;
@@ -192,6 +291,7 @@ function leaveRoom() {
     socket.emit('leave_room', { room_code: currentRoom.room_code });
     currentRoom = null;
     currentSession = null;
+    exitEditMode();
     showScreen('screen-setup');
 }
 
@@ -202,10 +302,15 @@ function renderRoom(room) {
 
     const passageIds = room.passage_ids || [];
     const lessonCount = new Set(passageIds.map(id => String(id).split('_')[1])).size;
+    const isLesson = room.category === 'lesson';
+    const countLine = isLesson
+        ? t('competition.tasks_source_count', { count: room.word_count || 0 })
+        : t('competition.words_count', { count: room.word_count || 0 });
     document.getElementById('room-summary').innerHTML = `
         <div><strong>HSK ${escapeHtml(room.level)}</strong></div>
+        <div>${escapeHtml(modeSummaryLabel(room))}</div>
         <div>${escapeHtml(t('competition.lessons_parts_count', { lessons: lessonCount, parts: passageIds.length }))}</div>
-        <div>${escapeHtml(t('competition.words_count', { count: room.word_count || 0 }))}</div>
+        <div>${escapeHtml(countLine)}</div>
         <div>${escapeHtml(t('competition.users_count', { count: room.members?.length || 0, max: room.max_users }))}</div>
         <div>${escapeHtml(t('competition.time_limit_value', { n: room.section_timeout_minutes }))}</div>
     `;
@@ -218,13 +323,22 @@ function renderRoom(room) {
         </div>
     `).join('');
 
-    const startBtn = document.getElementById('host-start-btn');
     const isHost = Number(room.host_user_id) === Number(window.currentUser.id);
-    startBtn.style.display = isHost && room.status !== 'running' ? '' : 'none';
+    const canManage = isHost && room.status !== 'running';
+    document.getElementById('host-start-btn').style.display = canManage ? '' : 'none';
+    const editBtn = document.getElementById('host-edit-btn');
+    if (editBtn) editBtn.style.display = canManage ? '' : 'none';
 
     const chat = document.getElementById('chat-list');
     chat.innerHTML = '';
     (room.chat || []).forEach(appendChat);
+}
+
+// "Vocabulary · Typing" / "Lesson" — the room's mode and (vocab-only) skill focus.
+function modeSummaryLabel(room) {
+    if (room.category === 'lesson') return t('competition.mode_lesson');
+    const typeKey = `competition.type_${room.activity_type || 'all'}`;
+    return `${t('competition.mode_vocab')} · ${t(typeKey)}`;
 }
 
 function appendChat(message) {
@@ -253,8 +367,13 @@ function startSession() {
 // ── In-room trainer ──────────────────────────────────────────────────────────────
 
 async function startTrainer() {
-    const words = await resolveRoomWords();
     const container = document.getElementById('competition-trainer');
+    if (currentRoom?.category === 'lesson') {
+        startLessonTrainer(container);
+        return;
+    }
+
+    const words = await resolveRoomWords();
     if (!words.length) {
         container.innerHTML = `<div class="competition-empty">${escapeHtml(t('competition.no_words'))}</div>`;
         return;
@@ -262,10 +381,28 @@ async function startTrainer() {
     VocabTrainer.start({
         container,
         words,
+        activityTypes: VOCAB_ACTIVITY_MAP[currentRoom?.activity_type || 'all'] || VOCAB_ACTIVITY_MAP.all,
         autoAdvance: true,        // competition: no Check/Next buttons — flow automatically
         keyboardShortcuts: true,  // 1-5 pick source cards, y-u-i-o-p pick match cards
         onAnswer: emitVocabAnswer,
         onProgress: updateTrainerProgress,
+        mountAction: mountCompetitionAction,
+        onFinish: finishTrainer,
+    });
+}
+
+// Lesson mode plays the shared task set generated server-side at session start.
+function startLessonTrainer(container) {
+    const tasks = currentSession?.lesson_tasks || [];
+    if (!tasks.length) {
+        container.innerHTML = `<div class="competition-empty">${escapeHtml(t('competition.no_tasks'))}</div>`;
+        return;
+    }
+    LessonTrainer.start({
+        container,
+        tasks,
+        onAnswer: emitLessonAnswer,
+        onProgress: updateLessonProgress,
         mountAction: mountCompetitionAction,
         onFinish: finishTrainer,
     });
@@ -298,9 +435,26 @@ function emitVocabAnswer(row, type, userAnswer, isCorrect, responseMs, wrongAtte
     });
 }
 
+function emitLessonAnswer(task, isCorrect, responseMs) {
+    if (!currentRoom || !currentSession) return;
+    socket.emit('lesson_answer', {
+        room_code: currentRoom.room_code,
+        session_id: currentSession.id,
+        item_key: `${task.passage_id || ''}:${task.line_id != null ? task.line_id : ''}`,
+        task_type: task.type,
+        is_correct: isCorrect,
+        response_time_ms: responseMs,
+    });
+}
+
 function updateTrainerProgress({ groupIndex, totalGroups }) {
     const el = document.getElementById('competition-progress');
     if (el) el.textContent = t('vocab_trainer.group_counter', { current: groupIndex + 1, total: totalGroups });
+}
+
+function updateLessonProgress({ index, total }) {
+    const el = document.getElementById('competition-progress');
+    if (el) el.textContent = t('trainer.task_counter', { current: index + 1, total });
 }
 
 function mountCompetitionAction(btn) {

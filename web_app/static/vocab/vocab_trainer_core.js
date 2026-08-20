@@ -40,22 +40,92 @@
 
     function start(config) {
         cfg = config;
-        activities = buildActivities(config.words || []);
+        // cfg.activityTypes (optional) restricts the run to a single skill; default is
+        // the all-rounder set (typing + listening + reading match).
+        const requested = Array.isArray(config.activityTypes) && config.activityTypes.length
+            ? config.activityTypes.filter(type => ACTIVITY_TYPES.includes(type))
+            : ACTIVITY_TYPES;
+        const types = requested.length ? requested : ACTIVITY_TYPES;
+        activities = buildActivities(config.words || [], types);
         currentActivityIndex = 0;
         renderActivity();
     }
 
     // ── Activity building ───────────────────────────────────────────────────────
-    function buildGroups(rows) {
-        const groups = [];
-        for (let i = 0; i < rows.length; i += GROUP_SIZE) {
-            groups.push(rows.slice(i, i + GROUP_SIZE));
+    // Group sizes for `n` words: fixed groups of GROUP_SIZE, but a lone trailing word is
+    // avoided by borrowing one from the previous group ([…,5,1] -> […,4,2]) instead of
+    // growing a group past GROUP_SIZE — a 6-word group would break the 1-5 keyboard
+    // shortcuts and leave a match card without a number badge.
+    function groupSizes(n) {
+        const sizes = [];
+        for (let i = 0; i < n; i += GROUP_SIZE) sizes.push(Math.min(GROUP_SIZE, n - i));
+        if (sizes.length > 1 && sizes[sizes.length - 1] === 1) {
+            sizes[sizes.length - 1] = 2;
+            sizes[sizes.length - 2] -= 1;
         }
-        // Avoid a lone trailing word: fold a size-1 remainder into the previous group.
-        if (groups.length > 1 && groups[groups.length - 1].length === 1) {
-            groups[groups.length - 2].push(groups.pop()[0]);
+        return sizes;
+    }
+
+    function buildGroups(rows) {
+        const sizes = groupSizes(rows.length);
+        const groups = [];
+        let i = 0;
+        for (const size of sizes) {
+            groups.push(rows.slice(i, i + size));
+            i += size;
         }
         return groups;
+    }
+
+    // Split `n` items into `k` groups as evenly as possible (sizes differ by at most one).
+    // With k >= ceil(n/GROUP_SIZE) every group stays within GROUP_SIZE.
+    function balancedSizes(n, k) {
+        const base = Math.floor(n / k);
+        let rem = n % k;
+        return Array.from({ length: k }, () => base + (rem-- > 0 ? 1 : 0));
+    }
+
+    // Homophones (same pinyin, e.g. 他 / 她 both "tā") sound identical, so a listening
+    // match group that holds two of them has no distinguishable answer. Group so no group
+    // repeats a key. A key that appears m times needs at least m groups to separate, so the
+    // group count grows to max(ceil(n/5), maxFrequency); the most-constrained words are
+    // placed first, each into the emptiest group with room and no clash.
+    function buildGroupsAvoidingKey(rows, keyFn) {
+        const shuffled = shuffle(rows.slice());
+        const n = shuffled.length;
+        if (!n) return [];
+
+        const freq = {};
+        shuffled.forEach(r => { const k = keyFn(r); freq[k] = (freq[k] || 0) + 1; });
+        const maxFreq = Math.max(...Object.values(freq));
+        const groupCount = Math.max(Math.ceil(n / GROUP_SIZE), maxFreq, 1);
+        const sizes = balancedSizes(n, groupCount);
+        const ordered = shuffled.slice().sort((a, b) => freq[keyFn(b)] - freq[keyFn(a)]);
+
+        const groups = sizes.map(() => []);
+        const emptiestWithRoom = (allow) => {
+            let best = -1;
+            groups.forEach((g, idx) => {
+                if (g.length >= sizes[idx] || !allow(g)) return;
+                if (best === -1 || g.length < groups[best].length) best = idx;
+            });
+            return best;
+        };
+        ordered.forEach(row => {
+            const key = keyFn(row);
+            let slot = emptiestWithRoom(g => !g.some(r => keyFn(r) === key));
+            if (slot === -1) slot = emptiestWithRoom(() => true);
+            groups[slot].push(row);
+        });
+        return groups;
+    }
+
+    // Pinyin identity for the homophone check: case/space-insensitive, tone marks kept
+    // (a true homophone matches tone too). Blank pinyin falls back to the word so distinct
+    // words are never treated as clashing.
+    function pinyinKey(row) {
+        const p = String(row.pinyin || '').toLowerCase().replace(/\s+/g, '');
+        return p || `__${row.word}`;
     }
 
     // Build the flat activity list. Each activity type gets its own independent random
@@ -63,10 +133,14 @@
     // paired together differ between typing, listening, and reading (e.g. typing shows
     // A/C while listening shows B/D). Every word still appears once per type, so all
     // words complete all three activities.
-    function buildActivities(rows) {
-        const groupsByType = ACTIVITY_TYPES.map(type => ({
+    function buildActivities(rows, types = ACTIVITY_TYPES) {
+        const groupsByType = types.map(type => ({
             type,
-            groups: buildGroups(shuffle(rows.slice()))
+            // Listening pairs audio -> meaning, so its groups must avoid same-pinyin
+            // homophones; the other types read the character and can group freely.
+            groups: type === 'listen'
+                ? buildGroupsAvoidingKey(rows, pinyinKey)
+                : buildGroups(shuffle(rows.slice()))
         }));
         const roundCount = Math.max(...groupsByType.map(g => g.groups.length));
 
