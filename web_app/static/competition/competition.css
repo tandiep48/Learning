@@ -260,6 +260,148 @@ body {
     color: var(--primary);
 }
 
+/* Setup / lobby action button rows (create+cancel, edit+start) */
+.competition-setup-actions,
+.competition-lobby-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.competition-lobby-actions {
+    margin-top: 14px;
+}
+
+.competition-lobby-actions .competition-start-btn {
+    margin-top: 0;
+}
+
+/* ── Lesson mode trainer (LessonTrainer core) ──────────────────────────────── */
+.lt-task {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+}
+
+.lt-task .instruction {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.lt-word {
+    font-size: 34px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.lt-audio-btn {
+    width: 84px;
+    height: 84px;
+    border-radius: 50%;
+    border: none;
+    background: var(--primary);
+    color: #fff;
+    font-size: 30px;
+    cursor: pointer;
+}
+
+.lt-audio-btn:hover {
+    background: var(--primary-hover);
+}
+
+.lt-mc-area {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    width: 100%;
+    max-width: 620px;
+}
+
+.lt-mc-btn {
+    justify-content: flex-start;
+    text-align: left;
+    font-size: 1.05rem;
+}
+
+.lt-mc-btn.lt-correct {
+    background: var(--success);
+    color: #fff;
+    border-color: var(--success);
+}
+
+.lt-mc-btn.lt-wrong {
+    background: var(--danger);
+    color: #fff;
+    border-color: var(--danger);
+}
+
+.lt-typing-target {
+    font-size: 30px;
+    text-align: center;
+    line-height: 1.5;
+}
+
+.lt-typing-target .typing-char.char-correct {
+    color: var(--success);
+}
+
+.lt-typing-target .typing-char.char-wrong {
+    color: var(--danger);
+}
+
+.lt-typing-input {
+    width: 100%;
+    max-width: 560px;
+    height: 58px;
+    font-size: 28px;
+    padding: 6px 12px;
+    box-sizing: border-box;
+    border: 1px solid #afcfbd;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.lt-typing-pinyin {
+    display: none;
+    color: var(--primary);
+    font-size: 20px;
+}
+
+.lt-reorder {
+    width: 100%;
+    max-width: 640px;
+}
+
+.lt-reorder .chip-container {
+    width: 100%;
+}
+
+.lt-reorder-feedback {
+    display: none;
+    text-align: center;
+    margin-top: 6px;
+}
+
+.lt-reorder-label {
+    display: block;
+    color: var(--text-muted);
+    font-size: 15px;
+}
+
+.lt-reorder-answer {
+    color: var(--success);
+    font-size: 22px;
+    font-weight: 700;
+}
+
+@media (max-width: 640px) {
+    .lt-mc-area {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-width: 900px) {
     .competition-play-grid {
         grid-template-columns: 1fr;

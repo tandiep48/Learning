@@ -8,11 +8,17 @@ from db import (
     create_competition_room,
     get_competition_room_state,
     get_competition_scores,
-    resolve_room_words,
+    prepare_room_settings,
 )
 
 
 competition_bp = Blueprint("competition", __name__, url_prefix="/api/competition")
+
+# Validation errors that mean "the picked passages have no material" map to 404.
+ROOM_EMPTY_ERRORS = (
+    "The selected parts have no vocabulary",
+    "The selected lessons have no tasks",
+)
 
 
 def make_room_code(length=6):
@@ -24,32 +30,9 @@ def make_room_code(length=6):
 @login_required
 def create_room():
     data = request.get_json(silent=True) or {}
-
-    try:
-        level = int(data.get("level"))
-    except (TypeError, ValueError):
-        return jsonify({"error": "HSK level is required"}), 400
-
-    passage_ids = [str(p).strip() for p in (data.get("passage_ids") or []) if str(p).strip()]
-    if not passage_ids:
-        return jsonify({"error": "Select at least one lesson part"}), 400
-
-    try:
-        max_users = int(data.get("max_users", 8))
-    except (TypeError, ValueError):
-        max_users = 8
-    max_users = min(30, max(2, max_users))
-
-    try:
-        section_timeout_minutes = int(data.get("section_timeout_minutes", 15))
-    except (TypeError, ValueError):
-        section_timeout_minutes = 15
-    if section_timeout_minutes not in (5, 10, 15, 20):
-        section_timeout_minutes = 15
-
-    words = resolve_room_words(passage_ids)
-    if not words:
-        return jsonify({"error": "The selected parts have no vocabulary"}), 404
+    settings, error = prepare_room_settings(data)
+    if error:
+        return jsonify({"error": error}), 404 if error in ROOM_EMPTY_ERRORS else 400
 
     room = None
     for _ in range(8):
@@ -57,11 +40,13 @@ def create_room():
         room = create_competition_room(
             room_code,
             current_user.id,
-            level,
-            passage_ids,
-            len(words),
-            max_users,
-            section_timeout_minutes,
+            settings["level"],
+            settings["passage_ids"],
+            settings["source_count"],
+            settings["max_users"],
+            settings["section_timeout_minutes"],
+            category=settings["category"],
+            activity_type=settings["activity_type"],
         )
         if room:
             break

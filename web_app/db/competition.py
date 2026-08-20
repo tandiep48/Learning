@@ -23,6 +23,72 @@ from entity.competition.entity import (
 )
 
 
+# A room is either a vocabulary competition or the lesson trainer; vocab rooms also
+# pick a skill focus ('all' = all-rounder, or a single activity).
+ROOM_CATEGORIES = ("vocab", "lesson")
+VOCAB_ACTIVITY_TYPES = ("all", "typing", "listening", "reading")
+
+
+def prepare_room_settings(data):
+    """Normalize + validate the room settings shared by room creation and host edits.
+    Returns (settings, error): settings carries level, passage_ids, category,
+    activity_type, max_users, section_timeout_minutes and source_count (vocab words or
+    lesson lines). error is a user-facing string when the input is unusable."""
+    data = data or {}
+    try:
+        level = int(data.get("level"))
+    except (TypeError, ValueError):
+        return None, "HSK level is required"
+
+    passage_ids = [str(p).strip() for p in (data.get("passage_ids") or []) if str(p).strip()]
+    if not passage_ids:
+        return None, "Select at least one lesson part"
+
+    category = str(data.get("category") or "vocab").strip().lower()
+    if category not in ROOM_CATEGORIES:
+        category = "vocab"
+
+    activity_type = str(data.get("activity_type") or "all").strip().lower()
+    if category != "vocab" or activity_type not in VOCAB_ACTIVITY_TYPES:
+        # Only the vocab competition has a skill focus; lessons always run the full mix.
+        activity_type = "all"
+
+    try:
+        max_users = int(data.get("max_users", 8))
+    except (TypeError, ValueError):
+        max_users = 8
+    max_users = min(30, max(2, max_users))
+
+    try:
+        section_timeout_minutes = int(data.get("section_timeout_minutes", 15))
+    except (TypeError, ValueError):
+        section_timeout_minutes = 15
+    if section_timeout_minutes not in (5, 10, 15, 20):
+        section_timeout_minutes = 15
+
+    # source_count doubles as the room's "material" count: vocab words, or lesson lines.
+    if category == "lesson":
+        from service.lesson_task_service import count_lesson_lines
+        source_count = count_lesson_lines(passage_ids)
+        if not source_count:
+            return None, "The selected lessons have no tasks"
+    else:
+        words = resolve_room_words(passage_ids)
+        if not words:
+            return None, "The selected parts have no vocabulary"
+        source_count = len(words)
+
+    return {
+        "level": level,
+        "passage_ids": passage_ids,
+        "category": category,
+        "activity_type": activity_type,
+        "max_users": max_users,
+        "section_timeout_minutes": section_timeout_minutes,
+        "source_count": source_count,
+    }, None
+
+
 def resolve_room_words(passage_ids):
     """Union the vocabulary of the selected passages into a deduped word list
     (rows as returned by get_passage_vocab, keyed by 'cn'). Shared by room
@@ -40,13 +106,16 @@ def resolve_room_words(passage_ids):
                 collected.append(row)
     return collected
 
-def create_competition_room(room_code, host_user_id, level, passage_ids, word_count, max_users, section_timeout_minutes):
+def create_competition_room(room_code, host_user_id, level, passage_ids, word_count,
+                            max_users, section_timeout_minutes,
+                            category="vocab", activity_type="all"):
     session = SessionLocal()
     try:
         room_id = session.execute(
             pg_insert(CompetitionRoom)
             .values(
-                room_code=room_code, host_user_id=host_user_id, category="vocab",
+                room_code=room_code, host_user_id=host_user_id, category=category,
+                activity_type=activity_type,
                 level=level, passage_ids=list(passage_ids), word_count=word_count,
                 max_users=max_users, section_timeout_minutes=section_timeout_minutes,
                 status="waiting",
@@ -83,6 +152,7 @@ def get_competition_room_by_code(room_code):
             select(
                 r.id, r.room_code, r.host_user_id, r.level, r.passage_ids, r.word_count,
                 r.max_users, r.section_timeout_minutes, r.status, r.created_at, r.updated_at,
+                r.category, r.activity_type,
             )
             .where(r.room_code == str(room_code).upper())
         ).first()
@@ -103,6 +173,8 @@ def get_competition_room_by_code(room_code):
             "status": row[8],
             "created_at": row[9].isoformat() if row[9] else None,
             "updated_at": row[10].isoformat() if row[10] else None,
+            "category": row[11] or "vocab",
+            "activity_type": row[12] or "all",
         }
     except Exception as e:
         print(f"Database get_competition_room_by_code failed: {e}")
@@ -236,6 +308,43 @@ def get_competition_room_state(room_code):
     finally:
         SessionLocal.remove()
 
+def update_competition_room(room_code, host_user_id, data):
+    """Host edit of an existing room's settings while it is waiting. Validates the new
+    settings, applies them and returns the fresh room state so it can be re-broadcast."""
+    room = get_competition_room_by_code(room_code)
+    if not room:
+        return None, "Room not found"
+    if int(room["host_user_id"]) != int(host_user_id):
+        return None, "Only the host can edit the room"
+    if room["status"] == "running":
+        return None, "Cannot edit while the round is running"
+
+    settings, error = prepare_room_settings(data)
+    if error:
+        return None, error
+
+    session = SessionLocal()
+    try:
+        session.execute(
+            update(CompetitionRoom)
+            .where(CompetitionRoom.id == room["id"])
+            .values(
+                category=settings["category"], activity_type=settings["activity_type"],
+                level=settings["level"], passage_ids=list(settings["passage_ids"]),
+                word_count=settings["source_count"], max_users=settings["max_users"],
+                section_timeout_minutes=settings["section_timeout_minutes"],
+                updated_at=func.now(),
+            )
+        )
+        session.commit()
+        return get_competition_room_state(room_code), None
+    except Exception as e:
+        print(f"Database update_competition_room failed: {e}")
+        session.rollback()
+        return None, "Could not update room"
+    finally:
+        SessionLocal.remove()
+
 def add_competition_chat_message(room_code, user_id, message):
     room = get_competition_room_by_code(room_code)
     text = str(message or "").strip()[:1000]
@@ -276,7 +385,17 @@ def start_competition_session(room_code, host_user_id):
     if room["status"] == "running":
         return None, "Room is already running"
     if not room.get("passage_ids"):
-        return None, "No vocabulary selected"
+        return None, "No lessons selected"
+
+    category = room.get("category") or "vocab"
+    # Lesson rooms generate one shared task set now, so every participant answers the
+    # same questions; vocab rooms resolve their word list on the client instead.
+    lesson_tasks = None
+    if category == "lesson":
+        from service.lesson_task_service import build_lesson_tasks
+        lesson_tasks = build_lesson_tasks(room["passage_ids"], mode="master")
+        if not lesson_tasks:
+            return None, "The selected lessons have no tasks"
 
     session = SessionLocal()
     try:
@@ -289,10 +408,10 @@ def start_competition_session(room_code, host_user_id):
         session_id = session.execute(
             pg_insert(CompetitionSession)
             .values(
-                room_id=room["id"], status="running", current_section="vocab",
+                room_id=room["id"], status="running", current_section=category,
                 section_started_at=func.now(),
                 section_ends_at=func.now() + literal_column("interval '1 minute'") * minutes,
-                started_at=func.now(),
+                started_at=func.now(), lesson_tasks=lesson_tasks,
             )
             .returning(CompetitionSession.id)
         ).scalar_one()
@@ -343,12 +462,14 @@ def get_competition_session_state(session_id):
     session = SessionLocal()
     try:
         s = CompetitionSession
+        r = CompetitionRoom
         row = session.execute(
             select(
-                s.id, s.room_id, CompetitionRoom.room_code, s.status, s.current_section,
+                s.id, s.room_id, r.room_code, s.status, s.current_section,
                 s.section_started_at, s.section_ends_at, s.started_at, s.finished_at,
+                r.category, r.activity_type, s.lesson_tasks,
             )
-            .select_from(s).join(CompetitionRoom, CompetitionRoom.id == s.room_id)
+            .select_from(s).join(r, r.id == s.room_id)
             .where(s.id == session_id)
         ).first()
         if not row:
@@ -363,6 +484,9 @@ def get_competition_session_state(session_id):
             "section_ends_at": row[6].isoformat() if row[6] else None,
             "started_at": row[7].isoformat() if row[7] else None,
             "finished_at": row[8].isoformat() if row[8] else None,
+            "category": row[9] or "vocab",
+            "activity_type": row[10] or "all",
+            "lesson_tasks": row[11] or [],
         }
         state["scores"] = get_competition_scores(session_id)
         return state
@@ -379,7 +503,14 @@ MODE_CONFIG = {
     "typing":  {"base": 120, "max_bonus": 60, "decay": 5.0, "penalty_rate": 0.0},
     "listen":  {"base": 100, "max_bonus": 50, "decay": 2.0, "penalty_rate": 0.10},
     "meaning": {"base": 80,  "max_bonus": 40, "decay": 3.0, "penalty_rate": 0.10},
+    # Lesson-mode task types. The lesson trainer is one-shot per task (no wrong-attempt
+    # tracking), so these carry no error penalty; a wrong answer simply scores nothing.
+    "listening": {"base": 100, "max_bonus": 50, "decay": 2.0, "penalty_rate": 0.0},
+    "reorder":   {"base": 130, "max_bonus": 60, "decay": 4.0, "penalty_rate": 0.0},
 }
+
+# The task types the lesson trainer produces (see service/lesson_task_service.py).
+LESSON_ACTIVITY_TYPES = ("listening", "meaning", "typing", "reorder")
 
 def calculate_competition_points(activity_type, is_correct, response_time_ms, wrong_attempts=0):
     cfg = MODE_CONFIG.get(activity_type)
@@ -456,6 +587,74 @@ def record_competition_vocab_answer(session_id, user_id, word, activity_type, is
         }, None
     except Exception as e:
         print(f"Database record_competition_vocab_answer failed: {e}")
+        session.rollback()
+        return None, "Could not record answer"
+    finally:
+        SessionLocal.remove()
+
+def record_competition_lesson_answer(session_id, user_id, item_key, task_type, is_correct, response_time_ms, wrong_attempts=0):
+    """Record one participant's answer for a lesson task, awarding points per the
+    per-mode scoring rules. `item_key` is the task's stable identity ("<passage>:<line>"),
+    so each task scores once per participant. Reuses competition_vocab_answers — a
+    session is either vocab or lesson, so the (word, activity_type) key never collides."""
+    item_key = str(item_key or "").strip()
+    task_type = str(task_type or "").strip()
+    if not item_key or task_type not in LESSON_ACTIVITY_TYPES:
+        return None, "Invalid answer payload"
+    session = SessionLocal()
+    try:
+        # Only accept answers while the session is running and the user is a scored participant.
+        active = session.execute(
+            select(literal(1))
+            .select_from(CompetitionSession)
+            .join(
+                CompetitionScore,
+                and_(
+                    CompetitionScore.session_id == CompetitionSession.id,
+                    CompetitionScore.user_id == user_id,
+                ),
+            )
+            .where(CompetitionSession.id == session_id, CompetitionSession.status == "running")
+        ).first()
+        if not active:
+            return None, "Session is not active"
+
+        is_correct = bool(is_correct)
+        points = calculate_competition_points(task_type, is_correct, response_time_ms, wrong_attempts)
+        inserted = session.execute(
+            pg_insert(CompetitionVocabAnswer)
+            .values(
+                session_id=session_id, user_id=user_id, word=item_key,
+                activity_type=task_type, is_correct=is_correct,
+                response_time_ms=int(response_time_ms or 0), points=points,
+            )
+            .on_conflict_do_nothing(
+                index_elements=["session_id", "user_id", "word", "activity_type"]
+            )
+            .returning(CompetitionVocabAnswer.id)
+        ).first()
+        if not inserted:
+            return None, "Answer already submitted"
+        session.execute(
+            update(CompetitionScore)
+            .where(
+                CompetitionScore.session_id == session_id,
+                CompetitionScore.user_id == user_id,
+            )
+            .values(
+                total_points=CompetitionScore.total_points + points,
+                total_response_time_ms=CompetitionScore.total_response_time_ms + int(response_time_ms or 0),
+                updated_at=func.now(),
+            )
+        )
+        session.commit()
+        return {
+            "is_correct": is_correct,
+            "points": points,
+            "scores": get_competition_scores(session_id),
+        }, None
+    except Exception as e:
+        print(f"Database record_competition_lesson_answer failed: {e}")
         session.rollback()
         return None, "Could not record answer"
     finally:

@@ -462,6 +462,15 @@ ALTER TABLE competition_rooms ADD COLUMN IF NOT EXISTS word_count INTEGER NOT NU
 ALTER TABLE competition_rooms ALTER COLUMN lesson DROP NOT NULL;
 ALTER TABLE competition_rooms ALTER COLUMN progress DROP NOT NULL;
 
+-- A room now picks both a category (vocab vs the lesson trainer) and, for vocab, a
+-- skill/activity focus: 'all' (all-rounder) or a single skill (typing/listening/reading).
+ALTER TABLE competition_rooms ADD COLUMN IF NOT EXISTS activity_type VARCHAR(20) NOT NULL DEFAULT 'all';
+
+-- Lesson-category sessions generate one shared task set at start (so every participant
+-- answers the same questions for a fair ranking); it is stored on the session. NULL for
+-- vocab sessions, which resolve their word list on the client from the room's passages.
+ALTER TABLE competition_sessions ADD COLUMN IF NOT EXISTS lesson_tasks JSONB;
+
 -- Topic "book" lessons (cover-book import) reuse lesson_passages/lesson_lines. book_code
 -- tags a passage as belonging to a book (e.g. 'AML'); NULL for regular HSK passages. The
 -- passage_id already encodes {CODE}_{lesson}_{part}, so this is just a fast, explicit filter.
