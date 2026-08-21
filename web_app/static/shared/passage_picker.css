@@ -139,6 +139,7 @@
 .picker-progress-lines-centered {
     align-items: center;
     font-size: 0.8rem;
+    flex-shrink: 0;
 }
 
 .lesson-card-count {
@@ -282,7 +283,9 @@
     color: #111111;
     font-size: 1.05rem;
     font-weight: 800;
-    white-space: nowrap;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 /* -- Picker Screens -- */
@@ -398,8 +401,8 @@
         flex: 1;
     }
 
-    .part-list-title {
-        white-space: normal;
+    .picker-progress-lines-centered {
+        width: 100%;
     }
 }
 
