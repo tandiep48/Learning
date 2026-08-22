@@ -540,7 +540,9 @@
         "type_all": "Toàn diện",
         "type_typing": "Gõ chữ",
         "type_listening": "Nghe",
-        "type_reading": "Đọc"
+        "type_reading": "Đọc",
+        "type_meaning": "Nghĩa",
+        "type_reorder": "Sắp xếp"
     },
     "practice": {
         "loading": "Đang tải bài luyện tập…",

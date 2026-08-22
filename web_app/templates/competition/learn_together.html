@@ -40,12 +40,13 @@
                         </label>
                         <label id="create-type-field">
                             {{ t('competition.type') }}
-                            <select id="create-type">
-                                <option value="all">{{ t('competition.type_all') }}</option>
-                                <option value="typing">{{ t('competition.type_typing') }}</option>
-                                <option value="listening">{{ t('competition.type_listening') }}</option>
-                                <option value="reading">{{ t('competition.type_reading') }}</option>
-                            </select>
+                            <div class="ms-dropdown" id="create-type-ms">
+                                <button type="button" class="ms-toggle" onclick="MultiSelect.toggle('create-type-ms')">
+                                    <span class="ms-label ms-placeholder"></span>
+                                    <i class="fa-solid fa-chevron-down ms-caret" aria-hidden="true"></i>
+                                </button>
+                                <div class="ms-panel" id="create-type-ms-panel"></div>
+                            </div>
                         </label>
                         <label>
                             HSK

@@ -100,15 +100,27 @@ def count_lesson_lines(passage_ids):
     return len(line_items)
 
 
-def build_lesson_tasks(passage_ids, mode="part"):
+def build_lesson_tasks(passage_ids, mode="part", types=None):
     """Build a shuffled lesson-trainer round for the selected passages.
 
     mode: "part" (one part) or "master" (a whole lesson / multiple parts) — only the
-    target task count differs. Returns a list of task dicts (same shape the lesson
-    trainer client expects). Empty list when the passages have no quizable lines."""
+    target task count differs. types: optional subset of the task types to include
+    (listening / meaning / typing / reorder); None or empty means the full mix. Returns
+    a list of task dicts (same shape the lesson trainer client expects). Empty list when
+    the passages have no quizable lines."""
     passages, line_items = _collect_line_items(passage_ids)
     if not line_items:
         return []
+
+    # Restrict the task mix to the requested types (re-normalizing their shares to 100%),
+    # falling back to the full distribution when nothing valid is requested.
+    distribution = LESSON_TASK_DISTRIBUTION
+    if types:
+        wanted = {str(x).strip().lower() for x in types}
+        selected = [(name, pct) for name, pct in LESSON_TASK_DISTRIBUTION if name in wanted]
+        total_pct = sum(pct for _, pct in selected)
+        if selected and total_pct > 0:
+            distribution = [(name, pct / total_pct) for name, pct in selected]
 
     # Build a pool of candidate tasks per type, one per line, then sample from each
     # pool to hit the target count and 30/30/30/10 mix.
@@ -185,21 +197,24 @@ def build_lesson_tasks(passage_ids, mode="part"):
     count_table = LESSON_MASTER_COUNTS if mode == "master" else LESSON_PART_COUNTS
     target_total = count_table.get(hsk_level, DEFAULT_LESSON_TASK_COUNT)
 
-    targets = _allocate_task_counts(target_total, LESSON_TASK_DISTRIBUTION)
+    targets = _allocate_task_counts(target_total, distribution)
 
     # If a type has no candidates (e.g. no multi-token lines → no reorder), move its
-    # share to the first type that does have material.
-    for name in ("reorder", "typing", "meaning", "listening"):
+    # share to another selected type that has material, falling back to any type so the
+    # round is never empty.
+    selected_names = [name for name, _ in distribution]
+    for name in selected_names:
         if targets.get(name) and not pools[name]:
             moved = targets[name]
             targets[name] = 0
-            for fallback in ("meaning", "listening", "typing"):
+            fallbacks = [n for n in selected_names if n != name] + list(pools.keys())
+            for fallback in fallbacks:
                 if pools[fallback]:
-                    targets[fallback] += moved
+                    targets[fallback] = targets.get(fallback, 0) + moved
                     break
 
     tasks = []
-    for name, _ in LESSON_TASK_DISTRIBUTION:
+    for name in targets:
         tasks.extend(_sample_task_pool(pools[name], targets.get(name, 0)))
     random.shuffle(tasks)
     return tasks

@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     socket = io();
     bindSocketEvents();
 
+    MultiSelect.init('create-type-ms', t('competition.type_all'), () => {});
     MultiSelect.init('create-lesson-ms', t('vocab.select_lesson_option'), onLessonChange);
     MultiSelect.init('create-part-ms', t('vocab.select_part_option'), () => {});
 
@@ -106,20 +107,47 @@ function showScreen(id) {
 
 // ── Setup: mode / type + HSK -> lessons -> parts selection ───────────────────────
 
-// Maps the room's vocab skill focus onto the trainer's internal activity types.
-const VOCAB_ACTIVITY_MAP = {
-    all: ['typing', 'listen', 'reading'],
-    typing: ['typing'],
-    listening: ['listen'],
-    reading: ['reading'],
+// Maps each selectable vocab type onto the trainer's internal activity type.
+const VOCAB_TYPE_TO_ACTIVITY = { typing: 'typing', listening: 'listen', reading: 'reading' };
+
+// The Type selector offers a different skill set per mode: the vocab competition picks
+// among typing/listening/reading; the lesson trainer picks among its four task types.
+const TYPE_OPTIONS = {
+    vocab: [
+        { value: 'typing', key: 'competition.type_typing' },
+        { value: 'listening', key: 'competition.type_listening' },
+        { value: 'reading', key: 'competition.type_reading' },
+    ],
+    lesson: [
+        { value: 'listening', key: 'competition.type_listening' },
+        { value: 'meaning', key: 'competition.type_meaning' },
+        { value: 'typing', key: 'competition.type_typing' },
+        { value: 'reorder', key: 'competition.type_reorder' },
+    ],
 };
 
-// The Type (skill focus) selector only applies to the Vocabulary competition; the
-// Lesson trainer always runs its full task mix, so hide Type when Lesson is picked.
+// Parse a stored activity_type ("all" or a CSV of type values) into a value array,
+// expanding "all" to every option available for the mode.
+function parseTypeValues(activityType, mode) {
+    const all = TYPE_OPTIONS[mode].map(o => o.value);
+    if (!activityType || activityType === 'all') return all;
+    const wanted = new Set(String(activityType).split(',').map(s => s.trim()).filter(Boolean));
+    const picked = all.filter(v => wanted.has(v));
+    return picked.length ? picked : all;
+}
+
+// Resolve the room's vocab type selection into the trainer's internal activity types.
+function vocabActivityTypes(activityType) {
+    return parseTypeValues(activityType, 'vocab').map(v => VOCAB_TYPE_TO_ACTIVITY[v]);
+}
+
+// Repopulate the Type multi-select for the current mode; defaults to all selected so a
+// room always has at least one type.
 function onModeChange() {
     const mode = document.getElementById('create-mode')?.value || 'vocab';
-    const typeField = document.getElementById('create-type-field');
-    if (typeField) typeField.style.display = mode === 'lesson' ? 'none' : '';
+    const options = TYPE_OPTIONS[mode].map(o => ({ value: o.value, label: t(o.key) }));
+    MultiSelect.setOptions('create-type-ms', options);
+    MultiSelect.setValues('create-type-ms', options.map(o => o.value));
 }
 
 async function onLevelChange() {
@@ -196,9 +224,11 @@ function collectRoomBody() {
     }
     showSetupError('');
     const mode = document.getElementById('create-mode')?.value || 'vocab';
+    // Send the selected types as a CSV; "all" (every option) is normalized server-side.
+    const selectedTypes = MultiSelect.values('create-type-ms');
     return {
         category: mode,
-        activity_type: mode === 'vocab' ? (document.getElementById('create-type')?.value || 'all') : 'all',
+        activity_type: selectedTypes.length ? selectedTypes.join(',') : 'all',
         level: Number(level),
         passage_ids: passageIds,
         max_users: document.getElementById('create-max-users').value,
@@ -234,7 +264,8 @@ async function editRoomSettings() {
 
     document.getElementById('create-mode').value = currentRoom.category || 'vocab';
     onModeChange();
-    document.getElementById('create-type').value = currentRoom.activity_type || 'all';
+    MultiSelect.setValues('create-type-ms',
+        parseTypeValues(currentRoom.activity_type, currentRoom.category || 'vocab'));
     document.getElementById('create-level').value = String(currentRoom.level || '');
     document.getElementById('create-max-users').value = currentRoom.max_users || 8;
     document.getElementById('create-timeout').value = String(currentRoom.section_timeout_minutes || 15);
@@ -334,11 +365,22 @@ function renderRoom(room) {
     (room.chat || []).forEach(appendChat);
 }
 
-// "Vocabulary · Typing" / "Lesson" — the room's mode and (vocab-only) skill focus.
+// "Vocabulary · Typing, Listening" / "Lesson · Typing" — the room's mode and its
+// selected skill focus (all types collapse to the "All-rounder" label).
 function modeSummaryLabel(room) {
-    if (room.category === 'lesson') return t('competition.mode_lesson');
-    const typeKey = `competition.type_${room.activity_type || 'all'}`;
-    return `${t('competition.mode_vocab')} · ${t(typeKey)}`;
+    const mode = room.category === 'lesson' ? 'lesson' : 'vocab';
+    const modeLabel = t(mode === 'lesson' ? 'competition.mode_lesson' : 'competition.mode_vocab');
+    const at = room.activity_type || 'all';
+    let typeLabel;
+    if (at === 'all') {
+        typeLabel = t('competition.type_all');
+    } else {
+        const byValue = Object.fromEntries(TYPE_OPTIONS[mode].map(o => [o.value, o.key]));
+        typeLabel = String(at).split(',')
+            .map(v => byValue[v.trim()] ? t(byValue[v.trim()]) : v.trim())
+            .join(', ');
+    }
+    return `${modeLabel} · ${typeLabel}`;
 }
 
 function appendChat(message) {
@@ -381,7 +423,7 @@ async function startTrainer() {
     VocabTrainer.start({
         container,
         words,
-        activityTypes: VOCAB_ACTIVITY_MAP[currentRoom?.activity_type || 'all'] || VOCAB_ACTIVITY_MAP.all,
+        activityTypes: vocabActivityTypes(currentRoom?.activity_type),
         autoAdvance: true,        // competition: no Check/Next buttons — flow automatically
         keyboardShortcuts: true,  // 1-5 pick source cards, y-u-i-o-p pick match cards
         onAnswer: emitVocabAnswer,

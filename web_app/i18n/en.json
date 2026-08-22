@@ -540,7 +540,9 @@
         "type_all": "All-rounder",
         "type_typing": "Typing",
         "type_listening": "Listening",
-        "type_reading": "Reading"
+        "type_reading": "Reading",
+        "type_meaning": "Meaning",
+        "type_reorder": "Reorder"
     },
     "practice": {
         "loading": "Loading practice…",
