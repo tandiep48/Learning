@@ -20,7 +20,7 @@ from werkzeug.security import generate_password_hash
 
 from entity.database import SessionLocal
 from entity.user.repository import UserRepository
-from db.records import get_learned_words
+from entity.record.service import get_learned_words
 
 
 # ---------------------------------------------------------------------------

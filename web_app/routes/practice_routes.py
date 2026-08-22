@@ -5,11 +5,12 @@ import ast
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 from db import (
-    insert_practice_progress, get_recommended_practices,
+    get_recommended_practices,
     get_practice_history_sessions, get_practice_session_detail,
     list_practice_lessons, get_practice_questions, get_practice_questions_multi,
     get_practice_progress_group,
 )
+from entity.record.service import insert_practice_progress
 
 # sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

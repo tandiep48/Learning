@@ -21,7 +21,7 @@ from entity.passage_vocabulary.entity import PassageVocabulary
 from entity.record.entity import VocabRecord
 from entity.user_lesson_part_progress.entity import UserLessonPartProgress
 from entity.user_learning_state.entity import UserLearningState
-from db.records import get_learned_words
+from entity.record.service import get_learned_words
 
 
 def set_recent_learning(user_id, passage_id):

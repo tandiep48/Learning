@@ -14,8 +14,6 @@ from flask_login import login_required, current_user
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from db import (
-    insert_learning_progress,
-    insert_learning_progress_batch,
     get_unlearned_words_from_db,
     get_unsure_words_from_db,
     get_review_words_flat,
@@ -29,6 +27,7 @@ from db import (
     get_passage_book_code,
     get_user_saved_vocab
 )
+from entity.record.service import insert_learning_progress, insert_learning_progress_batch
 from number_part import is_number_part, number_vocab_rows
 from entity.user_saved_word.service import (
     list_saved_vocab,

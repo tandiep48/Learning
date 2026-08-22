@@ -9,21 +9,23 @@ from werkzeug.utils import secure_filename
 
 from service.i18n_service import t
 from db import (
-    get_learned_words,
-    get_learned_words_last_3_days,
-    get_time_learned_last_3_days,
     get_mastered_words_page,
     get_unlearned_words_from_db,
     get_unsure_words_from_db,
     get_passage_vocab,
     get_vocabulary_by_words,
     get_lesson_passage_ids_like,
+    get_recent_learning,
+    set_recent_learning,
+)
+from entity.record.service import (
+    get_learned_words,
+    get_learned_words_last_3_days,
+    get_time_learned_last_3_days,
     get_lesson_progress_by_mode,
     get_vocab_record_totals,
     get_lesson_record_totals,
     get_practice_record_totals_by_category,
-    get_recent_learning,
-    set_recent_learning,
 )
 from entity.user.service import (
     get_profile_summary,

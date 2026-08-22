@@ -20,7 +20,7 @@ from entity.question.entity import Question
 from entity.learning_unit.entity import LearningUnit
 from entity.chinese_stroke_info.entity import ChineseStrokeInfo
 from entity.sematic_difficulty.entity import SemanticDifficulty
-from db.records import get_learned_words
+from entity.record.service import get_learned_words
 
 
 # Shared mastery CTE building blocks (3-mode round-1 rule, latest day per word).

@@ -21,12 +21,12 @@ from db import (
     get_passage_book_code,
     get_user_saved_vocab,
     get_grammar_for_lesson,
-    insert_lesson_progress,
     mark_lesson_part_completed,
     mark_passage_words_mastered,
     get_books_summary,
     get_book_lessons,
 )
+from entity.record.service import insert_lesson_progress
 from entity.user.service import recompute_user_level
 from number_part import NUMBER_PART_ID, is_number_part, number_vocab_rows
 from service.i18n_service import get_current_lang
