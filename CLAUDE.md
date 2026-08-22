@@ -1,68 +1,65 @@
-Job Description:
-You are a Junior developer that is working on a Elearning app specifically Chinese learning. Your job right now is making improvement and new feature for the current app inside Learning folder that user request. You need to follow these rule to ask or avoid breaking the app.
+# Project Overview
 
-Ruling:
-Rule 1: Think before doing and ask if you are unsure.
-1.1: What is the feature they want.
-1.2: How will it implement.
-1.3: If new feature somehow already exist or have conflicted with existing feature please raise a question.
-1.4: Will the new feature using any third-party that may need human setup or subscription first.
+E-learning platform focused on Chinese language education.
+**Important Architecture Note:** The project is currently transitioning from a Flask/Jinja frontend to a Next.js frontend. Flask will eventually become a purely backend API.
 
-Rule 2: Coding style need to be readable for human review
-2.1: You dont need to explain or give summary to each item you write.
-2.2: You need to make sure the code have good performance
-2.3: Do not write test case for each new feature you write since the test is done manually by user
-2.4: Make sure to clean-up unneeded items if possible inside the folder that you work
-2.5: For any code that relate to database always use SQLAlchemy query method. Avoid using standard SQL command if possible.
+# Tech Stack
 
-Rule 3: You do not commit after you done coding
+- **Backend:** Python (Flask)
+- **Frontend (Current):** HTML, CSS, JavaScript (Jinja templating)
+- **Frontend (Future):** Next.js (Ignore Next.js specific directories unless explicitly instructed to work on them)
+- **Database:** PostgreSQL (using SQLAlchemy)
 
-Rule 4: You don't need to explain every action that you do. Only do the task and done.
-4.1: Only give the explanation if I ask you to do so.
+# Global Execution Rules
 
-About Project
-This project is an Elearning project website focus on teaching user how to learn Chinese language. Here is the infomation regarding Back-end, Front-end, Database.
-Back-end: Python with Flask
-Database: PostgresSQL
-Front-end: HTML, CSS, JS with jinja as framework
-Query rule: Mix between SQLAlchemy and standard SQL command
+When processing requests, strictly adhere to the following workflow and communication constraints:
 
-Future Plan for this project
-This project is planning to refractor to use NextJs as Front-end and keeping Flask as back-end only to reduce the navigation and render in Flask so there may have folder that is using for NextJs if possible please ignore those and only start working on those when requested.
+## 1. Pre-Execution & Strategy
 
-Project Structure
-Learning (folder)
-|-- app.py (main file that run)
-|
-|-- db.py (main file that connect database and query)
-|
-|-- competition_socket.py (main file that use to setup websocket)
-|
-|-- number_part.py (main file that is hardcode to render a lesson Part on HSK 1 - Lesson 5)
-|
-|-- requirements.txt (contain list of python package that use)
-|
-|-- env.example (example for environment)
-|
-|--schema_sql_file (folder)
-| |
-| |--schema.sql
-|
-|--scripts (folder)
-| |
-| |--run-dev.bat (run for our local only)
-| |--run-dev.ps1
-| |--run-pre-dev.ps1
-| |--run-pre-dev.bat (run when new package is added inside requirements.txt)
-| |--run-pre-prod.sh (run for production only)
-| |--run-prod.sh (run when new package is added inside requirements.txt on production)
-|
-|--web_app
-| |
-| |--routes (folder contain python file for navigation)
-| |--service (folder contain shared service python file, e.g. i18n_service, gcs_service)
-| |--static (folder contain js and css file)
-| |--template (folder contain html file)
-| |--entity (refactor plan; grouped per model as entity/<model>/ with entity.py + repository.py + service.py; entity/database.py is the shared SQLAlchemy base/session)
-| |--models (folder that contain model that use to transcript user speak into text)
-| |--tests (folder for refractor plan only)
+Do not blindly write code. Analyze the request and ask for clarification if:
+
+- The requested feature's implementation strategy is ambiguous.
+- The feature conflicts with or duplicates existing functionality.
+- The implementation requires third-party services, subscriptions, or manual human setup.
+
+## 2. Communication Constraints
+
+- **No conversational filler:** Do not explain every action, provide summaries for each item, or narrate your thought process.
+- **Output only code:** Execute the task directly. Only provide explanations if explicitly asked to do so.
+- **No Git operations:** Do not commit code after completing a task.
+
+## 3. Coding Standards
+
+- **Performance:** Prioritize optimal performance and readability in all code structures.
+- **Database Queries:** The existing codebase contains a mix of SQLAlchemy and standard SQL. For all **new** code or updates, use SQLAlchemy ORM methods exclusively. Avoid raw SQL strings.
+- **Testing:** Always write unit tests for **new** code and ensure the functions execute successfully. For **old/existing** code, only write or update tests if explicitly requested.
+- **Housekeeping:** When modifying files in a directory, clean up unused imports, dead code, or unneeded items within that specific scope.
+
+# Project Structure
+
+```text
+Learning/
+├── app.py                     # Main application entry point
+├── db.py                      # Database connection and queries
+├── competition_socket.py      # WebSocket setup
+├── number_part.py             # Hardcoded lesson render (HSK 1 - Lesson 5)
+├── requirements.txt           # Python dependencies
+├── env.example                # Environment variables template
+├── schema_sql_file/
+│   └── schema.sql
+├── scripts/
+│   ├── run-dev.bat            # Local dev runner (Windows)
+│   ├── run-dev.ps1            # Local dev runner (PowerShell)
+│   ├── run-pre-dev.ps1        # Pre-dev setup (PowerShell)
+│   ├── run-pre-dev.bat        # Run when requirements.txt changes (Windows)
+│   ├── run-pre-prod.sh        # Pre-production setup (Shell)
+│   └── run-prod.sh            # Run when requirements.txt changes (Production)
+└── web_app/
+    ├── routes/                # Python routing files
+    ├── service/               # Shared services (e.g., i18n_service, gcs_service)
+    ├── static/                # JS and CSS assets
+    ├── template/              # HTML/Jinja templates
+    ├── entity/                # Refactor target: Grouped per model (entity/<model>/ containing entity.py, repository.py, service.py)
+    ├── models/                # Speech-to-text transcription models
+    └── tests/                 # Dedicated testing directory
+```

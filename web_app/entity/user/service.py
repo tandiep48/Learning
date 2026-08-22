@@ -20,6 +20,7 @@ from werkzeug.security import generate_password_hash
 
 from entity.database import SessionLocal
 from entity.user.repository import UserRepository
+from db.records import get_learned_words
 
 
 # ---------------------------------------------------------------------------
@@ -247,6 +248,216 @@ def update_user(user_id: int, data: dict) -> dict:
     except Exception:
         session.rollback()
         raise
+    finally:
+        SessionLocal.remove()
+
+
+# ---------------------------------------------------------------------------
+# Auth / Flask-Login support
+# ---------------------------------------------------------------------------
+
+def get_user_auth_by_username(username: str) -> dict | None:
+    """Return a user's full auth/profile fields (including password hash), or None."""
+    session = SessionLocal()
+    try:
+        user = UserRepository(session).get_by_username(username)
+        return user.to_auth_dict() if user else None
+    finally:
+        SessionLocal.remove()
+
+
+def get_user_auth_by_id(user_id: int) -> dict | None:
+    """Return a user's full auth/profile fields (including password hash), or None."""
+    session = SessionLocal()
+    try:
+        user = UserRepository(session).get_by_id(user_id)
+        return user.to_auth_dict() if user else None
+    finally:
+        SessionLocal.remove()
+
+
+def username_or_email_exists(username: str, email: str) -> bool:
+    """Return True if a user with this username or email already exists."""
+    session = SessionLocal()
+    try:
+        return UserRepository(session).exists_by_username_or_email(username, email)
+    finally:
+        SessionLocal.remove()
+
+
+# ---------------------------------------------------------------------------
+# HSK level progression
+# ---------------------------------------------------------------------------
+
+def _level_passes(level: int, lesson_pct: float, word_pct: float) -> bool:
+    """Per-band pass rule for HSK level progression (see recompute_user_level)."""
+    if level in (1, 2):
+        return lesson_pct >= 85 or (word_pct >= 85 and lesson_pct >= 50)
+    if level in (3, 4):
+        return lesson_pct >= 80 or (word_pct >= 80 and lesson_pct >= 50)
+    if level == 5:
+        return lesson_pct >= 75 or (word_pct >= 75 and lesson_pct >= 40)
+    if level == 6:
+        return lesson_pct >= 70 or (word_pct >= 70 and lesson_pct >= 40)
+    return False
+
+
+def recompute_user_level(user_id: int) -> int | None:
+    """
+    Derive and (if higher) persist the user's HSK level from lesson-trainer progress.
+    For each level compute lesson% (completed parts / total parts across ALL lessons at
+    that level) and word% (mastered / total lesson words at that level), then apply the
+    per-band pass rule in _level_passes. The user jumps to (highest passed level + 1),
+    capped at HSK 6, and the level never decreases. Returns the resulting level, or
+    None on failure.
+    """
+    session = SessionLocal()
+    try:
+        repo = UserRepository(session)
+        learned = get_learned_words(user_id)
+        progress = repo.get_level_progress_by_level(user_id, learned)
+
+        user = repo.get_by_id(user_id)
+        current = int(user.level) if user and user.level else 1
+
+        highest_passed = 0
+        for level, stats in progress.items():
+            lesson_pct = (stats["lesson_done"] / stats["lesson_total"] * 100) if stats["lesson_total"] else 0
+            word_pct = (stats["word_done"] / stats["word_total"] * 100) if stats["word_total"] else 0
+            if _level_passes(level, lesson_pct, word_pct):
+                highest_passed = level
+
+        target = min(6, highest_passed + 1) if highest_passed >= 1 else 1
+        target = min(6, max(current, target))  # never decrease
+
+        if target > current:
+            repo.set_level(user_id, target)
+            session.commit()
+        return target
+    except Exception as e:
+        print(f"recompute_user_level failed: {e}")
+        session.rollback()
+        return None
+    finally:
+        SessionLocal.remove()
+
+
+# ---------------------------------------------------------------------------
+# Profile settings (avatar, Hanzi font/script, UI language, password)
+# ---------------------------------------------------------------------------
+
+DEFAULT_HANZI_FONT = "Noto Sans"
+DEFAULT_HANZI_SCRIPT = "simplified"
+DEFAULT_UI_LANGUAGE = "en"
+
+
+def _update_setting(user_id: int, **values) -> bool:
+    session = SessionLocal()
+    try:
+        updated = UserRepository(session).update(user_id, values)
+        if updated is None:
+            return False
+        session.commit()
+        return True
+    except Exception as e:
+        print(f"Update user setting failed ({list(values)}): {e}")
+        session.rollback()
+        return False
+    finally:
+        SessionLocal.remove()
+
+
+def update_user_avatar_path(user_id: int, avatar_path: str) -> bool:
+    return _update_setting(user_id, avatar_path=avatar_path)
+
+
+def get_user_hanzi_font(user_id: int) -> str:
+    session = SessionLocal()
+    try:
+        user = UserRepository(session).get_by_id(user_id)
+        return (user.hanzi_font if user else None) or DEFAULT_HANZI_FONT
+    finally:
+        SessionLocal.remove()
+
+
+def update_user_hanzi_font(user_id: int, hanzi_font: str) -> bool:
+    return _update_setting(user_id, hanzi_font=hanzi_font)
+
+
+def get_user_hanzi_script(user_id: int) -> str:
+    session = SessionLocal()
+    try:
+        user = UserRepository(session).get_by_id(user_id)
+        return (user.hanzi_script if user else None) or DEFAULT_HANZI_SCRIPT
+    finally:
+        SessionLocal.remove()
+
+
+def update_user_hanzi_script(user_id: int, hanzi_script: str) -> bool:
+    return _update_setting(user_id, hanzi_script=hanzi_script)
+
+
+def get_user_ui_language(user_id: int) -> str:
+    session = SessionLocal()
+    try:
+        user = UserRepository(session).get_by_id(user_id)
+        return (user.ui_language if user else None) or DEFAULT_UI_LANGUAGE
+    finally:
+        SessionLocal.remove()
+
+
+def update_user_ui_language(user_id: int, ui_language: str) -> bool:
+    return _update_setting(user_id, ui_language=ui_language)
+
+
+def update_user_password(user_id: int, password_hash: str) -> bool:
+    return _update_setting(user_id, password=password_hash)
+
+
+def get_profile_summary(user_id: int) -> dict:
+    """
+    Return per-mode/skill time-spent totals for the vocab, lesson, and
+    practice/exam activity records, plus grand totals per bucket.
+    """
+    summary = {
+        "time_totals_ms": {"vocab": 0, "lesson": 0, "practice": 0, "exam": 0},
+        "vocab_mode_time_ms": [],
+        "lesson_mode_time_ms": [],
+        "practice_skill_time_ms": [],
+    }
+
+    session = SessionLocal()
+    try:
+        raw = UserRepository(session).get_profile_summary(user_id)
+
+        summary["vocab_mode_time_ms"] = [
+            {"mode": mode, "time_ms": time_ms} for mode, time_ms in raw["vocab_mode_time_ms"]
+        ]
+        summary["time_totals_ms"]["vocab"] = sum(
+            item["time_ms"] for item in summary["vocab_mode_time_ms"]
+        )
+
+        lesson_mode_names = {1: "meaning", 2: "typing", 3: "reorder", 4: "listening"}
+        summary["lesson_mode_time_ms"] = [
+            {"mode": lesson_mode_names.get(mode, str(mode)), "time_ms": time_ms}
+            for mode, time_ms in raw["lesson_mode_time_ms"]
+        ]
+        summary["time_totals_ms"]["lesson"] = sum(
+            item["time_ms"] for item in summary["lesson_mode_time_ms"]
+        )
+
+        summary["practice_skill_time_ms"] = [
+            {"category": cat, "skill": skill, "time_ms": time_ms}
+            for cat, skill, time_ms in raw["practice_skill_time_ms"]
+        ]
+        for item in summary["practice_skill_time_ms"]:
+            cat = item["category"] if item["category"] in ("practice", "exam") else "practice"
+            summary["time_totals_ms"][cat] += item["time_ms"]
+
+        return summary
+    except Exception as e:
+        print(f"get_profile_summary failed: {e}")
+        return summary
     finally:
         SessionLocal.remove()
 

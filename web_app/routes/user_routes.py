@@ -22,13 +22,15 @@ from db import (
     get_vocab_record_totals,
     get_lesson_record_totals,
     get_practice_record_totals_by_category,
-    get_profile_summary,
     get_recent_learning,
+    set_recent_learning,
+)
+from entity.user.service import (
+    get_profile_summary,
     recompute_user_level,
     get_user_hanzi_font,
     get_user_hanzi_script,
     get_user_ui_language,
-    set_recent_learning,
     update_user_avatar_path,
     update_user_hanzi_font,
     update_user_hanzi_script,

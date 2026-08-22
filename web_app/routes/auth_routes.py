@@ -1,7 +1,9 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required, current_user, UserMixin
-from werkzeug.security import check_password_hash, generate_password_hash
-from db import (
+from werkzeug.security import check_password_hash
+
+from entity.user.service import (
+    UserServiceError,
     get_user_auth_by_username,
     get_user_auth_by_id,
     username_or_email_exists,
@@ -74,12 +76,13 @@ def register():
             flash(t('flash.user_exists'), 'error')
             return redirect(url_for('auth.register'))
 
-        pwd_hash = generate_password_hash(password)
-        if create_user(username, email, pwd_hash, 1):
+        try:
+            create_user({"username": username, "email": email, "password": password, "level": 1})
             flash(t('flash.registration_success'), 'success')
             return redirect(url_for('auth.login'))
-        flash(t('flash.database_error'), 'error')
-        return redirect(url_for('auth.register'))
+        except UserServiceError:
+            flash(t('flash.database_error'), 'error')
+            return redirect(url_for('auth.register'))
 
     return render_template('shared/register.html')
 
