@@ -23,10 +23,25 @@ from entity.competition.entity import (
 )
 
 
-# A room is either a vocabulary competition or the lesson trainer; vocab rooms also
-# pick a skill focus ('all' = all-rounder, or a single activity).
+# A room is either a vocabulary competition or the lesson trainer; both pick a skill
+# focus: 'all' (every type) or a CSV of the selected types for that mode.
 ROOM_CATEGORIES = ("vocab", "lesson")
-VOCAB_ACTIVITY_TYPES = ("all", "typing", "listening", "reading")
+VOCAB_TYPE_CHOICES = ("typing", "listening", "reading")
+LESSON_TYPE_CHOICES = ("listening", "meaning", "typing", "reorder")
+
+
+def normalize_activity_types(raw, allowed):
+    """Normalize a type selection (a list or CSV string) against the allowed set for the
+    mode. Returns 'all' when nothing usable is picked or every type is selected;
+    otherwise a CSV of the picked types in the allowed order."""
+    if isinstance(raw, (list, tuple)):
+        items = [str(x).strip().lower() for x in raw]
+    else:
+        items = [x.strip().lower() for x in str(raw or "").split(",")]
+    picked = [x for x in allowed if x in items]
+    if not picked or len(picked) == len(allowed):
+        return "all"
+    return ",".join(picked)
 
 
 def prepare_room_settings(data):
@@ -48,10 +63,8 @@ def prepare_room_settings(data):
     if category not in ROOM_CATEGORIES:
         category = "vocab"
 
-    activity_type = str(data.get("activity_type") or "all").strip().lower()
-    if category != "vocab" or activity_type not in VOCAB_ACTIVITY_TYPES:
-        # Only the vocab competition has a skill focus; lessons always run the full mix.
-        activity_type = "all"
+    allowed_types = VOCAB_TYPE_CHOICES if category == "vocab" else LESSON_TYPE_CHOICES
+    activity_type = normalize_activity_types(data.get("activity_type"), allowed_types)
 
     try:
         max_users = int(data.get("max_users", 8))
@@ -393,7 +406,9 @@ def start_competition_session(room_code, host_user_id):
     lesson_tasks = None
     if category == "lesson":
         from service.lesson_task_service import build_lesson_tasks
-        lesson_tasks = build_lesson_tasks(room["passage_ids"], mode="master")
+        activity_type = room.get("activity_type") or "all"
+        types = None if activity_type == "all" else activity_type.split(",")
+        lesson_tasks = build_lesson_tasks(room["passage_ids"], mode="master", types=types)
         if not lesson_tasks:
             return None, "The selected lessons have no tasks"
 

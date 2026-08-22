@@ -164,7 +164,7 @@ function loadTask() {
         const activeTask = sessionData?.tasks?.[currentTaskIndex];
         if (!activeTask || activeTask.type !== 'typing' || answerSubmitted) return;
         updateTypingHighlight(typingInput.value);
-        if (typingInput.value.trim() === activeTask.correct_answer) {
+        if (answersMatch(typingInput.value, activeTask.correct_answer)) {
             submitTyping();
         }
     };
@@ -547,14 +547,17 @@ function updateTypingHighlight(value) {
     const target = [...typingTargetText];
     const typed = [...value];
     const spans = document.getElementById('word-display').children;
+    let ti = 0; // pointer into the typed text; '、' positions consume no input
     for (let i = 0; i < spans.length; i++) {
         spans[i].classList.remove('char-correct', 'char-wrong');
+        if (target[i] === '、') continue;
         // Only judge a position once a Chinese character sits there — while typing
         // pinyin/latin (IME composition) the field holds non-Chinese text that
         // should not glow red.
-        if (i < typed.length && /[一-鿿]/.test(typed[i])) {
-            spans[i].classList.add(typed[i] === target[i] ? 'char-correct' : 'char-wrong');
+        if (ti < typed.length && /[一-鿿]/.test(typed[ti])) {
+            spans[i].classList.add(typed[ti] === target[i] ? 'char-correct' : 'char-wrong');
         }
+        ti++;
     }
 }
 
@@ -571,7 +574,9 @@ function showTypingPinyin(task) {
 // before comparing: unify width via NFKC, fold CJK punctuation onto its ASCII
 // equivalent, then drop every space / zero-width character.
 const ANSWER_PUNCT_MAP = {
-    '、': ',', '。': '.', '｡': '.',
+    // '、' (ideographic comma) is dropped entirely — it has no easy keyboard input, so
+    // learners are never required to type it.
+    '、': '', '。': '.', '｡': '.',
     '【': '[', '】': ']', '《': '<', '》': '>',
     '「': '"', '」': '"', '『': '"', '』': '"',
     '“': '"', '”': '"', '‘': "'", '’': "'",

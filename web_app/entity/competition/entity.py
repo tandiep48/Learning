@@ -26,7 +26,7 @@ class CompetitionRoom(Base):
     room_code = Column(String(12), nullable=False, unique=True)
     host_user_id = Column(BigInteger, nullable=False)
     category = Column(String(20), nullable=False, default="vocab")
-    activity_type = Column(String(20), nullable=False, default="all")
+    activity_type = Column(String(64), nullable=False, default="all")
     level = Column(SmallInteger, nullable=False)
     lesson = Column(Integer, nullable=True)
     progress = Column(String(30), nullable=True)
