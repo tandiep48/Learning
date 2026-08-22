@@ -3,7 +3,7 @@ import sys
 from flask import Blueprint, request, jsonify
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from db import get_lesson_translations
+from entity.translation.service import get_lesson_translations
 
 translation_bp = Blueprint('translation', __name__, url_prefix='/api/translation')
 

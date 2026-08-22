@@ -1,13 +1,12 @@
 """
 db/content.py
 --------------
-Read queries for lesson/passage content — passage summaries, lesson
-translations, passage lines, course vocabulary, vocab lessons, passage
-vocabulary and grammar.
+Read queries for lesson/passage content — passage summaries, passage
+lines, course vocabulary, vocab lessons, passage vocabulary and grammar.
 Extracted from the former monolithic db.py.
 """
 
-from sqlalchemy import select, func, distinct, cast, and_, or_, Integer
+from sqlalchemy import select, func, distinct, and_, or_
 from sqlalchemy.orm import aliased
 
 from entity.database import SessionLocal
@@ -17,7 +16,6 @@ from entity.vocabulary.entity import Vocabulary
 from entity.passage_vocabulary.entity import PassageVocabulary
 from entity.user_saved_word.entity import UserSavedWord
 from entity.record.entity import VocabRecord
-from entity.translation.entity import Translation
 from entity.grammar_rule.entity import GrammarRule
 from entity.grammar_context.entity import GrammarContext
 from entity.question.entity import Question
@@ -140,27 +138,6 @@ def get_passages_summary(hsk_level=None, lang="en"):
             }
             for r in rows
         ]
-    finally:
-        SessionLocal.remove()
-
-
-def get_lesson_translations(hsk_level, lesson):
-    """Return every translation row for one lesson, e.g. HSK1 + lesson 2 -> 'H1_2_%'.
-    Ordered by the trailing index numerically so H1_2_10 follows H1_2_9, not H1_2_1."""
-    digits = "".join(ch for ch in str(hsk_level or "") if ch.isdigit())
-    lesson_num = "".join(ch for ch in str(lesson or "") if ch.isdigit())
-    if not digits or not lesson_num:
-        return []
-    prefix = f"H{digits}_{lesson_num}_"
-
-    session = SessionLocal()
-    try:
-        rows = session.execute(
-            select(Translation.translation_id, Translation.cn, Translation.vn, Translation.en)
-            .where(Translation.translation_id.like(prefix + "%"))
-            .order_by(cast(func.split_part(Translation.translation_id, "_", 3), Integer))
-        ).all()
-        return [{"translation_id": r[0], "cn": r[1], "vn": r[2], "en": r[3]} for r in rows]
     finally:
         SessionLocal.remove()
 
