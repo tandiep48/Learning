@@ -7,6 +7,8 @@ from flask_login import login_required, current_user
 from db import (
     get_recommended_practices,
     get_practice_history_sessions, get_practice_session_detail,
+)
+from entity.question.service import (
     list_practice_lessons, get_practice_questions, get_practice_questions_multi,
     get_practice_progress_group,
 )

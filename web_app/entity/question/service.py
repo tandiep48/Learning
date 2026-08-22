@@ -303,6 +303,51 @@ def update_question(question_id: int, data: dict) -> dict:
         SessionLocal.remove()
 
 
+# ---------------------------------------------------------------------------
+# Practice/exam trainer lookups
+# ---------------------------------------------------------------------------
+
+def list_practice_lessons(category, level) -> list[str]:
+    """Distinct lessons available for a practice/exam level, as strings."""
+    session = SessionLocal()
+    try:
+        lessons = QuestionRepository(session).list_distinct_lessons(category, level)
+        return [str(lesson) for lesson in lessons]
+    finally:
+        SessionLocal.remove()
+
+
+def get_practice_questions(category, level, lesson) -> list[dict]:
+    """All questions for one (category, level, lesson), ordered by question no."""
+    session = SessionLocal()
+    try:
+        rows = QuestionRepository(session).get_by_category_level_lesson(category, level, lesson)
+        return [q.to_dict() for q in rows]
+    finally:
+        SessionLocal.remove()
+
+
+def get_practice_progress_group(category, level, lesson, progress) -> list[dict]:
+    """All questions for one (category, level, lesson, progress) group, ordered by no."""
+    session = SessionLocal()
+    try:
+        rows = QuestionRepository(session).get_by_progress_group(category, level, lesson, progress)
+        return [q.to_dict() for q in rows]
+    finally:
+        SessionLocal.remove()
+
+
+def get_practice_questions_multi(items) -> list[dict]:
+    """Questions for several (category, level, lesson, progress) groups at once.
+    `items` is a list of dicts with those keys; ordered by level, lesson, progress, no."""
+    session = SessionLocal()
+    try:
+        rows = QuestionRepository(session).get_by_groups(items)
+        return [q.to_dict() for q in rows]
+    finally:
+        SessionLocal.remove()
+
+
 def delete_question(question_id: int) -> dict:
     """
     Delete a question by ID.

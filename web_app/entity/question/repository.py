@@ -7,6 +7,7 @@ No raw SQL strings — all queries go through the ORM session.
 """
 
 from typing import Optional
+from sqlalchemy import select, distinct, and_, or_
 from sqlalchemy.orm import Session
 
 from entity.question.entity import Question
@@ -91,6 +92,72 @@ class QuestionRepository:
                 Question.no == no,
             )
             .first()
+        )
+
+    # ------------------------------------------------------------------
+    # READ — practice/exam trainer lookups
+    # ------------------------------------------------------------------
+
+    def list_distinct_lessons(self, category: str, level: int) -> list:
+        """Distinct lesson numbers available for a practice/exam level."""
+        rows = self.session.execute(
+            select(distinct(Question.lesson))
+            .where(Question.category == category, Question.level == level)
+            .order_by(Question.lesson)
+        ).all()
+        return [r[0] for r in rows]
+
+    def get_by_category_level_lesson(self, category: str, level: int, lesson) -> list[Question]:
+        """All questions for one (category, level, lesson), ordered by question no."""
+        return (
+            self.session.execute(
+                select(Question)
+                .where(Question.category == category, Question.level == level, Question.lesson == lesson)
+                .order_by(Question.no)
+            )
+            .scalars()
+            .all()
+        )
+
+    def get_by_progress_group(self, category: str, level: int, lesson, progress) -> list[Question]:
+        """All questions for one (category, level, lesson, progress) group, ordered by no."""
+        return (
+            self.session.execute(
+                select(Question)
+                .where(
+                    Question.category == category, Question.level == level,
+                    Question.lesson == lesson, Question.progress == progress,
+                )
+                .order_by(Question.no)
+            )
+            .scalars()
+            .all()
+        )
+
+    def get_by_groups(self, groups: list[dict]) -> list[Question]:
+        """
+        Questions for several (category, level, lesson, progress) groups at once.
+        `groups` is a list of dicts with those keys; ordered by level, lesson, progress, no.
+        """
+        conds = [
+            and_(
+                Question.category == g.get("category", "practice"),
+                Question.level == g["level"],
+                Question.lesson == g["lesson"],
+                Question.progress == g["progress"],
+            )
+            for g in groups
+        ]
+        if not conds:
+            return []
+        return (
+            self.session.execute(
+                select(Question)
+                .where(or_(*conds))
+                .order_by(Question.level, Question.lesson, Question.progress, Question.no)
+            )
+            .scalars()
+            .all()
         )
 
     # ------------------------------------------------------------------
