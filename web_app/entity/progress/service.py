@@ -1,26 +1,19 @@
 """
-db/progress.py
----------------
-Queries for a user's lesson progress and recent-learning state —
+entity/progress/service.py
+----------------------------
+Business logic for a user's lesson progress and recent-learning state —
 recent lesson, lesson-part completion, the lesson-picker progress summary,
-and marking a passage's words mastered.
-Extracted from the former monolithic db.py.
+book browsing, and marking a passage's words mastered.
+
+Manages the SQLAlchemy session lifecycle (commit/rollback) and shapes
+repository rows into the plain dicts/lists callers expect.
 """
 
 import time
 from datetime import datetime, timezone
 
-from sqlalchemy import select, insert, func
-from sqlalchemy.dialects.postgresql import insert as pg_insert
-
 from entity.database import SessionLocal
-from entity.passage.entity import LessonPassage
-from entity.book.entity import Book
-from entity.lesson_line.entity import LessonLine  # noqa: F401  (registers LessonPassage.lines mapper)
-from entity.passage_vocabulary.entity import PassageVocabulary
-from entity.record.entity import VocabRecord
-from entity.user_lesson_part_progress.entity import UserLessonPartProgress
-from entity.user_learning_state.entity import UserLearningState
+from entity.progress.repository import ProgressRepository
 from entity.record.service import get_learned_words
 
 
@@ -29,19 +22,7 @@ def set_recent_learning(user_id, passage_id):
         return False
     session = SessionLocal()
     try:
-        stmt = pg_insert(UserLearningState).values(
-            user_id=user_id,
-            current_passage_id=passage_id,
-            updated_at=func.current_timestamp(),
-        )
-        stmt = stmt.on_conflict_do_update(
-            index_elements=[UserLearningState.user_id],
-            set_={
-                "current_passage_id": stmt.excluded.current_passage_id,
-                "updated_at": func.current_timestamp(),
-            },
-        )
-        session.execute(stmt)
+        ProgressRepository(session).upsert_recent_learning(user_id, passage_id)
         session.commit()
         return True
     except Exception as e:
@@ -55,10 +36,7 @@ def set_recent_learning(user_id, passage_id):
 def get_recent_learning(user_id):
     session = SessionLocal()
     try:
-        row = session.execute(
-            select(UserLearningState.current_passage_id, UserLearningState.updated_at)
-            .where(UserLearningState.user_id == user_id)
-        ).first()
+        row = ProgressRepository(session).get_recent_learning_row(user_id)
         if not row:
             return None
         return {"passage_id": row[0], "updated_at": row[1].isoformat() if row[1] else None}
@@ -79,29 +57,9 @@ def mark_lesson_part_completed(user_id, passage_id, completed=True, score_pct=No
         return False
     session = SessionLocal()
     try:
-        tbl = UserLessonPartProgress
-        stmt = pg_insert(tbl).values(
-            user_id=user_id,
-            passage_id=passage_id,
-            lesson_trainer_completed_at=(func.current_timestamp() if completed else None),
-            score_pct=score_pct,
-            updated_at=func.current_timestamp(),
+        ProgressRepository(session).upsert_lesson_part_progress(
+            user_id, passage_id, completed, score_pct
         )
-        stmt = stmt.on_conflict_do_update(
-            index_elements=[tbl.user_id, tbl.passage_id],
-            set_={
-                "lesson_trainer_completed_at": func.coalesce(
-                    stmt.excluded.lesson_trainer_completed_at,
-                    tbl.lesson_trainer_completed_at,
-                ),
-                "score_pct": func.greatest(
-                    func.coalesce(tbl.score_pct, 0),
-                    func.coalesce(stmt.excluded.score_pct, 0),
-                ),
-                "updated_at": func.current_timestamp(),
-            },
-        )
-        session.execute(stmt)
         session.commit()
         return True
     except Exception as e:
@@ -115,25 +73,14 @@ def mark_lesson_part_completed(user_id, passage_id, completed=True, score_pct=No
 def get_lesson_picker_progress(user_id, hsk_level):
     session = SessionLocal()
     try:
+        repo = ProgressRepository(session)
         mastered_words = set(get_learned_words(user_id))
 
-        vocab_rows = session.execute(
-            select(LessonPassage.passage_id, PassageVocabulary.cn)
-            .select_from(LessonPassage)
-            .outerjoin(PassageVocabulary, PassageVocabulary.passage_id == LessonPassage.passage_id)
-            .where(LessonPassage.hsk_level == hsk_level)
-            .order_by(LessonPassage.passage_id, PassageVocabulary.cn)
-        ).all()
+        vocab_rows = repo.get_passage_vocab_rows(hsk_level)
 
         completed_passages = set()
         part_scores = {}
-        for pid, completed_at, score in session.execute(
-            select(
-                UserLessonPartProgress.passage_id,
-                UserLessonPartProgress.lesson_trainer_completed_at,
-                UserLessonPartProgress.score_pct,
-            ).where(UserLessonPartProgress.user_id == user_id)
-        ).all():
+        for pid, completed_at, score in repo.get_user_lesson_part_progress(user_id):
             part_scores[pid] = score or 0
             if completed_at is not None:
                 completed_passages.add(pid)
@@ -223,26 +170,15 @@ def get_books_summary(user_id, lang="en"):
     completion counts. Books have no vocab, so this is passage/part based only."""
     session = SessionLocal()
     try:
-        rows = session.execute(
-            select(LessonPassage.passage_id, LessonPassage.book_code)
-            .where(LessonPassage.book_code.isnot(None))
-        ).all()
+        repo = ProgressRepository(session)
+        rows = repo.get_book_passage_rows()
 
         names = {
             code: _pick_lang(name_en, name_vn, lang)
-            for code, name_en, name_vn in session.execute(
-                select(Book.book_code, Book.name_en, Book.name_vn)
-            ).all()
+            for code, name_en, name_vn in repo.get_book_names()
         }
 
-        completed = {
-            pid for (pid,) in session.execute(
-                select(UserLessonPartProgress.passage_id).where(
-                    UserLessonPartProgress.user_id == user_id,
-                    UserLessonPartProgress.lesson_trainer_completed_at.isnot(None),
-                )
-            ).all()
-        }
+        completed = repo.get_completed_passage_ids(user_id)
 
         books = {}
         for passage_id, code in rows:
@@ -275,25 +211,17 @@ def get_book_lessons(user_id, book_code, lang="en"):
     the user's completion/progress. Returns None if the book has no passages (unknown code)."""
     session = SessionLocal()
     try:
-        rows = session.execute(
-            select(LessonPassage.passage_id, LessonPassage.title_en, LessonPassage.title_vn)
-            .where(LessonPassage.book_code == book_code)
-        ).all()
+        repo = ProgressRepository(session)
+        rows = repo.get_book_passages_with_titles(book_code)
         if not rows:
             return None
 
-        book = session.get(Book, book_code)
+        book = repo.get_book(book_code)
         book_name = _pick_lang(book.name_en, book.name_vn, lang) if book else book_code
 
         progress = {
             pid: (completed_at is not None, score or 0)
-            for pid, completed_at, score in session.execute(
-                select(
-                    UserLessonPartProgress.passage_id,
-                    UserLessonPartProgress.lesson_trainer_completed_at,
-                    UserLessonPartProgress.score_pct,
-                ).where(UserLessonPartProgress.user_id == user_id)
-            ).all()
+            for pid, completed_at, score in repo.get_user_lesson_part_progress(user_id)
         }
 
         lessons = {}
@@ -340,13 +268,8 @@ def mark_passage_words_mastered(user_id, passage_id):
         return 0
     session = SessionLocal()
     try:
-        words = [
-            r[0]
-            for r in session.execute(
-                select(PassageVocabulary.cn).where(PassageVocabulary.passage_id == passage_id)
-            ).all()
-            if r[0]
-        ]
+        repo = ProgressRepository(session)
+        words = repo.get_passage_vocab_words(passage_id)
         if not words:
             return 0
 
@@ -372,7 +295,7 @@ def mark_passage_words_mastered(user_id, passage_id):
             for word in pending
             for mode in ("typing", "listen", "meaning")
         ]
-        session.execute(insert(VocabRecord), rows)
+        repo.insert_vocab_mastery_records(rows)
         session.commit()
         return len(pending)
     except Exception as e:

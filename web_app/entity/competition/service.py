@@ -1,33 +1,24 @@
 """
-db/competition.py
-------------------
-Queries for the multiplayer "Learn Together" feature — competition rooms,
-sessions, sections, questions, answers, scores and chat.
-Extracted from the former monolithic db.py.
+entity/competition/service.py
+--------------------------------
+Business logic for the multiplayer "Learn Together" (vocab competition)
+feature — rooms, membership, chat, sessions, per-mode scoring and ranking.
+
+Manages the SQLAlchemy session lifecycle (commit/rollback) and shapes
+repository rows into the plain dicts callers expect.
 """
 
 import json
 
-from sqlalchemy import select, update, func, case, and_, literal, literal_column
-from sqlalchemy.dialects.postgresql import insert as pg_insert
-
 from entity.database import SessionLocal
-from entity.user.entity import User
-from entity.competition.entity import (
-    CompetitionRoom,
-    CompetitionRoomMember,
-    CompetitionChatMessage,
-    CompetitionSession,
-    CompetitionScore,
-    CompetitionVocabAnswer,
-)
+from entity.competition.repository import CompetitionRepository
 
 
 def resolve_room_words(passage_ids):
     """Union the vocabulary of the selected passages into a deduped word list
     (rows as returned by get_passage_vocab, keyed by 'cn'). Shared by room
     creation (word count) and answer validation."""
-    from db.content import get_passage_vocab
+    from entity.passage_vocabulary.service import get_passage_vocab
     if not passage_ids:
         return []
     collected = []
@@ -40,30 +31,17 @@ def resolve_room_words(passage_ids):
                 collected.append(row)
     return collected
 
-def create_competition_room(room_code, host_user_id, level, passage_ids, word_count, max_users, section_timeout_minutes):
+
+def create_competition_room(room_code, host_user_id, level, passage_ids, word_count,
+                             max_users, section_timeout_minutes):
     session = SessionLocal()
     try:
-        room_id = session.execute(
-            pg_insert(CompetitionRoom)
-            .values(
-                room_code=room_code, host_user_id=host_user_id, category="vocab",
-                level=level, passage_ids=list(passage_ids), word_count=word_count,
-                max_users=max_users, section_timeout_minutes=section_timeout_minutes,
-                status="waiting",
-            )
-            .returning(CompetitionRoom.id)
-        ).scalar_one()
-        session.execute(
-            pg_insert(CompetitionRoomMember)
-            .values(room_id=room_id, user_id=host_user_id, role="host", status="online")
-            .on_conflict_do_update(
-                index_elements=["room_id", "user_id"],
-                set_={
-                    "role": "host", "status": "online",
-                    "left_at": None, "last_seen_at": func.now(),
-                },
-            )
+        repo = CompetitionRepository(session)
+        room_id = repo.insert_room(
+            room_code, host_user_id, level, passage_ids, word_count,
+            max_users, section_timeout_minutes,
         )
+        repo.upsert_room_member(room_id, host_user_id, role="host", status="online")
         session.commit()
         return get_competition_room_by_code(room_code)
     except Exception as e:
@@ -73,19 +51,13 @@ def create_competition_room(room_code, host_user_id, level, passage_ids, word_co
     finally:
         SessionLocal.remove()
 
+
 def get_competition_room_by_code(room_code):
     if not room_code:
         return None
     session = SessionLocal()
     try:
-        r = CompetitionRoom
-        row = session.execute(
-            select(
-                r.id, r.room_code, r.host_user_id, r.level, r.passage_ids, r.word_count,
-                r.max_users, r.section_timeout_minutes, r.status, r.created_at, r.updated_at,
-            )
-            .where(r.room_code == str(room_code).upper())
-        ).first()
+        row = CompetitionRepository(session).get_room_row(room_code)
         if not row:
             return None
         passage_ids = row[4]
@@ -110,32 +82,21 @@ def get_competition_room_by_code(room_code):
     finally:
         SessionLocal.remove()
 
+
 def join_competition_room(room_code, user_id):
     room = get_competition_room_by_code(room_code)
     if not room:
         return None, "Room not found"
     session = SessionLocal()
     try:
-        m = CompetitionRoomMember
-        active_count = int(session.execute(
-            select(func.count()).select_from(m)
-            .where(m.room_id == room["id"], m.status != "left")
-        ).scalar() or 0)
-        already_member = session.execute(
-            select(m.id).where(m.room_id == room["id"], m.user_id == user_id)
-        ).first() is not None
+        repo = CompetitionRepository(session)
+        active_count = repo.get_active_member_count(room["id"])
+        already_member = repo.is_room_member(room["id"], user_id)
         if not already_member and active_count >= int(room["max_users"] or 8):
             return None, "Room is full"
 
         role = 'host' if int(room["host_user_id"]) == int(user_id) else 'participant'
-        session.execute(
-            pg_insert(m)
-            .values(room_id=room["id"], user_id=user_id, role=role, status="online")
-            .on_conflict_do_update(
-                index_elements=["room_id", "user_id"],
-                set_={"status": "online", "left_at": None, "last_seen_at": func.now()},
-            )
-        )
+        repo.upsert_join_member(room["id"], user_id, role)
         session.commit()
         return get_competition_room_state(room_code), None
     except Exception as e:
@@ -145,18 +106,14 @@ def join_competition_room(room_code, user_id):
     finally:
         SessionLocal.remove()
 
+
 def leave_competition_room(room_code, user_id):
     room = get_competition_room_by_code(room_code)
     if not room:
         return False
     session = SessionLocal()
     try:
-        m = CompetitionRoomMember
-        session.execute(
-            update(m)
-            .where(m.room_id == room["id"], m.user_id == user_id)
-            .values(status="left", left_at=func.now(), last_seen_at=func.now())
-        )
+        CompetitionRepository(session).mark_member_left(room["id"], user_id)
         session.commit()
         return True
     except Exception as e:
@@ -166,13 +123,14 @@ def leave_competition_room(room_code, user_id):
     finally:
         SessionLocal.remove()
 
+
 def get_competition_room_state(room_code):
     room = get_competition_room_by_code(room_code)
     if not room:
         return None
     session = SessionLocal()
     try:
-        m = CompetitionRoomMember
+        repo = CompetitionRepository(session)
         members = [
             {
                 "user_id": row[0],
@@ -181,15 +139,9 @@ def get_competition_room_state(room_code):
                 "status": row[3],
                 "joined_at": row[4].isoformat() if row[4] else None,
             }
-            for row in session.execute(
-                select(m.user_id, User.username, m.role, m.status, m.joined_at)
-                .select_from(m).join(User, User.id == m.user_id)
-                .where(m.room_id == room["id"], m.status != "left")
-                .order_by(case((m.role == "host", 0), else_=1), m.joined_at)
-            ).all()
+            for row in repo.get_room_members(room["id"])
         ]
 
-        c = CompetitionChatMessage
         chat = [
             {
                 "id": row[0],
@@ -198,23 +150,10 @@ def get_competition_room_state(room_code):
                 "message": row[3],
                 "created_at": row[4].isoformat() if row[4] else None,
             }
-            for row in reversed(session.execute(
-                select(c.id, c.user_id, User.username, c.message, c.created_at)
-                .select_from(c).join(User, User.id == c.user_id)
-                .where(c.room_id == room["id"])
-                .order_by(c.created_at.desc())
-                .limit(50)
-            ).all())
+            for row in reversed(repo.get_recent_chat(room["id"], limit=50))
         ]
 
-        s = CompetitionSession
-        session_row = session.execute(
-            select(s.id, s.status, s.current_section, s.section_started_at,
-                   s.section_ends_at, s.started_at, s.finished_at)
-            .where(s.room_id == room["id"])
-            .order_by(s.id.desc())
-            .limit(1)
-        ).first()
+        session_row = repo.get_latest_session_row(room["id"])
         session_state = None
         if session_row:
             session_state = {
@@ -236,6 +175,7 @@ def get_competition_room_state(room_code):
     finally:
         SessionLocal.remove()
 
+
 def add_competition_chat_message(room_code, user_id, message):
     room = get_competition_room_by_code(room_code)
     text = str(message or "").strip()[:1000]
@@ -243,20 +183,14 @@ def add_competition_chat_message(room_code, user_id, message):
         return None
     session = SessionLocal()
     try:
-        c = CompetitionChatMessage
-        row = session.execute(
-            pg_insert(c)
-            .values(room_id=room["id"], user_id=user_id, message=text)
-            .returning(c.id, c.created_at)
-        ).first()
-        user_row = session.execute(
-            select(User.username).where(User.id == user_id)
-        ).first()
+        repo = CompetitionRepository(session)
+        row = repo.insert_chat_message(room["id"], user_id, text)
+        username = repo.get_username(user_id)
         session.commit()
         return {
             "id": row[0],
             "user_id": user_id,
-            "username": user_row[0] if user_row else "User",
+            "username": username or "User",
             "message": text,
             "created_at": row[1].isoformat() if row[1] else None,
         }
@@ -266,6 +200,7 @@ def add_competition_chat_message(room_code, user_id, message):
         return None
     finally:
         SessionLocal.remove()
+
 
 def start_competition_session(room_code, host_user_id):
     room = get_competition_room_by_code(room_code)
@@ -280,35 +215,11 @@ def start_competition_session(room_code, host_user_id):
 
     session = SessionLocal()
     try:
-        session.execute(
-            update(CompetitionRoom)
-            .where(CompetitionRoom.id == room["id"])
-            .values(status="running", updated_at=func.now())
-        )
+        repo = CompetitionRepository(session)
+        repo.update_room_status(room["id"], "running")
         minutes = int(room["section_timeout_minutes"] or 15)
-        session_id = session.execute(
-            pg_insert(CompetitionSession)
-            .values(
-                room_id=room["id"], status="running", current_section="vocab",
-                section_started_at=func.now(),
-                section_ends_at=func.now() + literal_column("interval '1 minute'") * minutes,
-                started_at=func.now(),
-            )
-            .returning(CompetitionSession.id)
-        ).scalar_one()
-
-        session.execute(
-            pg_insert(CompetitionScore)
-            .from_select(
-                ["session_id", "user_id"],
-                select(literal(session_id), CompetitionRoomMember.user_id)
-                .where(
-                    CompetitionRoomMember.room_id == room["id"],
-                    CompetitionRoomMember.status != "left",
-                ),
-            )
-            .on_conflict_do_nothing(index_elements=["session_id", "user_id"])
-        )
+        session_id = repo.insert_session(room["id"], minutes)
+        repo.seed_scores_for_session(session_id, room["id"])
         session.commit()
         return get_competition_session_state(session_id), None
     except Exception as e:
@@ -318,18 +229,14 @@ def start_competition_session(room_code, host_user_id):
     finally:
         SessionLocal.remove()
 
+
 def get_active_competition_session(room_code):
     room = get_competition_room_by_code(room_code)
     if not room:
         return None
     session = SessionLocal()
     try:
-        row = session.execute(
-            select(CompetitionSession.id)
-            .where(CompetitionSession.room_id == room["id"])
-            .order_by(CompetitionSession.id.desc())
-            .limit(1)
-        ).first()
+        row = CompetitionRepository(session).get_latest_session_id(room["id"])
         return get_competition_session_state(row[0]) if row else None
     except Exception as e:
         print(f"Database get_active_competition_session failed: {e}")
@@ -337,20 +244,13 @@ def get_active_competition_session(room_code):
     finally:
         SessionLocal.remove()
 
+
 def get_competition_session_state(session_id):
     if not session_id:
         return None
     session = SessionLocal()
     try:
-        s = CompetitionSession
-        row = session.execute(
-            select(
-                s.id, s.room_id, CompetitionRoom.room_code, s.status, s.current_section,
-                s.section_started_at, s.section_ends_at, s.started_at, s.finished_at,
-            )
-            .select_from(s).join(CompetitionRoom, CompetitionRoom.id == s.room_id)
-            .where(s.id == session_id)
-        ).first()
+        row = CompetitionRepository(session).get_session_row(session_id)
         if not row:
             return None
         state = {
@@ -372,6 +272,7 @@ def get_competition_session_state(session_id):
     finally:
         SessionLocal.remove()
 
+
 # Per-mode scoring: base points + a time-decay speed bonus, minus a per-error penalty
 # on the matching modes. Time uses fractional seconds; typing is binary (an incorrect
 # submission scores nothing). See the scoring spec for the rationale behind each value.
@@ -380,6 +281,7 @@ MODE_CONFIG = {
     "listen":  {"base": 100, "max_bonus": 50, "decay": 2.0, "penalty_rate": 0.10},
     "meaning": {"base": 80,  "max_bonus": 40, "decay": 3.0, "penalty_rate": 0.10},
 }
+
 
 def calculate_competition_points(activity_type, is_correct, response_time_ms, wrong_attempts=0):
     cfg = MODE_CONFIG.get(activity_type)
@@ -393,7 +295,9 @@ def calculate_competition_points(activity_type, is_correct, response_time_ms, wr
     bonus = max(0.0, cfg["max_bonus"] - (seconds * cfg["decay"]))
     return max(0, round((cfg["base"] - penalty) + bonus))
 
-def record_competition_vocab_answer(session_id, user_id, word, activity_type, is_correct, response_time_ms, wrong_attempts=0):
+
+def record_competition_vocab_answer(session_id, user_id, word, activity_type, is_correct,
+                                     response_time_ms, wrong_attempts=0):
     """Record one participant's answer for a word/activity, awarding points per the
     per-mode scoring rules (speed bonus, minus per-error penalties on the matching
     modes). One-shot per (word, activity_type); the client reports correctness, timing
@@ -404,50 +308,19 @@ def record_competition_vocab_answer(session_id, user_id, word, activity_type, is
         return None, "Invalid answer payload"
     session = SessionLocal()
     try:
+        repo = CompetitionRepository(session)
         # Only accept answers while the session is running and the user is a scored participant.
-        active = session.execute(
-            select(literal(1))
-            .select_from(CompetitionSession)
-            .join(
-                CompetitionScore,
-                and_(
-                    CompetitionScore.session_id == CompetitionSession.id,
-                    CompetitionScore.user_id == user_id,
-                ),
-            )
-            .where(CompetitionSession.id == session_id, CompetitionSession.status == "running")
-        ).first()
-        if not active:
+        if not repo.is_session_active_for_user(session_id, user_id):
             return None, "Session is not active"
 
         is_correct = bool(is_correct)
         points = calculate_competition_points(activity_type, is_correct, response_time_ms, wrong_attempts)
-        inserted = session.execute(
-            pg_insert(CompetitionVocabAnswer)
-            .values(
-                session_id=session_id, user_id=user_id, word=word,
-                activity_type=activity_type, is_correct=is_correct,
-                response_time_ms=int(response_time_ms or 0), points=points,
-            )
-            .on_conflict_do_nothing(
-                index_elements=["session_id", "user_id", "word", "activity_type"]
-            )
-            .returning(CompetitionVocabAnswer.id)
-        ).first()
+        inserted = repo.insert_vocab_answer(
+            session_id, user_id, word, activity_type, is_correct, response_time_ms, points
+        )
         if not inserted:
             return None, "Answer already submitted"
-        session.execute(
-            update(CompetitionScore)
-            .where(
-                CompetitionScore.session_id == session_id,
-                CompetitionScore.user_id == user_id,
-            )
-            .values(
-                total_points=CompetitionScore.total_points + points,
-                total_response_time_ms=CompetitionScore.total_response_time_ms + int(response_time_ms or 0),
-                updated_at=func.now(),
-            )
-        )
+        repo.increment_score(session_id, user_id, points, response_time_ms)
         session.commit()
         return {
             "is_correct": is_correct,
@@ -461,12 +334,12 @@ def record_competition_vocab_answer(session_id, user_id, word, activity_type, is
     finally:
         SessionLocal.remove()
 
+
 def get_competition_scores(session_id):
     if not session_id:
         return []
     session = SessionLocal()
     try:
-        sc = CompetitionScore
         return [
             {
                 "user_id": row[0],
@@ -478,15 +351,7 @@ def get_competition_scores(session_id):
                 "rank": row[6],
                 "finished_at": row[7].isoformat() if row[7] else None,
             }
-            for row in session.execute(
-                select(
-                    sc.user_id, User.username, sc.listening_points, sc.reading_points,
-                    sc.total_points, sc.total_response_time_ms, sc.rank, sc.finished_at,
-                )
-                .select_from(sc).join(User, User.id == sc.user_id)
-                .where(sc.session_id == session_id)
-                .order_by(sc.total_points.desc(), sc.total_response_time_ms.asc(), User.username)
-            ).all()
+            for row in CompetitionRepository(session).get_scores_rows(session_id)
         ]
     except Exception as e:
         print(f"Database get_competition_scores failed: {e}")
@@ -494,15 +359,11 @@ def get_competition_scores(session_id):
     finally:
         SessionLocal.remove()
 
+
 def mark_competition_participant_finished(session_id, user_id):
     session = SessionLocal()
     try:
-        sc = CompetitionScore
-        session.execute(
-            update(sc)
-            .where(sc.session_id == session_id, sc.user_id == user_id, sc.finished_at.is_(None))
-            .values(finished_at=func.now(), updated_at=func.now())
-        )
+        CompetitionRepository(session).mark_score_finished(session_id, user_id)
         session.commit()
         return True
     except Exception as e:
@@ -512,25 +373,19 @@ def mark_competition_participant_finished(session_id, user_id):
     finally:
         SessionLocal.remove()
 
+
 def competition_all_participants_finished(session_id):
     """True when every scored participant has reported finishing their run."""
     session = SessionLocal()
     try:
-        sc = CompetitionScore
-        row = session.execute(
-            select(
-                func.count().label("total"),
-                func.count().filter(sc.finished_at.isnot(None)).label("done"),
-            )
-            .where(sc.session_id == session_id)
-        ).first()
-        total, done = row[0], row[1]
+        total, done = CompetitionRepository(session).get_finished_counts(session_id)
         return bool(total) and int(total) == int(done or 0)
     except Exception as e:
         print(f"Database competition_all_participants_finished failed: {e}")
         return False
     finally:
         SessionLocal.remove()
+
 
 def finalize_competition_session(session_id):
     """Rank participants, mark the session ranked and free the room back to waiting.
@@ -543,39 +398,10 @@ def finalize_competition_session(session_id):
         return state
     session = SessionLocal()
     try:
-        sc = CompetitionScore
-        session.execute(
-            update(CompetitionSession)
-            .where(CompetitionSession.id == session_id)
-            .values(status="ranked", finished_at=func.now())
-        )
-        ranked = (
-            select(
-                sc.id,
-                func.row_number().over(
-                    order_by=[
-                        sc.total_points.desc(),
-                        sc.total_response_time_ms.asc(),
-                        func.coalesce(sc.finished_at, func.now()).asc(),
-                    ]
-                ).label("next_rank"),
-            )
-            .where(sc.session_id == session_id)
-            .subquery("ranked")
-        )
-        session.execute(
-            update(sc)
-            .where(sc.id == ranked.c.id)
-            .values(rank=ranked.c.next_rank, updated_at=func.now())
-        )
-        session.execute(
-            update(CompetitionRoom)
-            .where(
-                CompetitionSession.id == session_id,
-                CompetitionRoom.id == CompetitionSession.room_id,
-            )
-            .values(status="waiting", updated_at=func.now())
-        )
+        repo = CompetitionRepository(session)
+        repo.update_session_status(session_id, "ranked", finished=True)
+        repo.rank_scores(session_id)
+        repo.reopen_room_for_session(session_id)
         session.commit()
         return get_competition_session_state(session_id)
     except Exception as e:

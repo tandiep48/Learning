@@ -4,7 +4,7 @@ import sys
 import ast
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
-from db import (
+from entity.learning.service import (
     get_recommended_practices,
     get_practice_history_sessions, get_practice_session_detail,
 )

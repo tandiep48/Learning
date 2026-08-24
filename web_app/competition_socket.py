@@ -1,7 +1,7 @@
 from flask_login import current_user
 from flask_socketio import emit, join_room as socket_join_room, leave_room as socket_leave_room
 
-from db import (
+from entity.competition.service import (
     add_competition_chat_message,
     competition_all_participants_finished,
     finalize_competition_session,

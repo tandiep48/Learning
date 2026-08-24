@@ -8,16 +8,18 @@ from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
 
 from service.i18n_service import t
-from db import (
-    get_mastered_words_page,
-    get_unlearned_words_from_db,
-    get_unsure_words_from_db,
-    get_passage_vocab,
-    get_vocabulary_by_words,
-    get_lesson_passage_ids_like,
+from entity.progress.service import (
     get_recent_learning,
     set_recent_learning,
 )
+from entity.learning.service import (
+    get_mastered_words_page,
+    get_unlearned_words_from_db,
+    get_unsure_words_from_db,
+)
+from entity.passage.service import get_lesson_passage_ids_like
+from entity.passage_vocabulary.service import get_passage_vocab
+from entity.vocabulary.service import get_vocabulary_by_words
 from entity.record.service import (
     get_learned_words,
     get_learned_words_last_3_days,

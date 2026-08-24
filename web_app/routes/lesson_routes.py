@@ -13,14 +13,8 @@ from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from db import (
+from entity.progress.service import (
     get_lesson_picker_progress,
-    get_passages_summary,
-    get_passage_content,
-    get_passage_vocab,
-    get_passage_book_code,
-    get_user_saved_vocab,
-    get_grammar_for_lesson,
     mark_lesson_part_completed,
     mark_passage_words_mastered,
     get_books_summary,
@@ -28,6 +22,14 @@ from db import (
 )
 from entity.record.service import insert_lesson_progress
 from entity.user.service import recompute_user_level
+from entity.passage.service import (
+    get_passages_summary,
+    get_passage_content,
+    get_passage_book_code,
+)
+from entity.passage_vocabulary.service import get_passage_vocab
+from entity.user_saved_word.service import get_user_saved_vocab
+from entity.grammar_rule.service import get_grammar_for_lesson
 from number_part import NUMBER_PART_ID, is_number_part, number_vocab_rows
 from service.i18n_service import get_current_lang
 

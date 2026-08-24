@@ -4,7 +4,7 @@ import string
 from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
 
-from db import (
+from entity.competition.service import (
     create_competition_room,
     get_competition_room_state,
     get_competition_scores,

@@ -13,26 +13,31 @@ from flask_login import login_required, current_user
 # Add web_app directory to sys.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from db import (
+from entity.learning.service import (
     get_unlearned_words_from_db,
     get_unsure_words_from_db,
     get_review_words_flat,
     get_hard_semantic_learned_words,
     get_hard_stroke_learned_words,
+)
+from entity.record.service import (
+    insert_learning_progress,
+    insert_learning_progress_batch,
+    has_vocab_history,
+)
+from entity.vocabulary.service import (
     get_course_vocab,
     get_vocabulary_by_words,
-    has_vocab_history,
     get_vocab_lessons,
-    get_passage_vocab,
-    get_passage_book_code,
-    get_user_saved_vocab
 )
-from entity.record.service import insert_learning_progress, insert_learning_progress_batch
+from entity.passage_vocabulary.service import get_passage_vocab
+from entity.passage.service import get_passage_book_code
 from number_part import is_number_part, number_vocab_rows
 from entity.user_saved_word.service import (
     list_saved_vocab,
     add_saved_word,
     remove_saved_word,
+    get_user_saved_vocab,
     UserSavedWordServiceError,
 )
 

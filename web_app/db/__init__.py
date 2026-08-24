@@ -1,12 +1,7 @@
 """
 db package
 -----------
-Database access split by domain, all on SQLAlchemy (see entity/database.py for
-the engine/session). `from db import <name>` resolves every query function via
-the re-exports below.
+Legacy database-access package. All query modules have been migrated into
+entity/<model>/{repository,service}.py (see entity/database.py for the
+engine/session) — nothing left to re-export here.
 """
-
-from db.competition import *  # noqa: F401,F403  (learn-together / competition)
-from db.progress import *   # noqa: F401,F403  (lesson progress / recent learning)
-from db.learning import *   # noqa: F401,F403  (vocab-learning & practice stats)
-from db.content import *    # noqa: F401,F403  (lesson / passage content)
