@@ -32,8 +32,12 @@ from entity.question.service import (
 question_crud_bp = Blueprint("question_crud", __name__, url_prefix="/api/admin/question")
 
 
+def _ok(data, status_code: int = 200):
+    return jsonify({"success": True, "data": data}), status_code
+
+
 def _error(message: str, status_code: int):
-    return jsonify({"error": message}), status_code
+    return jsonify({"success": False, "error": message}), status_code
 
 
 def _handle_service_error(exc: QuestionServiceError):
@@ -62,7 +66,7 @@ def list_questions_endpoint():
             skill=request.args.get("skill") or None,
             search=request.args.get("search") or None,
         )
-        return jsonify(result), 200
+        return _ok(result, 200)
     except QuestionServiceError as exc:
         return _handle_service_error(exc)
 
@@ -75,7 +79,7 @@ def get_question_endpoint(question_id: int):
     """Get a single question by numeric ID."""
     try:
         result = get_question(question_id)
-        return jsonify(result), 200
+        return _ok(result, 200)
     except QuestionServiceError as exc:
         return _handle_service_error(exc)
 
@@ -91,7 +95,7 @@ def create_question_endpoint():
         return _error("Request body must be a JSON object.", 400)
     try:
         result = create_question(data)
-        return jsonify(result), 201
+        return _ok(result, 201)
     except QuestionServiceError as exc:
         return _handle_service_error(exc)
 
@@ -107,7 +111,7 @@ def update_question_endpoint(question_id: int):
         return _error("Request body must be a JSON object.", 400)
     try:
         result = update_question(question_id, data)
-        return jsonify(result), 200
+        return _ok(result, 200)
     except QuestionServiceError as exc:
         return _handle_service_error(exc)
 
@@ -120,6 +124,6 @@ def delete_question_endpoint(question_id: int):
     """Delete a question by numeric ID."""
     try:
         result = delete_question(question_id)
-        return jsonify(result), 200
+        return _ok(result, 200)
     except QuestionServiceError as exc:
         return _handle_service_error(exc)
