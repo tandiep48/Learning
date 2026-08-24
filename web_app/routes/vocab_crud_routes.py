@@ -29,8 +29,12 @@ from entity.vocabulary.service import (
 vocab_crud_bp = Blueprint("vocab_crud", __name__, url_prefix="/api/admin/vocab")
 
 
+def _ok(data, status_code: int = 200):
+    return jsonify({"success": True, "data": data}), status_code
+
+
 def _error(message: str, status_code: int):
-    return jsonify({"error": message}), status_code
+    return jsonify({"success": False, "error": message}), status_code
 
 
 def _handle_service_error(exc: VocabServiceError):
@@ -53,7 +57,7 @@ def list_vocab_endpoint():
     hsk_level = request.args.get("hsk_level") or None
     search = request.args.get("search") or None
     result = list_vocab(page=page, page_size=page_size, hsk_level=hsk_level, search=search)
-    return jsonify(result), 200
+    return _ok(result, 200)
 
 
 # ---------------------------------------------------------------------------
@@ -64,7 +68,7 @@ def get_vocab_endpoint(vocab_id: int):
     """Get a single vocabulary entry by its numeric ID."""
     try:
         result = get_vocab(vocab_id)
-        return jsonify(result), 200
+        return _ok(result, 200)
     except VocabServiceError as exc:
         return _handle_service_error(exc)
 
@@ -84,7 +88,7 @@ def create_vocab_endpoint():
         return _error("Request body must be a JSON object.", 400)
     try:
         result = create_vocab(data)
-        return jsonify(result), 201
+        return _ok(result, 201)
     except VocabServiceError as exc:
         return _handle_service_error(exc)
 
@@ -101,7 +105,7 @@ def update_vocab_endpoint(vocab_id: int):
         return _error("Request body must be a JSON object.", 400)
     try:
         result = update_vocab(vocab_id, data)
-        return jsonify(result), 200
+        return _ok(result, 200)
     except VocabServiceError as exc:
         return _handle_service_error(exc)
 
@@ -114,6 +118,6 @@ def delete_vocab_endpoint(vocab_id: int):
     """Delete a vocabulary entry by its numeric ID."""
     try:
         result = delete_vocab(vocab_id)
-        return jsonify(result), 200
+        return _ok(result, 200)
     except VocabServiceError as exc:
         return _handle_service_error(exc)
