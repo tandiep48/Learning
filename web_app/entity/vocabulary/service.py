@@ -181,6 +181,80 @@ def update_vocab(vocab_id: int, data: dict) -> dict:
         SessionLocal.remove()
 
 
+# ---------------------------------------------------------------------------
+# Content lookups (course-wide vocab access used by the trainer/dashboard)
+# ---------------------------------------------------------------------------
+
+def get_course_vocab():
+    """Every vocabulary row as a pandas DataFrame, ordered by hsk_level then id."""
+    import pandas as pd
+
+    session = SessionLocal()
+    try:
+        items = VocabRepository(session).get_all_ordered()
+        return pd.DataFrame(
+            [(v.cn, v.pinyin, v.meaning_vn, v.meaning_en, v.audio_key, v.hsk_level) for v in items],
+            columns=["word", "pinyin", "meaning_vn", "meaning_en", "audio_key", "level"],
+        )
+    finally:
+        SessionLocal.remove()
+
+
+def get_vocab_lessons(hsk_level: str, lesson_size: int = 10) -> list[dict]:
+    """
+    Returns a list of lesson groups for a given HSK level.
+    Each lesson contains lesson_size words.
+    Returns: [{lesson: 1, start_idx: 0, end_idx: 9, word_count: 10, preview: ['你','好',...]}, ...]
+    """
+    session = SessionLocal()
+    try:
+        words = VocabRepository(session).get_words_by_hsk_level(hsk_level)
+        lessons = []
+        for i in range(0, len(words), lesson_size):
+            chunk = words[i:i + lesson_size]
+            lessons.append({
+                "lesson": (i // lesson_size) + 1,
+                "start_idx": i,
+                "end_idx": i + len(chunk) - 1,
+                "word_count": len(chunk),
+                "preview": chunk[:4],  # first 4 words as preview
+            })
+        return lessons
+    except Exception as e:
+        print(f"⚠️ Database query failed (get_vocab_lessons): {e}")
+        return []
+    finally:
+        SessionLocal.remove()
+
+
+def get_all_vn_meanings() -> list[str]:
+    """Every distinct, non-empty Vietnamese meaning."""
+    session = SessionLocal()
+    try:
+        return VocabRepository(session).get_distinct_vn_meanings()
+    finally:
+        SessionLocal.remove()
+
+
+def get_vocabulary_by_words(words: list[str]) -> list[dict]:
+    """Vocabulary rows for a set of Chinese words (used by the dashboard word cards)."""
+    words = [w for w in (words or []) if w]
+    if not words:
+        return []
+    session = SessionLocal()
+    try:
+        items = VocabRepository(session).get_by_words(words)
+        return [
+            {
+                "word": v.cn, "pinyin": v.pinyin, "meaning_vn": v.meaning_vn,
+                "meaning_en": v.meaning_en, "audio_key": v.audio_key, "hsk_level": v.hsk_level,
+            }
+            for v in items
+        ]
+    finally:
+        SessionLocal.remove()
+
+
 def delete_vocab(vocab_id: int) -> dict:
     """
     Delete a vocabulary entry by ID.

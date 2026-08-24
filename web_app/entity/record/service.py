@@ -112,6 +112,18 @@ def get_practice_record_totals_by_category(user_id):
         SessionLocal.remove()
 
 
+def has_vocab_history(user_id) -> bool:
+    """True if the user has any vocab_records entries."""
+    session = SessionLocal()
+    try:
+        return RecordRepository(session).has_vocab_history(user_id)
+    except Exception as e:
+        print(f"⚠️ Database query failed (has_vocab_history): {e}")
+        return False
+    finally:
+        SessionLocal.remove()
+
+
 def get_lesson_progress_by_mode(user_id, passage_ids):
     """Per-mode attempt/correct/time totals over lesson_records for the given passages."""
     if not passage_ids:

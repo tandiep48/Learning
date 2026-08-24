@@ -12,6 +12,7 @@ Design note:
 """
 
 from typing import Optional
+from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 from entity.passage.entity import LessonPassage
@@ -64,6 +65,46 @@ class PassageRepository:
         or None if not found.
         """
         return self.session.get(LessonPassage, passage_id)
+
+    def get_summary(self, hsk_level: Optional[str] = None):
+        """
+        Return (passage_id, hsk_level, line_count, title_en, title_vn) rows
+        for every passage, optionally filtered by hsk_level, ordered by id.
+        """
+        q = (
+            select(
+                LessonPassage.passage_id,
+                LessonPassage.hsk_level,
+                func.count(LessonLine.id).label("line_count"),
+                LessonPassage.title_en,
+                LessonPassage.title_vn,
+            )
+            .select_from(LessonPassage)
+            .outerjoin(LessonLine, LessonPassage.passage_id == LessonLine.passage_id)
+        )
+        if hsk_level:
+            q = q.where(LessonPassage.hsk_level == hsk_level)
+        q = q.group_by(
+            LessonPassage.passage_id, LessonPassage.hsk_level,
+            LessonPassage.title_en, LessonPassage.title_vn,
+        ).order_by(LessonPassage.passage_id)
+        return self.session.execute(q).all()
+
+    def get_book_code(self, passage_id: str) -> Optional[str]:
+        """Return a passage's book_code (e.g. 'AML'), or None if not found."""
+        row = self.session.execute(
+            select(LessonPassage.book_code).where(LessonPassage.passage_id == passage_id)
+        ).first()
+        return row[0] if row else None
+
+    def get_ids_like(self, pattern: str) -> list[str]:
+        """Passage ids matching a LIKE pattern (e.g. 'H1_2_%'), ordered."""
+        rows = self.session.execute(
+            select(LessonPassage.passage_id)
+            .where(LessonPassage.passage_id.like(pattern))
+            .order_by(LessonPassage.passage_id)
+        ).all()
+        return [r[0] for r in rows]
 
     # ------------------------------------------------------------------
     # CREATE

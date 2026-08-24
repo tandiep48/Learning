@@ -7,6 +7,7 @@ No raw SQL strings — all queries go through the ORM session.
 """
 
 from typing import Optional
+from sqlalchemy import select, distinct
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
@@ -72,6 +73,38 @@ class VocabRepository:
             .filter(Vocabulary.cn == cn)
             .first()
         )
+
+    def get_all_ordered(self) -> list[Vocabulary]:
+        """Every vocabulary row, ordered by hsk_level then id."""
+        return (
+            self.session.query(Vocabulary)
+            .order_by(Vocabulary.hsk_level, Vocabulary.id)
+            .all()
+        )
+
+    def get_words_by_hsk_level(self, hsk_level: str) -> list[str]:
+        """Chinese words for one HSK level, ordered by id."""
+        rows = self.session.execute(
+            select(Vocabulary.cn).where(Vocabulary.hsk_level == hsk_level).order_by(Vocabulary.id)
+        ).all()
+        return [r[0] for r in rows]
+
+    def get_distinct_vn_meanings(self) -> list[str]:
+        """Every distinct, non-empty Vietnamese meaning."""
+        rows = self.session.execute(
+            select(distinct(Vocabulary.meaning_vn)).where(
+                Vocabulary.meaning_vn.isnot(None), Vocabulary.meaning_vn != ""
+            )
+        ).all()
+        return [r[0] for r in rows]
+
+    def get_by_words(self, words: list[str]) -> list[Vocabulary]:
+        """Vocabulary rows whose `cn` is in `words`."""
+        if not words:
+            return []
+        return self.session.execute(
+            select(Vocabulary).where(Vocabulary.cn.in_(words))
+        ).scalars().all()
 
     # ------------------------------------------------------------------
     # CREATE

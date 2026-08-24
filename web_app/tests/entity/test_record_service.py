@@ -268,3 +268,30 @@ def test_insert_practice_progress_rolls_back_on_db_error():
         )
 
     session.rollback.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# has_vocab_history
+# ---------------------------------------------------------------------------
+
+def test_has_vocab_history_delegates_to_repository():
+    session, session_local = _mock_session()
+    repo = MagicMock()
+    repo.has_vocab_history.return_value = True
+
+    with patch.object(service, "SessionLocal", session_local), \
+         patch.object(service, "RecordRepository", return_value=repo):
+        assert service.has_vocab_history(1) is True
+
+    repo.has_vocab_history.assert_called_once_with(1)
+    session_local.remove.assert_called_once()
+
+
+def test_has_vocab_history_returns_false_on_db_error():
+    session, session_local = _mock_session()
+    repo = MagicMock()
+    repo.has_vocab_history.side_effect = Exception("boom")
+
+    with patch.object(service, "SessionLocal", session_local), \
+         patch.object(service, "RecordRepository", return_value=repo):
+        assert service.has_vocab_history(1) is False

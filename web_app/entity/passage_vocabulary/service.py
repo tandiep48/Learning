@@ -69,6 +69,30 @@ def list_passage_vocab(passage_id: str) -> dict:
         SessionLocal.remove()
 
 
+def get_passage_vocab(passage_id: str) -> list[dict]:
+    """
+    Vocabulary words linked to a passage, shaped for the lesson player /
+    trainer (unlike `list_passage_vocab`, does not require the passage to
+    exist — an unknown passage simply has no linked words).
+    """
+    session = SessionLocal()
+    try:
+        items = PassageVocabularyRepository(session).list_vocab(passage_id)
+        return [
+            {
+                "cn": v.cn,
+                "pinyin": v.pinyin or "",
+                "meaning_vn": v.meaning_vn or "",
+                "meaning_en": v.meaning_en or "",
+                "audio_key": v.audio_key or "",
+                "hsk_level": v.hsk_level or "",
+            }
+            for v in items
+        ]
+    finally:
+        SessionLocal.remove()
+
+
 def add_passage_vocab(passage_id: str, cn: str) -> dict:
     """
     Link an existing vocabulary word to a passage.

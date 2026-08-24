@@ -209,6 +209,79 @@ def update_passage(passage_id: str, data: dict) -> dict:
         SessionLocal.remove()
 
 
+# ---------------------------------------------------------------------------
+# Content lookups (lesson picker / lesson player)
+# ---------------------------------------------------------------------------
+
+def get_passages_summary(hsk_level: str | None = None, lang: str = "en") -> list[dict]:
+    """Return every passage's id, hsk_level, line_count and localized title."""
+    session = SessionLocal()
+    try:
+        rows = PassageRepository(session).get_summary(hsk_level)
+        return [
+            {
+                "passage_id": r[0],
+                "hsk_level": r[1],
+                "line_count": r[2],
+                "title": (r[4] or r[3]) if lang == "vi" else (r[3] or r[4]),
+            }
+            for r in rows
+        ]
+    finally:
+        SessionLocal.remove()
+
+
+def get_passage_content(passage_id: str) -> dict | None:
+    """
+    Return a passage with its lines shaped for the lesson player, or None
+    if the passage does not exist.
+    """
+    session = SessionLocal()
+    try:
+        passage = PassageRepository(session).get_by_id(passage_id)
+        if not passage:
+            return None
+        lines = [
+            {
+                "line_id": line.line_id,
+                "speaker": line.speaker,
+                "content": line.content,
+                "pinyin": line.pinyin,
+                "audio_key": line.audio_key,
+                "translations": {"en": line.translation_en, "vi": line.translation_vi},
+                "tokens": line.tokens if line.tokens else [],
+                "flag": 1 if line.flag is None else line.flag,
+            }
+            for line in passage.lines
+        ]
+        return {
+            "passage_id": passage.passage_id,
+            "hsk_level": passage.hsk_level,
+            "book_code": passage.book_code,
+            "lines": lines,
+        }
+    finally:
+        SessionLocal.remove()
+
+
+def get_passage_book_code(passage_id: str) -> str | None:
+    """Return a passage's book_code (e.g. 'AML'), or None for regular HSK passages."""
+    session = SessionLocal()
+    try:
+        return PassageRepository(session).get_book_code(passage_id)
+    finally:
+        SessionLocal.remove()
+
+
+def get_lesson_passage_ids_like(pattern: str) -> list[str]:
+    """Passage ids matching a LIKE pattern (e.g. 'H1_2_%'), ordered."""
+    session = SessionLocal()
+    try:
+        return PassageRepository(session).get_ids_like(pattern)
+    finally:
+        SessionLocal.remove()
+
+
 def delete_passage(passage_id: str) -> dict:
     """
     Delete a passage and all its lines (via cascade).

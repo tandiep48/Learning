@@ -181,6 +181,12 @@ class RecordRepository:
         ).all()
         return [(str(r[0]), int(r[1] or 0), int(r[2] or 0)) for r in rows]
 
+    def has_vocab_history(self, user_id) -> bool:
+        """True if the user has any vocab_records entries."""
+        return self.session.execute(
+            select(VocabRecord.id).where(VocabRecord.user_id == user_id).limit(1)
+        ).first() is not None
+
     def get_lesson_progress_by_mode(self, user_id, passage_ids):
         """Per-mode attempt/correct/time totals over lesson_records for the given passages."""
         if not passage_ids:
