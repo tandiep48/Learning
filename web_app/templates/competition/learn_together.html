@@ -50,15 +50,13 @@
                         </label>
                         <label>
                             HSK
-                            <select id="create-level">
-                                <option value="">{{ t('vocab.select_hsk') }}</option>
-                                <option value="1">HSK 1</option>
-                                <option value="2">HSK 2</option>
-                                <option value="3">HSK 3</option>
-                                <option value="4">HSK 4</option>
-                                <option value="5">HSK 5</option>
-                                <option value="6">HSK 6</option>
-                            </select>
+                            <div class="ms-dropdown" id="create-level-ms">
+                                <button type="button" class="ms-toggle" onclick="MultiSelect.toggle('create-level-ms')">
+                                    <span class="ms-label ms-placeholder"></span>
+                                    <i class="fa-solid fa-chevron-down ms-caret" aria-hidden="true"></i>
+                                </button>
+                                <div class="ms-panel" id="create-level-ms-panel"></div>
+                            </div>
                         </label>
                         <label>
                             {{ t('picker.lesson_prefix') }}
@@ -189,6 +187,6 @@
     <script src="/static/shared/multi_select.js?v=2"></script>
     <script src="/static/vocab/vocab_trainer_core.js?v=10"></script>
     <script src="/static/lesson/lesson_trainer_core.js?v=1"></script>
-    <script src="/static/competition/competition.js?v=7"></script>
+    <script src="/static/competition/competition.js?v=8"></script>
 </body>
 </html>

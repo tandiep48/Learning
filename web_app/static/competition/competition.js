@@ -1,13 +1,17 @@
-// Learn Together — a real-time vocabulary competition. The host picks HSK + lessons
-// + parts; every participant plays the shared vocab trainer flow (typing / listen
-// match / reading match) via VocabTrainer, scored live with a final ranking.
+// Learn Together — a real-time vocabulary competition. The host picks one or more HSK
+// levels and then any mix of their lessons + parts (parts may span several levels);
+// every participant plays the shared vocab trainer flow (typing / listen match /
+// reading match) via VocabTrainer, scored live with a final ranking.
 
 let socket = null;
 let currentRoom = null;
 let currentSession = null;
 let waitingUsers = new Set();
-let groupedPassages = {};        // lesson -> [{ passage_id, lesson, part }]
+let passagesByLevel = {};        // hsk level number -> [passage,...] (fetch cache)
+let groupedPassages = {};        // lessonKey ("HSK1_2") -> [{ passage_id, hsk, level, lesson, part, lessonKey }]
 let editing = false;             // host editing an existing room's settings in place
+
+const HSK_LEVELS = [1, 2, 3, 4, 5, 6];
 
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof io !== 'function') {
@@ -19,12 +23,13 @@ document.addEventListener('DOMContentLoaded', () => {
     bindSocketEvents();
 
     MultiSelect.init('create-type-ms', t('competition.type_all'), () => {});
+    MultiSelect.init('create-level-ms', t('vocab.select_hsk'), onLevelChange);
+    MultiSelect.setOptions('create-level-ms', HSK_LEVELS.map(n => ({ value: String(n), label: `HSK ${n}` })));
     MultiSelect.init('create-lesson-ms', t('vocab.select_lesson_option'), onLessonChange);
     MultiSelect.init('create-part-ms', t('vocab.select_part_option'), () => {});
 
     document.getElementById('create-mode')?.addEventListener('change', onModeChange);
     onModeChange();
-    document.getElementById('create-level')?.addEventListener('change', onLevelChange);
     document.getElementById('chat-input')?.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') sendChat();
     });
@@ -150,51 +155,110 @@ function onModeChange() {
     MultiSelect.setValues('create-type-ms', options.map(o => o.value));
 }
 
+// Parse a passage_id ("HSK1_2_2") into its pieces. `lessonKey` scopes a lesson to its
+// HSK level ("HSK1_2") so lesson numbers never collide across levels.
+function parsePassageId(passageId) {
+    const parts = String(passageId || '').split('_');
+    const hsk = parts[0] || '';
+    const level = Number(String(hsk).replace(/\D/g, '')) || 0;
+    const hasStructure = parts.length >= 2;
+    return {
+        passage_id: passageId,
+        hsk,
+        level,
+        lesson: hasStructure ? parts[1] : 'Other',
+        part: parts.length >= 3 ? parts[2] : passageId,
+        lessonKey: hasStructure ? `${hsk}_${parts[1]}` : String(passageId),
+    };
+}
+
+// Sort lessonKeys ("HSK1_2") by HSK level, then by lesson number.
+function lessonKeySort(a, b) {
+    const pa = String(a).split('_');
+    const pb = String(b).split('_');
+    const la = Number(pa[0].replace(/\D/g, '')) || 0;
+    const lb = Number(pb[0].replace(/\D/g, '')) || 0;
+    return la - lb || numericSort(pa[1], pb[1]);
+}
+
+// Load lessons/parts for every selected HSK level, accumulated so a host can mix parts
+// across levels (e.g. HSK 1 Lesson 2 Part 2 + HSK 2 Lesson 1 Part 3). Prior lesson/part
+// picks are preserved across level changes when they still exist.
 async function onLevelChange() {
-    const level = document.getElementById('create-level')?.value || '';
-    MultiSelect.clear('create-lesson-ms');
-    MultiSelect.clear('create-part-ms');
-    groupedPassages = {};
-    if (!level) return;
+    const levels = MultiSelect.values('create-level-ms').map(Number).filter(Boolean);
+    const prevLessons = MultiSelect.values('create-lesson-ms');
+    const prevParts = MultiSelect.values('create-part-ms');
+
+    if (!levels.length) {
+        MultiSelect.clear('create-lesson-ms');
+        MultiSelect.clear('create-part-ms');
+        groupedPassages = {};
+        return;
+    }
 
     showSetupError('');
     try {
-        const res = await fetch(`/api/lesson/passages?hsk_level=HSK${encodeURIComponent(level)}`);
-        const data = await res.json();
-        (data.passages || []).forEach(passage => {
-            const parts = String(passage.passage_id || '').split('_');
-            const lesson = parts.length >= 2 ? parts[1] : 'Other';
-            const part = parts.length >= 3 ? parts[2] : passage.passage_id;
-            if (!groupedPassages[lesson]) groupedPassages[lesson] = [];
-            groupedPassages[lesson].push({ ...passage, lesson, part });
+        await Promise.all(levels
+            .filter(n => !passagesByLevel[n])
+            .map(async n => {
+                const res = await fetch(`/api/lesson/passages?hsk_level=HSK${encodeURIComponent(n)}`);
+                const data = await res.json();
+                passagesByLevel[n] = data.passages || [];
+            }));
+
+        // Rebuild from the currently-selected levels only, so deselecting a level drops
+        // its lessons.
+        groupedPassages = {};
+        levels.forEach(n => {
+            (passagesByLevel[n] || []).forEach(passage => {
+                const info = parsePassageId(passage.passage_id);
+                if (!groupedPassages[info.lessonKey]) groupedPassages[info.lessonKey] = [];
+                groupedPassages[info.lessonKey].push({ ...passage, ...info });
+            });
         });
 
-        const lessonOptions = Object.keys(groupedPassages).sort(numericSort).map(lesson => ({
-            value: lesson,
-            label: lesson === 'Other' ? t('vocab.other_label') : `${t('picker.lesson_prefix')} ${lesson}`,
-        }));
+        const showGroups = levels.length > 1;
+        const lessonOptions = Object.keys(groupedPassages).sort(lessonKeySort).map(key => {
+            const info = groupedPassages[key][0];
+            return {
+                value: key,
+                label: info.lesson === 'Other' ? t('vocab.other_label') : `${t('picker.lesson_prefix')} ${info.lesson}`,
+                group: showGroups ? `HSK ${info.level}` : null,
+            };
+        });
         MultiSelect.setOptions('create-lesson-ms', lessonOptions);
-        if (!lessonOptions.length) showSetupError(t('vocab.no_lessons_found'));
+        if (!lessonOptions.length) {
+            showSetupError(t('vocab.no_lessons_found'));
+            return;
+        }
+
+        // Restore prior picks that survive the level change.
+        MultiSelect.setValues('create-lesson-ms', prevLessons);
+        onLessonChange();
+        MultiSelect.setValues('create-part-ms', prevParts);
     } catch (e) {
         showSetupError(t('picker.failed_load_lessons'));
     }
 }
 
 function onLessonChange() {
-    const selectedLessons = MultiSelect.values('create-lesson-ms');
-    if (!selectedLessons.length) {
+    const selectedKeys = MultiSelect.values('create-lesson-ms');
+    if (!selectedKeys.length) {
         MultiSelect.clear('create-part-ms');
         return;
     }
 
-    // Each part option carries its full passage_id; group parts by lesson when several
-    // lessons are selected so they stay distinguishable.
-    const showGroups = selectedLessons.length > 1;
+    // Each part option carries its full passage_id; group parts by HSK + lesson when
+    // several lessons are selected so they stay distinguishable across levels.
+    const showGroups = selectedKeys.length > 1;
     const partOptions = [];
-    selectedLessons.sort(numericSort).forEach(lesson => {
-        const passages = groupedPassages[lesson];
+    selectedKeys.sort(lessonKeySort).forEach(key => {
+        const passages = groupedPassages[key];
         if (!passages || !passages.length) return;
-        const groupLabel = lesson === 'Other' ? t('vocab.other_label') : `${t('picker.lesson_prefix')} ${lesson}`;
+        const info = passages[0];
+        const groupLabel = info.lesson === 'Other'
+            ? t('vocab.other_label')
+            : `HSK ${info.level} · ${t('picker.lesson_prefix')} ${info.lesson}`;
         [...passages].sort((a, b) => Number(a.part) - Number(b.part)).forEach(passage => {
             partOptions.push({
                 value: passage.passage_id,
@@ -216,9 +280,8 @@ function submitRoom() {
 // Read + validate the setup form into a room-settings payload (shared by create/edit).
 // Returns null (and shows an error) when the required fields are missing.
 function collectRoomBody() {
-    const level = document.getElementById('create-level')?.value;
     const passageIds = MultiSelect.values('create-part-ms');
-    if (!level || !passageIds.length) {
+    if (!passageIds.length) {
         showSetupError(t('competition.select_hsk_lesson_part'));
         return null;
     }
@@ -226,10 +289,13 @@ function collectRoomBody() {
     const mode = document.getElementById('create-mode')?.value || 'vocab';
     // Send the selected types as a CSV; "all" (every option) is normalized server-side.
     const selectedTypes = MultiSelect.values('create-type-ms');
+    // The parts can span multiple HSK levels; `level` is display metadata server-side, so
+    // send the lowest level involved to keep the column meaningful and non-null.
+    const levels = passageIds.map(id => parsePassageId(id).level).filter(Boolean);
     return {
         category: mode,
         activity_type: selectedTypes.length ? selectedTypes.join(',') : 'all',
-        level: Number(level),
+        level: levels.length ? Math.min(...levels) : 1,
         passage_ids: passageIds,
         max_users: document.getElementById('create-max-users').value,
         section_timeout_minutes: document.getElementById('create-timeout').value
@@ -266,15 +332,18 @@ async function editRoomSettings() {
     onModeChange();
     MultiSelect.setValues('create-type-ms',
         parseTypeValues(currentRoom.activity_type, currentRoom.category || 'vocab'));
-    document.getElementById('create-level').value = String(currentRoom.level || '');
     document.getElementById('create-max-users').value = currentRoom.max_users || 8;
     document.getElementById('create-timeout').value = String(currentRoom.section_timeout_minutes || 15);
 
-    // Rebuild lesson/part options for the level, then re-check the room's current picks.
-    await onLevelChange();
+    // Rebuild lesson/part options for every HSK level the room's parts span, then
+    // re-check the room's current picks.
     const passageIds = currentRoom.passage_ids || [];
-    const lessons = Array.from(new Set(passageIds.map(id => String(id).split('_')[1])));
-    MultiSelect.setValues('create-lesson-ms', lessons);
+    const infos = passageIds.map(parsePassageId);
+    const levels = Array.from(new Set(infos.map(i => String(i.level)).filter(v => v !== '0')));
+    MultiSelect.setValues('create-level-ms', levels);
+    await onLevelChange();
+    const lessonKeys = Array.from(new Set(infos.map(i => i.lessonKey)));
+    MultiSelect.setValues('create-lesson-ms', lessonKeys);
     onLessonChange();
     MultiSelect.setValues('create-part-ms', passageIds);
 
@@ -332,13 +401,16 @@ function renderRoom(room) {
     document.getElementById('room-code-display').textContent = room.room_code;
 
     const passageIds = room.passage_ids || [];
-    const lessonCount = new Set(passageIds.map(id => String(id).split('_')[1])).size;
+    const infos = passageIds.map(parsePassageId);
+    const lessonCount = new Set(infos.map(i => i.lessonKey)).size;
+    const hskLevels = Array.from(new Set(infos.map(i => i.level).filter(Boolean))).sort((a, b) => a - b);
+    const hskLabel = hskLevels.length ? hskLevels.map(n => `HSK ${n}`).join(', ') : `HSK ${room.level}`;
     const isLesson = room.category === 'lesson';
     const countLine = isLesson
         ? t('competition.tasks_source_count', { count: room.word_count || 0 })
         : t('competition.words_count', { count: room.word_count || 0 });
     document.getElementById('room-summary').innerHTML = `
-        <div><strong>HSK ${escapeHtml(room.level)}</strong></div>
+        <div><strong>${escapeHtml(hskLabel)}</strong></div>
         <div>${escapeHtml(modeSummaryLabel(room))}</div>
         <div>${escapeHtml(t('competition.lessons_parts_count', { lessons: lessonCount, parts: passageIds.length }))}</div>
         <div>${escapeHtml(countLine)}</div>
