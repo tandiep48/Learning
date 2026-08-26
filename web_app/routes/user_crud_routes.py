@@ -30,8 +30,12 @@ from entity.user.service import (
 user_crud_bp = Blueprint("user_crud", __name__, url_prefix="/api/admin/user")
 
 
+def _ok(data, status_code: int = 200):
+    return jsonify({"success": True, "data": data}), status_code
+
+
 def _error(message: str, status_code: int):
-    return jsonify({"error": message}), status_code
+    return jsonify({"success": False, "error": message}), status_code
 
 
 def _handle_service_error(exc: UserServiceError):
@@ -53,7 +57,7 @@ def list_users_endpoint():
 
     search = request.args.get("search") or None
     result = list_users(page=page, page_size=page_size, search=search)
-    return jsonify(result), 200
+    return _ok(result, 200)
 
 
 # ---------------------------------------------------------------------------
@@ -64,7 +68,7 @@ def get_user_endpoint(user_id: int):
     """Get a single user by numeric ID."""
     try:
         result = get_user(user_id)
-        return jsonify(result), 200
+        return _ok(result, 200)
     except UserServiceError as exc:
         return _handle_service_error(exc)
 
@@ -81,7 +85,7 @@ def create_user_endpoint():
         return _error("Request body must be a JSON object.", 400)
     try:
         result = create_user(data)
-        return jsonify(result), 201
+        return _ok(result, 201)
     except UserServiceError as exc:
         return _handle_service_error(exc)
 
@@ -98,7 +102,7 @@ def update_user_endpoint(user_id: int):
         return _error("Request body must be a JSON object.", 400)
     try:
         result = update_user(user_id, data)
-        return jsonify(result), 200
+        return _ok(result, 200)
     except UserServiceError as exc:
         return _handle_service_error(exc)
 
@@ -111,6 +115,6 @@ def delete_user_endpoint(user_id: int):
     """Delete a user by numeric ID."""
     try:
         result = delete_user(user_id)
-        return jsonify(result), 200
+        return _ok(result, 200)
     except UserServiceError as exc:
         return _handle_service_error(exc)
