@@ -36,6 +36,9 @@ class UserServiceError(Exception):
 
 
 _EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+_MIN_PASSWORD_LEN = 8
+_MAX_PASSWORD_LEN = 255
+_MIN_LEVEL, _MAX_LEVEL = 1, 6
 
 
 def _clamp_page_size(page_size: int) -> int:
@@ -67,10 +70,27 @@ def _validate_email(email: str) -> str:
 
 
 def _validate_level(level) -> int:
+    if isinstance(level, bool):
+        raise UserServiceError("Field 'level' must be an integer.")
     try:
-        return int(level)
+        level = int(level)
     except (TypeError, ValueError):
         raise UserServiceError("Field 'level' must be an integer.")
+    if not (_MIN_LEVEL <= level <= _MAX_LEVEL):
+        raise UserServiceError(f"Field 'level' must be between {_MIN_LEVEL} and {_MAX_LEVEL}.")
+    return level
+
+
+def _validate_password(password) -> str:
+    if not isinstance(password, str):
+        raise UserServiceError("Field 'password' must be a string.")
+    if not password:
+        raise UserServiceError("Field 'password' is required.")
+    if len(password) < _MIN_PASSWORD_LEN:
+        raise UserServiceError(f"Field 'password' must be at least {_MIN_PASSWORD_LEN} characters.")
+    if len(password) > _MAX_PASSWORD_LEN:
+        raise UserServiceError(f"Field 'password' must be {_MAX_PASSWORD_LEN} characters or fewer.")
+    return password
 
 
 # ---------------------------------------------------------------------------
@@ -148,11 +168,7 @@ def create_user(data: dict) -> dict:
     """
     username = _validate_username(data.get("username", ""))
     email = _validate_email(data.get("email", ""))
-
-    password = data.get("password") or ""
-    if not password:
-        raise UserServiceError("Field 'password' is required.")
-
+    password = _validate_password(data.get("password"))
     level = _validate_level(data["level"]) if "level" in data else 1
 
     session = SessionLocal()
@@ -207,10 +223,7 @@ def update_user(user_id: int, data: dict) -> dict:
     if "level" in data:
         payload["level"] = _validate_level(data["level"])
     if "password" in data:
-        password = data.get("password") or ""
-        if not password:
-            raise UserServiceError("Field 'password' cannot be empty.")
-        payload["password"] = generate_password_hash(password)
+        payload["password"] = generate_password_hash(_validate_password(data.get("password")))
 
     if not payload:
         raise UserServiceError("No updatable fields provided.")

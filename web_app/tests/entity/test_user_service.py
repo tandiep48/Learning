@@ -55,7 +55,7 @@ def test_create_user_success():
 
     with patch.object(service, "SessionLocal", session_local), \
          patch.object(service, "UserRepository", return_value=repo):
-        result = service.create_user({"username": "alice", "email": "alice@example.com", "password": "secret"})
+        result = service.create_user({"username": "alice", "email": "alice@example.com", "password": "secret123"})
 
     assert result["username"] == "alice"
     assert "password" not in result
@@ -81,10 +81,41 @@ def test_create_user_duplicate_username_raises_409():
     with patch.object(service, "SessionLocal", session_local), \
          patch.object(service, "UserRepository", return_value=repo):
         with pytest.raises(UserServiceError) as exc:
-            service.create_user({"username": "alice", "email": "new@example.com", "password": "secret"})
+            service.create_user({"username": "alice", "email": "new@example.com", "password": "secret123"})
 
     assert exc.value.status_code == 409
     session.rollback.assert_called_once()
+
+
+def test_create_user_rejects_short_password_before_touching_db():
+    session, session_local = _mock_session()
+    with patch.object(service, "SessionLocal", session_local):
+        with pytest.raises(UserServiceError) as exc:
+            service.create_user({"username": "alice", "email": "alice@example.com", "password": "short"})
+
+    assert exc.value.status_code == 400
+    session_local.assert_not_called()
+
+
+def test_create_user_rejects_non_string_password_before_touching_db():
+    session, session_local = _mock_session()
+    with patch.object(service, "SessionLocal", session_local):
+        with pytest.raises(UserServiceError):
+            service.create_user({"username": "alice", "email": "alice@example.com", "password": 12345678})
+
+    session_local.assert_not_called()
+
+
+def test_create_user_rejects_level_out_of_range_before_touching_db():
+    session, session_local = _mock_session()
+    with patch.object(service, "SessionLocal", session_local):
+        with pytest.raises(UserServiceError):
+            service.create_user({
+                "username": "alice", "email": "alice@example.com",
+                "password": "secret123", "level": 99,
+            })
+
+    session_local.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
