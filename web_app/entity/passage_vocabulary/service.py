@@ -19,6 +19,7 @@ from entity.database import SessionLocal
 from entity.passage.repository import PassageRepository
 from entity.vocabulary.repository import VocabRepository
 from entity.passage_vocabulary.repository import PassageVocabularyRepository
+from entity.validation import require_str
 
 
 # ---------------------------------------------------------------------------
@@ -106,9 +107,7 @@ def add_passage_vocab(passage_id: str, cn: str) -> dict:
         PassageVocabularyServiceError(404): if the passage or word does not exist.
         PassageVocabularyServiceError(409): if the link already exists.
     """
-    cn = (cn or "").strip()
-    if not cn:
-        raise PassageVocabularyServiceError("Field 'cn' (Chinese word) is required.")
+    cn = require_str(PassageVocabularyServiceError, "cn", cn, 100)
 
     session = SessionLocal()
     try:
