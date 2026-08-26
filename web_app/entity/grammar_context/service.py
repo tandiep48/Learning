@@ -14,6 +14,7 @@ from __future__ import annotations
 from entity.database import SessionLocal
 from entity.grammar_context.entity import GrammarContext
 from entity.grammar_context.repository import GrammarContextRepository
+from entity.validation import require_str
 
 
 class GrammarContextServiceError(Exception):
@@ -30,6 +31,15 @@ def _clamp_page_size(page_size: int) -> int:
 
 def _clamp_page(page: int) -> int:
     return max(1, page)
+
+
+def _validate_content_json(value):
+    """`content_json` (JSONB) must be a JSON object or array, or null."""
+    if value is None:
+        return None
+    if not isinstance(value, (dict, list)):
+        raise GrammarContextServiceError("Field 'content_json' must be a JSON object or array, or null.")
+    return value
 
 
 def _to_dict(context: GrammarContext) -> dict:
@@ -102,15 +112,15 @@ def create_grammar_context(data: dict) -> dict:
     Raises:
         GrammarContextServiceError(400): if "grammar_id" is missing.
     """
-    grammar_id = (data.get("grammar_id") or "").strip()
-    if not grammar_id:
-        raise GrammarContextServiceError("Field 'grammar_id' is required.")
+    grammar_id = require_str(GrammarContextServiceError, "grammar_id", data.get("grammar_id"), 50)
+    payload = {"grammar_id": grammar_id}
+    if "content_json" in data:
+        payload["content_json"] = _validate_content_json(data["content_json"])
 
     session = SessionLocal()
     try:
         repo = GrammarContextRepository(session)
-        data = {**data, "grammar_id": grammar_id}
-        context = repo.create(data)
+        context = repo.create(payload)
         session.commit()
         return _to_dict(context)
     except GrammarContextServiceError:
@@ -134,16 +144,19 @@ def update_grammar_context(context_id: int, data: dict) -> dict:
     if not data:
         raise GrammarContextServiceError("No fields provided to update.")
 
+    payload: dict = {}
     if "grammar_id" in data:
-        grammar_id = (data["grammar_id"] or "").strip()
-        if not grammar_id:
-            raise GrammarContextServiceError("Field 'grammar_id' cannot be empty.")
-        data["grammar_id"] = grammar_id
+        payload["grammar_id"] = require_str(GrammarContextServiceError, "grammar_id", data["grammar_id"], 50)
+    if "content_json" in data:
+        payload["content_json"] = _validate_content_json(data["content_json"])
+
+    if not payload:
+        raise GrammarContextServiceError("No updatable fields provided.")
 
     session = SessionLocal()
     try:
         repo = GrammarContextRepository(session)
-        context = repo.update(context_id, data)
+        context = repo.update(context_id, payload)
         if not context:
             raise GrammarContextServiceError(f"Grammar context with id={context_id} not found.", 404)
         session.commit()
