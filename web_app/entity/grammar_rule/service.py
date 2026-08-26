@@ -14,8 +14,13 @@ from __future__ import annotations
 from entity.database import SessionLocal
 from entity.grammar_rule.entity import GrammarRule
 from entity.grammar_rule.repository import GrammarRuleRepository
+from entity.validation import require_str, optional_str, optional_int, optional_one_of
 
 _COLUMNS = ["grammar_id", "type", "vietnamese_content", "english_content", "vn_context", "en_context"]
+
+# static/grammar/grammar.js renders types 1-5 (section header, ... example dialogue);
+# any other value has no known front-end rendering.
+GRAMMAR_TYPES = {1, 2, 3, 4, 5}
 
 
 class GrammarRuleServiceError(Exception):
@@ -32,6 +37,32 @@ def _clamp_page_size(page_size: int) -> int:
 
 def _clamp_page(page: int) -> int:
     return max(1, page)
+
+
+def _validate_payload(data: dict) -> dict:
+    """
+    Validate the optional grammar_rule fields present in `data` (type +
+    length matching the table's column sizes, and the known `type` domain).
+    `grammar_id` is validated by the caller since it's required on create
+    but optional on update.
+    """
+    payload: dict = {}
+    if "type" in data:
+        type_ = optional_int(GrammarRuleServiceError, "type", data["type"])
+        if type_ is not None:
+            optional_one_of(GrammarRuleServiceError, "type", type_, GRAMMAR_TYPES)
+        payload["type"] = type_
+    if "passage_number" in data:
+        payload["passage_number"] = optional_int(GrammarRuleServiceError, "passage_number", data["passage_number"])
+    if "vietnamese_content" in data:
+        payload["vietnamese_content"] = optional_str(
+            GrammarRuleServiceError, "vietnamese_content", data["vietnamese_content"]
+        )
+    if "english_content" in data:
+        payload["english_content"] = optional_str(
+            GrammarRuleServiceError, "english_content", data["english_content"]
+        )
+    return payload
 
 
 def _to_dict(rule: GrammarRule) -> dict:
@@ -141,15 +172,14 @@ def create_grammar_rule(data: dict) -> dict:
     Raises:
         GrammarRuleServiceError(400): if "grammar_id" is missing.
     """
-    grammar_id = (data.get("grammar_id") or "").strip()
-    if not grammar_id:
-        raise GrammarRuleServiceError("Field 'grammar_id' is required.")
+    grammar_id = require_str(GrammarRuleServiceError, "grammar_id", data.get("grammar_id"), 50)
+    payload = _validate_payload(data)
+    payload["grammar_id"] = grammar_id
 
     session = SessionLocal()
     try:
         repo = GrammarRuleRepository(session)
-        data = {**data, "grammar_id": grammar_id}
-        rule = repo.create(data)
+        rule = repo.create(payload)
         session.commit()
         return _to_dict(rule)
     except GrammarRuleServiceError:
@@ -173,16 +203,17 @@ def update_grammar_rule(rule_id: int, data: dict) -> dict:
     if not data:
         raise GrammarRuleServiceError("No fields provided to update.")
 
+    payload = _validate_payload(data)
     if "grammar_id" in data:
-        grammar_id = (data["grammar_id"] or "").strip()
-        if not grammar_id:
-            raise GrammarRuleServiceError("Field 'grammar_id' cannot be empty.")
-        data["grammar_id"] = grammar_id
+        payload["grammar_id"] = require_str(GrammarRuleServiceError, "grammar_id", data["grammar_id"], 50)
+
+    if not payload:
+        raise GrammarRuleServiceError("No updatable fields provided.")
 
     session = SessionLocal()
     try:
         repo = GrammarRuleRepository(session)
-        rule = repo.update(rule_id, data)
+        rule = repo.update(rule_id, payload)
         if not rule:
             raise GrammarRuleServiceError(f"Grammar rule with id={rule_id} not found.", 404)
         session.commit()
