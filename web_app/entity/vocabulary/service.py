@@ -16,6 +16,7 @@ from sqlalchemy.exc import IntegrityError
 
 from entity.database import SessionLocal
 from entity.vocabulary.repository import VocabRepository
+from entity.validation import require_str, optional_str, optional_one_of
 
 
 # ---------------------------------------------------------------------------
@@ -28,6 +29,32 @@ class VocabServiceError(Exception):
         super().__init__(message)
         self.message = message
         self.status_code = status_code
+
+
+HSK_LEVELS = {f"HSK{n}" for n in range(1, 7)}
+
+
+def _validate_vocab_payload(data: dict) -> dict:
+    """
+    Validate the optional vocabulary fields present in `data` (type + length,
+    matching the `vocabulary` table's column sizes). `cn` is validated by the
+    caller since it has different required/duplicate-check semantics on
+    create vs. update.
+    """
+    payload: dict = {}
+    if "pinyin" in data:
+        payload["pinyin"] = optional_str(VocabServiceError, "pinyin", data["pinyin"], 100)
+    if "meaning_en" in data:
+        payload["meaning_en"] = optional_str(VocabServiceError, "meaning_en", data["meaning_en"])
+    if "meaning_vn" in data:
+        payload["meaning_vn"] = optional_str(VocabServiceError, "meaning_vn", data["meaning_vn"])
+    if "audio_key" in data:
+        payload["audio_key"] = optional_str(VocabServiceError, "audio_key", data["audio_key"], 100)
+    if "hsk_level" in data:
+        payload["hsk_level"] = optional_one_of(VocabServiceError, "hsk_level", data["hsk_level"], HSK_LEVELS)
+    if "source" in data:
+        payload["source"] = optional_str(VocabServiceError, "source", data["source"], 50)
+    return payload
 
 
 def _clamp_page_size(page_size: int) -> int:
@@ -109,11 +136,11 @@ def create_vocab(data: dict) -> dict:
     Required fields: "cn"
 
     Raises:
-        VocabServiceError(400): if "cn" is missing or already exists.
+        VocabServiceError(400): if "cn" is missing, the wrong type, or already exists.
     """
-    cn = (data.get("cn") or "").strip()
-    if not cn:
-        raise VocabServiceError("Field 'cn' (Chinese word) is required.")
+    cn = require_str(VocabServiceError, "cn", data.get("cn"), 100)
+    payload = _validate_vocab_payload(data)
+    payload["cn"] = cn
 
     session = SessionLocal()
     try:
@@ -125,8 +152,7 @@ def create_vocab(data: dict) -> dict:
                 f"Vocabulary '{cn}' already exists. Use PUT to update it."
             )
 
-        data["cn"] = cn
-        vocab = repo.create(data)
+        vocab = repo.create(payload)
         session.commit()
         return vocab.to_dict()
     except VocabServiceError:
@@ -153,17 +179,14 @@ def update_vocab(vocab_id: int, data: dict) -> dict:
     if not data:
         raise VocabServiceError("No fields provided to update.")
 
-    # Strip cn if provided
+    payload = _validate_vocab_payload(data)
     if "cn" in data:
-        cn = (data["cn"] or "").strip()
-        if not cn:
-            raise VocabServiceError("Field 'cn' cannot be empty.")
-        data["cn"] = cn
+        payload["cn"] = require_str(VocabServiceError, "cn", data["cn"], 100)
 
     session = SessionLocal()
     try:
         repo = VocabRepository(session)
-        vocab = repo.update(vocab_id, data)
+        vocab = repo.update(vocab_id, payload)
         if not vocab:
             raise VocabServiceError(f"Vocabulary with id={vocab_id} not found.", 404)
         session.commit()

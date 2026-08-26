@@ -134,6 +134,24 @@ def test_create_vocab_missing_cn_raises_before_touching_db():
     session_local.assert_not_called()
 
 
+def test_create_vocab_rejects_non_string_cn_before_touching_db():
+    session, session_local = _mock_session()
+    with patch.object(service, "SessionLocal", session_local):
+        with pytest.raises(VocabServiceError):
+            service.create_vocab({"cn": {"not": "a string"}})
+
+    session_local.assert_not_called()
+
+
+def test_create_vocab_rejects_invalid_hsk_level_before_touching_db():
+    session, session_local = _mock_session()
+    with patch.object(service, "SessionLocal", session_local):
+        with pytest.raises(VocabServiceError):
+            service.create_vocab({"cn": "你好", "hsk_level": "HSK9"})
+
+    session_local.assert_not_called()
+
+
 def test_create_vocab_duplicate_cn_raises_and_rolls_back():
     session, session_local = _mock_session()
     repo = MagicMock()
