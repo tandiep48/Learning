@@ -2,9 +2,12 @@ import os
 import sys
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from entity.passage import service
+from entity.passage.service import PassageServiceError
 
 
 def _mock_session():
@@ -35,6 +38,12 @@ class FakePassage:
         self.hsk_level = hsk_level
         self.book_code = book_code
         self.lines = lines or []
+
+    def to_dict(self, include_lines=False):
+        data = {"passage_id": self.passage_id, "hsk_level": self.hsk_level, "book_code": self.book_code}
+        if include_lines:
+            data["lines"] = list(self.lines)
+        return data
 
 
 # ---------------------------------------------------------------------------
@@ -122,6 +131,62 @@ def test_get_passage_book_code_delegates_to_repository():
     with patch.object(service, "SessionLocal", session_local), \
          patch.object(service, "PassageRepository", return_value=repo):
         assert service.get_passage_book_code("AML_1_1") == "AML"
+
+
+def _mock_session():
+    """Patch service.SessionLocal so no real DB connection is ever opened."""
+    session = MagicMock()
+    session_local = MagicMock(return_value=session)
+    session_local.remove = MagicMock()
+    return session, session_local
+
+
+# ---------------------------------------------------------------------------
+# create_passage / add_passage_line validation
+# ---------------------------------------------------------------------------
+
+def test_create_passage_rejects_invalid_hsk_level_before_touching_db():
+    session, session_local = _mock_session()
+    with patch.object(service, "SessionLocal", session_local):
+        with pytest.raises(PassageServiceError):
+            service.create_passage({"passage_id": "H1_1_1", "hsk_level": "HSK9"})
+
+    session_local.assert_not_called()
+
+
+def test_create_passage_rejects_wrong_type_line_field_before_touching_db():
+    session, session_local = _mock_session()
+    with patch.object(service, "SessionLocal", session_local):
+        with pytest.raises(PassageServiceError):
+            service.create_passage({
+                "passage_id": "H1_1_1",
+                "lines": [{"line_id": 1, "speaker": {"not": "a string"}}],
+            })
+
+    session_local.assert_not_called()
+
+
+def test_create_passage_success():
+    session, session_local = _mock_session()
+    repo = MagicMock()
+    repo.get_by_id.return_value = None
+    repo.create.return_value = FakePassage()
+
+    with patch.object(service, "SessionLocal", session_local), \
+         patch.object(service, "PassageRepository", return_value=repo):
+        result = service.create_passage({"passage_id": "H1_1_1", "hsk_level": "HSK1"})
+
+    assert result["passage_id"] == "H1_1_1"
+    session.commit.assert_called_once()
+
+
+def test_add_passage_line_rejects_missing_line_id_before_touching_db():
+    session, session_local = _mock_session()
+    with patch.object(service, "SessionLocal", session_local):
+        with pytest.raises(PassageServiceError):
+            service.add_passage_line("H1_1_1", {"content": "你好"})
+
+    session_local.assert_not_called()
 
 
 def test_get_lesson_passage_ids_like_delegates_to_repository():

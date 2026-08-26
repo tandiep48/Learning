@@ -19,6 +19,7 @@ from sqlalchemy.exc import IntegrityError
 
 from entity.database import SessionLocal
 from entity.passage.repository import PassageRepository
+from entity.validation import optional_str, optional_int, optional_list, optional_one_of, require_int
 
 
 # ---------------------------------------------------------------------------
@@ -34,17 +35,29 @@ class PassageServiceError(Exception):
 
 
 _PASSAGE_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_\-]*$")
+HSK_LEVELS = {f"HSK{n}" for n in range(1, 7)}
 
 
-def _validate_passage_id(passage_id: str) -> str:
+def _validate_passage_id(passage_id) -> str:
+    if passage_id is not None and not isinstance(passage_id, str):
+        raise PassageServiceError("Field 'passage_id' must be a string.")
     pid = (passage_id or "").strip()
     if not pid:
         raise PassageServiceError("Field 'passage_id' is required.")
+    if len(pid) > 100:
+        raise PassageServiceError("Field 'passage_id' must be 100 characters or fewer.")
     if not _PASSAGE_ID_PATTERN.match(pid):
         raise PassageServiceError(
             "Field 'passage_id' may only contain letters, digits, underscores, and hyphens."
         )
     return pid
+
+
+def _validate_hsk_level(data: dict) -> dict:
+    payload: dict = {}
+    if "hsk_level" in data:
+        payload["hsk_level"] = optional_one_of(PassageServiceError, "hsk_level", data["hsk_level"], HSK_LEVELS)
+    return payload
 
 
 def _clamp_page_size(page_size: int) -> int:
@@ -55,22 +68,37 @@ def _clamp_page(page: int) -> int:
     return max(1, page)
 
 
-def _validate_line(line: dict, index: int) -> None:
-    """Light validation on a single line dict."""
+_LINE_STR_FIELDS = {
+    "speaker": 50,
+    "content": None,
+    "pinyin": None,
+    "audio_key": 100,
+    "translation_en": None,
+    "translation_vi": None,
+}
+
+
+def _validate_line(line: dict, index: int) -> dict:
+    """Validate a single line dict (type + length matching lesson_lines columns)."""
     if not isinstance(line, dict):
         raise PassageServiceError(f"lines[{index}] must be an object.")
-    if line.get("tokens") is not None and not isinstance(line["tokens"], list):
-        raise PassageServiceError(f"lines[{index}].tokens must be a list or null.")
+
+    clean: dict = dict(line)
+    for field, max_len in _LINE_STR_FIELDS.items():
+        if field in clean:
+            clean[field] = optional_str(PassageServiceError, f"lines[{index}].{field}", clean[field], max_len)
+    if "line_id" in clean:
+        clean["line_id"] = optional_int(PassageServiceError, f"lines[{index}].line_id", clean["line_id"])
+    if "tokens" in clean:
+        clean["tokens"] = optional_list(PassageServiceError, f"lines[{index}].tokens", clean["tokens"])
+    return clean
 
 
 def _validate_line_id(line_id) -> int:
     """`line_id` is the caller-facing key for a single line within a passage."""
     if line_id is None:
         raise PassageServiceError("Field 'line_id' is required.")
-    try:
-        return int(line_id)
-    except (TypeError, ValueError):
-        raise PassageServiceError("Field 'line_id' must be an integer.")
+    return require_int(PassageServiceError, "line_id", line_id)
 
 
 def _require_passage(repo: PassageRepository, passage_id: str) -> None:
@@ -153,13 +181,13 @@ def create_passage(data: dict) -> dict:
         PassageServiceError(400): validation failure or duplicate.
     """
     pid = _validate_passage_id(data.get("passage_id", ""))
-    data["passage_id"] = pid
+    payload = _validate_hsk_level(data)
+    payload["passage_id"] = pid
 
     lines = data.get("lines", [])
     if not isinstance(lines, list):
         raise PassageServiceError("Field 'lines' must be an array.")
-    for i, line in enumerate(lines):
-        _validate_line(line, i)
+    payload["lines"] = [_validate_line(line, i) for i, line in enumerate(lines)]
 
     session = SessionLocal()
     try:
@@ -169,7 +197,7 @@ def create_passage(data: dict) -> dict:
                 f"Passage '{pid}' already exists. Use PUT to update it."
             )
 
-        passage = repo.create(data)
+        passage = repo.create(payload)
         session.commit()
         return passage.to_dict(include_lines=True)
     except PassageServiceError:
@@ -199,17 +227,21 @@ def update_passage(passage_id: str, data: dict) -> dict:
     if not data:
         raise PassageServiceError("No fields provided to update.")
 
+    payload = _validate_hsk_level(data)
+
     lines = data.get("lines")
     if lines is not None:
         if not isinstance(lines, list):
             raise PassageServiceError("Field 'lines' must be an array.")
-        for i, line in enumerate(lines):
-            _validate_line(line, i)
+        payload["lines"] = [_validate_line(line, i) for i, line in enumerate(lines)]
+
+    if not payload:
+        raise PassageServiceError("No updatable fields provided.")
 
     session = SessionLocal()
     try:
         repo = PassageRepository(session)
-        passage = repo.update(passage_id, data)
+        passage = repo.update(passage_id, payload)
         if not passage:
             raise PassageServiceError(f"Passage '{passage_id}' not found.", 404)
         session.commit()
@@ -380,9 +412,9 @@ def add_passage_line(passage_id: str, data: dict) -> dict:
         PassageServiceError(404): if the passage does not exist.
         PassageServiceError(409): if the (passage_id, line_id) pair already exists.
     """
-    _validate_line(data, 0)
+    clean = _validate_line(data, 0)
     line_id = _validate_line_id(data.get("line_id"))
-    data = {**data, "line_id": line_id}
+    clean["line_id"] = line_id
 
     session = SessionLocal()
     try:
@@ -394,7 +426,7 @@ def add_passage_line(passage_id: str, data: dict) -> dict:
                 f"Line {line_id} already exists in passage '{passage_id}'. Use PUT to update it.", 409
             )
 
-        line = repo.add_line(passage_id, data)
+        line = repo.add_line(passage_id, clean)
         session.commit()
         return line.to_dict()
     except PassageServiceError:
@@ -423,14 +455,14 @@ def update_passage_line(passage_id: str, line_id: int, data: dict) -> dict:
     """
     if not data:
         raise PassageServiceError("No fields provided to update.")
-    _validate_line(data, 0)
-    if "line_id" in data:
-        data["line_id"] = _validate_line_id(data["line_id"])
+    clean = _validate_line(data, 0)
+    if "line_id" in clean:
+        clean["line_id"] = _validate_line_id(clean["line_id"])
 
     session = SessionLocal()
     try:
         repo = PassageRepository(session)
-        line = repo.update_line(passage_id, line_id, data)
+        line = repo.update_line(passage_id, line_id, clean)
         if not line:
             raise PassageServiceError(f"Line {line_id} not found in passage '{passage_id}'.", 404)
         session.commit()
