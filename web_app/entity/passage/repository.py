@@ -107,6 +107,24 @@ class PassageRepository:
         return [r[0] for r in rows]
 
     # ------------------------------------------------------------------
+    # Shared helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _build_line(passage_id: str, line_data: dict) -> LessonLine:
+        return LessonLine(
+            passage_id=passage_id,
+            line_id=line_data.get("line_id"),
+            speaker=line_data.get("speaker"),
+            content=line_data.get("content"),
+            pinyin=line_data.get("pinyin"),
+            audio_key=line_data.get("audio_key"),
+            translation_en=line_data.get("translation_en"),
+            translation_vi=line_data.get("translation_vi"),
+            tokens=line_data.get("tokens"),
+        )
+
+    # ------------------------------------------------------------------
     # CREATE
     # ------------------------------------------------------------------
 
@@ -134,18 +152,7 @@ class PassageRepository:
         self.session.flush()  # ensure passage_id is persisted before lines
 
         for line_data in data.get("lines", []):
-            line = LessonLine(
-                passage_id=passage.passage_id,
-                line_id=line_data.get("line_id"),
-                speaker=line_data.get("speaker"),
-                content=line_data.get("content"),
-                pinyin=line_data.get("pinyin"),
-                audio_key=line_data.get("audio_key"),
-                translation_en=line_data.get("translation_en"),
-                translation_vi=line_data.get("translation_vi"),
-                tokens=line_data.get("tokens"),
-            )
-            self.session.add(line)
+            self.session.add(self._build_line(passage.passage_id, line_data))
 
         self.session.flush()
         return passage
@@ -183,18 +190,7 @@ class PassageRepository:
                 .delete(synchronize_session="fetch")
             )
             for line_data in data["lines"]:
-                line = LessonLine(
-                    passage_id=passage_id,
-                    line_id=line_data.get("line_id"),
-                    speaker=line_data.get("speaker"),
-                    content=line_data.get("content"),
-                    pinyin=line_data.get("pinyin"),
-                    audio_key=line_data.get("audio_key"),
-                    translation_en=line_data.get("translation_en"),
-                    translation_vi=line_data.get("translation_vi"),
-                    tokens=line_data.get("tokens"),
-                )
-                self.session.add(line)
+                self.session.add(self._build_line(passage_id, line_data))
 
         self.session.flush()
         # Expire to reload relationship after potential line replacement
@@ -216,5 +212,65 @@ class PassageRepository:
         if not passage:
             return False
         self.session.delete(passage)
+        self.session.flush()
+        return True
+
+    # ------------------------------------------------------------------
+    # LessonLine — single-row operations (nested under the passage aggregate)
+    # ------------------------------------------------------------------
+
+    def get_line(self, passage_id: str, line_id: int) -> Optional[LessonLine]:
+        """Return a single LessonLine by (passage_id, line_id), or None."""
+        return (
+            self.session.query(LessonLine)
+            .filter(LessonLine.passage_id == passage_id, LessonLine.line_id == line_id)
+            .first()
+        )
+
+    def add_line(self, passage_id: str, line_data: dict) -> LessonLine:
+        """
+        Insert a single line into an existing passage.
+
+        Raises:
+            IntegrityError: if (passage_id, line_id) already exists.
+        """
+        line = self._build_line(passage_id, line_data)
+        self.session.add(line)
+        self.session.flush()
+        return line
+
+    def update_line(self, passage_id: str, line_id: int, data: dict) -> Optional[LessonLine]:
+        """
+        Update allowed fields on a single existing line.
+
+        Returns:
+            The updated LessonLine, or None if not found.
+        """
+        line = self.get_line(passage_id, line_id)
+        if not line:
+            return None
+
+        updatable_fields = {
+            "line_id", "speaker", "content", "pinyin",
+            "audio_key", "translation_en", "translation_vi", "tokens",
+        }
+        for field in updatable_fields:
+            if field in data:
+                setattr(line, field, data[field])
+
+        self.session.flush()
+        return line
+
+    def delete_line(self, passage_id: str, line_id: int) -> bool:
+        """
+        Delete a single line from a passage.
+
+        Returns:
+            True if deleted, False if not found.
+        """
+        line = self.get_line(passage_id, line_id)
+        if not line:
+            return False
+        self.session.delete(line)
         self.session.flush()
         return True
