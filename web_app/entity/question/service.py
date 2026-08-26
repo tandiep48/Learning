@@ -16,6 +16,7 @@ from sqlalchemy.exc import IntegrityError
 
 from entity.database import SessionLocal
 from entity.question.repository import QuestionRepository
+from entity.validation import optional_str
 
 
 # ---------------------------------------------------------------------------
@@ -90,10 +91,11 @@ def _validate_options(value):
 def _validate_len(field: str, value, max_len: int) -> str | None:
     if value is None:
         return None
-    text = str(value)
-    if len(text) > max_len:
+    if not isinstance(value, str):
+        raise QuestionServiceError(f"Field '{field}' must be a string.")
+    if len(value) > max_len:
         raise QuestionServiceError(f"Field '{field}' must be {max_len} characters or fewer.")
-    return text
+    return value
 
 
 def _build_payload(data: dict, *, partial: bool) -> dict:
@@ -135,7 +137,7 @@ def _build_payload(data: dict, *, partial: bool) -> dict:
         payload["unit_id"] = _validate_len("unit_id", data.get("unit_id") or "", 20)
     for field in ("content", "question", "audio_key"):
         if present(field):
-            payload[field] = data.get(field)
+            payload[field] = optional_str(QuestionServiceError, field, data.get(field))
 
     if not partial:
         payload.setdefault("unit_id", "")
