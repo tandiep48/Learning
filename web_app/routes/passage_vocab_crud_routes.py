@@ -30,8 +30,12 @@ passage_vocab_crud_bp = Blueprint(
 )
 
 
+def _ok(data, status_code: int = 200):
+    return jsonify({"success": True, "data": data}), status_code
+
+
 def _error(message: str, status_code: int):
-    return jsonify({"error": message}), status_code
+    return jsonify({"success": False, "error": message}), status_code
 
 
 def _handle_service_error(exc: PassageVocabularyServiceError):
@@ -46,7 +50,7 @@ def list_passage_vocab_endpoint(passage_id: str):
     """List all vocabulary words linked to a passage."""
     try:
         result = list_passage_vocab(passage_id)
-        return jsonify(result), 200
+        return _ok(result, 200)
     except PassageVocabularyServiceError as exc:
         return _handle_service_error(exc)
 
@@ -63,7 +67,7 @@ def add_passage_vocab_endpoint(passage_id: str):
         return _error("Request body must be a JSON object.", 400)
     try:
         result = add_passage_vocab(passage_id, data.get("cn", ""))
-        return jsonify(result), 201
+        return _ok(result, 201)
     except PassageVocabularyServiceError as exc:
         return _handle_service_error(exc)
 
@@ -76,6 +80,6 @@ def remove_passage_vocab_endpoint(passage_id: str, cn: str):
     """Remove the link between a passage and a vocabulary word."""
     try:
         result = remove_passage_vocab(passage_id, cn)
-        return jsonify(result), 200
+        return _ok(result, 200)
     except PassageVocabularyServiceError as exc:
         return _handle_service_error(exc)
