@@ -47,8 +47,12 @@ from entity.passage.service import (
 passage_crud_bp = Blueprint("passage_crud", __name__, url_prefix="/api/admin/passage")
 
 
+def _ok(data, status_code: int = 200):
+    return jsonify({"success": True, "data": data}), status_code
+
+
 def _error(message: str, status_code: int):
-    return jsonify({"error": message}), status_code
+    return jsonify({"success": False, "error": message}), status_code
 
 
 def _handle_service_error(exc: PassageServiceError):
@@ -70,7 +74,7 @@ def list_passages_endpoint():
 
     hsk_level = request.args.get("hsk_level") or None
     result = list_passages(page=page, page_size=page_size, hsk_level=hsk_level)
-    return jsonify(result), 200
+    return _ok(result, 200)
 
 
 # ---------------------------------------------------------------------------
@@ -81,7 +85,7 @@ def get_passage_endpoint(passage_id: str):
     """Get a single passage with all its lines."""
     try:
         result = get_passage(passage_id)
-        return jsonify(result), 200
+        return _ok(result, 200)
     except PassageServiceError as exc:
         return _handle_service_error(exc)
 
@@ -102,7 +106,7 @@ def create_passage_endpoint():
         return _error("Request body must be a JSON object.", 400)
     try:
         result = create_passage(data)
-        return jsonify(result), 201
+        return _ok(result, 201)
     except PassageServiceError as exc:
         return _handle_service_error(exc)
 
@@ -123,7 +127,7 @@ def update_passage_endpoint(passage_id: str):
         return _error("Request body must be a JSON object.", 400)
     try:
         result = update_passage(passage_id, data)
-        return jsonify(result), 200
+        return _ok(result, 200)
     except PassageServiceError as exc:
         return _handle_service_error(exc)
 
@@ -136,6 +140,6 @@ def delete_passage_endpoint(passage_id: str):
     """Delete a passage and all its lines (cascade)."""
     try:
         result = delete_passage(passage_id)
-        return jsonify(result), 200
+        return _ok(result, 200)
     except PassageServiceError as exc:
         return _handle_service_error(exc)
