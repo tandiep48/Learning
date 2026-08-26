@@ -99,6 +99,15 @@ def test_create_book_rejects_empty_book_code():
             service.create_book({"book_code": "  "})
 
 
+def test_create_book_rejects_oversized_name_before_touching_db():
+    session, session_local = _mock_session()
+    with patch.object(service, "SessionLocal", session_local):
+        with pytest.raises(service.BookServiceError):
+            service.create_book({"book_code": "AML", "name_en": "x" * 201})
+
+    session_local.assert_not_called()
+
+
 def test_create_book_rejects_duplicate():
     session, session_local = _mock_session()
     repo = MagicMock()

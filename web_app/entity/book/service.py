@@ -19,6 +19,7 @@ from sqlalchemy.exc import IntegrityError
 from entity.database import SessionLocal
 from entity.book.entity import Book
 from entity.book.repository import BookRepository
+from entity.validation import optional_str
 
 
 class BookServiceError(Exception):
@@ -30,17 +31,32 @@ class BookServiceError(Exception):
 
 
 _BOOK_CODE_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_\-]*$")
+_BOOK_CODE_MAX_LEN = 20
 
 
-def _validate_book_code(book_code: str) -> str:
+def _validate_book_code(book_code) -> str:
+    if book_code is not None and not isinstance(book_code, str):
+        raise BookServiceError("Field 'book_code' must be a string.")
     code = (book_code or "").strip()
     if not code:
         raise BookServiceError("Field 'book_code' is required.")
+    if len(code) > _BOOK_CODE_MAX_LEN:
+        raise BookServiceError(f"Field 'book_code' must be {_BOOK_CODE_MAX_LEN} characters or fewer.")
     if not _BOOK_CODE_PATTERN.match(code):
         raise BookServiceError(
             "Field 'book_code' may only contain letters, digits, underscores, and hyphens."
         )
     return code
+
+
+def _validate_book_payload(data: dict) -> dict:
+    """Validate the optional name fields present in `data` (VARCHAR(200))."""
+    payload: dict = {}
+    if "name_en" in data:
+        payload["name_en"] = optional_str(BookServiceError, "name_en", data["name_en"], 200)
+    if "name_vn" in data:
+        payload["name_vn"] = optional_str(BookServiceError, "name_vn", data["name_vn"], 200)
+    return payload
 
 
 def _to_dict(book: Book) -> dict:
@@ -89,7 +105,8 @@ def create_book(data: dict) -> dict:
         BookServiceError(400): validation failure or duplicate.
     """
     code = _validate_book_code(data.get("book_code", ""))
-    data = {**data, "book_code": code}
+    payload = _validate_book_payload(data)
+    payload["book_code"] = code
 
     session = SessionLocal()
     try:
@@ -97,7 +114,7 @@ def create_book(data: dict) -> dict:
         if repo.get_by_code(code):
             raise BookServiceError(f"Book '{code}' already exists. Use PUT to update it.")
 
-        book = repo.create(data)
+        book = repo.create(payload)
         session.commit()
         return _to_dict(book)
     except BookServiceError:
@@ -126,10 +143,14 @@ def update_book(book_code: str, data: dict) -> dict:
     if not data:
         raise BookServiceError("No fields provided to update.")
 
+    payload = _validate_book_payload(data)
+    if not payload:
+        raise BookServiceError("No updatable fields provided.")
+
     session = SessionLocal()
     try:
         repo = BookRepository(session)
-        book = repo.update(book_code, data)
+        book = repo.update(book_code, payload)
         if not book:
             raise BookServiceError(f"Book '{book_code}' not found.", 404)
         session.commit()
