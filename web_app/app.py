@@ -32,6 +32,7 @@ from routes.user_routes import user_bp
 from routes.vocab_crud_routes import vocab_crud_bp
 from routes.passage_crud_routes import passage_crud_bp
 from routes.passage_vocab_crud_routes import passage_vocab_crud_bp
+from routes.passage_line_crud_routes import passage_line_crud_bp
 from routes.user_crud_routes import user_crud_bp
 from routes.question_crud_routes import question_crud_bp
 from routes.translation_routes import translation_bp
@@ -70,6 +71,7 @@ app.register_blueprint(user_bp)
 app.register_blueprint(vocab_crud_bp)
 app.register_blueprint(passage_crud_bp)
 app.register_blueprint(passage_vocab_crud_bp)
+app.register_blueprint(passage_line_crud_bp)
 app.register_blueprint(user_crud_bp)
 app.register_blueprint(question_crud_bp)
 app.register_blueprint(translation_bp)
