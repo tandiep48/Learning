@@ -7,7 +7,7 @@ from flask import Flask
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-from routes.question_crud_routes import question_crud_bp
+from routes.question.question_crud_routes import question_crud_bp
 from entity.question.service import QuestionServiceError
 
 
@@ -32,7 +32,7 @@ QUESTION_DICT = {
 # ---------------------------------------------------------------------------
 
 def test_list_questions_endpoint(client):
-    with patch("routes.question_crud_routes.list_questions", return_value={
+    with patch("routes.question.question_crud_routes.list_questions", return_value={
         "items": [QUESTION_DICT], "page": 1, "page_size": 20, "total": 1, "total_pages": 1
     }) as mock_list:
         resp = client.get(
@@ -58,7 +58,7 @@ def test_list_questions_endpoint_rejects_non_integer_paging(client):
 
 
 def test_list_questions_endpoint_propagates_service_validation_error(client):
-    with patch("routes.question_crud_routes.list_questions",
+    with patch("routes.question.question_crud_routes.list_questions",
                side_effect=QuestionServiceError("Field 'category' must be one of: exam, practice.")):
         resp = client.get("/api/admin/question?category=bogus")
 
@@ -73,7 +73,7 @@ def test_list_questions_endpoint_propagates_service_validation_error(client):
 # ---------------------------------------------------------------------------
 
 def test_get_question_endpoint_found(client):
-    with patch("routes.question_crud_routes.get_question", return_value=QUESTION_DICT):
+    with patch("routes.question.question_crud_routes.get_question", return_value=QUESTION_DICT):
         resp = client.get("/api/admin/question/1")
 
     assert resp.status_code == 200
@@ -83,7 +83,7 @@ def test_get_question_endpoint_found(client):
 
 
 def test_get_question_endpoint_not_found(client):
-    with patch("routes.question_crud_routes.get_question",
+    with patch("routes.question.question_crud_routes.get_question",
                side_effect=QuestionServiceError("Question with id=999 not found.", 404)):
         resp = client.get("/api/admin/question/999")
 
@@ -98,7 +98,7 @@ def test_get_question_endpoint_not_found(client):
 # ---------------------------------------------------------------------------
 
 def test_create_question_endpoint_success(client):
-    with patch("routes.question_crud_routes.create_question", return_value=QUESTION_DICT):
+    with patch("routes.question.question_crud_routes.create_question", return_value=QUESTION_DICT):
         resp = client.post("/api/admin/question", json={
             "category": "practice", "level": 1, "lesson": 1, "no": 1, "type": 1, "progress": "vocab",
         })
@@ -118,7 +118,7 @@ def test_create_question_endpoint_rejects_non_json_body(client):
 
 
 def test_create_question_endpoint_conflict(client):
-    with patch("routes.question_crud_routes.create_question",
+    with patch("routes.question.question_crud_routes.create_question",
                side_effect=QuestionServiceError(
                    "A practice question already exists for level 1, lesson 1, no 1.", 409)):
         resp = client.post("/api/admin/question", json={
@@ -137,7 +137,7 @@ def test_create_question_endpoint_conflict(client):
 
 def test_update_question_endpoint_success(client):
     updated = {**QUESTION_DICT, "answer": "B"}
-    with patch("routes.question_crud_routes.update_question", return_value=updated):
+    with patch("routes.question.question_crud_routes.update_question", return_value=updated):
         resp = client.put("/api/admin/question/1", json={"answer": "B"})
 
     assert resp.status_code == 200
@@ -146,7 +146,7 @@ def test_update_question_endpoint_success(client):
 
 
 def test_update_question_endpoint_not_found(client):
-    with patch("routes.question_crud_routes.update_question",
+    with patch("routes.question.question_crud_routes.update_question",
                side_effect=QuestionServiceError("Question with id=999 not found.", 404)):
         resp = client.put("/api/admin/question/999", json={"answer": "B"})
 
@@ -166,7 +166,7 @@ def test_update_question_endpoint_rejects_non_json_body(client):
 # ---------------------------------------------------------------------------
 
 def test_delete_question_endpoint_success(client):
-    with patch("routes.question_crud_routes.delete_question",
+    with patch("routes.question.question_crud_routes.delete_question",
                return_value={"message": "Question id=1 deleted successfully."}):
         resp = client.delete("/api/admin/question/1")
 
@@ -177,7 +177,7 @@ def test_delete_question_endpoint_success(client):
 
 
 def test_delete_question_endpoint_not_found(client):
-    with patch("routes.question_crud_routes.delete_question",
+    with patch("routes.question.question_crud_routes.delete_question",
                side_effect=QuestionServiceError("Question with id=999 not found.", 404)):
         resp = client.delete("/api/admin/question/999")
 

@@ -7,7 +7,7 @@ from flask import Flask
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-from routes.passage_crud_routes import passage_crud_bp
+from routes.passage.passage_crud_routes import passage_crud_bp
 from entity.passage.service import PassageServiceError
 
 
@@ -33,7 +33,7 @@ PASSAGE_WITH_LINES = {**PASSAGE_DICT, "lines": [
 # ---------------------------------------------------------------------------
 
 def test_list_passages_endpoint(client):
-    with patch("routes.passage_crud_routes.list_passages", return_value={
+    with patch("routes.passage.passage_crud_routes.list_passages", return_value={
         "items": [PASSAGE_DICT], "page": 1, "page_size": 20, "total": 1, "total_pages": 1
     }) as mock_list:
         resp = client.get("/api/admin/passage?page=1&page_size=20&hsk_level=HSK1")
@@ -58,7 +58,7 @@ def test_list_passages_endpoint_rejects_non_integer_paging(client):
 # ---------------------------------------------------------------------------
 
 def test_get_passage_endpoint_found(client):
-    with patch("routes.passage_crud_routes.get_passage", return_value=PASSAGE_WITH_LINES):
+    with patch("routes.passage.passage_crud_routes.get_passage", return_value=PASSAGE_WITH_LINES):
         resp = client.get("/api/admin/passage/H1_1_1")
 
     assert resp.status_code == 200
@@ -69,7 +69,7 @@ def test_get_passage_endpoint_found(client):
 
 
 def test_get_passage_endpoint_not_found(client):
-    with patch("routes.passage_crud_routes.get_passage",
+    with patch("routes.passage.passage_crud_routes.get_passage",
                side_effect=PassageServiceError("Passage 'X' not found.", 404)):
         resp = client.get("/api/admin/passage/X")
 
@@ -84,7 +84,7 @@ def test_get_passage_endpoint_not_found(client):
 # ---------------------------------------------------------------------------
 
 def test_create_passage_endpoint_success(client):
-    with patch("routes.passage_crud_routes.create_passage", return_value=PASSAGE_WITH_LINES):
+    with patch("routes.passage.passage_crud_routes.create_passage", return_value=PASSAGE_WITH_LINES):
         resp = client.post("/api/admin/passage", json={"passage_id": "H1_1_1"})
 
     assert resp.status_code == 201
@@ -102,7 +102,7 @@ def test_create_passage_endpoint_rejects_non_json_body(client):
 
 
 def test_create_passage_endpoint_service_error(client):
-    with patch("routes.passage_crud_routes.create_passage",
+    with patch("routes.passage.passage_crud_routes.create_passage",
                side_effect=PassageServiceError("Passage 'H1_1_1' already exists. Use PUT to update it.")):
         resp = client.post("/api/admin/passage", json={"passage_id": "H1_1_1"})
 
@@ -118,7 +118,7 @@ def test_create_passage_endpoint_service_error(client):
 
 def test_update_passage_endpoint_success(client):
     updated = {**PASSAGE_DICT, "hsk_level": "HSK2"}
-    with patch("routes.passage_crud_routes.update_passage", return_value=updated):
+    with patch("routes.passage.passage_crud_routes.update_passage", return_value=updated):
         resp = client.put("/api/admin/passage/H1_1_1", json={"hsk_level": "HSK2"})
 
     assert resp.status_code == 200
@@ -127,7 +127,7 @@ def test_update_passage_endpoint_success(client):
 
 
 def test_update_passage_endpoint_not_found(client):
-    with patch("routes.passage_crud_routes.update_passage",
+    with patch("routes.passage.passage_crud_routes.update_passage",
                side_effect=PassageServiceError("Passage 'X' not found.", 404)):
         resp = client.put("/api/admin/passage/X", json={"hsk_level": "HSK2"})
 
@@ -147,7 +147,7 @@ def test_update_passage_endpoint_rejects_non_json_body(client):
 # ---------------------------------------------------------------------------
 
 def test_delete_passage_endpoint_success(client):
-    with patch("routes.passage_crud_routes.delete_passage",
+    with patch("routes.passage.passage_crud_routes.delete_passage",
                return_value={"message": "Passage 'H1_1_1' and all its lines deleted successfully."}):
         resp = client.delete("/api/admin/passage/H1_1_1")
 
@@ -158,7 +158,7 @@ def test_delete_passage_endpoint_success(client):
 
 
 def test_delete_passage_endpoint_not_found(client):
-    with patch("routes.passage_crud_routes.delete_passage",
+    with patch("routes.passage.passage_crud_routes.delete_passage",
                side_effect=PassageServiceError("Passage 'X' not found.", 404)):
         resp = client.delete("/api/admin/passage/X")
 

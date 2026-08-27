@@ -7,7 +7,7 @@ from flask import Flask
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-from routes.passage_line_crud_routes import passage_line_crud_bp
+from routes.passage_line.passage_line_crud_routes import passage_line_crud_bp
 from entity.passage.service import PassageServiceError
 
 
@@ -32,7 +32,7 @@ LINE_DICT = {
 # ---------------------------------------------------------------------------
 
 def test_list_passage_lines_endpoint(client):
-    with patch("routes.passage_line_crud_routes.list_passage_lines", return_value=[LINE_DICT]) as mock_list:
+    with patch("routes.passage_line.passage_line_crud_routes.list_passage_lines", return_value=[LINE_DICT]) as mock_list:
         resp = client.get("/api/admin/passage/H1_1_1/lines")
 
     assert resp.status_code == 200
@@ -43,7 +43,7 @@ def test_list_passage_lines_endpoint(client):
 
 
 def test_list_passage_lines_endpoint_passage_not_found(client):
-    with patch("routes.passage_line_crud_routes.list_passage_lines",
+    with patch("routes.passage_line.passage_line_crud_routes.list_passage_lines",
                side_effect=PassageServiceError("Passage 'X' not found.", 404)):
         resp = client.get("/api/admin/passage/X/lines")
 
@@ -58,7 +58,7 @@ def test_list_passage_lines_endpoint_passage_not_found(client):
 # ---------------------------------------------------------------------------
 
 def test_get_passage_line_endpoint_found(client):
-    with patch("routes.passage_line_crud_routes.get_passage_line", return_value=LINE_DICT):
+    with patch("routes.passage_line.passage_line_crud_routes.get_passage_line", return_value=LINE_DICT):
         resp = client.get("/api/admin/passage/H1_1_1/lines/1")
 
     assert resp.status_code == 200
@@ -68,7 +68,7 @@ def test_get_passage_line_endpoint_found(client):
 
 
 def test_get_passage_line_endpoint_not_found(client):
-    with patch("routes.passage_line_crud_routes.get_passage_line",
+    with patch("routes.passage_line.passage_line_crud_routes.get_passage_line",
                side_effect=PassageServiceError("Line 9 not found in passage 'H1_1_1'.", 404)):
         resp = client.get("/api/admin/passage/H1_1_1/lines/9")
 
@@ -83,7 +83,7 @@ def test_get_passage_line_endpoint_not_found(client):
 # ---------------------------------------------------------------------------
 
 def test_add_passage_line_endpoint_success(client):
-    with patch("routes.passage_line_crud_routes.add_passage_line", return_value=LINE_DICT) as mock_add:
+    with patch("routes.passage_line.passage_line_crud_routes.add_passage_line", return_value=LINE_DICT) as mock_add:
         resp = client.post("/api/admin/passage/H1_1_1/lines", json={"line_id": 1, "content": "你好"})
 
     assert resp.status_code == 201
@@ -102,7 +102,7 @@ def test_add_passage_line_endpoint_rejects_non_json_body(client):
 
 
 def test_add_passage_line_endpoint_duplicate(client):
-    with patch("routes.passage_line_crud_routes.add_passage_line",
+    with patch("routes.passage_line.passage_line_crud_routes.add_passage_line",
                side_effect=PassageServiceError("Line 1 already exists in passage 'H1_1_1'. Use PUT to update it.", 409)):
         resp = client.post("/api/admin/passage/H1_1_1/lines", json={"line_id": 1})
 
@@ -113,7 +113,7 @@ def test_add_passage_line_endpoint_duplicate(client):
 
 
 def test_add_passage_line_endpoint_missing_line_id(client):
-    with patch("routes.passage_line_crud_routes.add_passage_line",
+    with patch("routes.passage_line.passage_line_crud_routes.add_passage_line",
                side_effect=PassageServiceError("Field 'line_id' is required.")):
         resp = client.post("/api/admin/passage/H1_1_1/lines", json={"content": "你好"})
 
@@ -129,7 +129,7 @@ def test_add_passage_line_endpoint_missing_line_id(client):
 
 def test_update_passage_line_endpoint_success(client):
     updated = {**LINE_DICT, "translation_en": "Hi"}
-    with patch("routes.passage_line_crud_routes.update_passage_line", return_value=updated):
+    with patch("routes.passage_line.passage_line_crud_routes.update_passage_line", return_value=updated):
         resp = client.put("/api/admin/passage/H1_1_1/lines/1", json={"translation_en": "Hi"})
 
     assert resp.status_code == 200
@@ -138,7 +138,7 @@ def test_update_passage_line_endpoint_success(client):
 
 
 def test_update_passage_line_endpoint_not_found(client):
-    with patch("routes.passage_line_crud_routes.update_passage_line",
+    with patch("routes.passage_line.passage_line_crud_routes.update_passage_line",
                side_effect=PassageServiceError("Line 9 not found in passage 'H1_1_1'.", 404)):
         resp = client.put("/api/admin/passage/H1_1_1/lines/9", json={"translation_en": "Hi"})
 
@@ -158,7 +158,7 @@ def test_update_passage_line_endpoint_rejects_non_json_body(client):
 # ---------------------------------------------------------------------------
 
 def test_delete_passage_line_endpoint_success(client):
-    with patch("routes.passage_line_crud_routes.delete_passage_line",
+    with patch("routes.passage_line.passage_line_crud_routes.delete_passage_line",
                return_value={"message": "Line 1 deleted from passage 'H1_1_1'."}):
         resp = client.delete("/api/admin/passage/H1_1_1/lines/1")
 
@@ -169,7 +169,7 @@ def test_delete_passage_line_endpoint_success(client):
 
 
 def test_delete_passage_line_endpoint_not_found(client):
-    with patch("routes.passage_line_crud_routes.delete_passage_line",
+    with patch("routes.passage_line.passage_line_crud_routes.delete_passage_line",
                side_effect=PassageServiceError("Line 9 not found in passage 'H1_1_1'.", 404)):
         resp = client.delete("/api/admin/passage/H1_1_1/lines/9")
 

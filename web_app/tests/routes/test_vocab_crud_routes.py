@@ -7,7 +7,7 @@ from flask import Flask
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-from routes.vocab_crud_routes import vocab_crud_bp
+from routes.vocab.vocab_crud_routes import vocab_crud_bp
 from entity.vocabulary.service import VocabServiceError
 
 
@@ -31,7 +31,7 @@ VOCAB_DICT = {
 # ---------------------------------------------------------------------------
 
 def test_list_vocab_endpoint(client):
-    with patch("routes.vocab_crud_routes.list_vocab", return_value={
+    with patch("routes.vocab.vocab_crud_routes.list_vocab", return_value={
         "items": [VOCAB_DICT], "page": 1, "page_size": 20, "total": 1, "total_pages": 1
     }) as mock_list:
         resp = client.get("/api/admin/vocab?page=1&page_size=20&hsk_level=HSK1&search=hao")
@@ -56,7 +56,7 @@ def test_list_vocab_endpoint_rejects_non_integer_paging(client):
 # ---------------------------------------------------------------------------
 
 def test_get_vocab_endpoint_found(client):
-    with patch("routes.vocab_crud_routes.get_vocab", return_value=VOCAB_DICT):
+    with patch("routes.vocab.vocab_crud_routes.get_vocab", return_value=VOCAB_DICT):
         resp = client.get("/api/admin/vocab/1")
 
     assert resp.status_code == 200
@@ -66,7 +66,7 @@ def test_get_vocab_endpoint_found(client):
 
 
 def test_get_vocab_endpoint_not_found(client):
-    with patch("routes.vocab_crud_routes.get_vocab",
+    with patch("routes.vocab.vocab_crud_routes.get_vocab",
                side_effect=VocabServiceError("Vocabulary with id=999 not found.", 404)):
         resp = client.get("/api/admin/vocab/999")
 
@@ -81,7 +81,7 @@ def test_get_vocab_endpoint_not_found(client):
 # ---------------------------------------------------------------------------
 
 def test_create_vocab_endpoint_success(client):
-    with patch("routes.vocab_crud_routes.create_vocab", return_value=VOCAB_DICT):
+    with patch("routes.vocab.vocab_crud_routes.create_vocab", return_value=VOCAB_DICT):
         resp = client.post("/api/admin/vocab", json={"cn": "你好"})
 
     assert resp.status_code == 201
@@ -99,7 +99,7 @@ def test_create_vocab_endpoint_rejects_non_json_body(client):
 
 
 def test_create_vocab_endpoint_service_error(client):
-    with patch("routes.vocab_crud_routes.create_vocab",
+    with patch("routes.vocab.vocab_crud_routes.create_vocab",
                side_effect=VocabServiceError("Vocabulary '你好' already exists. Use PUT to update it.")):
         resp = client.post("/api/admin/vocab", json={"cn": "你好"})
 
@@ -115,7 +115,7 @@ def test_create_vocab_endpoint_service_error(client):
 
 def test_update_vocab_endpoint_success(client):
     updated = {**VOCAB_DICT, "meaning_en": "Hi"}
-    with patch("routes.vocab_crud_routes.update_vocab", return_value=updated):
+    with patch("routes.vocab.vocab_crud_routes.update_vocab", return_value=updated):
         resp = client.put("/api/admin/vocab/1", json={"meaning_en": "Hi"})
 
     assert resp.status_code == 200
@@ -124,7 +124,7 @@ def test_update_vocab_endpoint_success(client):
 
 
 def test_update_vocab_endpoint_not_found(client):
-    with patch("routes.vocab_crud_routes.update_vocab",
+    with patch("routes.vocab.vocab_crud_routes.update_vocab",
                side_effect=VocabServiceError("Vocabulary with id=999 not found.", 404)):
         resp = client.put("/api/admin/vocab/999", json={"meaning_en": "Hi"})
 
@@ -144,7 +144,7 @@ def test_update_vocab_endpoint_rejects_non_json_body(client):
 # ---------------------------------------------------------------------------
 
 def test_delete_vocab_endpoint_success(client):
-    with patch("routes.vocab_crud_routes.delete_vocab",
+    with patch("routes.vocab.vocab_crud_routes.delete_vocab",
                return_value={"message": "Vocabulary id=1 deleted successfully."}):
         resp = client.delete("/api/admin/vocab/1")
 
@@ -155,7 +155,7 @@ def test_delete_vocab_endpoint_success(client):
 
 
 def test_delete_vocab_endpoint_not_found(client):
-    with patch("routes.vocab_crud_routes.delete_vocab",
+    with patch("routes.vocab.vocab_crud_routes.delete_vocab",
                side_effect=VocabServiceError("Vocabulary with id=999 not found.", 404)):
         resp = client.delete("/api/admin/vocab/999")
 

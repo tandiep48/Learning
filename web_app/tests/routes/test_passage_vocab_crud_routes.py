@@ -7,7 +7,7 @@ from flask import Flask
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-from routes.passage_vocab_crud_routes import passage_vocab_crud_bp
+from routes.passage_vocab.passage_vocab_crud_routes import passage_vocab_crud_bp
 from entity.passage_vocabulary.service import PassageVocabularyServiceError
 
 
@@ -29,7 +29,7 @@ VOCAB_ITEM = {"cn": "你好", "pinyin": "ni3 hao3", "meaning_en": "Hello", "mean
 # ---------------------------------------------------------------------------
 
 def test_list_passage_vocab_endpoint(client):
-    with patch("routes.passage_vocab_crud_routes.list_passage_vocab", return_value={
+    with patch("routes.passage_vocab.passage_vocab_crud_routes.list_passage_vocab", return_value={
         "passage_id": "H1_1_1", "items": [VOCAB_ITEM], "total": 1
     }) as mock_list:
         resp = client.get("/api/admin/passage/H1_1_1/vocabulary")
@@ -42,7 +42,7 @@ def test_list_passage_vocab_endpoint(client):
 
 
 def test_list_passage_vocab_endpoint_passage_not_found(client):
-    with patch("routes.passage_vocab_crud_routes.list_passage_vocab",
+    with patch("routes.passage_vocab.passage_vocab_crud_routes.list_passage_vocab",
                side_effect=PassageVocabularyServiceError("Passage 'X' not found.", 404)):
         resp = client.get("/api/admin/passage/X/vocabulary")
 
@@ -57,7 +57,7 @@ def test_list_passage_vocab_endpoint_passage_not_found(client):
 # ---------------------------------------------------------------------------
 
 def test_add_passage_vocab_endpoint_success(client):
-    with patch("routes.passage_vocab_crud_routes.add_passage_vocab", return_value={
+    with patch("routes.passage_vocab.passage_vocab_crud_routes.add_passage_vocab", return_value={
         "message": "'你好' linked to passage 'H1_1_1'.", "passage_id": "H1_1_1", "cn": "你好"
     }) as mock_add:
         resp = client.post("/api/admin/passage/H1_1_1/vocabulary", json={"cn": "你好"})
@@ -78,7 +78,7 @@ def test_add_passage_vocab_endpoint_rejects_non_json_body(client):
 
 
 def test_add_passage_vocab_endpoint_duplicate_link(client):
-    with patch("routes.passage_vocab_crud_routes.add_passage_vocab",
+    with patch("routes.passage_vocab.passage_vocab_crud_routes.add_passage_vocab",
                side_effect=PassageVocabularyServiceError("'你好' is already linked to passage 'H1_1_1'.", 409)):
         resp = client.post("/api/admin/passage/H1_1_1/vocabulary", json={"cn": "你好"})
 
@@ -93,7 +93,7 @@ def test_add_passage_vocab_endpoint_duplicate_link(client):
 # ---------------------------------------------------------------------------
 
 def test_remove_passage_vocab_endpoint_success(client):
-    with patch("routes.passage_vocab_crud_routes.remove_passage_vocab",
+    with patch("routes.passage_vocab.passage_vocab_crud_routes.remove_passage_vocab",
                return_value={"message": "'你好' unlinked from passage 'H1_1_1'."}):
         resp = client.delete("/api/admin/passage/H1_1_1/vocabulary/你好")
 
@@ -104,7 +104,7 @@ def test_remove_passage_vocab_endpoint_success(client):
 
 
 def test_remove_passage_vocab_endpoint_not_found(client):
-    with patch("routes.passage_vocab_crud_routes.remove_passage_vocab",
+    with patch("routes.passage_vocab.passage_vocab_crud_routes.remove_passage_vocab",
                side_effect=PassageVocabularyServiceError("'你好' is not linked to passage 'H1_1_1'.", 404)):
         resp = client.delete("/api/admin/passage/H1_1_1/vocabulary/你好")
 

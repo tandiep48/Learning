@@ -7,7 +7,7 @@ from flask import Flask
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-from routes.user_crud_routes import user_crud_bp
+from routes.user.user_crud_routes import user_crud_bp
 from entity.user.service import UserServiceError
 
 
@@ -28,7 +28,7 @@ USER_DICT = {"id": 1, "username": "alice", "email": "alice@example.com", "level"
 # ---------------------------------------------------------------------------
 
 def test_list_users_endpoint(client):
-    with patch("routes.user_crud_routes.list_users", return_value={
+    with patch("routes.user.user_crud_routes.list_users", return_value={
         "items": [USER_DICT], "page": 1, "page_size": 20, "total": 1, "total_pages": 1
     }) as mock_list:
         resp = client.get("/api/admin/user?page=1&page_size=20&search=alice")
@@ -54,7 +54,7 @@ def test_list_users_endpoint_rejects_non_integer_paging(client):
 # ---------------------------------------------------------------------------
 
 def test_get_user_endpoint_found(client):
-    with patch("routes.user_crud_routes.get_user", return_value=USER_DICT):
+    with patch("routes.user.user_crud_routes.get_user", return_value=USER_DICT):
         resp = client.get("/api/admin/user/1")
 
     assert resp.status_code == 200
@@ -64,7 +64,7 @@ def test_get_user_endpoint_found(client):
 
 
 def test_get_user_endpoint_not_found(client):
-    with patch("routes.user_crud_routes.get_user",
+    with patch("routes.user.user_crud_routes.get_user",
                side_effect=UserServiceError("User with id=999 not found.", 404)):
         resp = client.get("/api/admin/user/999")
 
@@ -79,7 +79,7 @@ def test_get_user_endpoint_not_found(client):
 # ---------------------------------------------------------------------------
 
 def test_create_user_endpoint_success(client):
-    with patch("routes.user_crud_routes.create_user", return_value=USER_DICT):
+    with patch("routes.user.user_crud_routes.create_user", return_value=USER_DICT):
         resp = client.post("/api/admin/user", json={
             "username": "alice", "email": "alice@example.com", "password": "secret123"
         })
@@ -99,7 +99,7 @@ def test_create_user_endpoint_rejects_non_json_body(client):
 
 
 def test_create_user_endpoint_duplicate_username(client):
-    with patch("routes.user_crud_routes.create_user",
+    with patch("routes.user.user_crud_routes.create_user",
                side_effect=UserServiceError("Username 'alice' is already taken.", 409)):
         resp = client.post("/api/admin/user", json={
             "username": "alice", "email": "alice@example.com", "password": "secret123"
@@ -117,7 +117,7 @@ def test_create_user_endpoint_duplicate_username(client):
 
 def test_update_user_endpoint_success(client):
     updated = {**USER_DICT, "level": 2}
-    with patch("routes.user_crud_routes.update_user", return_value=updated):
+    with patch("routes.user.user_crud_routes.update_user", return_value=updated):
         resp = client.put("/api/admin/user/1", json={"level": 2})
 
     assert resp.status_code == 200
@@ -126,7 +126,7 @@ def test_update_user_endpoint_success(client):
 
 
 def test_update_user_endpoint_not_found(client):
-    with patch("routes.user_crud_routes.update_user",
+    with patch("routes.user.user_crud_routes.update_user",
                side_effect=UserServiceError("User with id=999 not found.", 404)):
         resp = client.put("/api/admin/user/999", json={"level": 2})
 
@@ -146,7 +146,7 @@ def test_update_user_endpoint_rejects_non_json_body(client):
 # ---------------------------------------------------------------------------
 
 def test_delete_user_endpoint_success(client):
-    with patch("routes.user_crud_routes.delete_user",
+    with patch("routes.user.user_crud_routes.delete_user",
                return_value={"message": "User id=1 deleted successfully."}):
         resp = client.delete("/api/admin/user/1")
 
@@ -157,7 +157,7 @@ def test_delete_user_endpoint_success(client):
 
 
 def test_delete_user_endpoint_not_found(client):
-    with patch("routes.user_crud_routes.delete_user",
+    with patch("routes.user.user_crud_routes.delete_user",
                side_effect=UserServiceError("User with id=999 not found.", 404)):
         resp = client.delete("/api/admin/user/999")
 

@@ -1,0 +1,1 @@
+from .passage_vocab_crud_routes import passage_vocab_crud_bp

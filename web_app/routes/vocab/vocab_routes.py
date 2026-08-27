@@ -11,7 +11,7 @@ from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 
 # Add web_app directory to sys.path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from entity.learning.service import (
     get_unlearned_words_from_db,

@@ -1,0 +1,1 @@
+from .chinese_stroke_info_routes import chinese_stroke_info_bp

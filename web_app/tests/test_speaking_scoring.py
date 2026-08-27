@@ -6,7 +6,7 @@ from flask import Flask
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from routes import vocab_routes
+from routes.vocab import vocab_routes
 
 
 class FakeVoskModel:

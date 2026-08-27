@@ -12,7 +12,7 @@ from datetime import datetime
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from entity.progress.service import (
     get_lesson_picker_progress,
     mark_lesson_part_completed,
@@ -40,7 +40,7 @@ lesson_bp = Blueprint('lesson', __name__, url_prefix='/api/lesson')
 # (answers marked wrong despite looking identical, and text appearing to grow on
 # review). Override the path with LESSON_TRAINER_LOG.
 _LESSON_LOG_PATH = os.getenv("LESSON_TRAINER_LOG") or os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "logs", "lesson_trainer.log"
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "logs", "lesson_trainer.log"
 )
 
 

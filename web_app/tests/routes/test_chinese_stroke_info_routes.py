@@ -8,7 +8,7 @@ from flask_login import LoginManager, UserMixin
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-from routes.chinese_stroke_info_routes import chinese_stroke_info_bp
+from routes.chinese_stroke_info.chinese_stroke_info_routes import chinese_stroke_info_bp
 from entity.chinese_stroke_info.service import ChineseStrokeInfoServiceError
 
 
@@ -78,7 +78,7 @@ def test_batch_endpoint_requires_login(client):
 # ---------------------------------------------------------------------------
 
 def test_get_stroke_info_endpoint_found(logged_in_client):
-    with patch("routes.chinese_stroke_info_routes.get_stroke_info", return_value=STROKE_INFO_DICT):
+    with patch("routes.chinese_stroke_info.chinese_stroke_info_routes.get_stroke_info", return_value=STROKE_INFO_DICT):
         resp = logged_in_client.get("/api/chinese_stroke_info/你好")
 
     assert resp.status_code == 200
@@ -89,7 +89,7 @@ def test_get_stroke_info_endpoint_found(logged_in_client):
 
 def test_get_stroke_info_endpoint_not_found(logged_in_client):
     with patch(
-        "routes.chinese_stroke_info_routes.get_stroke_info",
+        "routes.chinese_stroke_info.chinese_stroke_info_routes.get_stroke_info",
         side_effect=ChineseStrokeInfoServiceError("Chinese stroke info for 'xyz' not found.", 404),
     ):
         resp = logged_in_client.get("/api/chinese_stroke_info/xyz")
@@ -106,7 +106,7 @@ def test_get_stroke_info_endpoint_not_found(logged_in_client):
 
 def test_batch_endpoint_success(logged_in_client):
     with patch(
-        "routes.chinese_stroke_info_routes.get_stroke_info_batch",
+        "routes.chinese_stroke_info.chinese_stroke_info_routes.get_stroke_info_batch",
         return_value=[STROKE_INFO_DICT],
     ) as mock_batch:
         resp = logged_in_client.get("/api/chinese_stroke_info?words=你好,谢谢")

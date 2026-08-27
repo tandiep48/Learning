@@ -1,11 +1,8 @@
-import os
 import re
-import uuid
 
 from flask import Blueprint, jsonify, render_template, request
 from flask_login import current_user, login_required
 from werkzeug.security import generate_password_hash
-from werkzeug.utils import secure_filename
 
 from service.i18n_service import t
 from entity.progress.service import (
@@ -41,32 +38,17 @@ from entity.user.service import (
     update_user_ui_language,
     update_user_password,
 )
-
-try:
-    from google.cloud import storage
-except Exception:
-    storage = None
+from service.gcs_service import GCSServiceError, avatar_url, upload_avatar as upload_avatar_to_gcs
 
 
 user_bp = Blueprint('user', __name__)
 
-ALLOWED_AVATAR_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'gif'}
-MAX_AVATAR_BYTES = 3 * 1024 * 1024
 ALLOWED_HANZI_FONTS = {'SimSun', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Noto Sans'}
 DEFAULT_HANZI_FONT = 'Noto Sans'
 ALLOWED_HANZI_SCRIPTS = {'simplified', 'traditional'}
 DEFAULT_HANZI_SCRIPT = 'simplified'
 ALLOWED_UI_LANGUAGES = {'en', 'vi'}
 DEFAULT_UI_LANGUAGE = 'en'
-
-
-def avatar_url_from_path(avatar_path):
-    if not avatar_path:
-        return None
-    base_url = os.getenv('GCS_BUCKET_URL', '').rstrip('/')
-    if base_url:
-        return f"{base_url}/{avatar_path.lstrip('/')}"
-    return None
 
 
 def serialize_current_user():
@@ -76,18 +58,11 @@ def serialize_current_user():
         "email": current_user.email,
         "level": current_user.level,
         "avatar_path": getattr(current_user, 'avatar_path', None),
-        "avatar_url": avatar_url_from_path(getattr(current_user, 'avatar_path', None)),
+        "avatar_url": avatar_url(getattr(current_user, 'avatar_path', None)),
         "hanzi_font": getattr(current_user, 'hanzi_font', None) or DEFAULT_HANZI_FONT,
         "hanzi_script": getattr(current_user, 'hanzi_script', None) or DEFAULT_HANZI_SCRIPT,
         "ui_language": getattr(current_user, 'ui_language', None) or DEFAULT_UI_LANGUAGE,
     }
-
-
-def allowed_avatar(filename):
-    if not filename or '.' not in filename:
-        return False
-    ext = filename.rsplit('.', 1)[1].lower()
-    return ext in ALLOWED_AVATAR_EXTENSIONS
 
 
 def parse_dashboard_passage_id(passage_id):
@@ -473,38 +448,10 @@ def change_password():
 @user_bp.route('/api/user/avatar', methods=['POST'])
 @login_required
 def upload_avatar():
-    if storage is None:
-        return jsonify({"error": "Google Cloud Storage client is not installed"}), 503
-
-    bucket_name = os.getenv('GCS_BUCKET_NAME')
-    if not bucket_name:
-        return jsonify({"error": "GCS_BUCKET_NAME is not configured"}), 503
-
-    file = request.files.get('avatar')
-    if not file or not file.filename:
-        return jsonify({"error": "Avatar file is required"}), 400
-
-    if not allowed_avatar(file.filename):
-        return jsonify({"error": "Avatar must be png, jpg, jpeg, webp, or gif"}), 400
-
-    file.seek(0, os.SEEK_END)
-    size = file.tell()
-    file.seek(0)
-    if size > MAX_AVATAR_BYTES:
-        return jsonify({"error": "Avatar must be 3MB or smaller"}), 400
-
-    safe_name = secure_filename(file.filename)
-    ext = safe_name.rsplit('.', 1)[1].lower()
-    object_name = f"avatars/user_{current_user.id}/{uuid.uuid4().hex}.{ext}"
-
-    content_type = file.mimetype or f"image/{ext}"
     try:
-        client = storage.Client()
-        bucket = client.bucket(bucket_name)
-        blob = bucket.blob(object_name)
-        blob.upload_from_file(file, content_type=content_type)
-    except Exception as e:
-        return jsonify({"error": f"Avatar upload failed: {e}"}), 500
+        object_name = upload_avatar_to_gcs(current_user.id, request.files.get('avatar'))
+    except GCSServiceError as exc:
+        return jsonify({"error": exc.message}), exc.status_code
 
     if not update_user_avatar_path(current_user.id, object_name):
         return jsonify({"error": "Avatar uploaded but profile could not be updated"}), 500
@@ -513,5 +460,5 @@ def upload_avatar():
     return jsonify({
         "status": "success",
         "avatar_path": object_name,
-        "avatar_url": avatar_url_from_path(object_name),
+        "avatar_url": avatar_url(object_name),
     })

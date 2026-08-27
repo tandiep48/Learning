@@ -23,24 +23,22 @@ from flask import Flask, render_template, redirect, url_for, request, send_from_
 from flask_cors import CORS
 from flask_login import LoginManager, login_required, current_user
 from flask_socketio import SocketIO
-from routes.vocab_routes import vocab_bp
-from routes.lesson_routes import lesson_bp
-from routes.practice_routes import practice_bp
-from routes.competition_routes import competition_bp
-from routes.auth_routes import auth_bp, get_user_by_id
-from routes.user_routes import user_bp
-from routes.vocab_crud_routes import vocab_crud_bp
-from routes.passage_crud_routes import passage_crud_bp
-from routes.passage_vocab_crud_routes import passage_vocab_crud_bp
-from routes.passage_line_crud_routes import passage_line_crud_bp
-from routes.user_crud_routes import user_crud_bp
-from routes.question_crud_routes import question_crud_bp
-from routes.translation_routes import translation_bp
-from routes.book_crud_routes import book_crud_bp
-from routes.chinese_stroke_info_routes import chinese_stroke_info_bp
-from routes.grammar_rule_crud_routes import grammar_rule_crud_bp
-from routes.grammar_context_crud_routes import grammar_context_crud_bp
-from competition_socket import init_competition_socket
+from routes.vocab import vocab_bp, vocab_crud_bp
+from routes.lesson import lesson_bp
+from routes.practice import practice_bp
+from routes.competition import competition_bp
+from routes.auth import auth_bp, get_user_by_id
+from routes.user import user_bp, user_crud_bp
+from routes.passage import passage_crud_bp
+from routes.passage_vocab import passage_vocab_crud_bp
+from routes.passage_line import passage_line_crud_bp
+from routes.question import question_crud_bp
+from routes.translation import translation_bp
+from routes.book import book_crud_bp
+from routes.chinese_stroke_info import chinese_stroke_info_bp
+from routes.grammar_rule import grammar_rule_crud_bp
+from routes.grammar_context import grammar_context_crud_bp
+from service.competition_socket import init_competition_socket
 from service.i18n_service import get_current_lang, get_translations, t as i18n_t, SUPPORTED_LANGUAGES
 from entity.user.service import update_user_ui_language
 

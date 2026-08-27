@@ -7,7 +7,7 @@ from flask import Flask
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-from routes.book_crud_routes import book_crud_bp
+from routes.book.book_crud_routes import book_crud_bp
 from entity.book.service import BookServiceError
 
 
@@ -25,7 +25,7 @@ def client():
 # ---------------------------------------------------------------------------
 
 def test_list_books_endpoint(client):
-    with patch("routes.book_crud_routes.list_books", return_value=[
+    with patch("routes.book.book_crud_routes.list_books", return_value=[
         {"book_code": "AML", "name_en": "A Month in Life", "name_vn": "Mot thang"}
     ]):
         resp = client.get("/api/admin/book")
@@ -41,7 +41,7 @@ def test_list_books_endpoint(client):
 # ---------------------------------------------------------------------------
 
 def test_get_book_endpoint_found(client):
-    with patch("routes.book_crud_routes.get_book",
+    with patch("routes.book.book_crud_routes.get_book",
                return_value={"book_code": "AML", "name_en": "A Month in Life", "name_vn": "Mot thang"}):
         resp = client.get("/api/admin/book/AML")
 
@@ -52,7 +52,7 @@ def test_get_book_endpoint_found(client):
 
 
 def test_get_book_endpoint_not_found(client):
-    with patch("routes.book_crud_routes.get_book",
+    with patch("routes.book.book_crud_routes.get_book",
                side_effect=BookServiceError("Book 'MISSING' not found.", 404)):
         resp = client.get("/api/admin/book/MISSING")
 
@@ -67,7 +67,7 @@ def test_get_book_endpoint_not_found(client):
 # ---------------------------------------------------------------------------
 
 def test_create_book_endpoint_success(client):
-    with patch("routes.book_crud_routes.create_book",
+    with patch("routes.book.book_crud_routes.create_book",
                return_value={"book_code": "AML", "name_en": "A Month in Life", "name_vn": None}):
         resp = client.post("/api/admin/book", json={"book_code": "AML", "name_en": "A Month in Life"})
 
@@ -86,7 +86,7 @@ def test_create_book_endpoint_rejects_non_json_body(client):
 
 
 def test_create_book_endpoint_service_error(client):
-    with patch("routes.book_crud_routes.create_book",
+    with patch("routes.book.book_crud_routes.create_book",
                side_effect=BookServiceError("Book 'AML' already exists. Use PUT to update it.")):
         resp = client.post("/api/admin/book", json={"book_code": "AML"})
 
@@ -101,7 +101,7 @@ def test_create_book_endpoint_service_error(client):
 # ---------------------------------------------------------------------------
 
 def test_update_book_endpoint_success(client):
-    with patch("routes.book_crud_routes.update_book",
+    with patch("routes.book.book_crud_routes.update_book",
                return_value={"book_code": "AML", "name_en": "Updated", "name_vn": None}):
         resp = client.put("/api/admin/book/AML", json={"name_en": "Updated"})
 
@@ -111,7 +111,7 @@ def test_update_book_endpoint_success(client):
 
 
 def test_update_book_endpoint_not_found(client):
-    with patch("routes.book_crud_routes.update_book",
+    with patch("routes.book.book_crud_routes.update_book",
                side_effect=BookServiceError("Book 'MISSING' not found.", 404)):
         resp = client.put("/api/admin/book/MISSING", json={"name_en": "X"})
 
@@ -124,7 +124,7 @@ def test_update_book_endpoint_not_found(client):
 # ---------------------------------------------------------------------------
 
 def test_delete_book_endpoint_success(client):
-    with patch("routes.book_crud_routes.delete_book",
+    with patch("routes.book.book_crud_routes.delete_book",
                return_value={"message": "Book 'AML' deleted successfully."}):
         resp = client.delete("/api/admin/book/AML")
 
@@ -135,7 +135,7 @@ def test_delete_book_endpoint_success(client):
 
 
 def test_delete_book_endpoint_not_found(client):
-    with patch("routes.book_crud_routes.delete_book",
+    with patch("routes.book.book_crud_routes.delete_book",
                side_effect=BookServiceError("Book 'MISSING' not found.", 404)):
         resp = client.delete("/api/admin/book/MISSING")
 

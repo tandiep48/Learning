@@ -1,0 +1,1 @@
+from .passage_crud_routes import passage_crud_bp
