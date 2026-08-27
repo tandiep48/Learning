@@ -42,6 +42,7 @@ from routes.grammar_context import grammar_context_crud_bp
 from service.competition_socket import init_competition_socket
 from service.i18n_service import get_current_lang, get_translations, t as i18n_t, SUPPORTED_LANGUAGES
 from entity.user.service import update_user_ui_language
+from service import gcs_service
 
 load_dotenv()
 
@@ -81,24 +82,9 @@ app.register_blueprint(grammar_rule_crud_bp)
 app.register_blueprint(grammar_context_crud_bp)
 init_competition_socket(socketio)
 
-GCS_BUCKET_URL = os.getenv('GCS_BUCKET_URL', '')
-
 @app.context_processor
 def inject_avatar_helpers():
-    def avatar_url(avatar_path):
-        if not avatar_path or not GCS_BUCKET_URL:
-            return None
-        return f"{GCS_BUCKET_URL.rstrip('/')}/{str(avatar_path).lstrip('/')}"
-
-    def hsk_image_url(level):
-        if not GCS_BUCKET_URL:
-            return ''
-        level_num = str(level).replace('HSK', '').replace('hsk', '').replace('H', '').replace('h', '')
-        if level_num not in {'1', '2', '3', '4', '5', '6'}:
-            return ''
-        return f"{GCS_BUCKET_URL.rstrip('/')}/hsk_images/hsk{level_num}.png"
-
-    return {"avatar_url": avatar_url, "hsk_image_url": hsk_image_url}
+    return {"avatar_url": gcs_service.avatar_url, "hsk_image_url": gcs_service.hsk_image_url}
 
 # Jinja-only i18n wiring. Superseded by GET /api/i18n/translations (routes/i18n/i18n_routes.py)
 # for the Next.js frontend; remove this context processor once Jinja templates are gone.
@@ -232,33 +218,29 @@ def practice_multi():
 @app.route('/practice_image/<int:level>/<path:filename>')
 def serve_practice_image(level, filename):
     category = request.args.get('category', 'practice')
-    return redirect(f"{GCS_BUCKET_URL}/images/{category}/{level}/{filename}")
+    return redirect(gcs_service.practice_image_url(category, level, filename))
 
 @app.route('/practice_audio/<int:number>/<path:filename>')
 def serve_practice_audio(number, filename):
     category = request.args.get('category', 'practice')
-    return redirect(f"{GCS_BUCKET_URL}/question_bank/{category}/{category}-{number}/{filename}")
+    return redirect(gcs_service.practice_audio_url(category, number, filename))
 
 @app.route('/audio/<path:filename>')
 def serve_audio(filename):
-    return redirect(f"{GCS_BUCKET_URL}/vocab_audio/{filename}")
+    return redirect(gcs_service.vocab_audio_url(filename))
 
 @app.route('/lesson_audio/<path:filename>')
 def serve_lesson_audio(filename):
-    return redirect(f"{GCS_BUCKET_URL}/lesson_audio/{filename}")
+    return redirect(gcs_service.lesson_audio_url(filename))
 
 @app.route('/lesson-image/<hsk>/<filename>')
 def serve_lesson_image(hsk, filename):
-    # Convert formats like 'h1-lesson-2.png' to 'H1-lesson 2.png'
-    formatted_filename = filename.lower().replace('-lesson-', '-lesson ')
-    if formatted_filename.startswith(hsk.lower()):
-        formatted_filename = hsk.upper() + formatted_filename[len(hsk):]
-    return redirect(f"{GCS_BUCKET_URL}/lesson_images/{hsk.upper()}/{formatted_filename}")
+    return redirect(gcs_service.lesson_image_url(hsk, filename))
 
 @app.route('/lesson-cover/<code>')
 def serve_lesson_cover(code):
     # Cover image for a topic "book" lesson, e.g. /lesson-cover/AML -> lesson_cover/AML.png
-    return redirect(f"{GCS_BUCKET_URL}/lesson_cover/{code.upper()}.png")
+    return redirect(gcs_service.lesson_cover_url(code))
 
 if __name__ == '__main__':
     debug_mode = os.getenv('FLASK_DEBUG', '').lower() in ('1', 'true', 'yes', 'on')
