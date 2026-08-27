@@ -48,6 +48,8 @@ def get_current_lang():
     return session.get('ui_language', DEFAULT_LANGUAGE)
 
 
+# Template helper for Jinja pages only; will be removed once the frontend fully
+# migrates to Next.js and UI strings are fetched via GET /api/i18n/translations instead.
 def t(key, **vars):
     text = translate(key, get_current_lang())
     for name, value in vars.items():

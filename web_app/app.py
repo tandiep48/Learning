@@ -34,6 +34,7 @@ from routes.passage_vocab import passage_vocab_crud_bp
 from routes.passage_line import passage_line_crud_bp
 from routes.question import question_crud_bp
 from routes.translation import translation_bp
+from routes.i18n import i18n_bp
 from routes.book import book_crud_bp
 from routes.chinese_stroke_info import chinese_stroke_info_bp
 from routes.grammar_rule import grammar_rule_crud_bp
@@ -73,6 +74,7 @@ app.register_blueprint(passage_line_crud_bp)
 app.register_blueprint(user_crud_bp)
 app.register_blueprint(question_crud_bp)
 app.register_blueprint(translation_bp)
+app.register_blueprint(i18n_bp)
 app.register_blueprint(book_crud_bp)
 app.register_blueprint(chinese_stroke_info_bp)
 app.register_blueprint(grammar_rule_crud_bp)
@@ -98,6 +100,8 @@ def inject_avatar_helpers():
 
     return {"avatar_url": avatar_url, "hsk_image_url": hsk_image_url}
 
+# Jinja-only i18n wiring. Superseded by GET /api/i18n/translations (routes/i18n/i18n_routes.py)
+# for the Next.js frontend; remove this context processor once Jinja templates are gone.
 @app.context_processor
 def inject_i18n_helpers():
     lang = get_current_lang()
