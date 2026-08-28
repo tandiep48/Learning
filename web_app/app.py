@@ -49,7 +49,12 @@ load_dotenv()
 app = Flask(__name__)
 app.json.sort_keys = False
 app.secret_key = os.getenv('FLASK_SECRET_KEY', secrets.token_hex(32))
-CORS(app)
+# supports_credentials + an explicit origin (not "*") are required so the
+# Next.js frontend can send/receive the Flask-Login session cookie via
+# fetch(credentials: "include"). localhost:3000 and localhost:5000 are
+# same-site (same scheme+host, different port only), so the cookie's default
+# SameSite=Lax still flows across them without needing SameSite=None.
+CORS(app, supports_credentials=True, origins=[os.getenv('FRONTEND_ORIGIN', 'http://localhost:3000')])
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode=os.getenv("SOCKETIO_ASYNC_MODE", "threading"))
 
 # Setup Flask-Login
