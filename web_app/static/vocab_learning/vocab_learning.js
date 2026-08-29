@@ -172,7 +172,7 @@ function renderWord() {
     // Content
     document.getElementById('vl-hanzi').textContent = word.word;
     document.getElementById('vl-pinyin').textContent = word.pinyin || '';
-    document.getElementById('vl-meaning').textContent = word.meaning_vn || word.meaning_en || '';
+    document.getElementById('vl-meaning').textContent = pickMeaning(word);
 
     // Clear typing input
     const typingInput = document.getElementById('vl-typing-input');
@@ -617,7 +617,7 @@ function renderVocabTable() {
                     <div class="vc-char han-text">${escapeHtml(word)}</div>
                 </div>
                 <div class="vc-pinyin">${escapeHtml(v.pinyin || '')}</div>
-                <div class="vc-meaning">${escapeHtml(v.meaning_vn || v.meaning_en || '')}</div>
+                <div class="vc-meaning">${escapeHtml(pickMeaning(v))}</div>
                 <div class="vc-right">${audioBtn}${strokeBtn}</div>
             </div>`;
     }).join('');

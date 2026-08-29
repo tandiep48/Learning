@@ -310,7 +310,7 @@ function renderVocabTable(rows) {
             <td class="vocab-tools-cell">${writeBtn}${audioCell}</td>
             <td class="vocab-cn clickable-cell ${getVocabCellClasses(word, 'cn')}" onclick="toggleVocabCell(this, 'cn', ${escapeJsArg(word)}, 'trainer-vocab-table')">${escapeHtml(word)}</td>
             <td class="vocab-pinyin clickable-cell ${getVocabCellClasses(word, 'py')}" onclick="toggleVocabCell(this, 'py', ${escapeJsArg(word)}, 'trainer-vocab-table')">${escapeHtml(row.pinyin || '')}</td>
-            <td class="vocab-meaning-vn clickable-cell ${getVocabCellClasses(word, 'vn')}" onclick="toggleVocabCell(this, 'vn', ${escapeJsArg(word)}, 'trainer-vocab-table')">${escapeHtml(row.meaning_vn || row.meaning_en || '')}</td>
+            <td class="vocab-meaning-vn clickable-cell ${getVocabCellClasses(word, 'vn')}" onclick="toggleVocabCell(this, 'vn', ${escapeJsArg(word)}, 'trainer-vocab-table')">${escapeHtml(pickMeaning(row))}</td>
         `;
         tbody.appendChild(tr);
     });

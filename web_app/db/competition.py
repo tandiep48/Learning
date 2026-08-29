@@ -389,7 +389,7 @@ def add_competition_chat_message(room_code, user_id, message):
     finally:
         SessionLocal.remove()
 
-def start_competition_session(room_code, host_user_id):
+def start_competition_session(room_code, host_user_id, lang="vi"):
     room = get_competition_room_by_code(room_code)
     if not room:
         return None, "Room not found"
@@ -408,7 +408,7 @@ def start_competition_session(room_code, host_user_id):
         from service.lesson_task_service import build_lesson_tasks
         activity_type = room.get("activity_type") or "all"
         types = None if activity_type == "all" else activity_type.split(",")
-        lesson_tasks = build_lesson_tasks(room["passage_ids"], mode="master", types=types)
+        lesson_tasks = build_lesson_tasks(room["passage_ids"], mode="master", types=types, lang=lang)
         if not lesson_tasks:
             return None, "The selected lessons have no tasks"
 

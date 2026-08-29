@@ -100,14 +100,22 @@ def count_lesson_lines(passage_ids):
     return len(line_items)
 
 
-def build_lesson_tasks(passage_ids, mode="part", types=None):
+def _pick_translation(translations, lang):
+    """Pick the meaning matching the UI language, falling back to the other language."""
+    vi = translations.get("vi")
+    en = translations.get("en")
+    return (en or vi if lang == "en" else vi or en) or ""
+
+
+def build_lesson_tasks(passage_ids, mode="part", types=None, lang="vi"):
     """Build a shuffled lesson-trainer round for the selected passages.
 
     mode: "part" (one part) or "master" (a whole lesson / multiple parts) — only the
     target task count differs. types: optional subset of the task types to include
-    (listening / meaning / typing / reorder); None or empty means the full mix. Returns
-    a list of task dicts (same shape the lesson trainer client expects). Empty list when
-    the passages have no quizable lines."""
+    (listening / meaning / typing / reorder); None or empty means the full mix. lang:
+    UI language ("en"/"vi") that decides which meaning is shown in meaning/listening
+    tasks. Returns a list of task dicts (same shape the lesson trainer client expects).
+    Empty list when the passages have no quizable lines."""
     passages, line_items = _collect_line_items(passage_ids)
     if not line_items:
         return []
@@ -126,14 +134,14 @@ def build_lesson_tasks(passage_ids, mode="part", types=None):
     # pool to hit the target count and 30/30/30/10 mix.
     pools = {"listening": [], "meaning": [], "typing": [], "reorder": []}
 
-    # Collect all Vietnamese meanings in this session for multiple-choice distractors.
-    all_vn_meanings = [line["translations"]["vi"] for _, _, line in line_items]
+    # Collect all meanings (in the UI language) in this session for MC distractors.
+    all_meanings = [_pick_translation(line["translations"], lang) for _, _, line in line_items]
 
     for line_passage_id, passage, line in line_items:
         line_id = line.get("line_id", 0)
-        correct_meaning = line["translations"]["vi"]
+        correct_meaning = _pick_translation(line["translations"], lang)
 
-        meaning_options = list(set([opt for opt in all_vn_meanings if opt != correct_meaning]))
+        meaning_options = list(set([opt for opt in all_meanings if opt != correct_meaning]))
         distractors = random.sample(meaning_options, min(3, len(meaning_options)))
         m_options = distractors + [correct_meaning]
         random.shuffle(m_options)

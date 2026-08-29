@@ -152,7 +152,8 @@ def register_handlers():
             emit_error("Login required")
             return
         room_code = str((data or {}).get("room_code") or "").strip().upper()
-        state, error = start_competition_session(room_code, current_user.id)
+        host_lang = getattr(current_user, "ui_language", None) or "vi"
+        state, error = start_competition_session(room_code, current_user.id, lang=host_lang)
         if error:
             emit_error(error)
             return

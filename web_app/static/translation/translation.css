@@ -39,7 +39,7 @@
     padding: 16px;
     border: 1px solid var(--border, #e5e5e5);
     border-radius: 12px;
-    background: var(--card-bg, #fff);
+    background: #cbe2d4;
 }
 
 .translation-item-index {
@@ -93,8 +93,8 @@
     font-size: 14px;
     border: 1px solid var(--border, #d0d0d0);
     border-radius: 8px;
-    background: transparent;
-    color: var(--text-muted);
+    background: #00634f;
+    color: #fff;
     cursor: pointer;
 }
 

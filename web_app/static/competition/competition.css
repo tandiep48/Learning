@@ -378,6 +378,15 @@ body {
     width: 100%;
 }
 
+.lt-reorder .lesson-reorder-chip {
+    cursor: grab;
+}
+
+.lt-reorder .lesson-reorder-chip.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+}
+
 .lt-reorder-feedback {
     display: none;
     text-align: center;
