@@ -280,6 +280,20 @@
             if (autoSolved === activity.words.length) setTimeout(advanceActivity, 350);
         }
 
+        // Manual mode: once every word in the group is typed correctly, score the group
+        // and move on automatically so the learner never has to click Check on a perfect
+        // round. Guarded so it only fires once.
+        let autoFinished = false;
+        function maybeAutoFinishManual() {
+            if (autoFinished) return;
+            const allCorrect = [...wrap.querySelectorAll('.bt-type-input')]
+                .every((inp, i) => inp.value.trim() === (activity.words[i].word || ''));
+            if (!allCorrect) return;
+            autoFinished = true;
+            checkTypingGroup(activity, wrap, checkBtn);
+            setTimeout(advanceActivity, 600);
+        }
+
         // Enter on the last input triggers the group check (manual mode only).
         const inputs = wrap.querySelectorAll('.bt-type-input');
         inputs.forEach((input, idx) => {
@@ -306,6 +320,9 @@
                             record(row, 'typing', input.value.trim(), true,
                                 Number(input.dataset.completedAt) - activityStartTime, 0);
                             autoComplete();
+                        } else {
+                            // Manual mode: auto-advance when the whole group is now correct.
+                            maybeAutoFinishManual();
                         }
                     }
                 } else {
@@ -350,7 +367,7 @@
     function typingResultHtml(row, ok) {
         const cls = ok ? 'bt-ok' : 'bt-bad';
         const icon = ok ? 'fa-check' : 'fa-xmark';
-        const meaning = row.meaning_vn || row.meaning_en || '';
+        const meaning = pickMeaning(row);
         return `<span class="${cls}"><i class="fa-solid ${icon}"></i> ${escapeHtml(row.pinyin)} - ${escapeHtml(meaning)}</span>`;
     }
 
@@ -555,7 +572,7 @@
                 item.innerText = row.word;
                 item.style.fontSize = '30px';
             } else { // meaning
-                const meaning = row.meaning_vn || row.meaning_en || '';
+                const meaning = pickMeaning(row);
                 item.dataset.answer = meaning;
                 item.innerText = meaning;
             }

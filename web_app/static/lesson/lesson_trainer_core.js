@@ -287,13 +287,45 @@
             chip.className = 'chip lesson-reorder-chip';
             chip.innerText = token;
             chip.dataset.token = token;
+            chip.draggable = true;
+
+            // Click still moves a chip between the source row and the answer row.
             chip.addEventListener('click', () => {
-                if (answered) return;
+                if (answered || chip.dataset.dragged === '1') return;
                 if (chip.parentElement === sourceRow) targetRow.appendChild(chip);
                 else sourceRow.appendChild(chip);
                 syncAndCheck();
             });
+
+            // Drag lets the learner reposition a chip (or drop one in from the source
+            // row) without having to de-select and re-select.
+            chip.addEventListener('dragstart', () => {
+                if (answered) return;
+                chip.classList.add('dragging');
+            });
+            chip.addEventListener('dragend', () => {
+                chip.classList.remove('dragging');
+                syncAndCheck();
+                // Suppress the click that fires right after a drag so it doesn't move the chip.
+                chip.dataset.dragged = '1';
+                setTimeout(() => { chip.dataset.dragged = ''; }, 0);
+            });
+
             sourceRow.appendChild(chip);
+        });
+
+        // While dragging over a row, slot the dragged chip in front of whichever chip
+        // the pointer is left of (or at the end of the row).
+        [sourceRow, targetRow].forEach(container => {
+            container.ondragover = (e) => {
+                if (answered) return;
+                e.preventDefault();
+                const dragging = document.querySelector('.lesson-reorder-chip.dragging');
+                if (!dragging) return;
+                const after = getReorderDragAfter(container, e.clientX);
+                if (after == null) container.appendChild(dragging);
+                else container.insertBefore(dragging, after);
+            };
         });
 
         wrap.appendChild(targetRow);
@@ -363,25 +395,31 @@
         if (window.HanText && area) window.HanText.apply(area, task?.hsk_level);
     }
 
-    // Mirror of the lesson trainer's answer normalization so matches agree with the server.
-    const ANSWER_PUNCT_MAP = {
-        // '、' (ideographic comma) is dropped entirely — no easy keyboard input, so
-        // learners are never required to type it.
-        '、': '', '。': '.', '｡': '.', '【': '[', '】': ']', '《': '<', '》': '>',
-        '「': '"', '」': '"', '『': '"', '』': '"', '“': '"', '”': '"', '‘': "'", '’': "'",
-        '～': '~', '—': '-', '–': '-', '‧': '', '·': '', '・': ''
-    };
-
+    // Mirror of the lesson trainer's answer normalization so matches agree with the
+    // server. Punctuation is optional when typing, so we strip all CJK and ASCII
+    // punctuation (after NFKC folds full-width forms onto ASCII) from both sides.
     function normalizeAnswer(value) {
         if (value == null) return '';
         return String(value)
             .normalize('NFKC')
-            .replace(/[、。｡【】《》「」『』“”‘’～—–‧·・]/g, ch => ANSWER_PUNCT_MAP[ch] ?? ch)
+            .replace(/[、。｡，？！；：【】《》「」『』“”‘’～—–…‧·・.,?!;:'"()\[\]<>~\-]/g, '')
             .replace(/[\s​‌‍﻿]/g, '');
     }
 
     function answersMatch(a, b) {
         return normalizeAnswer(a) === normalizeAnswer(b);
+    }
+
+    // Determine which chip the dragged chip should be inserted before, based on cursor X.
+    function getReorderDragAfter(container, x) {
+        const chips = [...container.querySelectorAll('.lesson-reorder-chip:not(.dragging)')];
+        let closest = { offset: -Infinity, element: null };
+        chips.forEach(chip => {
+            const box = chip.getBoundingClientRect();
+            const offset = x - box.left - box.width / 2;
+            if (offset < 0 && offset > closest.offset) closest = { offset, element: chip };
+        });
+        return closest.element;
     }
 
     function reorderMatches(userTokens, correctTokens) {

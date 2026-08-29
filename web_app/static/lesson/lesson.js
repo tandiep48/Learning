@@ -569,25 +569,15 @@ function showTypingPinyin(task) {
 }
 
 // Reorder/typing answers can mix full-width & half-width punctuation, ideographic
-// punctuation (。、《》「」), and stray whitespace between tokens. Two answers that
-// look identical can therefore differ byte-for-byte, so we normalize both sides
-// before comparing: unify width via NFKC, fold CJK punctuation onto its ASCII
-// equivalent, then drop every space / zero-width character.
-const ANSWER_PUNCT_MAP = {
-    // '、' (ideographic comma) is dropped entirely — it has no easy keyboard input, so
-    // learners are never required to type it.
-    '、': '', '。': '.', '｡': '.',
-    '【': '[', '】': ']', '《': '<', '》': '>',
-    '「': '"', '」': '"', '『': '"', '』': '"',
-    '“': '"', '”': '"', '‘': "'", '’': "'",
-    '～': '~', '—': '-', '–': '-', '‧': '', '·': '', '・': ''
-};
-
+// punctuation (。、《》「」), and stray whitespace between tokens. Punctuation is optional
+// when typing — none of these marks are easy to key in — so we normalize both sides the
+// same way: unify width via NFKC (folds full-width forms onto ASCII), strip all CJK and
+// ASCII punctuation, then drop every space / zero-width character.
 function normalizeAnswer(value) {
     if (value == null) return '';
     return String(value)
         .normalize('NFKC')
-        .replace(/[、。｡【】《》「」『』“”‘’～—–‧·・]/g, ch => ANSWER_PUNCT_MAP[ch] ?? ch)
+        .replace(/[、。｡，？！；：【】《》「」『』“”‘’～—–…‧·・.,?!;:'"()\[\]<>~\-]/g, '')
         .replace(/[\s\u200b\u200c\u200d\ufeff]/g, '');
 }
 

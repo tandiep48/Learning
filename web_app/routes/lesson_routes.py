@@ -68,22 +68,20 @@ _lesson_logger = _build_lesson_logger()
 LESSON_PASS_THRESHOLD = 0.70
 
 
-# Mirror of the client's ANSWER_PUNCT_MAP so normalized_equal matches answersMatch.
-_ANSWER_PUNCT_MAP = {
-    '、': ',', '。': '.', '｡': '.', '【': '[', '】': ']', '《': '<', '》': '>',
-    '「': '"', '」': '"', '『': '"', '』': '"', '“': '"', '”': '"', '‘': "'", '’': "'",
-    '～': '~', '—': '-', '–': '-', '‧': '', '·': '', '・': '',
-}
+# Mirror of the client's normalizeAnswer so normalized_equal matches answersMatch.
+# Punctuation is optional when typing, so all CJK and ASCII punctuation is stripped.
+_PUNCT_RE = re.compile(r"[、。｡，？！；：【】《》「」『』“”‘’～—–…‧·・.,?!;:'\"()\[\]<>~-]")
 _WS_RE = re.compile(r"[\s​‌‍﻿]")
 
 
 def _normalize_answer(value):
-    """Mirror the client's normalizeAnswer: NFKC, fold CJK punctuation to ASCII, then
-    drop whitespace/zero-width chars. Lets normalized_equal cross-check is_correct."""
+    """Mirror the client's normalizeAnswer: NFKC (folds full-width punctuation onto
+    ASCII), strip all CJK/ASCII punctuation, then drop whitespace/zero-width chars.
+    Lets normalized_equal cross-check is_correct."""
     if value is None:
         return ""
     text = unicodedata.normalize("NFKC", str(value))
-    text = "".join(_ANSWER_PUNCT_MAP.get(ch, ch) for ch in text)
+    text = _PUNCT_RE.sub("", text)
     return _WS_RE.sub("", text)
 
 
@@ -261,7 +259,7 @@ def start_session():
         return jsonify({"error": "passage_id or passage_ids is required"}), 400
 
     mode = "master" if data.get("mode") == "master" else "part"
-    tasks = build_lesson_tasks(passage_ids, mode)
+    tasks = build_lesson_tasks(passage_ids, mode, lang=get_current_lang())
     if not tasks:
         return jsonify({"error": "Passage not found"}), 404
 

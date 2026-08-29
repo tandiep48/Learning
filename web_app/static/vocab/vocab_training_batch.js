@@ -233,7 +233,7 @@ function showCompleteScreen() {
             tr.innerHTML = `
                 <td class="complete-word">${escapeHtml(row.word)}</td>
                 <td>${escapeHtml(row.pinyin || '')}</td>
-                <td>${escapeHtml(row.meaning_vn || row.meaning_en || '')}</td>
+                <td>${escapeHtml(pickMeaning(row))}</td>
             `;
             tableBody.appendChild(tr);
         });

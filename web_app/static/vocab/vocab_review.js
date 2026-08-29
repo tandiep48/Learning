@@ -74,7 +74,7 @@ function buildRow(row) {
     item.className = 'review-item';
     item.dataset.word = row.word;
 
-    const meaning = row.meaning_vn || row.meaning_en || '';
+    const meaning = pickMeaning(row);
     const audioBtn = row.audio_key
         ? `<button type="button" class="review-audio-btn" data-audio="${escapeAttr(row.audio_key)}" title="${escapeAttr(t('lesson.play_audio'))}" aria-label="${escapeAttr(t('lesson.play_audio'))}"><i class="fa-solid fa-volume-high" aria-hidden="true"></i></button>`
         : '';

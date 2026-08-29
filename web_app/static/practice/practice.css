@@ -491,7 +491,8 @@ body {
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    background: rgba(87, 104, 86,0.04);
+    background: #cbe2d4;
+    color: #000;
     border: 1px solid rgba(87, 104, 86,0.09);
     border-radius: 12px;
     padding: 12px 14px;
@@ -553,7 +554,8 @@ body {
 
 /* ── Type 5 Reading Match Group ── */
 .t5r-options-box {
-    background: rgba(87, 104, 86,0.05);
+    background: #cbe2d4;
+    color: #000;
     border: 1px solid rgba(87, 104, 86,0.12);
     border-radius: 14px;
     padding: 16px 18px;
@@ -567,7 +569,7 @@ body {
     align-items: flex-start;
         font-size: 0.95rem;
     line-height: 1.6;
-    color: var(--text-main);
+    color: #000;
 }
 .t5r-opt-key {
     font-weight: 800;
@@ -584,7 +586,7 @@ body {
 }
 .t5r-sentence {
         font-size: 1rem;
-    color: var(--text-main);
+    color: #000;
     line-height: 1.6;
 }
 

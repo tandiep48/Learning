@@ -23,5 +23,23 @@
         return str;
     }
 
+    // Pick the Vietnamese or English value matching the active UI language, falling back
+    // to the other language when the preferred one is empty.
+    function pickLang(vi, en) {
+        const useVi = (window.currentLang || 'en') === 'vi';
+        return (useVi ? (vi || en) : (en || vi)) || '';
+    }
+
+    // Pick the meaning column matching the active UI language. Accepts either explicit
+    // (vn, en) strings or a row object carrying meaning_vn / meaning_en.
+    function pickMeaning(rowOrVn, en) {
+        if (rowOrVn && typeof rowOrVn === 'object') {
+            return pickLang(rowOrVn.meaning_vn, rowOrVn.meaning_en);
+        }
+        return pickLang(rowOrVn, en);
+    }
+
     window.t = t;
+    window.pickLang = pickLang;
+    window.pickMeaning = pickMeaning;
 })();
