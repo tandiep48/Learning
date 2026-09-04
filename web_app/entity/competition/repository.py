@@ -35,17 +35,33 @@ class CompetitionRepository:
     # ------------------------------------------------------------------
 
     def insert_room(self, room_code, host_user_id, level, passage_ids, word_count,
-                     max_users, section_timeout_minutes):
+                     max_users, section_timeout_minutes,
+                     category="vocab", activity_type="all"):
         return self.session.execute(
             pg_insert(CompetitionRoom)
             .values(
-                room_code=room_code, host_user_id=host_user_id, category="vocab",
+                room_code=room_code, host_user_id=host_user_id, category=category,
+                activity_type=activity_type,
                 level=level, passage_ids=list(passage_ids), word_count=word_count,
                 max_users=max_users, section_timeout_minutes=section_timeout_minutes,
                 status="waiting",
             )
             .returning(CompetitionRoom.id)
         ).scalar_one()
+
+    def update_room_settings(self, room_id, category, activity_type, level, passage_ids,
+                              word_count, max_users, section_timeout_minutes):
+        self.session.execute(
+            update(CompetitionRoom)
+            .where(CompetitionRoom.id == room_id)
+            .values(
+                category=category, activity_type=activity_type,
+                level=level, passage_ids=list(passage_ids),
+                word_count=word_count, max_users=max_users,
+                section_timeout_minutes=section_timeout_minutes,
+                updated_at=func.now(),
+            )
+        )
 
     def upsert_room_member(self, room_id, user_id, role, status="online"):
         self.session.execute(
@@ -66,6 +82,7 @@ class CompetitionRepository:
             select(
                 r.id, r.room_code, r.host_user_id, r.level, r.passage_ids, r.word_count,
                 r.max_users, r.section_timeout_minutes, r.status, r.created_at, r.updated_at,
+                r.category, r.activity_type,
             )
             .where(r.room_code == str(room_code).upper())
         ).first()
@@ -182,14 +199,14 @@ class CompetitionRepository:
             .limit(1)
         ).first()
 
-    def insert_session(self, room_id, minutes):
+    def insert_session(self, room_id, minutes, category="vocab", lesson_tasks=None):
         return self.session.execute(
             pg_insert(CompetitionSession)
             .values(
-                room_id=room_id, status="running", current_section="vocab",
+                room_id=room_id, status="running", current_section=category,
                 section_started_at=func.now(),
                 section_ends_at=func.now() + literal_column("interval '1 minute'") * minutes,
-                started_at=func.now(),
+                started_at=func.now(), lesson_tasks=lesson_tasks,
             )
             .returning(CompetitionSession.id)
         ).scalar_one()
@@ -210,12 +227,14 @@ class CompetitionRepository:
 
     def get_session_row(self, session_id):
         s = CompetitionSession
+        r = CompetitionRoom
         return self.session.execute(
             select(
-                s.id, s.room_id, CompetitionRoom.room_code, s.status, s.current_section,
+                s.id, s.room_id, r.room_code, s.status, s.current_section,
                 s.section_started_at, s.section_ends_at, s.started_at, s.finished_at,
+                r.category, r.activity_type, s.lesson_tasks,
             )
-            .select_from(s).join(CompetitionRoom, CompetitionRoom.id == s.room_id)
+            .select_from(s).join(r, r.id == s.room_id)
             .where(s.id == session_id)
         ).first()
 

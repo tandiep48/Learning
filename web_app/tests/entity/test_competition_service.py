@@ -17,7 +17,7 @@ def _mock_session():
 
 
 ROOM_ROW = (1, "ABC123", 42, 1, ["H1_1_1"], 10, 8, 15, "waiting",
-            datetime(2026, 8, 1), datetime(2026, 8, 1))
+            datetime(2026, 8, 1), datetime(2026, 8, 1), "vocab", "all")
 
 
 # ---------------------------------------------------------------------------
@@ -331,11 +331,11 @@ def test_start_competition_session_already_running():
     assert (result, error) == (None, "Room is already running")
 
 
-def test_start_competition_session_no_vocab():
+def test_start_competition_session_no_lessons():
     room = {"id": 1, "host_user_id": 42, "status": "waiting", "passage_ids": []}
     with patch.object(service, "get_competition_room_by_code", return_value=room):
         result, error = service.start_competition_session("ABC123", 42)
-    assert (result, error) == (None, "No vocabulary selected")
+    assert (result, error) == (None, "No lessons selected")
 
 
 def test_start_competition_session_success():
@@ -354,7 +354,7 @@ def test_start_competition_session_success():
         result, error = service.start_competition_session("ABC123", 42)
 
     repo.update_room_status.assert_called_once_with(1, "running")
-    repo.insert_session.assert_called_once_with(1, 15)
+    repo.insert_session.assert_called_once_with(1, 15, category="vocab", lesson_tasks=None)
     repo.seed_scores_for_session.assert_called_once_with(7, 1)
     session.commit.assert_called_once()
     get_state.assert_called_once_with(7)
@@ -441,8 +441,9 @@ def test_get_competition_session_state_shapes_row_and_attaches_scores():
     session, session_local = _mock_session()
     repo = MagicMock()
     repo.get_session_row.return_value = (
-        7, 1, "ABC123", "running", "vocab",
+        7, 1, "ABC123", "running", "lesson",
         datetime(2026, 8, 1), datetime(2026, 8, 1), datetime(2026, 8, 1), None,
+        "lesson", "typing,reorder", [{"item_key": "H1_1_1:1"}],
     )
 
     with patch.object(service, "SessionLocal", session_local), \
@@ -451,6 +452,9 @@ def test_get_competition_session_state_shapes_row_and_attaches_scores():
         state = service.get_competition_session_state(7)
 
     assert state["room_code"] == "ABC123"
+    assert state["category"] == "lesson"
+    assert state["activity_type"] == "typing,reorder"
+    assert state["lesson_tasks"] == [{"item_key": "H1_1_1:1"}]
     assert state["scores"] == [{"user_id": 42}]
     get_scores.assert_called_once_with(7)
 

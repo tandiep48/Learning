@@ -9,11 +9,13 @@ let isLessonPartFlow = false;
 let answerSubmitted = false;
 let skipButtonMode = 'skip';
 let typingTargetText = '';
+let selectedLessonTypes = null;   // skills the learner chose in the pre-training picker
 
 // Fetch passages on load
 window.onload = async () => {
     const params = new URLSearchParams(window.location.search);
     isLessonPartFlow = params.get('flow') === 'lesson-part';
+    selectedLessonTypes = readSelectedLessonTypes();
 
     Picker.init((passage) => {
         startSession(passage.passage_id);
@@ -31,6 +33,20 @@ window.onload = async () => {
         startSession(autoPassage);
     }
 };
+
+// Skills chosen in the train-type picker (lesson task types: 'listening' | 'meaning' |
+// 'typing' | 'reorder'). Absent/empty means train every skill.
+function readSelectedLessonTypes() {
+    const raw = sessionStorage.getItem('lessonTrainerActivityTypes');
+    if (!raw) return null;
+    sessionStorage.removeItem('lessonTrainerActivityTypes');
+    try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) && parsed.length ? parsed : null;
+    } catch (e) {
+        return null;
+    }
+}
 
 function readLessonWideLessonTrainer() {
     const raw = sessionStorage.getItem('lessonWideLessonTrainer');
@@ -114,6 +130,19 @@ async function startSession(passage_id, passage_ids = null) {
         }
 
         sessionData = data;
+
+        // Restrict the run to the skills the learner picked. If a part has no tasks of the
+        // chosen type(s), there is nothing to train — tell them and return.
+        if (selectedLessonTypes && Array.isArray(sessionData.tasks)) {
+            const allowed = new Set(selectedLessonTypes);
+            sessionData.tasks = sessionData.tasks.filter(task => allowed.has(task.type));
+            if (!sessionData.tasks.length) {
+                alert(t('lesson.no_tasks_for_types'));
+                goHome();
+                return;
+            }
+        }
+
         currentTaskIndex = 0;
         missedTasks = [];
         answerSubmitted = false;
@@ -164,7 +193,7 @@ function loadTask() {
         const activeTask = sessionData?.tasks?.[currentTaskIndex];
         if (!activeTask || activeTask.type !== 'typing' || answerSubmitted) return;
         updateTypingHighlight(typingInput.value);
-        if (typingInput.value.trim() === activeTask.correct_answer) {
+        if (answersMatch(typingInput.value, activeTask.correct_answer)) {
             submitTyping();
         }
     };
@@ -547,14 +576,17 @@ function updateTypingHighlight(value) {
     const target = [...typingTargetText];
     const typed = [...value];
     const spans = document.getElementById('word-display').children;
+    let ti = 0; // pointer into the typed text; '、' positions consume no input
     for (let i = 0; i < spans.length; i++) {
         spans[i].classList.remove('char-correct', 'char-wrong');
+        if (target[i] === '、') continue;
         // Only judge a position once a Chinese character sits there — while typing
         // pinyin/latin (IME composition) the field holds non-Chinese text that
         // should not glow red.
-        if (i < typed.length && /[一-鿿]/.test(typed[i])) {
-            spans[i].classList.add(typed[i] === target[i] ? 'char-correct' : 'char-wrong');
+        if (ti < typed.length && /[一-鿿]/.test(typed[ti])) {
+            spans[i].classList.add(typed[ti] === target[i] ? 'char-correct' : 'char-wrong');
         }
+        ti++;
     }
 }
 
@@ -566,23 +598,15 @@ function showTypingPinyin(task) {
 }
 
 // Reorder/typing answers can mix full-width & half-width punctuation, ideographic
-// punctuation (。、《》「」), and stray whitespace between tokens. Two answers that
-// look identical can therefore differ byte-for-byte, so we normalize both sides
-// before comparing: unify width via NFKC, fold CJK punctuation onto its ASCII
-// equivalent, then drop every space / zero-width character.
-const ANSWER_PUNCT_MAP = {
-    '、': ',', '。': '.', '｡': '.',
-    '【': '[', '】': ']', '《': '<', '》': '>',
-    '「': '"', '」': '"', '『': '"', '』': '"',
-    '“': '"', '”': '"', '‘': "'", '’': "'",
-    '～': '~', '—': '-', '–': '-', '‧': '', '·': '', '・': ''
-};
-
+// punctuation (。、《》「」), and stray whitespace between tokens. Punctuation is optional
+// when typing — none of these marks are easy to key in — so we normalize both sides the
+// same way: unify width via NFKC (folds full-width forms onto ASCII), strip all CJK and
+// ASCII punctuation, then drop every space / zero-width character.
 function normalizeAnswer(value) {
     if (value == null) return '';
     return String(value)
         .normalize('NFKC')
-        .replace(/[、。｡【】《》「」『』“”‘’～—–‧·・]/g, ch => ANSWER_PUNCT_MAP[ch] ?? ch)
+        .replace(/[、。｡，？！；：【】《》「」『』“”‘’～—–…‧·・.,?!;:'"()\[\]<>~\-]/g, '')
         .replace(/[\s\u200b\u200c\u200d\ufeff]/g, '');
 }
 

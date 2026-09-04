@@ -74,6 +74,21 @@ const MultiSelect = {
         return reg ? Array.from(reg.selected) : [];
     },
 
+    // Pre-check the given option values (used to pre-fill the dropdown when editing an
+    // existing selection). Only values present in the current options are applied.
+    // Does not fire onChange — the caller controls the sequencing.
+    setValues(rootId, values) {
+        const reg = this.registry[rootId];
+        if (!reg) return;
+        const wanted = new Set(values || []);
+        reg.selected = new Set(reg.options.filter(o => wanted.has(o.value)).map(o => o.value));
+        const panel = document.getElementById(`${rootId}-panel`);
+        panel?.querySelectorAll('.ms-option:not(.ms-option-all) input[type="checkbox"]')
+            .forEach(cb => { cb.checked = reg.selected.has(cb.value); });
+        this._syncSelectAll(rootId);
+        this._renderLabel(rootId);
+    },
+
     toggle(rootId) {
         const root = document.getElementById(rootId);
         if (!root) return;

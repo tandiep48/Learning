@@ -127,7 +127,7 @@ function renderPassage() {
             <div class="reading-text">
                 <div class="hanzi-text">${line.content}</div>
                 <div class="${pinyinClass}">${line.pinyin || ''}</div>
-                <div class="${meaningClass}">${line.translations.vi || line.translations.en || ''}</div>
+                <div class="${meaningClass}">${pickLang(line.translations.vi, line.translations.en)}</div>
             </div>`;
 
         lineDiv.innerHTML = textHTML + audioHTML;
@@ -346,7 +346,7 @@ function renderVocabTable(vocab) {
             <td class="vocab-tools-cell">${audioCell}</td>
             <td class="vocab-cn clickable-cell" onclick="this.classList.toggle('hidden-cell')">${escapeHtml(w.word || w.cn || '')}</td>
             <td class="vocab-pinyin clickable-cell" onclick="this.classList.toggle('hidden-cell')">${escapeHtml(w.pinyin || '')}</td>
-            <td class="vocab-meaning-vn clickable-cell" onclick="this.classList.toggle('hidden-cell')">${escapeHtml(w.meaning_vn || w.meaning_en || '')}</td>`;
+            <td class="vocab-meaning-vn clickable-cell" onclick="this.classList.toggle('hidden-cell')">${escapeHtml(pickMeaning(w))}</td>`;
         tbody.appendChild(tr);
     });
 
@@ -515,7 +515,7 @@ function renderLessonSummary() {
             <div class="lesson-preview-text">
                 <div class="hanzi-text">${renderTokens(line)}</div>
                 <div class="pinyin-text lesson-summary-pinyin ${lessonSummaryPinyinVisible ? 'show' : ''}">${escapeHtml(line.pinyin || '')}</div>
-                <div class="meaning-text lesson-summary-meaning ${lessonSummaryMeaningVisible ? 'show' : ''}">${escapeHtml(line.translations?.vi || line.translations?.en || '')}</div>
+                <div class="meaning-text lesson-summary-meaning ${lessonSummaryMeaningVisible ? 'show' : ''}">${escapeHtml(pickLang(line.translations?.vi, line.translations?.en))}</div>
             </div>
         </div>`;
     }).join('');
@@ -868,7 +868,7 @@ function renderLessonCard() {
     document.getElementById('lesson-card-progress-fill').style.width = `${((currentLessonLineIndex + 1) / lines.length) * 100}%`;
     document.getElementById('lesson-card-hanzi').textContent = line.content || '';
     document.getElementById('lesson-card-pinyin').textContent = line.pinyin || '';
-    document.getElementById('lesson-card-meaning').textContent = line.translations?.vi || line.translations?.en || '';
+    document.getElementById('lesson-card-meaning').textContent = pickLang(line.translations?.vi, line.translations?.en);
 
     const input = document.getElementById('lesson-card-typing-input');
     if (input) {
@@ -1096,9 +1096,15 @@ function goToLessonTrainer() {
         startNumberTrainer();
         return;
     }
-    const params = new URLSearchParams({ passage_id: currentPassage.passage_id });
-    if (isLessonPartFlow) params.set('flow', 'lesson-part');
-    window.location.href = `/lesson?${params.toString()}`;
+    TrainTypePicker.open({
+        engine: 'lesson',
+        onStart: (types) => {
+            sessionStorage.setItem('lessonTrainerActivityTypes', JSON.stringify(types));
+            const params = new URLSearchParams({ passage_id: currentPassage.passage_id });
+            if (isLessonPartFlow) params.set('flow', 'lesson-part');
+            window.location.href = `/lesson?${params.toString()}`;
+        }
+    });
 }
 
 function ensureNumberPracticeRows() {

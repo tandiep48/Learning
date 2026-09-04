@@ -41,3 +41,34 @@ def test_get_user_saved_vocab_shapes_rows_with_empty_string_fallback():
     }]
     repo.list_vocab.assert_called_once_with(1, "H1_1_1")
     session_local.remove.assert_called_once()
+
+
+def test_get_user_saved_vocab_by_book_shapes_rows_with_empty_string_fallback():
+    session, session_local = _mock_session()
+    repo = MagicMock()
+    repo.list_vocab_by_book.return_value = [
+        FakeVocab(cn="谢谢", pinyin="xièxie", meaning_en="thanks", hsk_level="1"),
+    ]
+
+    with patch.object(service, "SessionLocal", session_local), \
+         patch.object(service, "UserSavedWordRepository", return_value=repo):
+        result = service.get_user_saved_vocab_by_book(7, "HSK1")
+
+    assert result == [{
+        "cn": "谢谢", "pinyin": "xièxie", "meaning_vn": "", "meaning_en": "thanks",
+        "audio_key": "", "hsk_level": "1",
+    }]
+    repo.list_vocab_by_book.assert_called_once_with(7, "HSK1")
+    session_local.remove.assert_called_once()
+
+
+def test_get_user_saved_vocab_by_book_returns_empty_when_no_rows():
+    session, session_local = _mock_session()
+    repo = MagicMock()
+    repo.list_vocab_by_book.return_value = []
+
+    with patch.object(service, "SessionLocal", session_local), \
+         patch.object(service, "UserSavedWordRepository", return_value=repo):
+        assert service.get_user_saved_vocab_by_book(7, "HSK1") == []
+
+    session_local.remove.assert_called_once()

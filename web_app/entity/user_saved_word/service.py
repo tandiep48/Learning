@@ -66,6 +66,26 @@ def get_user_saved_vocab(user_id: int, passage_id: str) -> list[dict]:
         SessionLocal.remove()
 
 
+def get_user_saved_vocab_by_book(user_id: int, book_code: str) -> list[dict]:
+    """Vocabulary rows a user saved anywhere in one book, shaped for the lesson player."""
+    session = SessionLocal()
+    try:
+        items = UserSavedWordRepository(session).list_vocab_by_book(user_id, book_code)
+        return [
+            {
+                "cn": v.cn,
+                "pinyin": v.pinyin or "",
+                "meaning_vn": v.meaning_vn or "",
+                "meaning_en": v.meaning_en or "",
+                "audio_key": v.audio_key or "",
+                "hsk_level": v.hsk_level or "",
+            }
+            for v in items
+        ]
+    finally:
+        SessionLocal.remove()
+
+
 def add_saved_word(user_id: int, passage_id: str, cn: str) -> dict:
     """
     Save a known vocabulary word to the user's personal list for a passage.

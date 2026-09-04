@@ -32,12 +32,15 @@ from entity.vocabulary.service import (
 )
 from entity.passage_vocabulary.service import get_passage_vocab
 from entity.passage.service import get_passage_book_code
+from entity.progress.service import get_saved_books
 from number_part import is_number_part, number_vocab_rows
+from service.i18n_service import get_current_lang
 from entity.user_saved_word.service import (
     list_saved_vocab,
     add_saved_word,
     remove_saved_word,
     get_user_saved_vocab,
+    get_user_saved_vocab_by_book,
     UserSavedWordServiceError,
 )
 
@@ -363,6 +366,19 @@ def get_vocab_table():
             level_df = full_lesson_records[full_lesson_records["level"] == hsk_level].reset_index(drop=True)
             rows = [normalize_vocab_row(row) for row in level_df.to_dict("records")]
 
+    elif table_mode == "book":
+        book_code = (request.args.get("book_code") or "").strip()
+        if not book_code:
+            return jsonify({
+                "rows": [],
+                "page": 1,
+                "page_size": page_size,
+                "total": 0,
+                "total_pages": 1,
+                "passage_id": None
+            })
+        rows = [normalize_vocab_row(row) for row in get_user_saved_vocab_by_book(current_user.id, book_code)]
+
     elif table_mode in ("unlearn", "unsure"):
         if table_mode == "unlearn":
             words = get_unlearned_words_from_db(current_user.id)
@@ -384,6 +400,13 @@ def get_vocab_table():
         "total_pages": total_pages,
         "passage_id": passage_id
     })
+
+@vocab_bp.route('/saved-books', methods=['GET'])
+@login_required
+def list_saved_books():
+    """Books the current user has saved words in — populates the vocab "Book" mode picker."""
+    return jsonify({"books": get_saved_books(current_user.id, get_current_lang())})
+
 
 @vocab_bp.route('/saved', methods=['GET'])
 @login_required

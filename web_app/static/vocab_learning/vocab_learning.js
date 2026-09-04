@@ -172,7 +172,7 @@ function renderWord() {
     // Content
     document.getElementById('vl-hanzi').textContent = word.word;
     document.getElementById('vl-pinyin').textContent = word.pinyin || '';
-    document.getElementById('vl-meaning').textContent = word.meaning_vn || word.meaning_en || '';
+    document.getElementById('vl-meaning').textContent = pickMeaning(word);
 
     // Clear typing input
     const typingInput = document.getElementById('vl-typing-input');
@@ -514,18 +514,24 @@ function showVocabSummary() {
 
 function goToTrainer() {
     if (!lessonMeta) return;
-    if (lessonMeta.source === 'selection') {
-        sessionStorage.setItem('selectedVocabTrainerWords', JSON.stringify(lessonMeta.selected_words || []));
-        window.location.href = '/vocab-training-batch';
-        return;
-    }
-    // Deep-link to vocab trainer with URL params so it auto-starts
-    const params = new URLSearchParams({
-        mode: '6',
-        passage_id: lessonMeta.passage_id
+    TrainTypePicker.open({
+        engine: 'vocab',
+        onStart: (types) => {
+            sessionStorage.setItem('vocabTrainerActivityTypes', JSON.stringify(types));
+            if (lessonMeta.source === 'selection') {
+                sessionStorage.setItem('selectedVocabTrainerWords', JSON.stringify(lessonMeta.selected_words || []));
+                window.location.href = '/vocab-training-batch';
+                return;
+            }
+            // Deep-link to vocab trainer with URL params so it auto-starts
+            const params = new URLSearchParams({
+                mode: '6',
+                passage_id: lessonMeta.passage_id
+            });
+            if (isLessonPartFlow) params.set('flow', 'lesson-part');
+            window.location.href = `/vocab-training-batch?${params.toString()}`;
+        }
     });
-    if (isLessonPartFlow) params.set('flow', 'lesson-part');
-    window.location.href = `/vocab-training-batch?${params.toString()}`;
 }
 
 function goToLessonSummary() {
@@ -617,7 +623,7 @@ function renderVocabTable() {
                     <div class="vc-char han-text">${escapeHtml(word)}</div>
                 </div>
                 <div class="vc-pinyin">${escapeHtml(v.pinyin || '')}</div>
-                <div class="vc-meaning">${escapeHtml(v.meaning_vn || v.meaning_en || '')}</div>
+                <div class="vc-meaning">${escapeHtml(pickMeaning(v))}</div>
                 <div class="vc-right">${audioBtn}${strokeBtn}</div>
             </div>`;
     }).join('');

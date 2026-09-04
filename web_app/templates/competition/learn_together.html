@@ -14,7 +14,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="/static/shared/multi_select.css?v=1">
     <link rel="stylesheet" href="/static/vocab/vocab_training_batch.css?v=9">
-    <link rel="stylesheet" href="/static/competition/competition.css?v=4">
+    <link rel="stylesheet" href="/static/lesson/lesson.css?v=1">
+    <link rel="stylesheet" href="/static/competition/competition.css?v=6">
 </head>
 <body class="with-site-nav">
     {% include 'shared/site_nav.html' %}
@@ -31,16 +32,31 @@
                     <h2>{{ t('competition.create_room') }}</h2>
                     <div class="competition-form">
                         <label>
-                            HSK
-                            <select id="create-level">
-                                <option value="">{{ t('vocab.select_hsk') }}</option>
-                                <option value="1">HSK 1</option>
-                                <option value="2">HSK 2</option>
-                                <option value="3">HSK 3</option>
-                                <option value="4">HSK 4</option>
-                                <option value="5">HSK 5</option>
-                                <option value="6">HSK 6</option>
+                            {{ t('competition.mode') }}
+                            <select id="create-mode">
+                                <option value="vocab">{{ t('competition.mode_vocab') }}</option>
+                                <option value="lesson">{{ t('competition.mode_lesson') }}</option>
                             </select>
+                        </label>
+                        <label id="create-type-field">
+                            {{ t('competition.type') }}
+                            <div class="ms-dropdown" id="create-type-ms">
+                                <button type="button" class="ms-toggle" onclick="MultiSelect.toggle('create-type-ms')">
+                                    <span class="ms-label ms-placeholder"></span>
+                                    <i class="fa-solid fa-chevron-down ms-caret" aria-hidden="true"></i>
+                                </button>
+                                <div class="ms-panel" id="create-type-ms-panel"></div>
+                            </div>
+                        </label>
+                        <label>
+                            HSK
+                            <div class="ms-dropdown" id="create-level-ms">
+                                <button type="button" class="ms-toggle" onclick="MultiSelect.toggle('create-level-ms')">
+                                    <span class="ms-label ms-placeholder"></span>
+                                    <i class="fa-solid fa-chevron-down ms-caret" aria-hidden="true"></i>
+                                </button>
+                                <div class="ms-panel" id="create-level-ms-panel"></div>
+                            </div>
                         </label>
                         <label>
                             {{ t('picker.lesson_prefix') }}
@@ -76,11 +92,14 @@
                             </select>
                         </label>
                         <p id="setup-error" class="competition-error" hidden></p>
-                        <button class="btn primary" onclick="createRoom()">{{ t('competition.create_room') }}</button>
+                        <div class="competition-setup-actions">
+                            <button id="create-submit-btn" class="btn primary" onclick="submitRoom()">{{ t('competition.create_room') }}</button>
+                            <button id="edit-cancel-btn" class="btn secondary" onclick="cancelEdit()" style="display:none;">{{ t('competition.cancel') }}</button>
+                        </div>
                     </div>
                 </section>
 
-                <section class="competition-panel">
+                <section id="join-panel" class="competition-panel">
                     <h2>{{ t('competition.join_room') }}</h2>
                     <div class="competition-form">
                         <label>
@@ -107,7 +126,10 @@
                     <h2>{{ t('competition.room_setup') }}</h2>
                     <div id="room-summary" class="competition-summary"></div>
                     <div id="member-list" class="member-list"></div>
-                    <button id="host-start-btn" class="btn primary competition-start-btn" onclick="startSession()" style="display:none;">{{ t('competition.start_session') }}</button>
+                    <div class="competition-lobby-actions">
+                        <button id="host-edit-btn" class="btn secondary" onclick="editRoomSettings()" style="display:none;">{{ t('competition.edit_settings') }}</button>
+                        <button id="host-start-btn" class="btn primary competition-start-btn" onclick="startSession()" style="display:none;">{{ t('competition.start_session') }}</button>
+                    </div>
                 </section>
 
                 <section class="competition-panel chat-panel">
@@ -162,8 +184,9 @@
 
     <audio id="competition-audio" preload="auto"></audio>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
-    <script src="/static/shared/multi_select.js?v=1"></script>
-    <script src="/static/vocab/vocab_trainer_core.js?v=8"></script>
-    <script src="/static/competition/competition.js?v=5"></script>
+    <script src="/static/shared/multi_select.js?v=2"></script>
+    <script src="/static/vocab/vocab_trainer_core.js?v=11"></script>
+    <script src="/static/lesson/lesson_trainer_core.js?v=2"></script>
+    <script src="/static/competition/competition.js?v=8"></script>
 </body>
 </html>

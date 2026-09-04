@@ -17,10 +17,12 @@ let retryPool = [];            // unique missed rows offered for a round-2 retry
 let pendingRecords = [];       // buffered answers, flushed per activity in one request
 let totalAnswers = 0;          // number of recorded answers this session
 let correctAnswers = 0;
+let selectedActivityTypes = null;   // skills the learner chose in the pre-training picker
 
 document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
     isLessonPartFlow = params.get('flow') === 'lesson-part';
+    selectedActivityTypes = readSelectedActivityTypes();
     hideBaseControls();
 
     // Word-list flows: vocabulary-page selection, lesson-part selection, number part.
@@ -49,6 +51,20 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ── Entry data ────────────────────────────────────────────────────────────────
+
+// Skills chosen in the train-type picker (vocab engine: 'typing' | 'listen' | 'reading').
+// Absent/empty means train every skill.
+function readSelectedActivityTypes() {
+    const raw = sessionStorage.getItem('vocabTrainerActivityTypes');
+    if (!raw) return null;
+    sessionStorage.removeItem('vocabTrainerActivityTypes');
+    try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) && parsed.length ? parsed : null;
+    } catch (e) {
+        return null;
+    }
+}
 
 function readSelectedTrainerWords() {
     const raw = sessionStorage.getItem('selectedVocabTrainerWords');
@@ -107,6 +123,7 @@ function trainerConfig(rows) {
     return {
         container: document.getElementById('activity-area'),
         words: rows,
+        activityTypes: selectedActivityTypes || undefined,
         onAnswer: recordAnswer,
         onProgress: updateProgress,
         mountAction: mountBottomAction,
@@ -233,7 +250,7 @@ function showCompleteScreen() {
             tr.innerHTML = `
                 <td class="complete-word">${escapeHtml(row.word)}</td>
                 <td>${escapeHtml(row.pinyin || '')}</td>
-                <td>${escapeHtml(row.meaning_vn || row.meaning_en || '')}</td>
+                <td>${escapeHtml(pickMeaning(row))}</td>
             `;
             tableBody.appendChild(tr);
         });

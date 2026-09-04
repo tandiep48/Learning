@@ -1,0 +1,90 @@
+/* ── Train type picker popup (choose which skills to train before a session) ── */
+.ttp-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9500;
+    align-items: center;
+    justify-content: center;
+    background: rgba(30, 49, 36, 0.38);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+.ttp-overlay.open {
+    display: flex;
+    animation: ttpFadeIn 0.25s ease;
+}
+@keyframes ttpFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.ttp-card {
+    background: #ffffff;
+    border: 1px solid #afcfbd;
+    border-radius: 16px;
+    padding: 28px 28px 24px;
+    width: min(420px, calc(100vw - 40px));
+    box-shadow: 0 28px 70px rgba(87, 104, 86, 0.22);
+    animation: ttpSlideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes ttpSlideUp {
+    from { opacity: 0; transform: translateY(30px) scale(0.94); }
+    to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+
+.ttp-title {
+    margin: 0 0 6px;
+    font-size: 1.25rem;
+    color: #1e3124;
+}
+.ttp-subtitle {
+    margin: 0 0 18px;
+    font-size: 0.9rem;
+    color: #5f7268;
+}
+
+.ttp-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.ttp-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: #d8efe7;
+    border: 1px solid rgba(87, 104, 86, 0.18);
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 700;
+    color: #1e3124;
+    transition: border-color 0.15s, background 0.15s;
+}
+.ttp-option:hover {
+    border-color: rgba(87, 104, 86, 0.4);
+}
+.ttp-option input {
+    width: 18px;
+    height: 18px;
+    accent-color: #576856;
+    cursor: pointer;
+}
+
+.ttp-error {
+    min-height: 18px;
+    margin: 12px 2px 0;
+    font-size: 0.85rem;
+    color: #c0392b;
+}
+
+.ttp-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 18px;
+}
+.ttp-actions .btn {
+    min-width: 96px;
+}

@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from entity.user_saved_word.entity import UserSavedWord
 from entity.vocabulary.entity import Vocabulary
+from entity.passage.entity import LessonPassage
 
 
 class UserSavedWordRepository:
@@ -34,6 +35,22 @@ class UserSavedWordRepository:
                 UserSavedWord.user_id == user_id,
                 UserSavedWord.passage_id == passage_id,
             )
+            .order_by(Vocabulary.cn)
+            .all()
+        )
+
+    def list_vocab_by_book(self, user_id: int, book_code: str) -> list[Vocabulary]:
+        """Every Vocabulary the user saved anywhere in one book (across its passages),
+        deduped by word and ordered by cn."""
+        return (
+            self.session.query(Vocabulary)
+            .join(UserSavedWord, UserSavedWord.cn == Vocabulary.cn)
+            .join(LessonPassage, LessonPassage.passage_id == UserSavedWord.passage_id)
+            .filter(
+                UserSavedWord.user_id == user_id,
+                LessonPassage.book_code == book_code,
+            )
+            .distinct()
             .order_by(Vocabulary.cn)
             .all()
         )

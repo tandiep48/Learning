@@ -8,10 +8,15 @@ No raw SQL strings — all queries go through the ORM session. Session
 lifecycle (commit/rollback/remove) is owned by the service layer.
 """
 
-from sqlalchemy import select, func, distinct, case, union_all, cast, insert, BigInteger
+from sqlalchemy import select, func, distinct, case, union_all, cast, insert, literal, BigInteger
 from sqlalchemy.orm import Session
 
 from entity.record.entity import VocabRecord, LessonRecord, PracticeRecord
+
+# A single answer can't realistically take longer than this. Larger values are
+# idle time (task left open in a background tab), so they're clamped before
+# summing — otherwise one abandoned task inflates a day's total by hours.
+PER_ANSWER_MS_CAP = 300_000  # 5 minutes
 
 
 class RecordRepository:
@@ -127,10 +132,14 @@ class RecordRepository:
         (day, total_ms) for the 3 most recent active days (gaps skipped),
         summed across all three activity tables, oldest -> newest.
         """
+        # Clamp each answer to PER_ANSWER_MS_CAP so idle gaps don't inflate the total.
         def _per_table(model):
             return select(
                 func.date(model.updated_at).label("day"),
-                model.response_time_ms.label("ms"),
+                func.least(
+                    func.coalesce(model.response_time_ms, 0),
+                    literal(PER_ANSWER_MS_CAP),
+                ).label("ms"),
             ).where(model.user_id == user_id)
 
         all_time = union_all(
