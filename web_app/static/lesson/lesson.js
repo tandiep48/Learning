@@ -9,11 +9,13 @@ let isLessonPartFlow = false;
 let answerSubmitted = false;
 let skipButtonMode = 'skip';
 let typingTargetText = '';
+let selectedLessonTypes = null;   // skills the learner chose in the pre-training picker
 
 // Fetch passages on load
 window.onload = async () => {
     const params = new URLSearchParams(window.location.search);
     isLessonPartFlow = params.get('flow') === 'lesson-part';
+    selectedLessonTypes = readSelectedLessonTypes();
 
     Picker.init((passage) => {
         startSession(passage.passage_id);
@@ -31,6 +33,20 @@ window.onload = async () => {
         startSession(autoPassage);
     }
 };
+
+// Skills chosen in the train-type picker (lesson task types: 'listening' | 'meaning' |
+// 'typing' | 'reorder'). Absent/empty means train every skill.
+function readSelectedLessonTypes() {
+    const raw = sessionStorage.getItem('lessonTrainerActivityTypes');
+    if (!raw) return null;
+    sessionStorage.removeItem('lessonTrainerActivityTypes');
+    try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) && parsed.length ? parsed : null;
+    } catch (e) {
+        return null;
+    }
+}
 
 function readLessonWideLessonTrainer() {
     const raw = sessionStorage.getItem('lessonWideLessonTrainer');
@@ -114,6 +130,19 @@ async function startSession(passage_id, passage_ids = null) {
         }
 
         sessionData = data;
+
+        // Restrict the run to the skills the learner picked. If a part has no tasks of the
+        // chosen type(s), there is nothing to train — tell them and return.
+        if (selectedLessonTypes && Array.isArray(sessionData.tasks)) {
+            const allowed = new Set(selectedLessonTypes);
+            sessionData.tasks = sessionData.tasks.filter(task => allowed.has(task.type));
+            if (!sessionData.tasks.length) {
+                alert(t('lesson.no_tasks_for_types'));
+                goHome();
+                return;
+            }
+        }
+
         currentTaskIndex = 0;
         missedTasks = [];
         answerSubmitted = false;
