@@ -1096,9 +1096,15 @@ function goToLessonTrainer() {
         startNumberTrainer();
         return;
     }
-    const params = new URLSearchParams({ passage_id: currentPassage.passage_id });
-    if (isLessonPartFlow) params.set('flow', 'lesson-part');
-    window.location.href = `/lesson?${params.toString()}`;
+    TrainTypePicker.open({
+        engine: 'lesson',
+        onStart: (types) => {
+            sessionStorage.setItem('lessonTrainerActivityTypes', JSON.stringify(types));
+            const params = new URLSearchParams({ passage_id: currentPassage.passage_id });
+            if (isLessonPartFlow) params.set('flow', 'lesson-part');
+            window.location.href = `/lesson?${params.toString()}`;
+        }
+    });
 }
 
 function ensureNumberPracticeRows() {

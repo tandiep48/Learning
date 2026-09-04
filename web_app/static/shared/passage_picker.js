@@ -380,13 +380,25 @@ const Picker = {
     },
 
     startLessonWideVocabTrainer(lessonNum, parts) {
-        sessionStorage.setItem('lessonWideVocabTrainer', JSON.stringify(this.buildLessonTrainerPayload(lessonNum, parts)));
-        window.location.href = '/vocab-training-batch';
+        TrainTypePicker.open({
+            engine: 'vocab',
+            onStart: (types) => {
+                sessionStorage.setItem('lessonWideVocabTrainer', JSON.stringify(this.buildLessonTrainerPayload(lessonNum, parts)));
+                sessionStorage.setItem('vocabTrainerActivityTypes', JSON.stringify(types));
+                window.location.href = '/vocab-training-batch';
+            }
+        });
     },
 
     startLessonWideLessonTrainer(lessonNum, parts) {
-        sessionStorage.setItem('lessonWideLessonTrainer', JSON.stringify(this.buildLessonTrainerPayload(lessonNum, parts)));
-        window.location.href = '/lesson';
+        TrainTypePicker.open({
+            engine: 'lesson',
+            onStart: (types) => {
+                sessionStorage.setItem('lessonWideLessonTrainer', JSON.stringify(this.buildLessonTrainerPayload(lessonNum, parts)));
+                sessionStorage.setItem('lessonTrainerActivityTypes', JSON.stringify(types));
+                window.location.href = '/lesson';
+            }
+        });
     },
 
     buildLessonTrainerPayload(lessonNum, parts) {
