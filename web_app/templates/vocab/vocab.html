@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="/static/shared/vocab_table.css?v=11">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="/static/shared/multi_select.css?v=1">
+    <link rel="stylesheet" href="/static/shared/train_type_picker.css?v=1">
     <link rel="stylesheet" href="/static/vocab/vocab_select.css?v=8">
     <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
 </head>
@@ -26,6 +27,7 @@
                         <select id="mode-select" class="vocab-mode-select" onchange="setTableMode(this.value)">
                             <option value="free">{{ t('vocab.mode_free') }}</option>
                             <option value="standard" selected>{{ t('vocab.mode_standard') }}</option>
+                            <option value="book">{{ t('vocab.mode_book') }}</option>
                             <option value="unsure">{{ t('vocab.mode_unsure') }}</option>
                             <option value="unlearn">{{ t('vocab.mode_unlearn') }}</option>
                             <option value="recent">{{ t('vocab.mode_recent') }}</option>
@@ -87,6 +89,12 @@
                             <div class="ms-panel" id="filter-part-ms-panel"></div>
                         </div>
                     </div>
+                    <div class="form-group book-filter">
+                        <label for="filter-book">{{ t('vocab.book_label') }}</label>
+                        <select id="filter-book" onchange="handleBookChange()">
+                            <option value="">{{ t('vocab.select_book_option') }}</option>
+                        </select>
+                    </div>
                     <div class="form-group page-size-filter">
                         <label for="filter-page-size">{{ t('vocab.rows_label') }}</label>
                         <select id="filter-page-size" onchange="changePageSize()">
@@ -114,7 +122,8 @@
     </div>
 
     <script src="/static/shared/multi_select.js?v=1"></script>
-    <script src="/static/vocab/vocab_select.js?v=10"></script>
+    <script src="/static/shared/train_type_picker.js?v=1"></script>
+    <script src="/static/vocab/vocab_select.js?v=12"></script>
 
     <!-- ── Vocab Table Stroke Order Modal ── -->
     <div id="vocab-stroke-modal-overlay" class="stroke-modal-overlay" onclick="closeVocabStrokeModalIfBackground(event)">

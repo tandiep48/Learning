@@ -33,7 +33,7 @@ function initTableTrainer() {
     if (pageSizeEl) pageSize = Number(pageSizeEl.value) || 20;
     const params = new URLSearchParams(window.location.search);
     const requestedMode = params.get('mode');
-    const allowedModes = new Set(['standard', 'free', 'unsure', 'unlearn', 'recent']);
+    const allowedModes = new Set(['standard', 'free', 'book', 'unsure', 'unlearn', 'recent']);
     setTableMode(allowedModes.has(requestedMode) ? requestedMode : 'standard');
     updateSelectionUI();
 }
@@ -50,16 +50,22 @@ function setTableMode(mode) {
     if (modeSelect && modeSelect.value !== mode) modeSelect.value = mode;
 
     document.querySelectorAll('.hsk-filter').forEach(el => {
-        el.style.display = isHistoryMode() ? 'none' : '';
+        el.style.display = (isHistoryMode() || isBookMode()) ? 'none' : '';
     });
     document.querySelectorAll('.standard-filter').forEach(el => {
         el.style.display = mode === 'standard' ? '' : 'none';
+    });
+    document.querySelectorAll('.book-filter').forEach(el => {
+        el.style.display = isBookMode() ? '' : 'none';
     });
 
     resetSelect('filter-hsk', t('vocab.select_hsk'));
     MultiSelect.clear('filter-lesson-ms');
     MultiSelect.clear('filter-part-ms');
-    if (isHistoryMode()) {
+    if (isBookMode()) {
+        loadSavedBooks();
+        clearTable(t('vocab.choose_book'));
+    } else if (isHistoryMode()) {
         loadVocabTable();
     } else {
         clearTable(t('vocab.state_choose_filters'));
@@ -68,6 +74,45 @@ function setTableMode(mode) {
 
 function isHistoryMode() {
     return tableMode === 'unsure' || tableMode === 'unlearn' || tableMode === 'recent';
+}
+
+function isBookMode() {
+    return tableMode === 'book';
+}
+
+async function loadSavedBooks() {
+    const select = document.getElementById('filter-book');
+    if (!select) return;
+    select.innerHTML = `<option value="">${t('vocab.select_book_option')}</option>`;
+    try {
+        const res = await fetch('/api/vocab/saved-books');
+        const data = await res.json();
+        const books = data.books || [];
+        if (!books.length) {
+            clearTable(t('vocab.no_saved_books'));
+            return;
+        }
+        books.forEach(book => {
+            const option = document.createElement('option');
+            option.value = book.book_code;
+            option.textContent = book.name || book.book_code;
+            select.appendChild(option);
+        });
+    } catch (e) {
+        console.error(e);
+        clearTable(t('vocab.no_saved_books'));
+    }
+}
+
+function handleBookChange() {
+    currentPage = 1;
+    currentPassageId = null;
+    const bookCode = document.getElementById('filter-book').value;
+    if (!bookCode) {
+        clearTable(t('vocab.choose_book'));
+        return;
+    }
+    loadVocabTable();
 }
 
 function resetSelect(id, label, disabled = false) {
@@ -188,8 +233,14 @@ async function loadVocabTable() {
     if (tableMode === 'standard') {
         selectedPassages = MultiSelect.values('filter-part-ms');
     }
+    const bookCode = isBookMode() ? (document.getElementById('filter-book')?.value || '') : '';
 
-    if (!isHistoryMode() && (!hskLevel || (tableMode === 'standard' && !selectedPassages.length))) {
+    if (isBookMode()) {
+        if (!bookCode) {
+            clearTable(t('vocab.choose_book'));
+            return;
+        }
+    } else if (!isHistoryMode() && (!hskLevel || (tableMode === 'standard' && !selectedPassages.length))) {
         clearTable(tableMode === 'standard' ? t('vocab.choose_hsk_lesson_part') : t('vocab.choose_hsk_only'));
         return;
     }
@@ -203,6 +254,9 @@ async function loadVocabTable() {
     });
     if (tableMode === 'standard') {
         params.set('passages', selectedPassages.join(','));
+    }
+    if (isBookMode()) {
+        params.set('book_code', bookCode);
     }
 
     try {
@@ -396,8 +450,14 @@ function startSelectedTraining() {
         alert(t('vocab.select_at_least_one'));
         return;
     }
-    sessionStorage.setItem('selectedVocabTrainerWords', JSON.stringify(selected.map(row => row.word)));
-    window.location.href = '/vocab-training-batch';
+    TrainTypePicker.open({
+        engine: 'vocab',
+        onStart: (types) => {
+            sessionStorage.setItem('selectedVocabTrainerWords', JSON.stringify(selected.map(row => row.word)));
+            sessionStorage.setItem('vocabTrainerActivityTypes', JSON.stringify(types));
+            window.location.href = '/vocab-training-batch';
+        }
+    });
 }
 
 function openSelectedFlashcards() {

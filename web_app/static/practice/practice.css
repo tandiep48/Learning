@@ -171,19 +171,17 @@ body {
 
 /* Paragraph / Content Area */
 .p-paragraph {
-        font-size: 1rem;
+    font-size: 1rem;
     line-height: 1.9;
     color: var(--text-main);
     white-space: pre-wrap;
-    background: #ffffff;
     padding: 14px 16px;
     border-radius: 10px;
-    border-left: 3px solid var(--primary);
 }
 .p-question-text {
     font-size: 0.95rem;
     font-weight: 600;
-    color: var(--text-main);
+    color: black;
     }
 
 /* blank-gap and interactive blanks are defined later in the file */
@@ -774,13 +772,17 @@ body {
 }
 
 .p-paragraph,
+.t5r-sentence-part,
+.t5l-opt-part {
+    background: transparent;
+    color: #111111;
+}
+
 .tf-btn,
 .mc-option,
 .chip-bank,
 .chip-answer,
-.t5l-key-btn,
-.t5l-opt-part,
-.t5r-sentence-part {
+.t5l-key-btn {
     background: #ffffff;
     color: #111111;
 }

@@ -10,7 +10,7 @@ Extracted from the former monolithic db.py.
 import time
 from datetime import datetime, timezone
 
-from sqlalchemy import select, insert, func
+from sqlalchemy import select, insert, func, distinct
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from entity.database import SessionLocal
@@ -18,6 +18,7 @@ from entity.passage.entity import LessonPassage
 from entity.book.entity import Book
 from entity.lesson_line.entity import LessonLine  # noqa: F401  (registers LessonPassage.lines mapper)
 from entity.passage_vocabulary.entity import PassageVocabulary
+from entity.user_saved_word.entity import UserSavedWord
 from entity.record.entity import VocabRecord
 from entity.user_lesson_part_progress.entity import UserLessonPartProgress
 from entity.user_learning_state.entity import UserLearningState
@@ -264,6 +265,40 @@ def get_books_summary(user_id, lang="en"):
         for book in books.values():
             book["lesson_count"] = len(book.pop("_lessons"))
             result.append(book)
+        result.sort(key=lambda b: b["book_code"])
+        return result
+    finally:
+        SessionLocal.remove()
+
+
+def get_saved_books(user_id, lang="en"):
+    """Books the user has personally saved words in, for the vocab "Book" mode picker.
+    One row per book_code (localized name), ordered by code. Empty if the user saved
+    nothing in any book."""
+    session = SessionLocal()
+    try:
+        codes = [
+            code for (code,) in session.execute(
+                select(distinct(LessonPassage.book_code))
+                .select_from(UserSavedWord)
+                .join(LessonPassage, LessonPassage.passage_id == UserSavedWord.passage_id)
+                .where(
+                    UserSavedWord.user_id == user_id,
+                    LessonPassage.book_code.isnot(None),
+                )
+            ).all()
+        ]
+        if not codes:
+            return []
+
+        names = {
+            code: _pick_lang(name_en, name_vn, lang)
+            for code, name_en, name_vn in session.execute(
+                select(Book.book_code, Book.name_en, Book.name_vn)
+                .where(Book.book_code.in_(codes))
+            ).all()
+        }
+        result = [{"book_code": code, "name": names.get(code) or code} for code in codes]
         result.sort(key=lambda b: b["book_code"])
         return result
     finally:

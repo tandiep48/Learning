@@ -355,6 +355,41 @@ def get_user_saved_vocab(user_id, passage_id):
         SessionLocal.remove()
 
 
+def get_user_saved_vocab_by_book(user_id, book_code):
+    """All vocabulary rows a user saved anywhere in one book (via user_saved_word joined
+    to the book's passages), deduped by word and ordered by cn."""
+    session = SessionLocal()
+    try:
+        rows = session.execute(
+            select(
+                Vocabulary.cn, Vocabulary.pinyin, Vocabulary.meaning_vn,
+                Vocabulary.meaning_en, Vocabulary.audio_key, Vocabulary.hsk_level,
+            )
+            .select_from(UserSavedWord)
+            .join(LessonPassage, LessonPassage.passage_id == UserSavedWord.passage_id)
+            .join(Vocabulary, Vocabulary.cn == UserSavedWord.cn)
+            .where(
+                UserSavedWord.user_id == user_id,
+                LessonPassage.book_code == book_code,
+            )
+            .distinct()
+            .order_by(Vocabulary.cn)
+        ).all()
+        return [
+            {
+                "cn": r[0],
+                "pinyin": r[1] or "",
+                "meaning_vn": r[2] or "",
+                "meaning_en": r[3] or "",
+                "audio_key": r[4] or "",
+                "hsk_level": r[5] or "",
+            }
+            for r in rows
+        ]
+    finally:
+        SessionLocal.remove()
+
+
 def get_vocabulary_by_words(words):
     """Vocabulary rows for a set of Chinese words (used by the dashboard word cards)."""
     words = [w for w in (words or []) if w]
