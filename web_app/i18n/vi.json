@@ -368,7 +368,10 @@
         "date": "Ngày",
         "all_dates": "Tất cả ngày",
         "no_more": "Không còn phiên nào để hiển thị.",
-        "page_indicator": "Trang {page}"
+        "page_indicator": "Trang {page}",
+        "filter_result": "Kết quả",
+        "result_all": "Tất cả",
+        "skill_all": "Tất cả kỹ năng"
     },
     "vocab": {
         "page_title": "Chọn Từ Vựng",
@@ -445,6 +448,7 @@
     "profile": {
         "page_title": "Hồ Sơ",
         "dashboard": "Trang Chính",
+        "badge": "Huy Hiệu",
         "review_practices": "Xem Lại Bài Làm",
         "review_practices_sub": "Xem lại các câu hỏi bạn đã làm và kết quả của bạn.",
         "open_review": "Mở Xem Lại",
@@ -460,6 +464,8 @@
         "learned_vocabulary": "Từ Vựng Đã Học",
         "change_password": "Đổi Mật Khẩu",
         "new_password_label": "Mật Khẩu Mới",
+        "confirm_password_label": "Nhập Lại Mật Khẩu Mới",
+        "passwords_do_not_match": "Mật khẩu không khớp.",
         "failed_load_learned_vocab": "Không thể tải từ vựng đã học.",
         "failed_load_profile": "Không thể tải hồ sơ.",
         "no_time_yet": "Chưa có thời gian",
@@ -468,7 +474,7 @@
         "uploading": "Đang tải lên...",
         "upload_failed": "Tải lên thất bại.",
         "avatar_updated": "Đã cập nhật ảnh đại diện.",
-        "username_new_password_required": "Cần nhập tên đăng nhập và mật khẩu mới.",
+        "new_password_required": "Cần nhập mật khẩu mới.",
         "updating_password": "Đang cập nhật mật khẩu...",
         "could_not_update_password": "Không thể cập nhật mật khẩu.",
         "password_updated": "Đã cập nhật mật khẩu.",

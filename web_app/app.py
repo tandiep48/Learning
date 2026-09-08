@@ -88,7 +88,15 @@ def inject_avatar_helpers():
             return ''
         return f"{GCS_BUCKET_URL.rstrip('/')}/hsk_images/hsk{level_num}.png"
 
-    return {"avatar_url": avatar_url, "hsk_image_url": hsk_image_url}
+    def badge_url(level):
+        if not GCS_BUCKET_URL:
+            return ''
+        level_num = str(level).replace('HSK', '').replace('hsk', '').replace('H', '').replace('h', '')
+        if level_num not in {'1', '2', '3', '4', '5', '6'}:
+            return ''
+        return f"{GCS_BUCKET_URL.rstrip('/')}/badge/HSK{level_num}.png"
+
+    return {"avatar_url": avatar_url, "hsk_image_url": hsk_image_url, "badge_url": badge_url}
 
 @app.context_processor
 def inject_i18n_helpers():

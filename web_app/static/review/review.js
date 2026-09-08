@@ -140,26 +140,15 @@ function clearDateFilter() {
 function sessionCard(s) {
     const levels = (s.levels || []).map(l => `HSK ${l}`).join(', ');
     const lessons = (s.lessons || []).join(', ');
-    const cats = (s.categories || []).map(c =>
-        c === 'exam' ? t('dashboard.exam') : t('dashboard.exercise')
-    );
-    const catLabel = [...new Set(cats)].join(', ');
-    const pct = s.score_pct;
-    const scoreClass = pct >= 80 ? 'good' : pct >= 50 ? 'mid' : 'low';
 
     return `
         <button type="button" class="session-card" onclick="openSession(${s.session_id})">
             <div class="session-card-main">
                 <div class="session-card-title">${levels}${lessons ? ` · ${t('picker.lesson_prefix')} ${lessons}` : ''}</div>
                 <div class="session-card-meta">
-                    <span class="session-cat">${catLabel}</span>
                     <span class="session-date">${fmtDate(s.ended_at)}</span>
                     <span>${t('review.questions', { count: s.total })}</span>
                 </div>
-            </div>
-            <div class="session-score ${scoreClass}">
-                <span class="session-score-pct">${pct}%</span>
-                <span class="session-score-sub">${t('review.session_summary', { correct: s.correct, total: s.total })}</span>
             </div>
         </button>`;
 }
@@ -184,15 +173,66 @@ async function openSession(sessionId) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+let detailQuestions = [];
+const detailFilters = { result: 'all', skill: 'all' };
+
 function renderDetail(data) {
+    detailQuestions = data.questions || [];
+    detailFilters.result = 'all';
+    detailFilters.skill = 'all';
+
     const detail = document.getElementById('session-detail');
-    const header = `
-        <div class="detail-summary">
-            <span class="detail-score">${data.score_pct}%</span>
-            <span>${t('review.session_summary', { correct: data.correct, total: data.total })}</span>
-        </div>`;
-    const cards = (data.questions || []).map((q, i) => questionCard(q, i + 1)).join('');
-    detail.innerHTML = header + `<div class="q-review-list">${cards}</div>`;
+    detail.innerHTML = `
+        <div class="review-filters">
+            <div class="filter-group">
+                <label class="filter-label" for="detail-filter-result">${t('review.filter_result')}</label>
+                <select id="detail-filter-result" class="filter-select">
+                    <option value="all">${t('review.result_all')}</option>
+                    <option value="correct">${t('review.correct_badge')}</option>
+                    <option value="incorrect">${t('review.incorrect_badge')}</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="detail-filter-skill">${t('recommend.skill')}</label>
+                <select id="detail-filter-skill" class="filter-select">
+                    <option value="all">${t('review.skill_all')}</option>
+                    <option value="reading">${t('recommend.reading')}</option>
+                    <option value="listening">${t('recommend.listening')}</option>
+                </select>
+            </div>
+        </div>
+        <div id="q-review-list" class="q-review-list"></div>`;
+
+    document.getElementById('detail-filter-result').addEventListener('change', onDetailFilterChange);
+    document.getElementById('detail-filter-skill').addEventListener('change', onDetailFilterChange);
+    renderQuestionList();
+}
+
+function onDetailFilterChange() {
+    detailFilters.result = document.getElementById('detail-filter-result').value;
+    detailFilters.skill = document.getElementById('detail-filter-skill').value;
+    renderQuestionList();
+}
+
+function renderQuestionList() {
+    const listEl = document.getElementById('q-review-list');
+    if (!listEl) return;
+
+    const filtered = detailQuestions.filter(q => {
+        if (detailFilters.result === 'correct' && !q.is_correct) return false;
+        if (detailFilters.result === 'incorrect' && q.is_correct) return false;
+        if (detailFilters.skill !== 'all' && (q.skill || 'listening') !== detailFilters.skill) return false;
+        return true;
+    });
+
+    if (!filtered.length) {
+        listEl.innerHTML = stateBox(t('review.empty_sub'));
+        return;
+    }
+    // Keep the original question numbering regardless of the active filter.
+    listEl.innerHTML = filtered
+        .map(q => questionCard(q, detailQuestions.indexOf(q) + 1))
+        .join('');
 }
 
 function questionCard(q, index) {

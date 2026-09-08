@@ -14,3 +14,4 @@ python-dotenv
 rapidfuzz
 vosk
 SQLAlchemy
+google-cloud-storage
