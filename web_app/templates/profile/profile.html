@@ -5,112 +5,74 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ t('profile.page_title') }}</title>
     <link rel="stylesheet" href="/static/shared/styles.css?v=7">
-    <link rel="stylesheet" href="/static/profile/profile.css">
+    <link rel="stylesheet" href="/static/profile/profile.css?v=8">
+    <link rel="stylesheet" href="/static/review/review.css?v=4">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 <body class="with-site-nav">
     {% include 'shared/site_nav.html' %}
     <main class="app-container profile-container">
         <div class="profile-topbar">
             <a href="/" class="profile-link">&larr; {{ t('profile.dashboard') }}</a>
-            <a href="/learning" class="profile-link">{{ t('nav.learning') }}</a>
         </div>
 
         <section class="profile-header">
-            <div class="profile-avatar-wrap">
-                <img id="profile-avatar-img" class="profile-avatar-img" alt="" style="display:none;">
-                <div id="profile-avatar-fallback" class="profile-avatar-fallback">{{ current_user.username[:1]|upper }}</div>
+            <div class="profile-header-main">
+                <button type="button" id="avatar-trigger" class="profile-avatar-wrap" title="{{ t('profile.upload_avatar') }}">
+                    <img id="profile-avatar-img" class="profile-avatar-img" alt="" style="display:none;">
+                    <div id="profile-avatar-fallback" class="profile-avatar-fallback">{{ current_user.username[:1]|upper }}</div>
+                    <span class="profile-avatar-overlay"><i class="fa-solid fa-camera" aria-hidden="true"></i></span>
+                </button>
+                <div class="profile-heading">
+                    <h1>{{ current_user.username }}</h1>
+                    <p>{{ current_user.email }}</p>
+                </div>
             </div>
-            <div class="profile-heading">
-                <h1>{{ current_user.username }}</h1>
-                <p>{{ current_user.email }}</p>
+            <div class="profile-badge-col">
+                <img class="profile-badge-img" src="{{ badge_url(current_user.level) }}" alt="{{ t('profile.badge') }} HSK {{ current_user.level }}">
+            </div>
+        </section>
+
+        <div id="avatar-modal" class="profile-modal" hidden>
+            <div class="profile-modal-backdrop" data-avatar-close></div>
+            <div class="profile-modal-box" role="dialog" aria-modal="true" aria-labelledby="avatar-modal-title">
+                <div class="profile-modal-head">
+                    <h2 id="avatar-modal-title">{{ t('profile.upload_avatar') }}</h2>
+                    <button type="button" class="profile-modal-close" data-avatar-close aria-label="{{ t('widgets.close') }}">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                    </button>
+                </div>
                 <form id="avatar-form" class="avatar-form" enctype="multipart/form-data">
                     <input id="avatar-input" name="avatar" type="file" accept="image/png,image/jpeg,image/webp,image/gif">
                     <button class="btn primary avatar-submit" type="submit">{{ t('profile.upload_avatar') }}</button>
                 </form>
                 <div id="avatar-message" class="profile-message"></div>
             </div>
-        </section>
-
-        <section class="profile-section profile-review-cta">
-            <div class="profile-review-cta-text">
-                <h2>{{ t('profile.review_practices') }}</h2>
-                <p>{{ t('profile.review_practices_sub') }}</p>
-            </div>
-            <a href="/review" class="btn primary profile-review-btn">{{ t('profile.open_review') }}</a>
-        </section>
-
-        <section class="profile-stats-grid">
-            <div class="profile-stat profile-stat-level">
-                <span class="profile-stat-label">{{ t('profile.hsk_level') }}</span>
-                <strong id="stat-hsk-level">HSK {{ current_user.level }}</strong>
-            </div>
-            <div class="profile-stat">
-                <span class="profile-stat-label">{{ t('profile.vocab_time') }}</span>
-                <strong id="stat-vocab-time">0m</strong>
-            </div>
-            <div class="profile-stat">
-                <span class="profile-stat-label">{{ t('profile.lesson_time') }}</span>
-                <strong id="stat-lesson-time">0m</strong>
-            </div>
-            <div class="profile-stat">
-                <span class="profile-stat-label">{{ t('profile.practice_time') }}</span>
-                <strong id="stat-practice-time">0m</strong>
-            </div>
-            <div class="profile-stat">
-                <span class="profile-stat-label">{{ t('profile.exam_time') }}</span>
-                <strong id="stat-exam-time">0m</strong>
-            </div>
-        </section>
+        </div>
 
         <section class="profile-section">
-            <h2>{{ t('profile.time_breakdown') }}</h2>
-            <div class="profile-breakdown-grid">
-                <div>
-                    <h3>{{ t('nav.vocabulary') }}</h3>
-                    <div id="vocab-breakdown" class="profile-list compact"></div>
-                </div>
-                <div>
-                    <h3>{{ t('profile.lesson') }}</h3>
-                    <div id="lesson-breakdown" class="profile-list compact"></div>
-                </div>
-                <div>
-                    <h3>{{ t('profile.practice_exam') }}</h3>
-                    <div id="practice-breakdown" class="profile-list compact"></div>
-                </div>
-            </div>
-        </section>
-
-        <section class="profile-section">
-            <div class="profile-section-heading">
-                <h2>{{ t('profile.learned_vocabulary') }}</h2>
-                <span id="learned-count" class="profile-count">{{ t('dashboard.word_count', count=0) }}</span>
-            </div>
-            <div id="learned-vocab-list" class="profile-vocab-list"></div>
-            <div id="learned-pagination" class="profile-pagination" style="display:none;">
-                <button class="btn secondary" id="learned-prev-btn" type="button">{{ t('reading.prev') }}</button>
-                <span id="learned-page-status">{{ t('vocab.page_status', current=1, total=1) }}</span>
-                <button class="btn secondary" id="learned-next-btn" type="button">{{ t('reading.next') }}</button>
-            </div>
+            <h2>{{ t('profile.review_practices') }}</h2>
+            {% include 'review/_review_panel.html' %}
         </section>
 
         <section class="profile-section">
             <h2>{{ t('profile.change_password') }}</h2>
             <form id="password-form" class="password-form">
                 <div class="form-group">
-                    <label for="password-username">{{ t('auth.username_label') }}</label>
-                    <input id="password-username" name="username" type="text" autocomplete="username" required>
-                </div>
-                <div class="form-group">
                     <label for="new-password">{{ t('profile.new_password_label') }}</label>
                     <input id="new-password" name="new_password" type="password" autocomplete="new-password" required>
+                </div>
+                <div class="form-group">
+                    <label for="confirm-password">{{ t('profile.confirm_password_label') }}</label>
+                    <input id="confirm-password" name="confirm_password" type="password" autocomplete="new-password" required>
                 </div>
                 <button class="btn primary password-submit" type="submit">{{ t('profile.change_password') }}</button>
             </form>
             <div id="password-message" class="profile-message"></div>
-            <div id="learned-vocab-list" class="profile-vocab-table-wrap"></div>
         </section>
     </main>
 
-    <script src="/static/profile/profile.js"></script>
+    <script src="/static/profile/profile.js?v=4"></script>
+    <script src="/static/review/review.js?v=4"></script>
 </body>
 </html>

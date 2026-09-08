@@ -172,26 +172,6 @@
     font-size: 0.85rem;
     color: var(--text-muted);
 }
-.session-cat {
-    background: var(--secondary);
-    color: var(--primary);
-    padding: 1px 8px;
-    border-radius: 999px;
-    font-weight: 600;
-}
-.session-score {
-    text-align: right;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-}
-.session-score-pct { font-size: 1.5rem; font-weight: 800; line-height: 1.1; }
-.session-score-sub { font-size: 0.75rem; color: var(--text-muted); }
-.session-score.good .session-score-pct { color: var(--success); }
-.session-score.mid  .session-score-pct { color: var(--warning); }
-.session-score.low  .session-score-pct { color: var(--danger); }
-
 /* ── Detail view ── */
 .review-back-btn {
     background: none;
@@ -204,20 +184,6 @@
     transition: color 0.2s;
 }
 .review-back-btn:hover { color: var(--primary); }
-
-.detail-summary {
-    display: flex;
-    align-items: baseline;
-    gap: 12px;
-    margin-bottom: 20px;
-    color: var(--text-muted);
-    font-size: 0.95rem;
-}
-.detail-score {
-    font-size: 1.8rem;
-    font-weight: 800;
-    color: var(--primary);
-}
 
 .q-review-list {
     display: flex;
@@ -362,7 +328,6 @@
 
 @media (max-width: 600px) {
     .session-card { flex-direction: column; align-items: flex-start; }
-    .session-score { align-items: flex-start; text-align: left; }
     .q-answer-label { min-width: 0; }
     .q-answer-line { flex-direction: column; gap: 2px; }
 }

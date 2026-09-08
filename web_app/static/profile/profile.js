@@ -1,45 +1,33 @@
-let learnedPage = 1;
-const learnedPageSize = 24;
-let learnedTotalPages = 1;
-
 document.addEventListener('DOMContentLoaded', () => {
     loadProfileSummary();
-    loadLearnedWords();
 
     const avatarForm = document.getElementById('avatar-form');
     if (avatarForm) {
         avatarForm.addEventListener('submit', uploadAvatar);
     }
 
+    document.getElementById('avatar-trigger')?.addEventListener('click', openAvatarModal);
+    document.querySelectorAll('[data-avatar-close]').forEach(el => {
+        el.addEventListener('click', closeAvatarModal);
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeAvatarModal();
+    });
+
     const passwordForm = document.getElementById('password-form');
     if (passwordForm) {
         passwordForm.addEventListener('submit', changePassword);
     }
-
-    document.getElementById('learned-prev-btn')?.addEventListener('click', () => {
-        if (learnedPage > 1) loadLearnedWords(learnedPage - 1);
-    });
-    document.getElementById('learned-next-btn')?.addEventListener('click', () => {
-        if (learnedPage < learnedTotalPages) loadLearnedWords(learnedPage + 1);
-    });
 });
 
-async function loadLearnedWords(page = 1) {
-    try {
-        const params = new URLSearchParams({
-            page: String(page),
-            page_size: String(learnedPageSize)
-        });
-        const res = await fetch(`/api/user/learned-vocab?${params.toString()}`);
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || t('profile.failed_load_learned_vocab'));
-        renderLearnedWords(data);
-    } catch (e) {
-        const list = document.getElementById('learned-vocab-list');
-        if (list) {
-            list.innerHTML = `<div class="profile-list-row"><span>${escapeHtml(e.message || t('profile.failed_load_learned_vocab'))}</span></div>`;
-        }
-    }
+function openAvatarModal() {
+    const modal = document.getElementById('avatar-modal');
+    if (modal) modal.hidden = false;
+}
+
+function closeAvatarModal() {
+    const modal = document.getElementById('avatar-modal');
+    if (modal) modal.hidden = true;
 }
 
 async function loadProfileSummary() {
@@ -47,28 +35,10 @@ async function loadProfileSummary() {
         const res = await fetch('/api/user/profile-summary');
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || t('profile.failed_load_profile'));
-        renderProfile(data);
+        renderAvatar(data.user?.avatar_url);
     } catch (e) {
         setAvatarMessage(e.message || t('profile.failed_load_profile'), 'error');
     }
-}
-
-function renderProfile(data) {
-    renderAvatar(data.user?.avatar_url);
-    const level = data.user?.level;
-    if (level) {
-        const levelEl = document.getElementById('stat-hsk-level');
-        if (levelEl) levelEl.textContent = `HSK ${level}`;
-    }
-    const totals = data.time_totals_ms || {};
-    document.getElementById('stat-vocab-time').textContent = formatDuration(totals.vocab || 0);
-    document.getElementById('stat-lesson-time').textContent = formatDuration(totals.lesson || 0);
-    document.getElementById('stat-practice-time').textContent = formatDuration(totals.practice || 0);
-    document.getElementById('stat-exam-time').textContent = formatDuration(totals.exam || 0);
-
-    renderBreakdown('vocab-breakdown', data.vocab_mode_time_ms || [], item => item.mode);
-    renderBreakdown('lesson-breakdown', data.lesson_mode_time_ms || [], item => item.mode);
-    renderBreakdown('practice-breakdown', data.practice_skill_time_ms || [], item => `${item.category} ${item.skill}`);
 }
 
 function renderAvatar(url) {
@@ -83,53 +53,6 @@ function renderAvatar(url) {
         img.style.display = 'none';
         fallback.style.display = 'flex';
     }
-}
-
-function renderBreakdown(id, rows, labelFn) {
-    const container = document.getElementById(id);
-    if (!container) return;
-    if (!rows.length) {
-        container.innerHTML = `<div class="profile-list-row"><span>${t('profile.no_time_yet')}</span><strong>0m</strong></div>`;
-        return;
-    }
-    container.innerHTML = rows.map(row => `
-        <div class="profile-list-row">
-            <span>${escapeHtml(labelFn(row))}</span>
-            <strong>${formatDuration(row.time_ms || 0)}</strong>
-        </div>
-    `).join('');
-}
-
-function renderLearnedWords(data) {
-    const words = data.rows || [];
-    const count = document.getElementById('learned-count');
-    const list = document.getElementById('learned-vocab-list');
-    const pagination = document.getElementById('learned-pagination');
-    const status = document.getElementById('learned-page-status');
-    const prev = document.getElementById('learned-prev-btn');
-    const next = document.getElementById('learned-next-btn');
-
-    learnedPage = data.page || 1;
-    learnedTotalPages = data.total_pages || 1;
-    const total = data.total || 0;
-
-    count.textContent = t('dashboard.word_count', { count: total });
-    if (!words.length) {
-        list.innerHTML = `<div class="profile-list-row"><span>${t('profile.no_mastered_vocab')}</span></div>`;
-        if (pagination) pagination.style.display = 'none';
-        return;
-    }
-    list.innerHTML = words.map(item => `
-        <div class="profile-vocab-chip">
-            <div class="profile-vocab-word">${escapeHtml(item.word || '')}</div>
-            <div class="profile-vocab-date">${formatDate(item.learned_at)}</div>
-        </div>
-    `).join('');
-
-    if (pagination) pagination.style.display = total > learnedPageSize ? 'flex' : 'none';
-    if (status) status.textContent = t('vocab.page_status', { current: learnedPage, total: learnedTotalPages });
-    if (prev) prev.disabled = learnedPage <= 1;
-    if (next) next.disabled = learnedPage >= learnedTotalPages;
 }
 
 async function uploadAvatar(e) {
@@ -153,6 +76,7 @@ async function uploadAvatar(e) {
         renderAvatar(data.avatar_url);
         setAvatarMessage(t('profile.avatar_updated'), 'success');
         input.value = '';
+        setTimeout(closeAvatarModal, 800);
     } catch (err) {
         setAvatarMessage(err.message || t('profile.upload_failed'), 'error');
     }
@@ -160,11 +84,16 @@ async function uploadAvatar(e) {
 
 async function changePassword(e) {
     e.preventDefault();
-    const username = document.getElementById('password-username').value.trim();
     const newPassword = document.getElementById('new-password').value;
+    const confirmPassword = document.getElementById('confirm-password').value;
 
-    if (!username || !newPassword) {
-        setPasswordMessage(t('profile.username_new_password_required'), 'error');
+    if (!newPassword || !confirmPassword) {
+        setPasswordMessage(t('profile.new_password_required'), 'error');
+        return;
+    }
+
+    if (newPassword !== confirmPassword) {
+        setPasswordMessage(t('profile.passwords_do_not_match'), 'error');
         return;
     }
 
@@ -173,11 +102,12 @@ async function changePassword(e) {
         const res = await fetch('/api/user/change-password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, new_password: newPassword })
+            body: JSON.stringify({ new_password: newPassword, confirm_password: confirmPassword })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || t('profile.could_not_update_password'));
         document.getElementById('new-password').value = '';
+        document.getElementById('confirm-password').value = '';
         setPasswordMessage(t('profile.password_updated'), 'success');
     } catch (err) {
         setPasswordMessage(err.message || t('profile.could_not_update_password'), 'error');
@@ -194,31 +124,4 @@ function setPasswordMessage(message, type) {
     const el = document.getElementById('password-message');
     el.textContent = message;
     el.className = `profile-message ${type || ''}`;
-}
-
-function formatDuration(ms) {
-    const seconds = Math.round((Number(ms) || 0) / 1000);
-    if (seconds < 60) return `${seconds}s`;
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    if (minutes < 60) return remainingSeconds ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return remainingMinutes ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
-}
-
-function formatDate(value) {
-    if (!value) return t('profile.date_unknown');
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return t('profile.date_unknown');
-    return date.toLocaleDateString();
-}
-
-function escapeHtml(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
 }

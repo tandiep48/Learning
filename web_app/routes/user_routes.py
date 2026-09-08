@@ -448,14 +448,14 @@ def time_learned_last_3_days():
 @login_required
 def change_password():
     data = request.get_json(silent=True) or {}
-    username = str(data.get('username') or '').strip()
     new_password = str(data.get('new_password') or '')
+    confirm_password = str(data.get('confirm_password') or '')
 
-    if not username or not new_password:
-        return jsonify({"error": "Username and new password are required."}), 400
+    if not new_password:
+        return jsonify({"error": "New password is required."}), 400
 
-    if username != current_user.username:
-        return jsonify({"error": "Username does not match the logged-in account."}), 403
+    if new_password != confirm_password:
+        return jsonify({"error": "Passwords do not match."}), 400
 
     password_hash = generate_password_hash(new_password)
     if not update_user_password(current_user.id, password_hash):
@@ -500,8 +500,17 @@ def upload_avatar():
     except Exception as e:
         return jsonify({"error": f"Avatar upload failed: {e}"}), 500
 
+    old_object_name = current_user.avatar_path
+
     if not update_user_avatar_path(current_user.id, object_name):
         return jsonify({"error": "Avatar uploaded but profile could not be updated"}), 500
+
+    # Keep one avatar per user: drop the previous file once the new one is saved.
+    if old_object_name and old_object_name != object_name:
+        try:
+            bucket.blob(old_object_name).delete()
+        except Exception:
+            pass
 
     current_user.avatar_path = object_name
     return jsonify({

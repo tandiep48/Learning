@@ -368,7 +368,10 @@
         "date": "Date",
         "all_dates": "All dates",
         "no_more": "No more sessions to show.",
-        "page_indicator": "Page {page}"
+        "page_indicator": "Page {page}",
+        "filter_result": "Result",
+        "result_all": "All",
+        "skill_all": "All skills"
     },
     "vocab": {
         "page_title": "Vocabulary Selection",
@@ -445,6 +448,7 @@
     "profile": {
         "page_title": "Profile",
         "dashboard": "Dashboard",
+        "badge": "Badge",
         "review_practices": "Practice Review",
         "review_practices_sub": "Revisit questions you've answered and see your results.",
         "open_review": "Open Review",
@@ -460,6 +464,8 @@
         "learned_vocabulary": "Learned Vocabulary",
         "change_password": "Change Password",
         "new_password_label": "New Password",
+        "confirm_password_label": "Re-type New Password",
+        "passwords_do_not_match": "Passwords do not match.",
         "failed_load_learned_vocab": "Failed to load learned vocabulary.",
         "failed_load_profile": "Failed to load profile.",
         "no_time_yet": "No time yet",
@@ -468,7 +474,7 @@
         "uploading": "Uploading...",
         "upload_failed": "Upload failed.",
         "avatar_updated": "Avatar updated.",
-        "username_new_password_required": "Username and new password are required.",
+        "new_password_required": "New password is required.",
         "updating_password": "Updating password...",
         "could_not_update_password": "Could not update password.",
         "password_updated": "Password updated.",
