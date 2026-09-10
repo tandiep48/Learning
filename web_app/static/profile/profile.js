@@ -53,6 +53,26 @@ function renderAvatar(url) {
         img.style.display = 'none';
         fallback.style.display = 'flex';
     }
+    updateNavAvatar(url);
+}
+
+// Keep the site-nav avatar in sync with the profile without a full reload: the nav is
+// server-rendered once, so after an upload we swap its <img> (or replace the letter
+// fallback with one) in place.
+function updateNavAvatar(url) {
+    const link = document.getElementById('site-user-link');
+    if (!link || !url) return;
+    let navImg = document.getElementById('site-avatar');
+    if (!navImg) {
+        navImg = document.createElement('img');
+        navImg.className = 'site-avatar';
+        navImg.id = 'site-avatar';
+        navImg.alt = '';
+        const fallback = document.getElementById('site-avatar-fallback');
+        if (fallback) fallback.replaceWith(navImg);
+        else link.prepend(navImg);
+    }
+    navImg.src = url;
 }
 
 async function uploadAvatar(e) {
