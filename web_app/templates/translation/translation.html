@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="/static/shared/styles.css?v=7">
     <link rel="stylesheet" href="/static/shared/passage_picker.css?v=1000">
     <link rel="stylesheet" href="/static/shared/train_type_picker.css?v=1">
-    <link rel="stylesheet" href="/static/translation/translation.css?v=5">
+    <link rel="stylesheet" href="/static/translation/translation.css?v=6">
     <link rel="stylesheet" href="/static/shared/lesson_ui2.css?v=5">
     <link rel="stylesheet" href="/static/shared/sidebar.css?v=10">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -39,7 +39,37 @@
                     <p>{{ t('translation.empty') }}</p>
                 </div>
 
-                <div id="translation-list" class="translation-list"></div>
+                <div id="translation-card-view" class="translation-card-view" hidden>
+                    <div class="translation-card-topbar">
+                        <span id="translation-counter" class="translation-counter"></span>
+                    </div>
+                    <div class="translation-progress-bar">
+                        <div id="translation-progress-fill" class="translation-progress-fill" style="width:0%"></div>
+                    </div>
+
+                    <div class="translation-card">
+                        <div id="translation-card-meaning" class="translation-meaning"></div>
+                        <input type="text" id="translation-card-input" class="translation-input" lang="zh-CN"
+                               placeholder="{{ t('translation.input_placeholder') }}"
+                               autocomplete="off" autocapitalize="off" spellcheck="false">
+                        <div id="translation-card-answer" class="translation-answer" hidden></div>
+                        <button type="button" id="translation-reveal-btn" class="translation-reveal-btn" onclick="toggleAnswer()">
+                            {{ t('translation.reveal') }}
+                        </button>
+                    </div>
+
+                    <div class="translation-nav-row">
+                        <button id="translation-prev" class="btn secondary translation-nav-btn" onclick="prevCard()">
+                            &larr; {{ t('reading.prev') }}
+                        </button>
+                        <button class="btn secondary translation-nav-btn" onclick="shuffleCards()">
+                            <i class="fa-solid fa-shuffle" aria-hidden="true"></i> {{ t('vocab_learning.shuffle') }}
+                        </button>
+                        <button id="translation-next" class="btn primary translation-nav-btn" onclick="nextCard()">
+                            {{ t('reading.next') }} &rarr;
+                        </button>
+                    </div>
+                </div>
             </section>
         </div>
     </div><!-- /.page-main -->
@@ -48,7 +78,7 @@
     <script src="/static/shared/train_type_picker.js?v=1"></script>
     <script src="/static/shared/passage_picker.js?v=18"></script>
     <script src="/static/shared/passage_label.js"></script>
-    <script src="/static/translation/translation.js?v=3"></script>
+    <script src="/static/translation/translation.js?v=4"></script>
     <script src="/static/shared/sidebar.js?v=11"></script>
 </body>
 </html>

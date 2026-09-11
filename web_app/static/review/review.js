@@ -46,14 +46,7 @@ function fmtDate(iso) {
 
 // ── Session list ────────────────────────────────────────────────
 
-function todayStr() {
-    const d = new Date();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${d.getFullYear()}-${mm}-${dd}`;
-}
-
-const filters = { level: 'all', category: 'all', sort: 'recent', date: todayStr(), page: 1 };
+const filters = { level: 'all', category: 'all', sort: 'recent', page: 1 };
 let hasMore = false;
 
 async function loadSessions() {
@@ -71,7 +64,6 @@ async function loadSessions() {
         sort: filters.sort,
         page: filters.page,
     });
-    if (filters.date) qs.set('date', filters.date);
     try {
         const res = await fetch(`/api/practice/history?${qs.toString()}`);
         const data = await res.json();
@@ -125,14 +117,6 @@ function onFilterChange() {
     filters.level = document.getElementById('filter-level').value;
     filters.category = document.getElementById('filter-category').value;
     filters.sort = document.getElementById('filter-sort').value;
-    filters.date = document.getElementById('filter-date').value;
-    filters.page = 1;
-    loadSessions();
-}
-
-function clearDateFilter() {
-    filters.date = '';
-    document.getElementById('filter-date').value = '';
     filters.page = 1;
     loadSessions();
 }
@@ -401,10 +385,8 @@ function escapeHtml(str) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    ['filter-level', 'filter-category', 'filter-sort', 'filter-date'].forEach(id => {
+    ['filter-level', 'filter-category', 'filter-sort'].forEach(id => {
         document.getElementById(id).addEventListener('change', onFilterChange);
     });
-    document.getElementById('filter-date').value = filters.date;   // default: today
-    document.getElementById('filter-date-clear').addEventListener('click', clearDateFilter);
     loadSessions();
 });

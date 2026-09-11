@@ -9,7 +9,7 @@ Extracted from the former monolithic db.py.
 
 from sqlalchemy import (
     select, func, distinct, case, cast, and_, or_, any_, bindparam,
-    asc, desc, nullslast, Text, Date, Float, Integer, String,
+    asc, desc, nullslast, Text, Float, Integer, String,
 )
 from sqlalchemy.dialects.postgresql import ARRAY
 
@@ -387,10 +387,10 @@ def get_recommended_practices(user_id, threshold=0.80, limit=None, status_filter
 
 
 def get_practice_history_sessions(user_id, hsk_level=None, category=None,
-                                  date=None, sort='recent', page=1, page_size=20):
+                                  sort='recent', page=1, page_size=20):
     """
     List a user's past practice/exam sessions for the review page, with optional
-    backend filters (hsk_level, category, date) and ordering. One row per session_id,
+    backend filters (hsk_level, category) and ordering. One row per session_id,
     with score and the level(s)/lesson(s) it covered.
 
     Returns (sessions, has_more). has_more lets the caller do prev/next paging without a
@@ -407,13 +407,11 @@ def get_practice_history_sessions(user_id, hsk_level=None, category=None,
         where.append(func.coalesce(PracticeRecord.category, 'practice') == category)
 
     # Level can vary within a multi-lesson session, so keep the whole session (with its
-    # full score) as long as it touched the requested level. Date matches the session's
-    # end day. Both are HAVING conditions so session stats stay complete.
+    # full score) as long as it touched the requested level. This is a HAVING condition
+    # so session stats stay complete.
     having = []
     if hsk_level is not None:
         having.append(func.bool_or(PracticeRecord.hsk_level == hsk_level))
-    if date:
-        having.append(cast(ended_at, Date) == date)
 
     stmt = (
         select(

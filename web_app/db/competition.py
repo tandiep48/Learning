@@ -23,9 +23,11 @@ from entity.competition.entity import (
 )
 
 
-# A room is either a vocabulary competition or the lesson trainer; both pick a skill
-# focus: 'all' (every type) or a CSV of the selected types for that mode.
-ROOM_CATEGORIES = ("vocab", "lesson")
+# A room is a vocabulary competition, a "book" competition (words drawn from the
+# participants' saved vocabulary), or the lesson trainer. Each picks a skill focus:
+# 'all' (every type) or a CSV of the selected types for that mode. Vocab and book share
+# the vocab trainer's type set.
+ROOM_CATEGORIES = ("vocab", "lesson", "book")
 VOCAB_TYPE_CHOICES = ("typing", "listening", "reading")
 LESSON_TYPE_CHOICES = ("listening", "meaning", "typing", "reorder")
 
@@ -63,7 +65,7 @@ def prepare_room_settings(data):
     if category not in ROOM_CATEGORIES:
         category = "vocab"
 
-    allowed_types = VOCAB_TYPE_CHOICES if category == "vocab" else LESSON_TYPE_CHOICES
+    allowed_types = LESSON_TYPE_CHOICES if category == "lesson" else VOCAB_TYPE_CHOICES
     activity_type = normalize_activity_types(data.get("activity_type"), allowed_types)
 
     try:
@@ -85,6 +87,11 @@ def prepare_room_settings(data):
         source_count = count_lesson_lines(passage_ids)
         if not source_count:
             return None, "The selected lessons have no tasks"
+    elif category == "book":
+        # A book room's word pool is the union of every participant's saved words within
+        # the selected parts, so it can only be resolved once the room has members. Defer
+        # the count and the empty check to session start.
+        source_count = 0
     else:
         words = resolve_room_words(passage_ids)
         if not words:
@@ -389,6 +396,53 @@ def add_competition_chat_message(room_code, user_id, message):
     finally:
         SessionLocal.remove()
 
+def _room_member_ids(room_id):
+    """Active member user_ids for a room (excludes anyone who left)."""
+    session = SessionLocal()
+    try:
+        return [
+            row[0] for row in session.execute(
+                select(CompetitionRoomMember.user_id)
+                .where(
+                    CompetitionRoomMember.room_id == room_id,
+                    CompetitionRoomMember.status != "left",
+                )
+            ).all()
+        ]
+    finally:
+        SessionLocal.remove()
+
+
+def get_competition_book_words_for_session(session_id):
+    """Deterministic shared word pool for a running book session: the deduped union of
+    every scored participant's saved words within the room's selected parts. Frozen at
+    start, since competition_scores (the participant set) is created then."""
+    session = SessionLocal()
+    try:
+        row = session.execute(
+            select(CompetitionRoom.passage_ids, CompetitionRoom.category)
+            .select_from(CompetitionSession)
+            .join(CompetitionRoom, CompetitionRoom.id == CompetitionSession.room_id)
+            .where(CompetitionSession.id == session_id)
+        ).first()
+        if not row or (row[1] or "vocab") != "book":
+            return []
+        passage_ids = row[0]
+        if isinstance(passage_ids, str):
+            passage_ids = json.loads(passage_ids)
+        user_ids = [
+            r[0] for r in session.execute(
+                select(CompetitionScore.user_id)
+                .where(CompetitionScore.session_id == session_id)
+            ).all()
+        ]
+    finally:
+        SessionLocal.remove()
+
+    from db.content import get_competition_book_words
+    return get_competition_book_words(user_ids, passage_ids or [])
+
+
 def start_competition_session(room_code, host_user_id, lang="vi"):
     room = get_competition_room_by_code(room_code)
     if not room:
@@ -411,6 +465,14 @@ def start_competition_session(room_code, host_user_id, lang="vi"):
         lesson_tasks = build_lesson_tasks(room["passage_ids"], mode="master", types=types, lang=lang)
         if not lesson_tasks:
             return None, "The selected lessons have no tasks"
+    elif category == "book":
+        # Build the shared pool now (union of the room members' saved words within the
+        # selected parts) purely to validate it is non-empty; clients then fetch the same
+        # deterministic pool from the session's participant set at trainer start.
+        from db.content import get_competition_book_words
+        pool = get_competition_book_words(_room_member_ids(room["id"]), room["passage_ids"])
+        if not pool:
+            return None, "No saved words in the selected parts"
 
     session = SessionLocal()
     try:

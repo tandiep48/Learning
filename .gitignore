@@ -35,3 +35,6 @@ docs
 
 # image folder
 web_app/static/images/lessons
+
+# google cloud storage service account json file
+chinese-service.json

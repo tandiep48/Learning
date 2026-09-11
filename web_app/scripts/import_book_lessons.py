@@ -50,9 +50,8 @@ DEFAULT_SOURCE = os.path.normpath(
 )
 
 
-def load_book(source_dir, code):
-    """Load one book JSON and return its list of passage dicts."""
-    path = os.path.join(source_dir, f"{code}.json")
+def load_json_file(path):
+    """Load one book JSON from path and return its list of passage dicts."""
     if not os.path.isfile(path):
         raise FileNotFoundError(path)
     # utf-8-sig tolerates a BOM (PowerShell-exported JSON often has one).
@@ -162,28 +161,40 @@ def main():
     parser.add_argument("--source", default=DEFAULT_SOURCE, help=f"folder holding {{CODE}}.json (default: {DEFAULT_SOURCE})")
     parser.add_argument("--xlsx", default="", help="content_info.xlsx for book names + lesson titles (default: <source>/../content_info.xlsx)")
     parser.add_argument("--codes", default="", help="comma-separated subset of book codes (default: all 15)")
+    parser.add_argument("--file", default="", help="direct path to a specific JSON file to import (overrides --source and --codes)")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--dry-run", action="store_true", help="show what would change, write nothing")
     group.add_argument("--apply", action="store_true", help="import in one transaction")
     args = parser.parse_args()
 
-    if args.codes:
-        codes = [c.strip().upper() for c in args.codes.split(",") if c.strip()]
-        unknown = [c for c in codes if c not in BOOK_CODES]
-        if unknown:
-            print(f"Unknown codes (not in the cover-book list): {', '.join(unknown)}")
-            sys.exit(1)
+    items_to_process = []
+    if args.file:
+        file_path = args.file
+        code = os.path.splitext(os.path.basename(file_path))[0].upper()
+        items_to_process.append((code, file_path))
+        xlsx_path = args.xlsx
+        has_xlsx = os.path.isfile(xlsx_path) if xlsx_path else False
+        print(f"file   : {file_path}")
     else:
-        codes = list(BOOK_CODES)
+        if args.codes:
+            codes = [c.strip().upper() for c in args.codes.split(",") if c.strip()]
+            unknown = [c for c in codes if c not in BOOK_CODES]
+            if unknown:
+                print(f"Unknown codes (not in the cover-book list): {', '.join(unknown)}")
+                sys.exit(1)
+        else:
+            codes = list(BOOK_CODES)
+        for c in codes:
+            items_to_process.append((c, os.path.join(args.source, f"{c}.json")))
+        
+        xlsx_path = args.xlsx or os.path.normpath(
+            os.path.join(args.source, "..", "content_info.xlsx")
+        )
+        has_xlsx = os.path.isfile(xlsx_path)
+        print(f"source : {args.source}")
 
-    xlsx_path = args.xlsx or os.path.normpath(
-        os.path.join(args.source, "..", "content_info.xlsx")
-    )
-    has_xlsx = os.path.isfile(xlsx_path)
-
-    print(f"source : {args.source}")
     print(f"xlsx   : {xlsx_path}" + ("" if has_xlsx else "  (NOT FOUND — names/titles skipped)"))
-    print(f"books  : {len(codes)} ({', '.join(codes)})")
+    print(f"books  : {len(items_to_process)} ({', '.join(c for c, _ in items_to_process)})")
     print()
 
     session = SessionLocal()
@@ -195,8 +206,8 @@ def main():
         }
 
         grand_passages = grand_lines = grand_new = 0
-        for code in codes:
-            data = load_book(args.source, code)
+        for code, path in items_to_process:
+            data = load_json_file(path)
             bad = [p.get("passage_id") for p in data
                    if not str(p.get("passage_id", "")).startswith(f"{code}_")]
             new_count = sum(1 for p in data if p["passage_id"] not in existing_pids)
@@ -227,7 +238,7 @@ def main():
         # Titles update the passages just added above; flush so import_metadata sees them.
         if has_xlsx:
             session.flush()
-            books_n, titles_n = import_metadata(session, xlsx_path, set(codes))
+            books_n, titles_n = import_metadata(session, xlsx_path, set(c for c, _ in items_to_process))
             print(f"metadata: books={books_n}  lesson_titles={titles_n}")
         else:
             print("metadata: no xlsx found — book names/lesson titles skipped.")

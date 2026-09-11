@@ -52,7 +52,7 @@ function renderHomeDashboard(data) {
     document.getElementById('dashboard-content').style.display = '';
 
     const lesson = data.lesson || {};
-    document.getElementById('home-lesson-title').textContent = `${lesson.hsk_level || 'HSK'} - Lesson ${lesson.lesson || ''}`;
+    document.getElementById('home-lesson-title').textContent = `${lesson.hsk_level || 'HSK'} - ${t('picker.lesson_prefix')} ${lesson.lesson || ''}`;
     document.getElementById('home-lesson-subtitle').textContent = t('dashboard.current_part', {
         part: lesson.part || '-',
         count: lesson.passage_ids?.length || 1,
