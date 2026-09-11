@@ -390,6 +390,67 @@ def get_user_saved_vocab_by_book(user_id, book_code):
         SessionLocal.remove()
 
 
+def get_user_saved_book_passages(user_id, book_code):
+    """Distinct book passages the user has saved words in, for the Learn Together book
+    picker (Book -> Lesson -> Part). A book passage_id encodes {CODE}_{lesson}_{part}."""
+    if not book_code:
+        return []
+    session = SessionLocal()
+    try:
+        rows = session.execute(
+            select(distinct(UserSavedWord.passage_id))
+            .select_from(UserSavedWord)
+            .join(LessonPassage, LessonPassage.passage_id == UserSavedWord.passage_id)
+            .where(
+                UserSavedWord.user_id == user_id,
+                LessonPassage.book_code == book_code,
+            )
+        ).all()
+        return sorted(r[0] for r in rows if r[0])
+    finally:
+        SessionLocal.remove()
+
+
+def get_competition_book_words(user_ids, passage_ids):
+    """Deduped union of the given users' saved words that fall within the selected book
+    passages, in the shape the vocab trainer expects. Builds the shared word pool for a
+    Learn Together "book" room from every participant's saved vocabulary."""
+    user_ids = [int(u) for u in (user_ids or []) if u is not None]
+    passage_ids = [str(p) for p in (passage_ids or []) if p]
+    if not user_ids or not passage_ids:
+        return []
+    session = SessionLocal()
+    try:
+        rows = session.execute(
+            select(
+                Vocabulary.cn, Vocabulary.pinyin, Vocabulary.meaning_vn,
+                Vocabulary.meaning_en, Vocabulary.audio_key, Vocabulary.hsk_level,
+            )
+            .select_from(UserSavedWord)
+            .join(Vocabulary, Vocabulary.cn == UserSavedWord.cn)
+            .where(
+                UserSavedWord.user_id.in_(user_ids),
+                UserSavedWord.passage_id.in_(passage_ids),
+            )
+            .distinct()
+            .order_by(Vocabulary.cn)
+        ).all()
+        return [
+            {
+                "word": r[0],
+                "cn": r[0],
+                "pinyin": r[1] or "",
+                "meaning_vn": r[2] or "",
+                "meaning_en": r[3] or "",
+                "audio_key": r[4] or "",
+                "level": r[5] or "",
+            }
+            for r in rows
+        ]
+    finally:
+        SessionLocal.remove()
+
+
 def get_vocabulary_by_words(words):
     """Vocabulary rows for a set of Chinese words (used by the dashboard word cards)."""
     words = [w for w in (words or []) if w]

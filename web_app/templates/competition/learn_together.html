@@ -36,7 +36,18 @@
                             <select id="create-mode">
                                 <option value="vocab">{{ t('competition.mode_vocab') }}</option>
                                 <option value="lesson">{{ t('competition.mode_lesson') }}</option>
+                                <option value="book">{{ t('competition.mode_book') }}</option>
                             </select>
+                        </label>
+                        <label id="create-book-field" style="display:none;">
+                            {{ t('competition.book') }}
+                            <div class="ms-dropdown" id="create-book-ms">
+                                <button type="button" class="ms-toggle" onclick="MultiSelect.toggle('create-book-ms')">
+                                    <span class="ms-label ms-placeholder"></span>
+                                    <i class="fa-solid fa-chevron-down ms-caret" aria-hidden="true"></i>
+                                </button>
+                                <div class="ms-panel" id="create-book-ms-panel"></div>
+                            </div>
                         </label>
                         <label id="create-type-field">
                             {{ t('competition.type') }}
@@ -48,7 +59,7 @@
                                 <div class="ms-panel" id="create-type-ms-panel"></div>
                             </div>
                         </label>
-                        <label>
+                        <label id="create-level-field">
                             HSK
                             <div class="ms-dropdown" id="create-level-ms">
                                 <button type="button" class="ms-toggle" onclick="MultiSelect.toggle('create-level-ms')">
@@ -187,6 +198,6 @@
     <script src="/static/shared/multi_select.js?v=2"></script>
     <script src="/static/vocab/vocab_trainer_core.js?v=11"></script>
     <script src="/static/lesson/lesson_trainer_core.js?v=2"></script>
-    <script src="/static/competition/competition.js?v=8"></script>
+    <script src="/static/competition/competition.js?v=9"></script>
 </body>
 </html>

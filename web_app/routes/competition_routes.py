@@ -9,6 +9,8 @@ from db import (
     get_competition_room_state,
     get_competition_scores,
     prepare_room_settings,
+    get_user_saved_book_passages,
+    get_competition_book_words_for_session,
 )
 
 
@@ -54,6 +56,26 @@ def create_room():
         return jsonify({"error": "Could not create room"}), 500
 
     return jsonify({"room": get_competition_room_state(room["room_code"])})
+
+
+@competition_bp.route("/book-passages", methods=["GET"])
+@login_required
+def book_passages():
+    """Book passages the current user has saved words in — populates the Book mode
+    Lesson/Part picker (a book passage_id encodes {CODE}_{lesson}_{part})."""
+    book_code = (request.args.get("book_code") or "").strip()
+    if not book_code:
+        return jsonify({"passages": []})
+    passages = get_user_saved_book_passages(current_user.id, book_code)
+    return jsonify({"passages": [{"passage_id": pid} for pid in passages]})
+
+
+@competition_bp.route("/sessions/<int:session_id>/book-words", methods=["GET"])
+@login_required
+def session_book_words(session_id):
+    """Shared word pool for a running book session (union of participants' saved words in
+    the selected parts). Every participant fetches the same deterministic set."""
+    return jsonify({"words": get_competition_book_words_for_session(session_id)})
 
 
 @competition_bp.route("/rooms/<room_code>", methods=["GET"])
