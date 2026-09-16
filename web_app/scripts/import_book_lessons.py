@@ -41,7 +41,7 @@ from entity.book.entity import Book                      # noqa: E402
 # The 15 books that have a matching cover image; only these are imported.
 BOOK_CODES = [
     "AML", "CHE", "DSBD", "IBT", "IE", "KB", "LM", "LOG",
-    "OFC", "OW", "SA", "SC", "SD", "SR", "TOU",
+    "OFC", "OW", "SA", "SC", "SD", "SR", "TOU", "GCS"
 ]
 
 # content_info/Final sits next to the Learning repo (YiChinese/content_info/Final).
