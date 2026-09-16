@@ -59,6 +59,60 @@ def test_hsk_image_url_invalid_level_returns_empty_string(monkeypatch):
     assert gcs_service.hsk_image_url("HSK9") == ""
 
 
+def test_badge_url_valid_level(monkeypatch):
+    monkeypatch.setenv("GCS_BUCKET_URL", "https://cdn.example.com/")
+    assert gcs_service.badge_url("h3") == "https://cdn.example.com/badge/HSK3.png"
+
+
+def test_badge_url_invalid_level_returns_empty_string(monkeypatch):
+    monkeypatch.setenv("GCS_BUCKET_URL", "https://cdn.example.com")
+    assert gcs_service.badge_url("HSK9") == ""
+    assert gcs_service.badge_url(None) == ""
+
+
+def test_badge_url_without_bucket_configured(monkeypatch):
+    monkeypatch.delenv("GCS_BUCKET_URL", raising=False)
+    assert gcs_service.badge_url("HSK1") == ""
+
+
+# ---------------------------------------------------------------------------
+# delete_object
+# ---------------------------------------------------------------------------
+
+def test_delete_object_removes_the_blob(monkeypatch):
+    monkeypatch.setenv("GCS_BUCKET_NAME", "bucket")
+    blob = MagicMock()
+    client = MagicMock()
+    client.bucket.return_value.blob.return_value = blob
+
+    with patch.object(gcs_service, "storage", MagicMock(Client=MagicMock(return_value=client))):
+        assert gcs_service.delete_object("avatars/user_1/old.png") is True
+
+    client.bucket.assert_called_once_with("bucket")
+    blob.delete.assert_called_once()
+
+
+def test_delete_object_ignores_missing_inputs(monkeypatch):
+    monkeypatch.setenv("GCS_BUCKET_NAME", "bucket")
+    assert gcs_service.delete_object(None) is False
+    assert gcs_service.delete_object("") is False
+
+
+def test_delete_object_returns_false_without_bucket_name(monkeypatch):
+    monkeypatch.delenv("GCS_BUCKET_NAME", raising=False)
+    with patch.object(gcs_service, "storage", MagicMock()):
+        assert gcs_service.delete_object("avatars/user_1/old.png") is False
+
+
+def test_delete_object_swallows_gcs_failures(monkeypatch):
+    monkeypatch.setenv("GCS_BUCKET_NAME", "bucket")
+    storage = MagicMock()
+    storage.Client.side_effect = RuntimeError("boom")
+
+    with patch.object(gcs_service, "storage", storage):
+        assert gcs_service.delete_object("avatars/user_1/old.png") is False
+
+
 def test_hsk_image_url_without_bucket_returns_empty_string(monkeypatch):
     monkeypatch.delenv("GCS_BUCKET_URL", raising=False)
     assert gcs_service.hsk_image_url("HSK3") == ""

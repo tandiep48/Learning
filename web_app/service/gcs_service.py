@@ -64,6 +64,16 @@ def hsk_image_url(level) -> str:
     return f"{base_url}/hsk_images/hsk{level_num}.png"
 
 
+def badge_url(level) -> str:
+    base_url = _bucket_url()
+    if not base_url:
+        return ''
+    level_num = str(level).replace('HSK', '').replace('hsk', '').replace('H', '').replace('h', '')
+    if level_num not in _VALID_HSK_LEVELS:
+        return ''
+    return f"{base_url}/badge/HSK{level_num}.png"
+
+
 def practice_image_url(category, level, filename) -> str | None:
     return build_public_url(f"images/{category}/{level}/{filename}")
 
@@ -90,6 +100,24 @@ def lesson_image_url(hsk, filename) -> str | None:
 
 def lesson_cover_url(code) -> str | None:
     return build_public_url(f"lesson_cover/{code.upper()}.png")
+
+
+def delete_object(object_name: str | None) -> bool:
+    """Best-effort removal of a stored object. Returns True when the delete went through;
+    never raises, so callers can clean up without risking the request they are serving."""
+    if not object_name or storage is None:
+        return False
+
+    bucket_name = os.getenv('GCS_BUCKET_NAME')
+    if not bucket_name:
+        return False
+
+    try:
+        storage.Client().bucket(bucket_name).blob(object_name).delete()
+        return True
+    except Exception:
+        logger.warning("Could not delete GCS object %s", object_name, exc_info=True)
+        return False
 
 
 def _allowed_avatar_extension(filename: str) -> bool:

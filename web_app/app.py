@@ -89,7 +89,11 @@ init_competition_socket(socketio)
 
 @app.context_processor
 def inject_avatar_helpers():
-    return {"avatar_url": gcs_service.avatar_url, "hsk_image_url": gcs_service.hsk_image_url}
+    return {
+        "avatar_url": gcs_service.avatar_url,
+        "hsk_image_url": gcs_service.hsk_image_url,
+        "badge_url": gcs_service.badge_url,
+    }
 
 # Jinja-only i18n wiring. Superseded by GET /api/i18n/translations (routes/i18n/i18n_routes.py)
 # for the Next.js frontend; remove this context processor once Jinja templates are gone.
