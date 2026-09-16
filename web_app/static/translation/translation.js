@@ -1,10 +1,14 @@
-// Lesson translation page: show each sentence's meaning (in the UI language) with an
-// input for the learner to type the Chinese, plus a per-row reveal of the answer.
-// Mirrors the grammar page: reached with a passage_id, driven by the shared picker
-// and universal sidebar. Content is lesson-wide (all H<level>_<lesson>_* sentences).
+// Lesson translation page: a flashcard drill. Each card shows one sentence's meaning
+// (in the UI language) with an input to type the Chinese and a reveal for the answer,
+// navigated one at a time like the "Learn these words" flow. Reached with a passage_id,
+// driven by the shared picker and universal sidebar. Content is lesson-wide (all
+// H<level>_<lesson>_* sentences).
 
 let currentPassageId = null;
 let isLessonPartFlow = false;
+
+let translationRows = [];   // all sentences for the lesson
+let cardIndex = 0;          // which card is showing
 
 document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
@@ -20,6 +24,24 @@ document.addEventListener('DOMContentLoaded', () => {
         backLink.href = '/learning';
         backLink.innerHTML = '&larr; Back to Learning';
     }
+
+    // Highlight the input once the typed Chinese matches the current answer.
+    const input = document.getElementById('translation-card-input');
+    if (input) {
+        input.addEventListener('input', () => {
+            const row = translationRows[cardIndex];
+            const match = row && input.value.trim() === (row.cn || '').trim();
+            input.classList.toggle('success-highlight', !!match);
+        });
+    }
+
+    // Arrow keys flip between cards, but not while the learner is typing.
+    document.addEventListener('keydown', (e) => {
+        if (document.getElementById('translation-card-view').hidden) return;
+        if (document.activeElement === input) return;
+        if (e.key === 'ArrowLeft') prevCard();
+        if (e.key === 'ArrowRight') nextCard();
+    });
 
     if (autoPassage) {
         loadTranslation(autoPassage);
@@ -40,15 +62,6 @@ function goBackToPartSelection() {
     }
 }
 
-function escapeHtml(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
-
 function meaningFor(row) {
     // CSV column is `vn`; UI language code for Vietnamese is `vi`.
     const useVi = (window.currentLang || 'en') === 'vi';
@@ -64,34 +77,71 @@ function lessonKeyFrom(passageId) {
     return { hskLevel: digits ? `HSK${digits}` : '', lesson };
 }
 
-function renderRows(rows) {
-    const list = document.getElementById('translation-list');
-    list.innerHTML = '';
+// ── Flashcards ──────────────────────────────────────────────────
 
-    rows.forEach((row, index) => {
-        const item = document.createElement('div');
-        item.className = 'translation-item';
-        item.innerHTML = `
-            <div class="translation-item-index">${index + 1}</div>
-            <div class="translation-item-body">
-                <div class="translation-meaning">${escapeHtml(meaningFor(row))}</div>
-                <input type="text" class="translation-input" placeholder="${escapeHtml(t('translation.input_placeholder'))}"
-                       autocomplete="off" autocapitalize="off" spellcheck="false">
-                <div class="translation-answer" hidden>${escapeHtml(row.cn || '')}</div>
-                <button type="button" class="translation-reveal-btn">${escapeHtml(t('translation.reveal'))}</button>
-            </div>
-        `;
+function renderCards(rows) {
+    translationRows = rows;
+    cardIndex = 0;
+    document.getElementById('translation-empty').hidden = true;
+    document.getElementById('translation-card-view').hidden = false;
+    renderCard();
+}
 
-        const answerEl = item.querySelector('.translation-answer');
-        const revealBtn = item.querySelector('.translation-reveal-btn');
-        revealBtn.addEventListener('click', () => {
-            const showing = !answerEl.hidden;
-            answerEl.hidden = showing;
-            revealBtn.textContent = showing ? t('translation.reveal') : t('translation.hide');
-        });
+function renderCard() {
+    const row = translationRows[cardIndex];
+    if (!row) return;
+    const total = translationRows.length;
 
-        list.appendChild(item);
-    });
+    document.getElementById('translation-counter').textContent = `${cardIndex + 1} / ${total}`;
+    document.getElementById('translation-progress-fill').style.width = `${((cardIndex + 1) / total) * 100}%`;
+
+    document.getElementById('translation-card-meaning').textContent = meaningFor(row);
+
+    const input = document.getElementById('translation-card-input');
+    input.value = '';
+    input.classList.remove('success-highlight');
+
+    const answer = document.getElementById('translation-card-answer');
+    answer.textContent = row.cn || '';
+    answer.hidden = true;
+    document.getElementById('translation-reveal-btn').textContent = t('translation.reveal');
+
+    document.getElementById('translation-prev').disabled = cardIndex === 0;
+    document.getElementById('translation-next').disabled = cardIndex === total - 1;
+
+    input.focus();
+}
+
+function toggleAnswer() {
+    const answer = document.getElementById('translation-card-answer');
+    const showing = !answer.hidden;
+    answer.hidden = showing;
+    document.getElementById('translation-reveal-btn').textContent =
+        showing ? t('translation.reveal') : t('translation.hide');
+}
+
+function prevCard() {
+    if (cardIndex > 0) {
+        cardIndex--;
+        renderCard();
+    }
+}
+
+function nextCard() {
+    if (cardIndex < translationRows.length - 1) {
+        cardIndex++;
+        renderCard();
+    }
+}
+
+function shuffleCards() {
+    if (translationRows.length <= 1) return;
+    for (let i = translationRows.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [translationRows[i], translationRows[j]] = [translationRows[j], translationRows[i]];
+    }
+    cardIndex = 0;
+    renderCard();
 }
 
 async function loadTranslation(passageId) {
@@ -103,6 +153,7 @@ async function loadTranslation(passageId) {
     const { hskLevel, lesson } = lessonKeyFrom(passageId);
     const emptyEl = document.getElementById('translation-empty');
     emptyEl.hidden = true;
+    document.getElementById('translation-card-view').hidden = true;
 
     try {
         const res = await fetch(`/api/translation/lesson?hsk_level=${encodeURIComponent(hskLevel)}&lesson=${encodeURIComponent(lesson)}`);
@@ -110,16 +161,16 @@ async function loadTranslation(passageId) {
 
         const rows = data.translations || [];
         if (!rows.length) {
-            document.getElementById('translation-list').innerHTML = '';
+            emptyEl.querySelector('p').textContent = t('translation.empty');
             emptyEl.hidden = false;
         } else {
-            renderRows(rows);
+            renderCards(rows);
         }
         switchScreen('screen-translation');
     } catch (e) {
         console.error(e);
-        document.getElementById('translation-list').innerHTML =
-            `<p style="color:var(--danger); padding:20px;">${t('translation.failed_load')}</p>`;
+        emptyEl.querySelector('p').textContent = t('translation.failed_load');
+        emptyEl.hidden = false;
         switchScreen('screen-translation');
     }
 }
