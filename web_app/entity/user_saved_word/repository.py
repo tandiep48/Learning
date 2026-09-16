@@ -55,6 +55,40 @@ class UserSavedWordRepository:
             .all()
         )
 
+    def list_book_passage_ids(self, user_id: int, book_code: str) -> list[str]:
+        """Distinct book passages the user has saved words in, ordered by passage_id.
+        A book passage_id encodes {CODE}_{lesson}_{part}, so this drives the
+        Book -> Lesson -> Part picker."""
+        rows = (
+            self.session.query(UserSavedWord.passage_id)
+            .join(LessonPassage, LessonPassage.passage_id == UserSavedWord.passage_id)
+            .filter(
+                UserSavedWord.user_id == user_id,
+                LessonPassage.book_code == book_code,
+            )
+            .distinct()
+            .order_by(UserSavedWord.passage_id)
+            .all()
+        )
+        return [r[0] for r in rows if r[0]]
+
+    def list_vocab_for_users_in_passages(
+        self, user_ids: list[int], passage_ids: list[str]
+    ) -> list[Vocabulary]:
+        """Deduped union of several users' saved Vocabulary within a set of passages,
+        ordered by cn. Builds the shared word pool for a Learn Together book room."""
+        return (
+            self.session.query(Vocabulary)
+            .join(UserSavedWord, UserSavedWord.cn == Vocabulary.cn)
+            .filter(
+                UserSavedWord.user_id.in_(user_ids),
+                UserSavedWord.passage_id.in_(passage_ids),
+            )
+            .distinct()
+            .order_by(Vocabulary.cn)
+            .all()
+        )
+
     def exists(self, user_id: int, passage_id: str, cn: str) -> bool:
         """Return True if the (user_id, passage_id, cn) row already exists."""
         return (

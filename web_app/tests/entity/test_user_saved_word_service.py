@@ -72,3 +72,65 @@ def test_get_user_saved_vocab_by_book_returns_empty_when_no_rows():
         assert service.get_user_saved_vocab_by_book(7, "HSK1") == []
 
     session_local.remove.assert_called_once()
+
+
+# ----------------------------------------------------------------------
+# get_user_saved_book_passages
+# ----------------------------------------------------------------------
+
+def test_get_user_saved_book_passages_returns_repository_rows():
+    session, session_local = _mock_session()
+    repo = MagicMock()
+    repo.list_book_passage_ids.return_value = ["GCS_1_1", "GCS_1_2"]
+
+    with patch.object(service, "SessionLocal", session_local), \
+         patch.object(service, "UserSavedWordRepository", return_value=repo):
+        result = service.get_user_saved_book_passages(7, "  GCS  ")
+
+    assert result == ["GCS_1_1", "GCS_1_2"]
+    repo.list_book_passage_ids.assert_called_once_with(7, "GCS")
+    session_local.remove.assert_called_once()
+
+
+def test_get_user_saved_book_passages_skips_db_without_book_code():
+    session, session_local = _mock_session()
+
+    with patch.object(service, "SessionLocal", session_local):
+        assert service.get_user_saved_book_passages(7, "") == []
+        assert service.get_user_saved_book_passages(7, None) == []
+
+    session_local.assert_not_called()
+
+
+# ----------------------------------------------------------------------
+# get_competition_book_words
+# ----------------------------------------------------------------------
+
+def test_get_competition_book_words_shapes_rows_for_the_vocab_trainer():
+    session, session_local = _mock_session()
+    repo = MagicMock()
+    repo.list_vocab_for_users_in_passages.return_value = [
+        FakeVocab(cn="书", pinyin="shū", meaning_vn="sách", hsk_level="1"),
+    ]
+
+    with patch.object(service, "SessionLocal", session_local), \
+         patch.object(service, "UserSavedWordRepository", return_value=repo):
+        result = service.get_competition_book_words(["3", 4], ["GCS_1_1"])
+
+    assert result == [{
+        "word": "书", "cn": "书", "pinyin": "shū", "meaning_vn": "sách",
+        "meaning_en": "", "audio_key": "", "level": "1",
+    }]
+    repo.list_vocab_for_users_in_passages.assert_called_once_with([3, 4], ["GCS_1_1"])
+    session_local.remove.assert_called_once()
+
+
+def test_get_competition_book_words_skips_db_when_either_side_is_empty():
+    session, session_local = _mock_session()
+
+    with patch.object(service, "SessionLocal", session_local):
+        assert service.get_competition_book_words([], ["GCS_1_1"]) == []
+        assert service.get_competition_book_words([1], []) == []
+        assert service.get_competition_book_words(None, None) == []
+
+    session_local.assert_not_called()

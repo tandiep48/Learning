@@ -86,6 +86,50 @@ def get_user_saved_vocab_by_book(user_id: int, book_code: str) -> list[dict]:
         SessionLocal.remove()
 
 
+def get_user_saved_book_passages(user_id: int, book_code: str) -> list[str]:
+    """Distinct book passages the user has saved words in, for the Learn Together book
+    picker (Book -> Lesson -> Part)."""
+    book_code = (book_code or "").strip()
+    if not book_code:
+        return []
+
+    session = SessionLocal()
+    try:
+        return UserSavedWordRepository(session).list_book_passage_ids(user_id, book_code)
+    finally:
+        SessionLocal.remove()
+
+
+def get_competition_book_words(user_ids, passage_ids) -> list[dict]:
+    """Deduped union of the given users' saved words that fall within the selected book
+    passages, in the shape the vocab trainer expects. Builds the shared word pool for a
+    Learn Together "book" room from every participant's saved vocabulary."""
+    user_ids = [int(u) for u in (user_ids or []) if u is not None]
+    passage_ids = [str(p) for p in (passage_ids or []) if p]
+    if not user_ids or not passage_ids:
+        return []
+
+    session = SessionLocal()
+    try:
+        items = UserSavedWordRepository(session).list_vocab_for_users_in_passages(
+            user_ids, passage_ids
+        )
+        return [
+            {
+                "word": v.cn,
+                "cn": v.cn,
+                "pinyin": v.pinyin or "",
+                "meaning_vn": v.meaning_vn or "",
+                "meaning_en": v.meaning_en or "",
+                "audio_key": v.audio_key or "",
+                "level": v.hsk_level or "",
+            }
+            for v in items
+        ]
+    finally:
+        SessionLocal.remove()
+
+
 def add_saved_word(user_id: int, passage_id: str, cn: str) -> dict:
     """
     Save a known vocabulary word to the user's personal list for a passage.
