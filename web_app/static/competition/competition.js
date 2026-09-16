@@ -8,6 +8,7 @@ let currentRoom = null;
 let currentSession = null;
 let waitingUsers = new Set();
 let passagesByLevel = {};        // hsk level number -> [passage,...] (fetch cache)
+let passagesByBook = {};         // book_code -> [passage,...] (book-mode fetch cache)
 let groupedPassages = {};        // lessonKey ("HSK1_2") -> [{ passage_id, hsk, level, lesson, part, lessonKey }]
 let editing = false;             // host editing an existing room's settings in place
 
@@ -25,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     MultiSelect.init('create-type-ms', t('competition.type_all'), () => {});
     MultiSelect.init('create-level-ms', t('vocab.select_hsk'), onLevelChange);
     MultiSelect.setOptions('create-level-ms', HSK_LEVELS.map(n => ({ value: String(n), label: `HSK ${n}` })));
+    MultiSelect.init('create-book-ms', t('competition.select_book'), onBookChange);
     MultiSelect.init('create-lesson-ms', t('vocab.select_lesson_option'), onLessonChange);
     MultiSelect.init('create-part-ms', t('vocab.select_part_option'), () => {});
 
@@ -117,12 +119,15 @@ const VOCAB_TYPE_TO_ACTIVITY = { typing: 'typing', listening: 'listen', reading:
 
 // The Type selector offers a different skill set per mode: the vocab competition picks
 // among typing/listening/reading; the lesson trainer picks among its four task types.
+const VOCAB_TYPE_SET = [
+    { value: 'typing', key: 'competition.type_typing' },
+    { value: 'listening', key: 'competition.type_listening' },
+    { value: 'reading', key: 'competition.type_reading' },
+];
 const TYPE_OPTIONS = {
-    vocab: [
-        { value: 'typing', key: 'competition.type_typing' },
-        { value: 'listening', key: 'competition.type_listening' },
-        { value: 'reading', key: 'competition.type_reading' },
-    ],
+    vocab: VOCAB_TYPE_SET,
+    // Book rooms play the vocab trainer, so they share the vocab type set.
+    book: VOCAB_TYPE_SET,
     lesson: [
         { value: 'listening', key: 'competition.type_listening' },
         { value: 'meaning', key: 'competition.type_meaning' },
@@ -130,6 +135,12 @@ const TYPE_OPTIONS = {
         { value: 'reorder', key: 'competition.type_reorder' },
     ],
 };
+
+// Group header for a lesson/part option: "HSK 1" for HSK passages, or the book code for
+// book passages (whose parsed level is 0).
+function sourceGroupLabel(info) {
+    return info.level ? `HSK ${info.level}` : info.hsk;
+}
 
 // Parse a stored activity_type ("all" or a CSV of type values) into a value array,
 // expanding "all" to every option available for the mode.
@@ -147,12 +158,99 @@ function vocabActivityTypes(activityType) {
 }
 
 // Repopulate the Type multi-select for the current mode; defaults to all selected so a
-// room always has at least one type.
+// room always has at least one type. Also swaps the source picker: book mode picks a
+// Book (from the host's saved vocabulary) instead of an HSK level.
 function onModeChange() {
     const mode = document.getElementById('create-mode')?.value || 'vocab';
     const options = TYPE_OPTIONS[mode].map(o => ({ value: o.value, label: t(o.key) }));
     MultiSelect.setOptions('create-type-ms', options);
     MultiSelect.setValues('create-type-ms', options.map(o => o.value));
+
+    const isBook = mode === 'book';
+    const bookField = document.getElementById('create-book-field');
+    const levelField = document.getElementById('create-level-field');
+    if (bookField) bookField.style.display = isBook ? '' : 'none';
+    if (levelField) levelField.style.display = isBook ? 'none' : '';
+
+    // Switching source picker invalidates the current lesson/part cascade.
+    MultiSelect.clear('create-lesson-ms');
+    MultiSelect.clear('create-part-ms');
+    groupedPassages = {};
+    if (isBook) {
+        loadSavedBooks();
+    } else {
+        MultiSelect.clear('create-book-ms');
+    }
+}
+
+// Populate the Book multi-select from the books the host has saved words in.
+async function loadSavedBooks() {
+    try {
+        const res = await fetch('/api/vocab/saved-books');
+        const data = await res.json();
+        const books = data.books || [];
+        MultiSelect.setOptions('create-book-ms',
+            books.map(b => ({ value: b.book_code, label: b.name || b.book_code })));
+        if (!books.length) showSetupError(t('competition.no_saved_books'));
+    } catch (e) {
+        showSetupError(t('picker.failed_load_lessons'));
+    }
+}
+
+// Book mode: load each selected book's saved-in passages, then rebuild the lesson/part
+// cascade off the same groupedPassages structure the HSK path uses.
+async function onBookChange() {
+    const books = MultiSelect.values('create-book-ms');
+    const prevLessons = MultiSelect.values('create-lesson-ms');
+    const prevParts = MultiSelect.values('create-part-ms');
+
+    if (!books.length) {
+        MultiSelect.clear('create-lesson-ms');
+        MultiSelect.clear('create-part-ms');
+        groupedPassages = {};
+        return;
+    }
+
+    showSetupError('');
+    try {
+        await Promise.all(books
+            .filter(code => !passagesByBook[code])
+            .map(async code => {
+                const res = await fetch(`/api/competition/book-passages?book_code=${encodeURIComponent(code)}`);
+                const data = await res.json();
+                passagesByBook[code] = data.passages || [];
+            }));
+
+        groupedPassages = {};
+        books.forEach(code => {
+            (passagesByBook[code] || []).forEach(passage => {
+                const info = parsePassageId(passage.passage_id);
+                if (!groupedPassages[info.lessonKey]) groupedPassages[info.lessonKey] = [];
+                groupedPassages[info.lessonKey].push({ ...passage, ...info });
+            });
+        });
+
+        const showGroups = books.length > 1;
+        const lessonOptions = Object.keys(groupedPassages).sort(lessonKeySort).map(key => {
+            const info = groupedPassages[key][0];
+            return {
+                value: key,
+                label: info.lesson === 'Other' ? t('vocab.other_label') : `${t('picker.lesson_prefix')} ${info.lesson}`,
+                group: showGroups ? sourceGroupLabel(info) : null,
+            };
+        });
+        MultiSelect.setOptions('create-lesson-ms', lessonOptions);
+        if (!lessonOptions.length) {
+            showSetupError(t('competition.no_saved_books'));
+            return;
+        }
+
+        MultiSelect.setValues('create-lesson-ms', prevLessons);
+        onLessonChange();
+        MultiSelect.setValues('create-part-ms', prevParts);
+    } catch (e) {
+        showSetupError(t('picker.failed_load_lessons'));
+    }
 }
 
 // Parse a passage_id ("HSK1_2_2") into its pieces. `lessonKey` scopes a lesson to its
@@ -258,7 +356,7 @@ function onLessonChange() {
         const info = passages[0];
         const groupLabel = info.lesson === 'Other'
             ? t('vocab.other_label')
-            : `HSK ${info.level} · ${t('picker.lesson_prefix')} ${info.lesson}`;
+            : `${sourceGroupLabel(info)} · ${t('picker.lesson_prefix')} ${info.lesson}`;
         [...passages].sort((a, b) => Number(a.part) - Number(b.part)).forEach(passage => {
             partOptions.push({
                 value: passage.passage_id,
@@ -328,20 +426,28 @@ async function editRoomSettings() {
     editing = true;
     showSetupError('');
 
-    document.getElementById('create-mode').value = currentRoom.category || 'vocab';
+    const category = currentRoom.category || 'vocab';
+    document.getElementById('create-mode').value = category;
     onModeChange();
-    MultiSelect.setValues('create-type-ms',
-        parseTypeValues(currentRoom.activity_type, currentRoom.category || 'vocab'));
+    MultiSelect.setValues('create-type-ms', parseTypeValues(currentRoom.activity_type, category));
     document.getElementById('create-max-users').value = currentRoom.max_users || 8;
     document.getElementById('create-timeout').value = String(currentRoom.section_timeout_minutes || 15);
 
-    // Rebuild lesson/part options for every HSK level the room's parts span, then
+    // Rebuild the lesson/part options for the room's source (HSK levels, or books), then
     // re-check the room's current picks.
     const passageIds = currentRoom.passage_ids || [];
     const infos = passageIds.map(parsePassageId);
-    const levels = Array.from(new Set(infos.map(i => String(i.level)).filter(v => v !== '0')));
-    MultiSelect.setValues('create-level-ms', levels);
-    await onLevelChange();
+    if (category === 'book') {
+        // A book passage_id's first segment is the book code (parsed as `hsk`, level 0).
+        const bookCodes = Array.from(new Set(infos.map(i => i.hsk).filter(Boolean)));
+        await loadSavedBooks();
+        MultiSelect.setValues('create-book-ms', bookCodes);
+        await onBookChange();
+    } else {
+        const levels = Array.from(new Set(infos.map(i => String(i.level)).filter(v => v !== '0')));
+        MultiSelect.setValues('create-level-ms', levels);
+        await onLevelChange();
+    }
     const lessonKeys = Array.from(new Set(infos.map(i => i.lessonKey)));
     MultiSelect.setValues('create-lesson-ms', lessonKeys);
     onLessonChange();
@@ -404,13 +510,19 @@ function renderRoom(room) {
     const infos = passageIds.map(parsePassageId);
     const lessonCount = new Set(infos.map(i => i.lessonKey)).size;
     const hskLevels = Array.from(new Set(infos.map(i => i.level).filter(Boolean))).sort((a, b) => a - b);
-    const hskLabel = hskLevels.length ? hskLevels.map(n => `HSK ${n}`).join(', ') : `HSK ${room.level}`;
     const isLesson = room.category === 'lesson';
-    const countLine = isLesson
-        ? t('competition.tasks_source_count', { count: room.word_count || 0 })
-        : t('competition.words_count', { count: room.word_count || 0 });
+    const isBook = room.category === 'book';
+    // Book rooms are sourced from books (first passage_id segment), not an HSK level.
+    const bookCodes = Array.from(new Set(infos.map(i => i.hsk).filter(Boolean)));
+    const sourceLabel = isBook
+        ? (bookCodes.join(', ') || t('competition.mode_book'))
+        : (hskLevels.length ? hskLevels.map(n => `HSK ${n}`).join(', ') : `HSK ${room.level}`);
+    let countLine;
+    if (isLesson) countLine = t('competition.tasks_source_count', { count: room.word_count || 0 });
+    else if (isBook) countLine = t('competition.book_pool_note');
+    else countLine = t('competition.words_count', { count: room.word_count || 0 });
     document.getElementById('room-summary').innerHTML = `
-        <div><strong>${escapeHtml(hskLabel)}</strong></div>
+        <div><strong>${escapeHtml(sourceLabel)}</strong></div>
         <div>${escapeHtml(modeSummaryLabel(room))}</div>
         <div>${escapeHtml(t('competition.lessons_parts_count', { lessons: lessonCount, parts: passageIds.length }))}</div>
         <div>${escapeHtml(countLine)}</div>
@@ -440,8 +552,11 @@ function renderRoom(room) {
 // "Vocabulary · Typing, Listening" / "Lesson · Typing" — the room's mode and its
 // selected skill focus (all types collapse to the "All-rounder" label).
 function modeSummaryLabel(room) {
-    const mode = room.category === 'lesson' ? 'lesson' : 'vocab';
-    const modeLabel = t(mode === 'lesson' ? 'competition.mode_lesson' : 'competition.mode_vocab');
+    const mode = TYPE_OPTIONS[room.category] ? room.category : 'vocab';
+    const modeKey = mode === 'lesson' ? 'competition.mode_lesson'
+        : mode === 'book' ? 'competition.mode_book'
+        : 'competition.mode_vocab';
+    const modeLabel = t(modeKey);
     const at = room.activity_type || 'all';
     let typeLabel;
     if (at === 'all') {
@@ -487,7 +602,12 @@ async function startTrainer() {
         return;
     }
 
-    const words = await resolveRoomWords();
+    // Book rooms play the deduped union of participants' saved words, resolved
+    // server-side from the frozen participant set; vocab rooms resolve public passage
+    // vocabulary on the client.
+    const words = currentRoom?.category === 'book'
+        ? await resolveBookWords()
+        : await resolveRoomWords();
     if (!words.length) {
         container.innerHTML = `<div class="competition-empty">${escapeHtml(t('competition.no_words'))}</div>`;
         return;
@@ -529,6 +649,19 @@ async function resolveRoomWords() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ passage_ids: currentRoom?.passage_ids || [] })
         });
+        const data = await res.json();
+        return Array.isArray(data.words) ? data.words.filter(w => w && w.word) : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+// Book mode: the shared pool is resolved server-side from the session's participant set,
+// so every player fetches the same deterministic word list.
+async function resolveBookWords() {
+    if (!currentSession?.id) return [];
+    try {
+        const res = await fetch(`/api/competition/sessions/${currentSession.id}/book-words`);
         const data = await res.json();
         return Array.isArray(data.words) ? data.words.filter(w => w && w.word) : [];
     } catch (e) {
