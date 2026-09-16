@@ -149,6 +149,14 @@ class CompetitionRepository:
             .order_by(case((m.role == "host", 0), else_=1), m.joined_at)
         ).all()
 
+    def get_active_member_ids(self, room_id):
+        """Active member user_ids for a room (excludes anyone who left)."""
+        m = CompetitionRoomMember
+        rows = self.session.execute(
+            select(m.user_id).where(m.room_id == room_id, m.status != "left")
+        ).all()
+        return [r[0] for r in rows]
+
     # ------------------------------------------------------------------
     # Chat
     # ------------------------------------------------------------------
@@ -198,6 +206,23 @@ class CompetitionRepository:
             .order_by(CompetitionSession.id.desc())
             .limit(1)
         ).first()
+
+    def get_session_room_source(self, session_id):
+        """(passage_ids, category) of the room behind a session — the word-pool source."""
+        return self.session.execute(
+            select(CompetitionRoom.passage_ids, CompetitionRoom.category)
+            .select_from(CompetitionSession)
+            .join(CompetitionRoom, CompetitionRoom.id == CompetitionSession.room_id)
+            .where(CompetitionSession.id == session_id)
+        ).first()
+
+    def get_score_user_ids(self, session_id):
+        """user_ids scored in a session — the participant set, frozen at start."""
+        rows = self.session.execute(
+            select(CompetitionScore.user_id)
+            .where(CompetitionScore.session_id == session_id)
+        ).all()
+        return [r[0] for r in rows]
 
     def insert_session(self, room_id, minutes, category="vocab", lesson_tasks=None):
         return self.session.execute(

@@ -308,6 +308,79 @@ def test_add_competition_chat_message_error_rolls_back():
 
 
 # ---------------------------------------------------------------------------
+# prepare_room_settings - "book" category
+# ---------------------------------------------------------------------------
+
+def test_prepare_room_settings_book_defers_source_count_without_touching_vocab():
+    with patch.object(service, "resolve_room_words") as resolve:
+        settings, error = service.prepare_room_settings({
+            "level": 1, "passage_ids": ["GCS_1_1"], "category": "book",
+            "activity_type": ["typing"],
+        })
+
+    assert error is None
+    assert settings["category"] == "book"
+    assert settings["source_count"] == 0
+    # Book rooms share the vocab trainer's type set, not the lesson one.
+    assert settings["activity_type"] == "typing"
+    resolve.assert_not_called()
+
+
+def test_prepare_room_settings_book_rejects_lesson_only_types():
+    settings, error = service.prepare_room_settings({
+        "level": 1, "passage_ids": ["GCS_1_1"], "category": "book",
+        "activity_type": ["reorder"],
+    })
+
+    assert error is None
+    assert settings["activity_type"] == "all"
+
+
+# ---------------------------------------------------------------------------
+# get_competition_book_words_for_session
+# ---------------------------------------------------------------------------
+
+def test_get_competition_book_words_for_session_unions_participant_words():
+    session, session_local = _mock_session()
+    repo = MagicMock()
+    repo.get_session_room_source.return_value = ('["GCS_1_1"]', "book")
+    repo.get_score_user_ids.return_value = [42, 43]
+    words = [{"word": "书", "cn": "书"}]
+
+    with patch.object(service, "SessionLocal", session_local), \
+         patch.object(service, "CompetitionRepository", return_value=repo), \
+         patch("entity.user_saved_word.service.get_competition_book_words",
+               return_value=words) as book_words:
+        result = service.get_competition_book_words_for_session(7)
+
+    assert result == words
+    book_words.assert_called_once_with([42, 43], ["GCS_1_1"])
+    session_local.remove.assert_called_once()
+
+
+def test_get_competition_book_words_for_session_ignores_non_book_sessions():
+    session, session_local = _mock_session()
+    repo = MagicMock()
+    repo.get_session_room_source.return_value = (["H1_1_1"], "vocab")
+
+    with patch.object(service, "SessionLocal", session_local), \
+         patch.object(service, "CompetitionRepository", return_value=repo):
+        assert service.get_competition_book_words_for_session(7) == []
+
+    repo.get_score_user_ids.assert_not_called()
+
+
+def test_get_competition_book_words_for_session_unknown_session_returns_empty():
+    session, session_local = _mock_session()
+    repo = MagicMock()
+    repo.get_session_room_source.return_value = None
+
+    with patch.object(service, "SessionLocal", session_local), \
+         patch.object(service, "CompetitionRepository", return_value=repo):
+        assert service.get_competition_book_words_for_session(7) == []
+
+
+# ---------------------------------------------------------------------------
 # start_competition_session
 # ---------------------------------------------------------------------------
 
@@ -360,6 +433,42 @@ def test_start_competition_session_success():
     get_state.assert_called_once_with(7)
     assert result == {"id": 7}
     assert error is None
+
+
+def test_start_competition_session_book_rejects_an_empty_shared_pool():
+    room = {
+        "id": 1, "host_user_id": 42, "status": "waiting", "category": "book",
+        "passage_ids": ["GCS_1_1"], "section_timeout_minutes": 15,
+    }
+
+    with patch.object(service, "get_competition_room_by_code", return_value=room), \
+         patch.object(service, "_room_member_ids", return_value=[42]), \
+         patch("entity.user_saved_word.service.get_competition_book_words", return_value=[]):
+        result, error = service.start_competition_session("ABC123", 42)
+
+    assert (result, error) == (None, "No saved words in the selected parts")
+
+
+def test_start_competition_session_book_starts_when_the_pool_is_not_empty():
+    session, session_local = _mock_session()
+    repo = MagicMock()
+    repo.insert_session.return_value = 7
+    room = {
+        "id": 1, "host_user_id": 42, "status": "waiting", "category": "book",
+        "passage_ids": ["GCS_1_1"], "section_timeout_minutes": 15,
+    }
+
+    with patch.object(service, "SessionLocal", session_local), \
+         patch.object(service, "CompetitionRepository", return_value=repo), \
+         patch.object(service, "get_competition_room_by_code", return_value=room), \
+         patch.object(service, "_room_member_ids", return_value=[42, 43]), \
+         patch("entity.user_saved_word.service.get_competition_book_words",
+               return_value=[{"cn": "书"}]), \
+         patch.object(service, "get_competition_session_state", return_value={"id": 7}):
+        result, error = service.start_competition_session("ABC123", 42)
+
+    repo.insert_session.assert_called_once_with(1, 15, category="book", lesson_tasks=None)
+    assert (result, error) == ({"id": 7}, None)
 
 
 def test_start_competition_session_error_rolls_back():
