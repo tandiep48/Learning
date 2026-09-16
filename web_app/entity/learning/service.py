@@ -192,10 +192,10 @@ def get_recommended_practices(user_id, threshold=0.80, limit=None, status_filter
 
 
 def get_practice_history_sessions(user_id, hsk_level=None, category=None,
-                                   date=None, sort='recent', page=1, page_size=20):
+                                   sort='recent', page=1, page_size=20):
     """
     List a user's past practice/exam sessions for the review page, with optional
-    backend filters (hsk_level, category, date) and ordering. One row per session_id,
+    backend filters (hsk_level, category) and ordering. One row per session_id,
     with score and the level(s)/lesson(s) it covered.
 
     Returns (sessions, has_more). has_more lets the caller do prev/next paging without a
@@ -207,7 +207,7 @@ def get_practice_history_sessions(user_id, hsk_level=None, category=None,
     session = SessionLocal()
     try:
         rows = LearningRepository(session).list_practice_sessions(
-            user_id, hsk_level, category, date, sort, page, page_size
+            user_id, hsk_level, category, sort, page, page_size
         )
         has_more = len(rows) > page_size
         rows = rows[:page_size]

@@ -11,7 +11,7 @@ lifecycle (commit/rollback/remove) is owned by the service layer.
 
 from sqlalchemy import (
     select, func, distinct, case, cast, and_, or_, any_, bindparam,
-    asc, desc, nullslast, Text, Date, Float, Integer, String,
+    asc, desc, nullslast, Text, Float, Integer, String,
 )
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Session
@@ -317,7 +317,7 @@ class LearningRepository:
     # Practice history
     # ------------------------------------------------------------------
 
-    def list_practice_sessions(self, user_id, hsk_level, category, date, sort, page, page_size):
+    def list_practice_sessions(self, user_id, hsk_level, category, sort, page, page_size):
         """One row per session_id for the user's practice/exam history, newest/oldest
         first per `sort`. Fetches one extra row past page_size so the caller can detect
         a next page without a separate COUNT query."""
@@ -329,13 +329,11 @@ class LearningRepository:
             where.append(func.coalesce(PracticeRecord.category, 'practice') == category)
 
         # Level can vary within a multi-lesson session, so keep the whole session (with its
-        # full score) as long as it touched the requested level. Date matches the session's
-        # end day. Both are HAVING conditions so session stats stay complete.
+        # full score) as long as it touched the requested level. This is a HAVING condition
+        # so session stats stay complete.
         having = []
         if hsk_level is not None:
             having.append(func.bool_or(PracticeRecord.hsk_level == hsk_level))
-        if date:
-            having.append(cast(ended_at, Date) == date)
 
         stmt = (
             select(
