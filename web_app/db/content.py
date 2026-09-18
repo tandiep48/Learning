@@ -145,20 +145,25 @@ def get_passages_summary(hsk_level=None, lang="en"):
 
 
 def get_lesson_translations(hsk_level, lesson):
-    """Return every translation row for one lesson, e.g. HSK1 + lesson 2 -> 'H1_2_%'.
+    """Return every translation row for one lesson, e.g. HSK1 + lesson 2 -> H1_2_*.
+    translation_id is split on '_' and its parts compared exactly — a LIKE prefix would
+    treat the underscores as single-character wildcards and pull lesson 20..29 in too.
     Ordered by the trailing index numerically so H1_2_10 follows H1_2_9, not H1_2_1."""
     digits = "".join(ch for ch in str(hsk_level or "") if ch.isdigit())
     lesson_num = "".join(ch for ch in str(lesson or "") if ch.isdigit())
     if not digits or not lesson_num:
         return []
-    prefix = f"H{digits}_{lesson_num}_"
+
+    level_part = func.split_part(Translation.translation_id, "_", 1)
+    lesson_part = func.split_part(Translation.translation_id, "_", 2)
+    index_part = func.split_part(Translation.translation_id, "_", 3)
 
     session = SessionLocal()
     try:
         rows = session.execute(
             select(Translation.translation_id, Translation.cn, Translation.vn, Translation.en)
-            .where(Translation.translation_id.like(prefix + "%"))
-            .order_by(cast(func.split_part(Translation.translation_id, "_", 3), Integer))
+            .where(and_(level_part == f"H{digits}", lesson_part == lesson_num))
+            .order_by(cast(func.nullif(index_part, ""), Integer))
         ).all()
         return [{"translation_id": r[0], "cn": r[1], "vn": r[2], "en": r[3]} for r in rows]
     finally:
