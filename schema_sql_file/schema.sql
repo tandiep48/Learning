@@ -54,7 +54,8 @@ CREATE TABLE IF NOT EXISTS passage_vocabulary (
 
 -- Sentence-level translations shown on the lesson translation page. translation_id
 -- follows the H<level>_<lesson>_<index> convention (e.g. H1_2_1), so a whole lesson is
--- queried with a LIKE 'H1_2_%' prefix, ordered by the trailing index.
+-- queried by splitting the id on '_' and matching the level and lesson parts exactly
+-- (a LIKE prefix would treat the underscores as wildcards), ordered by the trailing index.
 CREATE TABLE IF NOT EXISTS translation (
     translation_id VARCHAR(100) PRIMARY KEY,
     cn TEXT,
