@@ -82,6 +82,19 @@ class VocabRepository:
             .all()
         )
 
+    def get_existing_words(self, words: list[str]) -> list[str]:
+        """Which of `words` exist in the vocabulary table, as distinct Chinese words.
+
+        Indexed lookup bounded by len(words) — the cheap counterpart to loading the
+        whole table via get_all_ordered() just to intersect it with a word list.
+        """
+        if not words:
+            return []
+        rows = self.session.execute(
+            select(distinct(Vocabulary.cn)).where(Vocabulary.cn.in_(words))
+        ).all()
+        return [r[0] for r in rows]
+
     def get_words_by_hsk_level(self, hsk_level: str) -> list[str]:
         """Chinese words for one HSK level, ordered by id."""
         rows = self.session.execute(

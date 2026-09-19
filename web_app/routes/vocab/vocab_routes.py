@@ -27,6 +27,7 @@ from entity.record.service import (
 )
 from entity.vocabulary.service import (
     get_course_vocab,
+    get_existing_vocab_words,
     get_vocabulary_by_words,
     get_vocab_lessons,
 )
@@ -533,6 +534,44 @@ def get_review_list():
         "total": total,
         "total_pages": total_pages
     })
+
+@vocab_bp.route('/review/count', methods=['GET'])
+@login_required
+def get_review_count():
+    """How many words are waiting in the review list, without building the list.
+
+    Returns the SAME number as /review's `total`, but skips get_records_for_words()
+    — which loads the entire vocabulary table into a DataFrame (uncached) purely to
+    hydrate the rows. Callers that only need the number (e.g. a dashboard badge that
+    loads on every visit) must use this route, not /review with a small page_size:
+    /review paginates in Python after all the work is already done, so a small page
+    costs exactly as much as a large one.
+
+    The count must stay in step with get_review_list(): it is the number of review
+    words that exist EITHER in the vocabulary table OR in the static number rows,
+    deduplicated by word — the same union get_records_for_words() builds.
+    """
+    words = get_review_words_flat(current_user.id)
+
+    cleaned_words = []
+    seen = set()
+    for word in words:
+        word = str(word).strip()
+        if word and word not in seen:
+            cleaned_words.append(word)
+            seen.add(word)
+
+    if not cleaned_words:
+        return jsonify({"total": 0})
+
+    matched = get_existing_vocab_words(cleaned_words)
+    # number_vocab_rows is a static in-memory list, so this union costs nothing.
+    number_words = {
+        normalize_vocab_row(row)["word"] for row in number_vocab_rows(include_all=True)
+    }
+    matched |= number_words & seen
+
+    return jsonify({"total": len(matched)})
 
 @vocab_bp.route('/has_history', methods=['GET'])
 @login_required

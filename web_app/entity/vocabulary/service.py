@@ -223,6 +223,23 @@ def get_course_vocab():
         SessionLocal.remove()
 
 
+def get_existing_vocab_words(words: list[str]) -> set[str]:
+    """The subset of `words` that exist in the vocabulary table.
+
+    One indexed query. Use this instead of get_course_vocab() whenever you only need
+    to know WHICH words exist — get_course_vocab() loads every row into a DataFrame
+    and is not cached.
+    """
+    if not words:
+        return set()
+
+    session = SessionLocal()
+    try:
+        return set(VocabRepository(session).get_existing_words(words))
+    finally:
+        SessionLocal.remove()
+
+
 def get_vocab_lessons(hsk_level: str, lesson_size: int = 10) -> list[dict]:
     """
     Returns a list of lesson groups for a given HSK level.
