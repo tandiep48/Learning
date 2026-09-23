@@ -263,6 +263,28 @@ CREATE TABLE IF NOT EXISTS user_lesson_part_progress (
 CREATE INDEX IF NOT EXISTS idx_user_lesson_part_progress_user
 ON user_lesson_part_progress(user_id);
 
+-- One row per completed step of a lesson part's six-step milestone (vocab
+-- summary -> vocab learner -> vocab trainer -> lesson summary -> lesson learner
+-- -> lesson trainer). Append-only: writes are ON CONFLICT DO NOTHING so replaying
+-- a step never moves its original timestamp.
+--
+-- Only the passive steps (1, 2, 4, 5) are ever stored. The two graded steps are
+-- derived on read from the data that already governs them — step 3 from full word
+-- mastery, step 6 from user_lesson_part_progress.lesson_trainer_completed_at — so
+-- the milestone cannot drift out of step with the lesson picker, and a learner who
+-- finished a part before this shipped reads as 6/6 with no rows here at all.
+--
+-- The composite primary key is both the ON CONFLICT target and the only index the
+-- table needs: every read is "all steps for this (user, passage)", a prefix scan.
+CREATE TABLE IF NOT EXISTS user_lesson_milestone (
+    user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+    passage_id VARCHAR(255) NOT NULL,
+    step SMALLINT NOT NULL,
+    completed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, passage_id, step),
+    CONSTRAINT user_lesson_milestone_step_range CHECK (step BETWEEN 1 AND 6)
+);
+
 -- Personal word list: words a user saved from a passage (e.g. tapping a
 -- character in a book-cover lesson summary). cn must already exist in
 -- vocabulary, so only known words are saved. These rows are unioned into the
