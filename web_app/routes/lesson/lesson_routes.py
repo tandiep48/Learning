@@ -26,6 +26,12 @@ from entity.passage.service import (
     get_passage_book_code,
 )
 from entity.passage_vocabulary.service import get_passage_vocab
+from entity.user_lesson_milestone.service import (
+    get_milestone,
+    mark_milestone_step,
+    is_passive_step,
+    TOTAL_STEPS as MILESTONE_TOTAL_STEPS,
+)
 from entity.user_saved_word.service import get_user_saved_vocab
 from entity.grammar_rule.service import get_grammar_for_lesson
 from number_part import NUMBER_PART_ID, is_number_part, number_vocab_rows
@@ -203,6 +209,56 @@ def complete_lesson_part():
         current_user.level = new_level
     return jsonify({"status": "success", "passage_id": passage_id,
                     "score_pct": score_pct, "mastered_words": mastered, "level": new_level})
+
+@lesson_bp.route('/milestone', methods=['GET'])
+@login_required
+def get_lesson_milestone():
+    """The six-step milestone for one part.
+
+    Steps 3 and 6 are derived from mastery data rather than read from the
+    milestone table, so this never drifts out of step with the lesson picker —
+    and a learner who finished a part before the milestone shipped sees 6/6 with
+    no stored rows. See entity/user_lesson_milestone/service.py.
+    """
+    passage_id = request.args.get('passage_id')
+    if not passage_id:
+        return jsonify({"error": "passage_id is required"}), 400
+
+    return jsonify(get_milestone(current_user.id, passage_id))
+
+
+@lesson_bp.route('/milestone', methods=['POST'])
+@login_required
+def post_lesson_milestone():
+    """Record one completed passive step (1, 2, 4, 5).
+
+    The graded steps are refused on purpose: step 6 already flows through
+    /api/lesson/part-complete and step 3 through the vocab trainer's batch
+    submit. Accepting them here would let the milestone claim a step the
+    learner had not actually passed.
+    """
+    data = request.get_json(silent=True) or {}
+    passage_id = data.get('passage_id')
+    if not passage_id:
+        return jsonify({"error": "passage_id is required"}), 400
+
+    try:
+        step = int(data.get('step'))
+    except (TypeError, ValueError):
+        return jsonify({"error": "step is required"}), 400
+
+    if not 1 <= step <= MILESTONE_TOTAL_STEPS:
+        return jsonify({"error": f"step must be between 1 and {MILESTONE_TOTAL_STEPS}"}), 400
+    if not is_passive_step(step):
+        return jsonify({
+            "error": "graded steps are recorded by their own trainer endpoints"
+        }), 400
+
+    if not mark_milestone_step(current_user.id, passage_id, step):
+        return jsonify({"error": "Could not save milestone progress"}), 500
+
+    return jsonify(get_milestone(current_user.id, passage_id))
+
 
 @lesson_bp.route('/passage/<passage_id>', methods=['GET'])
 def get_passage_detail(passage_id):
