@@ -12,7 +12,8 @@ Target tables, all keyed off the Chinese word `cn`:
                        database (never from the spreadsheet's own `id` column).
 
 Nothing is deleted, so passage_vocabulary / user_saved_word foreign keys stay
-intact. Duplicate `cn` rows in the sheet collapse to the last occurrence.
+intact. The sheet lists one row per sense, so rows sharing a `cn` are merged
+into a single record (see load_rows) instead of overwriting each other.
 
 The sheet is loaded into a TEMPORARY staging table with chunked multi-row
 INSERTs, then each target table is written by a handful of set-based statements
@@ -157,12 +158,38 @@ def resolve_file(path):
     )
 
 
-def load_rows(path):
-    """Read the xlsx and return (rows, dropped_dup_cn).
+def _text(value):
+    """Trim a cell to a clean string, or None when it is blank.
 
-    Rows are deduplicated by `cn` keeping the last occurrence; each row is a
-    plain dict matching the staging columns. Sheet columns the schema has no
-    home for (id, freq, pos, corpus_count) are ignored.
+    Non-breaking spaces are common in this sheet ('zhēngduó\xa0'), so collapse
+    every run of whitespace — otherwise two identical senses look different.
+    """
+    if value is None:
+        return None
+    text = " ".join(str(value).split())
+    return text or None
+
+
+def _merge_texts(values, limit=None):
+    """Join distinct senses with '; ', in sheet order, dropping blanks."""
+    merged = "; ".join(dict.fromkeys(v for v in values if v))
+    if not merged:
+        return None
+    # pinyin lands in VARCHAR(100); keep whole senses rather than cutting mid-word.
+    while limit is not None and len(merged) > limit and "; " in merged:
+        merged = merged.rsplit("; ", 1)[0]
+    return merged[:limit] if limit is not None else merged
+
+
+def load_rows(path):
+    """Read the xlsx and return (rows, merged_sense_rows).
+
+    The sheet holds one row per sense, so a word such as 会 appears several
+    times ('can, to be able to' / 'will'). Rows sharing a `cn` are merged into a
+    single record: pinyin and the two meaning columns keep every distinct sense
+    joined with '; ', the remaining columns take the first non-empty value, and
+    hsk_level takes the lowest level the word is tagged with. Sheet columns the
+    schema has no home for (id, freq, pos, corpus_count) are ignored.
     """
     import openpyxl
 
@@ -177,34 +204,63 @@ def load_rows(path):
             return r[i] if i is not None else None
 
         by_cn = {}
-        seen = 0
+        senses = {}
+        merged_rows = 0
         for r in it:
-            cn = val(r, "cn")
-            if cn is None or str(cn).strip() == "":
+            cn = _text(val(r, "cn"))
+            if cn is None:
                 continue
-            cn = str(cn).strip()
-            seen += 1
-            by_cn[cn] = {
-                "cn": cn,
-                "pinyin": val(r, "py"),
-                "meaning_en": val(r, "en"),
-                "meaning_vn": val(r, "vn"),
-                "audio_key": val(r, "audio_key"),
-                "hsk_level": _hsk_from_tags(val(r, "tags")),
-                "sematic_difficulty": val(r, "sematic_difficulty"),
-                "sematic_tags": val(r, "sematic_tags"),
-                "zh": val(r, "zh"),
-                "total_strokes_cn": _as_int(val(r, "total_strokes_cn")),
-                "total_strokes_zh": _as_int(val(r, "total_strokes_zh")),
-                "strokes_cn": val(r, "strokes_cn"),
-                "strokes_zh": val(r, "strokes_zh"),
-                "word_length": _as_int(val(r, "word_length")),
-                "strokes_difficult_cn": val(r, "strokes_difficult_cn"),
-                "strokes_difficult_cn_norm": val(r, "strokes_difficult_cn_norm"),
-                "strokes_difficult_zh": val(r, "strokes_difficult_zh"),
-                "strokes_difficult_zh_norm": val(r, "strokes_difficult_zh_norm"),
-            }
-        return list(by_cn.values()), seen - len(by_cn)
+
+            row = by_cn.get(cn)
+            if row is None:
+                row = by_cn[cn] = {
+                    "cn": cn,
+                    "audio_key": _text(val(r, "audio_key")),
+                    "hsk_level": _hsk_from_tags(val(r, "tags")),
+                    "sematic_difficulty": val(r, "sematic_difficulty"),
+                    "sematic_tags": _text(val(r, "sematic_tags")),
+                    "zh": _text(val(r, "zh")),
+                    "total_strokes_cn": _as_int(val(r, "total_strokes_cn")),
+                    "total_strokes_zh": _as_int(val(r, "total_strokes_zh")),
+                    "strokes_cn": _text(val(r, "strokes_cn")),
+                    "strokes_zh": _text(val(r, "strokes_zh")),
+                    "word_length": _as_int(val(r, "word_length")),
+                    "strokes_difficult_cn": val(r, "strokes_difficult_cn"),
+                    "strokes_difficult_cn_norm": val(r, "strokes_difficult_cn_norm"),
+                    "strokes_difficult_zh": val(r, "strokes_difficult_zh"),
+                    "strokes_difficult_zh_norm": val(r, "strokes_difficult_zh_norm"),
+                }
+                senses[cn] = {"pinyin": [], "meaning_en": [], "meaning_vn": []}
+            else:
+                merged_rows += 1
+                # A later row only fills the gaps the first one left.
+                for key, cell in (
+                    ("audio_key", _text(val(r, "audio_key"))),
+                    ("sematic_difficulty", val(r, "sematic_difficulty")),
+                    ("sematic_tags", _text(val(r, "sematic_tags"))),
+                    ("zh", _text(val(r, "zh"))),
+                    ("strokes_cn", _text(val(r, "strokes_cn"))),
+                    ("strokes_zh", _text(val(r, "strokes_zh"))),
+                ):
+                    if row[key] is None:
+                        row[key] = cell
+                # A word taught at HSK1 and re-tagged h5 later stays HSK1.
+                level = _hsk_from_tags(val(r, "tags"))
+                if level is not None and (row["hsk_level"] is None or level < row["hsk_level"]):
+                    row["hsk_level"] = level
+
+            sense = senses[cn]
+            sense["pinyin"].append(_text(val(r, "py")))
+            sense["meaning_en"].append(_text(val(r, "en")))
+            sense["meaning_vn"].append(_text(val(r, "vn")))
+
+        for cn, row in by_cn.items():
+            sense = senses[cn]
+            row["pinyin"] = _merge_texts(sense["pinyin"], limit=100)
+            row["meaning_en"] = _merge_texts(sense["meaning_en"])
+            row["meaning_vn"] = _merge_texts(sense["meaning_vn"])
+
+        return list(by_cn.values()), merged_rows
     finally:
         wb.close()
 
@@ -349,7 +405,7 @@ def main():
         print(err, file=sys.stderr)
         sys.exit(1)
 
-    rows, dropped = load_rows(path)
+    rows, merged_rows = load_rows(path)
     if not rows:
         print(f"No usable rows in {path} (every row is missing `cn`).")
         sys.exit(1)
@@ -361,7 +417,7 @@ def main():
 
         print("Dictionary:")
         print(f"  file        : {path}")
-        print(f"  words       : {stats['words']}  (dropped {dropped} duplicate-cn rows)")
+        print(f"  words       : {stats['words']}  (merged {merged_rows} extra sense rows)")
         print(f"  vocabulary  : new {stats['vocab_new']}, update {stats['vocab_update']}")
         print(f"  stroke_info : new {stats['stroke_new']}, update {stats['stroke_update']}")
         print(f"  sematic     : update {stats['sematic_update']}, "
