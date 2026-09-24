@@ -4,6 +4,7 @@ import json
 import re
 import subprocess
 import tempfile
+import time
 import wave
 import pandas as pd
 from datetime import datetime
@@ -243,7 +244,30 @@ def paginate_rows(rows, page, page_size):
     end = start + page_size
     return rows[start:end], total, total_pages, page
 
+# Words the reader has already resolved, shared by the whole worker. Only hits
+# are cached: a miss must stay a miss for this request alone, otherwise a word
+# added by the dictionary import keeps reading as "not found" until the server
+# restarts. Entries expire so an updated meaning reaches the reader on its own.
 _word_cache: dict = {}
+_WORD_CACHE_TTL = 900          # seconds
+_WORD_CACHE_MAX = 20000        # entries, cleared wholesale when exceeded
+
+# A passage is looked up in one request, so the limits are per lesson, not per
+# screen: enough for the longest lesson, small enough to bound a crafted URL.
+MAX_LOOKUP_WORDS = 1000
+LOOKUP_CHUNK = 500
+
+
+def _cached_word(word, now):
+    entry = _word_cache.get(word)
+    if entry is None:
+        return None
+    cached_at, payload = entry
+    if now - cached_at > _WORD_CACHE_TTL:
+        _word_cache.pop(word, None)
+        return None
+    return payload
+
 
 @vocab_bp.route('/lookup-batch', methods=['GET'])
 @login_required
@@ -251,32 +275,33 @@ def lookup_batch():
     raw = request.args.get('words', '').strip()
     if not raw:
         return jsonify({})
-    words = list({w for w in raw.split(',') if w})[:80]
+    # dict.fromkeys keeps the reading order, so a truncated lesson loses its
+    # tail rather than an arbitrary slice of a set.
+    words = list(dict.fromkeys(w for w in raw.split(',') if w))[:MAX_LOOKUP_WORDS]
 
+    now = time.time()
     result = {}
     missing = []
     for w in words:
-        if w in _word_cache:
-            if _word_cache[w] is not None:
-                result[w] = _word_cache[w]
-        else:
+        payload = _cached_word(w, now)
+        if payload is None:
             missing.append(w)
+        else:
+            result[w] = payload
 
-    if missing:
-        found = set()
-        for row in get_vocabulary_by_words(missing):
+    if len(_word_cache) > _WORD_CACHE_MAX:
+        _word_cache.clear()
+
+    for start in range(0, len(missing), LOOKUP_CHUNK):
+        for row in get_vocabulary_by_words(missing[start:start + LOOKUP_CHUNK]):
             entry = {
                 "pinyin": row["pinyin"],
                 "meaning_vn": row["meaning_vn"],
                 "meaning_en": row["meaning_en"],
                 "audio_key": row["audio_key"],
             }
-            _word_cache[row["word"]] = entry
+            _word_cache[row["word"]] = (now, entry)
             result[row["word"]] = entry
-            found.add(row["word"])
-        for w in missing:
-            if w not in found:
-                _word_cache[w] = None
 
     return jsonify(result)
 
