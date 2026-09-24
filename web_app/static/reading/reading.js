@@ -1158,21 +1158,34 @@ function renderTokens(line) {
     }).join('');
 }
 
+// A long book lesson holds hundreds of distinct words; ask in batches so the
+// query string stays well inside what a server or proxy accepts.
+const LOOKUP_BATCH_SIZE = 100;
+
 async function prefetchTokens(lines) {
     const words = [...new Set(
         lines.flatMap(l => (l.tokens || []).filter(t => !PUNCT_RE.test(t)))
     )].filter(w => !_wordCache.has(w));
     if (!words.length) return;
-    try {
-        const res = await fetch(`/api/vocab/lookup-batch?words=${encodeURIComponent(words.join(','))}`);
-        const data = await res.json();
-        for (const [word, info] of Object.entries(data)) {
-            _wordCache.set(word, info);
-        }
-        words.forEach(w => { if (!_wordCache.has(w)) _wordCache.set(w, null); });
-    } catch (e) {
-        words.forEach(w => _wordCache.set(w, null));
+
+    const batches = [];
+    for (let i = 0; i < words.length; i += LOOKUP_BATCH_SIZE) {
+        batches.push(words.slice(i, i + LOOKUP_BATCH_SIZE));
     }
+
+    await Promise.all(batches.map(async batch => {
+        try {
+            const res = await fetch(`/api/vocab/lookup-batch?words=${encodeURIComponent(batch.join(','))}`);
+            if (!res.ok) return;
+            const data = await res.json();
+            for (const [word, info] of Object.entries(data)) {
+                _wordCache.set(word, info);
+            }
+            // Only the answered batch may be marked unknown; a failed batch stays
+            // unresolved so the next render can ask again.
+            batch.forEach(w => { if (!_wordCache.has(w)) _wordCache.set(w, null); });
+        } catch (e) { /* leave this batch unresolved */ }
+    }));
 }
 
 // ── Word popup ────────────────────────────────────────────────────────────────
