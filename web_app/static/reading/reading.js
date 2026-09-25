@@ -1204,17 +1204,17 @@ function showWordPopup(word) {
 
     const cached = _wordCache.get(word);
     const notFound = cached === null || cached === undefined;
-    const pinyin    = cached?.pinyin     || '';
-    const meaningVn = cached?.meaning_vn || '';
-    const meaningEn = cached?.meaning_en || '';
-    _popupAudioKey  = cached?.audio_key  || null;
+    const pinyin   = cached?.pinyin || '';
+    _popupAudioKey = cached?.audio_key || null;
 
     document.getElementById('word-popup-hanzi').textContent = word;
     document.getElementById('word-popup-pinyin').textContent = pinyin;
-    document.getElementById('word-popup-meaning-vn').textContent = notFound ? '' : meaningVn;
-    document.getElementById('word-popup-meaning-en').textContent = meaningEn;
+    // Show only the meaning matching the user's UI language (pickMeaning honors currentLang).
+    const meaningEl = document.getElementById('word-popup-meaning-vn');
     if (notFound) {
-        document.getElementById('word-popup-meaning-vn').innerHTML = '<span class="word-popup-not-found">Not found in vocabulary</span>';
+        meaningEl.innerHTML = '<span class="word-popup-not-found">Not found in vocabulary</span>';
+    } else {
+        meaningEl.textContent = pickMeaning(cached);
     }
     document.getElementById('word-popup-stroke-area').style.display = 'none';
     document.getElementById('word-stroke-tabs').innerHTML = '';
