@@ -9,7 +9,7 @@ other /api/admin CRUD blueprints.
 Prefix: /api/admin/grammar_context
 
 Endpoints:
-    GET    /api/admin/grammar_context                     → list (paginated + filters)
+    POST   /api/admin/grammar_context/query              → list (paginated, validated body + filter)
     GET    /api/admin/grammar_context/<int:context_id>    → get single
     POST   /api/admin/grammar_context                     → create
     PUT    /api/admin/grammar_context/<int:context_id>    → update
@@ -28,6 +28,8 @@ from entity.grammar_context.service import (
     update_grammar_context,
     delete_grammar_context,
 )
+from entity.grammar_context.schemas import GrammarContextQuery
+from routes.validation import parse_body, RequestValidationError
 
 grammar_context_crud_bp = Blueprint(
     "grammar_context_crud", __name__, url_prefix="/api/admin/grammar_context"
@@ -47,20 +49,21 @@ def _handle_service_error(exc: GrammarContextServiceError):
 
 
 # ---------------------------------------------------------------------------
-# GET /api/admin/grammar_context
-# Query params: page, page_size, grammar_id
+# POST /api/admin/grammar_context/query
+# Body (JSON): { "page": 1, "page_size": 20, "grammar_id": "H1-2-1" }  (all optional)
+# Replaces the former GET list — the filter now travels in a validated body.
 # ---------------------------------------------------------------------------
-@grammar_context_crud_bp.route("", methods=["GET"])
-def list_grammar_contexts_endpoint():
-    """List grammar contexts with an optional grammar_id filter and pagination."""
+@grammar_context_crud_bp.route("/query", methods=["POST"])
+def query_grammar_contexts_endpoint():
+    """List grammar contexts from a validated JSON body (optional grammar_id filter)."""
     try:
-        page = int(request.args.get("page", 1))
-        page_size = int(request.args.get("page_size", 20))
-    except (TypeError, ValueError):
-        return _error("'page' and 'page_size' must be integers.", 400)
+        params = parse_body(GrammarContextQuery)
+    except RequestValidationError as exc:
+        return exc.response()
 
-    grammar_id = request.args.get("grammar_id") or None
-    result = list_grammar_contexts(page=page, page_size=page_size, grammar_id=grammar_id)
+    result = list_grammar_contexts(
+        page=params.page, page_size=params.page_size, grammar_id=params.grammar_id
+    )
     return _ok(result, 200)
 
 

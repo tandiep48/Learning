@@ -29,11 +29,11 @@ CONTEXT_DICT = {
 # GET /api/admin/grammar_context
 # ---------------------------------------------------------------------------
 
-def test_list_grammar_contexts_endpoint(client):
+def test_query_grammar_contexts_endpoint(client):
     with patch("routes.grammar_context.grammar_context_crud_routes.list_grammar_contexts", return_value={
         "items": [CONTEXT_DICT], "page": 1, "page_size": 20, "total": 1, "total_pages": 1
     }) as mock_list:
-        resp = client.get("/api/admin/grammar_context?page=1&page_size=20&grammar_id=H1-2-1")
+        resp = client.post("/api/admin/grammar_context/query", json={"page": 1, "page_size": 20, "grammar_id": "H1-2-1"})
 
     assert resp.status_code == 200
     body = resp.get_json()
@@ -42,10 +42,20 @@ def test_list_grammar_contexts_endpoint(client):
     mock_list.assert_called_once_with(page=1, page_size=20, grammar_id="H1-2-1")
 
 
-def test_list_grammar_contexts_endpoint_rejects_non_integer_paging(client):
-    resp = client.get("/api/admin/grammar_context?page=abc")
+def test_query_grammar_contexts_endpoint_applies_defaults_on_empty_body(client):
+    with patch("routes.grammar_context.grammar_context_crud_routes.list_grammar_contexts", return_value={
+        "items": [], "page": 1, "page_size": 20, "total": 0, "total_pages": 1
+    }) as mock_list:
+        resp = client.post("/api/admin/grammar_context/query", json={})
 
-    assert resp.status_code == 400
+    assert resp.status_code == 200
+    mock_list.assert_called_once_with(page=1, page_size=20, grammar_id=None)
+
+
+def test_query_grammar_contexts_endpoint_rejects_bad_input(client):
+    resp = client.post("/api/admin/grammar_context/query", json={"page_size": 999})
+
+    assert resp.status_code == 422
     body = resp.get_json()
     assert body["success"] is False
 

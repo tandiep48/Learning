@@ -8,7 +8,7 @@ All endpoints are publicly accessible (no @login_required).
 Prefix: /api/admin/vocab
 
 Endpoints:
-    GET    /api/admin/vocab                  → list (paginated)
+    POST   /api/admin/vocab/query            → list (paginated, validated body)
     GET    /api/admin/vocab/<int:vocab_id>   → get single
     POST   /api/admin/vocab                  → create
     PUT    /api/admin/vocab/<int:vocab_id>   → update
@@ -25,6 +25,8 @@ from entity.vocabulary.service import (
     update_vocab,
     delete_vocab,
 )
+from entity.vocabulary.schemas import VocabQuery
+from routes.validation import parse_body, RequestValidationError
 
 vocab_crud_bp = Blueprint("vocab_crud", __name__, url_prefix="/api/admin/vocab")
 
@@ -42,21 +44,25 @@ def _handle_service_error(exc: VocabServiceError):
 
 
 # ---------------------------------------------------------------------------
-# GET /api/admin/vocab
-# Query params: page, page_size, hsk_level
+# POST /api/admin/vocab/query
+# Body (JSON): { "page": 1, "page_size": 20, "hsk_level": "HSK1", "search": "hao" }
+# All fields optional. Replaces the former GET list — the filter now travels in a
+# validated JSON body instead of the query string.
 # ---------------------------------------------------------------------------
-@vocab_crud_bp.route("", methods=["GET"])
-def list_vocab_endpoint():
-    """List vocabulary entries with optional HSK level filter and pagination."""
+@vocab_crud_bp.route("/query", methods=["POST"])
+def query_vocab_endpoint():
+    """List vocabulary entries from a validated JSON body (filter + pagination)."""
     try:
-        page = int(request.args.get("page", 1))
-        page_size = int(request.args.get("page_size", 20))
-    except (TypeError, ValueError):
-        return _error("'page' and 'page_size' must be integers.", 400)
+        params = parse_body(VocabQuery)
+    except RequestValidationError as exc:
+        return exc.response()
 
-    hsk_level = request.args.get("hsk_level") or None
-    search = request.args.get("search") or None
-    result = list_vocab(page=page, page_size=page_size, hsk_level=hsk_level, search=search)
+    result = list_vocab(
+        page=params.page,
+        page_size=params.page_size,
+        hsk_level=params.hsk_level,
+        search=params.search,
+    )
     return _ok(result, 200)
 
 

@@ -30,11 +30,14 @@ RULE_DICT = {
 # GET /api/admin/grammar_rule
 # ---------------------------------------------------------------------------
 
-def test_list_grammar_rules_endpoint(client):
+def test_query_grammar_rules_endpoint(client):
     with patch("routes.grammar_rule.grammar_rule_crud_routes.list_grammar_rules", return_value={
         "items": [RULE_DICT], "page": 1, "page_size": 20, "total": 1, "total_pages": 1
     }) as mock_list:
-        resp = client.get("/api/admin/grammar_rule?page=1&page_size=20&grammar_id=H1-2-1&type=1")
+        resp = client.post(
+            "/api/admin/grammar_rule/query",
+            json={"page": 1, "page_size": 20, "grammar_id": "H1-2-1", "type": 1},
+        )
 
     assert resp.status_code == 200
     body = resp.get_json()
@@ -43,18 +46,20 @@ def test_list_grammar_rules_endpoint(client):
     mock_list.assert_called_once_with(page=1, page_size=20, grammar_id="H1-2-1", type_=1)
 
 
-def test_list_grammar_rules_endpoint_rejects_non_integer_paging(client):
-    resp = client.get("/api/admin/grammar_rule?page=abc")
+def test_query_grammar_rules_endpoint_applies_defaults_on_empty_body(client):
+    with patch("routes.grammar_rule.grammar_rule_crud_routes.list_grammar_rules", return_value={
+        "items": [], "page": 1, "page_size": 20, "total": 0, "total_pages": 1
+    }) as mock_list:
+        resp = client.post("/api/admin/grammar_rule/query", json={})
 
-    assert resp.status_code == 400
-    body = resp.get_json()
-    assert body["success"] is False
+    assert resp.status_code == 200
+    mock_list.assert_called_once_with(page=1, page_size=20, grammar_id=None, type_=None)
 
 
-def test_list_grammar_rules_endpoint_rejects_non_integer_type(client):
-    resp = client.get("/api/admin/grammar_rule?type=abc")
+def test_query_grammar_rules_endpoint_rejects_non_integer_type(client):
+    resp = client.post("/api/admin/grammar_rule/query", json={"type": "abc"})
 
-    assert resp.status_code == 400
+    assert resp.status_code == 422
     body = resp.get_json()
     assert body["success"] is False
 

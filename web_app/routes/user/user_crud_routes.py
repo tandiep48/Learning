@@ -9,7 +9,7 @@ other /api/admin CRUD blueprints. Password hashes are never returned.
 Prefix: /api/admin/user
 
 Endpoints:
-    GET    /api/admin/user                  → list (paginated, optional ?search=)
+    POST   /api/admin/user/query            → list (paginated, validated body, optional search)
     GET    /api/admin/user/<int:user_id>    → get single
     POST   /api/admin/user                  → create
     PUT    /api/admin/user/<int:user_id>    → update
@@ -26,6 +26,8 @@ from entity.user.service import (
     update_user,
     delete_user,
 )
+from entity.user.schemas import UserQuery
+from routes.validation import parse_body, RequestValidationError
 
 user_crud_bp = Blueprint("user_crud", __name__, url_prefix="/api/admin/user")
 
@@ -43,20 +45,19 @@ def _handle_service_error(exc: UserServiceError):
 
 
 # ---------------------------------------------------------------------------
-# GET /api/admin/user
-# Query params: page, page_size, search
+# POST /api/admin/user/query
+# Body (JSON): { "page": 1, "page_size": 20, "search": "alice" }  (all optional)
+# Replaces the former GET list — search now travels in a validated body.
 # ---------------------------------------------------------------------------
-@user_crud_bp.route("", methods=["GET"])
-def list_users_endpoint():
-    """List users with optional search (username/email) and pagination."""
+@user_crud_bp.route("/query", methods=["POST"])
+def query_users_endpoint():
+    """List users from a validated JSON body (optional username/email search)."""
     try:
-        page = int(request.args.get("page", 1))
-        page_size = int(request.args.get("page_size", 20))
-    except (TypeError, ValueError):
-        return _error("'page' and 'page_size' must be integers.", 400)
+        params = parse_body(UserQuery)
+    except RequestValidationError as exc:
+        return exc.response()
 
-    search = request.args.get("search") or None
-    result = list_users(page=page, page_size=page_size, search=search)
+    result = list_users(page=params.page, page_size=params.page_size, search=params.search)
     return _ok(result, 200)
 
 

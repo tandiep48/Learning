@@ -8,7 +8,7 @@ All endpoints are publicly accessible (no @login_required).
 Prefix: /api/admin/passage
 
 Endpoints:
-    GET    /api/admin/passage                    → list passages (paginated, no lines)
+    POST   /api/admin/passage/query              → list passages (paginated, validated body, no lines)
     GET    /api/admin/passage/<passage_id>        → get single passage with its lines
     POST   /api/admin/passage                    → create passage (+ optional lines)
     PUT    /api/admin/passage/<passage_id>        → update passage (+ optional line replacement)
@@ -43,6 +43,8 @@ from entity.passage.service import (
     update_passage,
     delete_passage,
 )
+from entity.passage.schemas import PassageQuery
+from routes.validation import parse_body, RequestValidationError
 
 passage_crud_bp = Blueprint("passage_crud", __name__, url_prefix="/api/admin/passage")
 
@@ -60,20 +62,19 @@ def _handle_service_error(exc: PassageServiceError):
 
 
 # ---------------------------------------------------------------------------
-# GET /api/admin/passage
-# Query params: page, page_size, hsk_level
+# POST /api/admin/passage/query
+# Body (JSON): { "page": 1, "page_size": 20, "hsk_level": "HSK1" }  (all optional)
+# Replaces the former GET list — the filter now travels in a validated body.
 # ---------------------------------------------------------------------------
-@passage_crud_bp.route("", methods=["GET"])
-def list_passages_endpoint():
-    """List lesson passages with optional HSK level filter. Lines are NOT included."""
+@passage_crud_bp.route("/query", methods=["POST"])
+def query_passages_endpoint():
+    """List lesson passages from a validated JSON body. Lines are NOT included."""
     try:
-        page = int(request.args.get("page", 1))
-        page_size = int(request.args.get("page_size", 20))
-    except (TypeError, ValueError):
-        return _error("'page' and 'page_size' must be integers.", 400)
+        params = parse_body(PassageQuery)
+    except RequestValidationError as exc:
+        return exc.response()
 
-    hsk_level = request.args.get("hsk_level") or None
-    result = list_passages(page=page, page_size=page_size, hsk_level=hsk_level)
+    result = list_passages(page=params.page, page_size=params.page_size, hsk_level=params.hsk_level)
     return _ok(result, 200)
 
 

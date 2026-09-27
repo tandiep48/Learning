@@ -27,14 +27,17 @@ VOCAB_DICT = {
 
 
 # ---------------------------------------------------------------------------
-# GET /api/admin/vocab
+# POST /api/admin/vocab/query
 # ---------------------------------------------------------------------------
 
-def test_list_vocab_endpoint(client):
+def test_query_vocab_endpoint(client):
     with patch("routes.vocab.vocab_crud_routes.list_vocab", return_value={
         "items": [VOCAB_DICT], "page": 1, "page_size": 20, "total": 1, "total_pages": 1
     }) as mock_list:
-        resp = client.get("/api/admin/vocab?page=1&page_size=20&hsk_level=HSK1&search=hao")
+        resp = client.post(
+            "/api/admin/vocab/query",
+            json={"page": 1, "page_size": 20, "hsk_level": "HSK1", "search": "hao"},
+        )
 
     assert resp.status_code == 200
     body = resp.get_json()
@@ -43,12 +46,37 @@ def test_list_vocab_endpoint(client):
     mock_list.assert_called_once_with(page=1, page_size=20, hsk_level="HSK1", search="hao")
 
 
-def test_list_vocab_endpoint_rejects_non_integer_paging(client):
-    resp = client.get("/api/admin/vocab?page=abc")
+def test_query_vocab_endpoint_applies_defaults_on_empty_body(client):
+    with patch("routes.vocab.vocab_crud_routes.list_vocab", return_value={
+        "items": [], "page": 1, "page_size": 20, "total": 0, "total_pages": 1
+    }) as mock_list:
+        resp = client.post("/api/admin/vocab/query", json={})
 
-    assert resp.status_code == 400
+    assert resp.status_code == 200
+    mock_list.assert_called_once_with(page=1, page_size=20, hsk_level=None, search=None)
+
+
+def test_query_vocab_endpoint_rejects_out_of_range_page_size(client):
+    resp = client.post("/api/admin/vocab/query", json={"page_size": 500})
+
+    assert resp.status_code == 422
     body = resp.get_json()
     assert body["success"] is False
+    assert body["details"][0]["field"] == "page_size"
+
+
+def test_query_vocab_endpoint_rejects_unknown_hsk_level(client):
+    resp = client.post("/api/admin/vocab/query", json={"hsk_level": "HSK9"})
+
+    assert resp.status_code == 422
+    assert resp.get_json()["success"] is False
+
+
+def test_query_vocab_endpoint_rejects_non_json_body(client):
+    resp = client.post("/api/admin/vocab/query", data="not json", content_type="text/plain")
+
+    assert resp.status_code == 422
+    assert resp.get_json()["success"] is False
 
 
 # ---------------------------------------------------------------------------

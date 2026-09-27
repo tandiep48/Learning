@@ -27,11 +27,11 @@ USER_DICT = {"id": 1, "username": "alice", "email": "alice@example.com", "level"
 # GET /api/admin/user
 # ---------------------------------------------------------------------------
 
-def test_list_users_endpoint(client):
+def test_query_users_endpoint(client):
     with patch("routes.user.user_crud_routes.list_users", return_value={
         "items": [USER_DICT], "page": 1, "page_size": 20, "total": 1, "total_pages": 1
     }) as mock_list:
-        resp = client.get("/api/admin/user?page=1&page_size=20&search=alice")
+        resp = client.post("/api/admin/user/query", json={"page": 1, "page_size": 20, "search": "alice"})
 
     assert resp.status_code == 200
     body = resp.get_json()
@@ -41,10 +41,20 @@ def test_list_users_endpoint(client):
     mock_list.assert_called_once_with(page=1, page_size=20, search="alice")
 
 
-def test_list_users_endpoint_rejects_non_integer_paging(client):
-    resp = client.get("/api/admin/user?page=abc")
+def test_query_users_endpoint_applies_defaults_on_empty_body(client):
+    with patch("routes.user.user_crud_routes.list_users", return_value={
+        "items": [], "page": 1, "page_size": 20, "total": 0, "total_pages": 1
+    }) as mock_list:
+        resp = client.post("/api/admin/user/query", json={})
 
-    assert resp.status_code == 400
+    assert resp.status_code == 200
+    mock_list.assert_called_once_with(page=1, page_size=20, search=None)
+
+
+def test_query_users_endpoint_rejects_bad_input(client):
+    resp = client.post("/api/admin/user/query", json={"page": 0})
+
+    assert resp.status_code == 422
     body = resp.get_json()
     assert body["success"] is False
 

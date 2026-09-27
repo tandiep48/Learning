@@ -32,11 +32,11 @@ PASSAGE_WITH_LINES = {**PASSAGE_DICT, "lines": [
 # GET /api/admin/passage
 # ---------------------------------------------------------------------------
 
-def test_list_passages_endpoint(client):
+def test_query_passages_endpoint(client):
     with patch("routes.passage.passage_crud_routes.list_passages", return_value={
         "items": [PASSAGE_DICT], "page": 1, "page_size": 20, "total": 1, "total_pages": 1
     }) as mock_list:
-        resp = client.get("/api/admin/passage?page=1&page_size=20&hsk_level=HSK1")
+        resp = client.post("/api/admin/passage/query", json={"page": 1, "page_size": 20, "hsk_level": "HSK1"})
 
     assert resp.status_code == 200
     body = resp.get_json()
@@ -45,10 +45,20 @@ def test_list_passages_endpoint(client):
     mock_list.assert_called_once_with(page=1, page_size=20, hsk_level="HSK1")
 
 
-def test_list_passages_endpoint_rejects_non_integer_paging(client):
-    resp = client.get("/api/admin/passage?page=abc")
+def test_query_passages_endpoint_applies_defaults_on_empty_body(client):
+    with patch("routes.passage.passage_crud_routes.list_passages", return_value={
+        "items": [], "page": 1, "page_size": 20, "total": 0, "total_pages": 1
+    }) as mock_list:
+        resp = client.post("/api/admin/passage/query", json={})
 
-    assert resp.status_code == 400
+    assert resp.status_code == 200
+    mock_list.assert_called_once_with(page=1, page_size=20, hsk_level=None)
+
+
+def test_query_passages_endpoint_rejects_bad_input(client):
+    resp = client.post("/api/admin/passage/query", json={"hsk_level": "HSK9"})
+
+    assert resp.status_code == 422
     body = resp.get_json()
     assert body["success"] is False
 

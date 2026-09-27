@@ -9,13 +9,13 @@ other /api/admin CRUD blueprints.
 Prefix: /api/admin/question
 
 Endpoints:
-    GET    /api/admin/question                      → list (paginated + filters)
+    POST   /api/admin/question/query                → list (paginated, validated body + filters)
     GET    /api/admin/question/<int:question_id>    → get single
     POST   /api/admin/question                      → create
     PUT    /api/admin/question/<int:question_id>    → update
     DELETE /api/admin/question/<int:question_id>    → delete
 
-List query params: page, page_size, category, level, lesson, skill, search
+List body fields: page, page_size, category, level, lesson, skill, search
 """
 
 from flask import Blueprint, request, jsonify
@@ -28,6 +28,8 @@ from entity.question.service import (
     update_question,
     delete_question,
 )
+from entity.question.schemas import QuestionQuery
+from routes.validation import parse_body, RequestValidationError
 
 question_crud_bp = Blueprint("question_crud", __name__, url_prefix="/api/admin/question")
 
@@ -45,26 +47,28 @@ def _handle_service_error(exc: QuestionServiceError):
 
 
 # ---------------------------------------------------------------------------
-# GET /api/admin/question
+# POST /api/admin/question/query
+# Body (JSON): { "page", "page_size", "category", "level", "lesson", "skill", "search" }
+# All fields optional. Replaces the former GET list — filters now travel in a
+# validated body.
 # ---------------------------------------------------------------------------
-@question_crud_bp.route("", methods=["GET"])
-def list_questions_endpoint():
-    """List questions with optional filters and pagination."""
+@question_crud_bp.route("/query", methods=["POST"])
+def query_questions_endpoint():
+    """List questions from a validated JSON body (optional filters + search)."""
     try:
-        page = int(request.args.get("page", 1))
-        page_size = int(request.args.get("page_size", 20))
-    except (TypeError, ValueError):
-        return _error("'page' and 'page_size' must be integers.", 400)
+        params = parse_body(QuestionQuery)
+    except RequestValidationError as exc:
+        return exc.response()
 
     try:
         result = list_questions(
-            page=page,
-            page_size=page_size,
-            category=request.args.get("category") or None,
-            level=request.args.get("level") or None,
-            lesson=request.args.get("lesson") or None,
-            skill=request.args.get("skill") or None,
-            search=request.args.get("search") or None,
+            page=params.page,
+            page_size=params.page_size,
+            category=params.category,
+            level=params.level,
+            lesson=params.lesson,
+            skill=params.skill,
+            search=params.search,
         )
         return _ok(result, 200)
     except QuestionServiceError as exc:

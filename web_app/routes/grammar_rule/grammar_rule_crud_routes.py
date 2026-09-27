@@ -9,7 +9,7 @@ other /api/admin CRUD blueprints.
 Prefix: /api/admin/grammar_rule
 
 Endpoints:
-    GET    /api/admin/grammar_rule                  → list (paginated + filters)
+    POST   /api/admin/grammar_rule/query          → list (paginated, validated body + filters)
     GET    /api/admin/grammar_rule/<int:rule_id>    → get single
     POST   /api/admin/grammar_rule                  → create
     PUT    /api/admin/grammar_rule/<int:rule_id>    → update
@@ -28,6 +28,8 @@ from entity.grammar_rule.service import (
     update_grammar_rule,
     delete_grammar_rule,
 )
+from entity.grammar_rule.schemas import GrammarRuleQuery
+from routes.validation import parse_body, RequestValidationError
 
 grammar_rule_crud_bp = Blueprint("grammar_rule_crud", __name__, url_prefix="/api/admin/grammar_rule")
 
@@ -45,26 +47,22 @@ def _handle_service_error(exc: GrammarRuleServiceError):
 
 
 # ---------------------------------------------------------------------------
-# GET /api/admin/grammar_rule
-# Query params: page, page_size, grammar_id, type
+# POST /api/admin/grammar_rule/query
+# Body (JSON): { "page": 1, "page_size": 20, "grammar_id": "H1-2-1", "type": 1 }
+# All fields optional. Replaces the former GET list — filters now travel in a
+# validated body.
 # ---------------------------------------------------------------------------
-@grammar_rule_crud_bp.route("", methods=["GET"])
-def list_grammar_rules_endpoint():
-    """List grammar rules with optional grammar_id/type filters and pagination."""
+@grammar_rule_crud_bp.route("/query", methods=["POST"])
+def query_grammar_rules_endpoint():
+    """List grammar rules from a validated JSON body (optional grammar_id/type filters)."""
     try:
-        page = int(request.args.get("page", 1))
-        page_size = int(request.args.get("page_size", 20))
-    except (TypeError, ValueError):
-        return _error("'page' and 'page_size' must be integers.", 400)
+        params = parse_body(GrammarRuleQuery)
+    except RequestValidationError as exc:
+        return exc.response()
 
-    type_param = request.args.get("type")
-    try:
-        type_ = int(type_param) if type_param is not None else None
-    except (TypeError, ValueError):
-        return _error("'type' must be an integer.", 400)
-
-    grammar_id = request.args.get("grammar_id") or None
-    result = list_grammar_rules(page=page, page_size=page_size, grammar_id=grammar_id, type_=type_)
+    result = list_grammar_rules(
+        page=params.page, page_size=params.page_size, grammar_id=params.grammar_id, type_=params.type
+    )
     return _ok(result, 200)
 
 

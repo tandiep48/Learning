@@ -31,12 +31,16 @@ QUESTION_DICT = {
 # GET /api/admin/question
 # ---------------------------------------------------------------------------
 
-def test_list_questions_endpoint(client):
+def test_query_questions_endpoint(client):
     with patch("routes.question.question_crud_routes.list_questions", return_value={
         "items": [QUESTION_DICT], "page": 1, "page_size": 20, "total": 1, "total_pages": 1
     }) as mock_list:
-        resp = client.get(
-            "/api/admin/question?page=1&page_size=20&category=practice&level=1&lesson=1&skill=reading&search=hi"
+        resp = client.post(
+            "/api/admin/question/query",
+            json={
+                "page": 1, "page_size": 20, "category": "practice", "level": "1",
+                "lesson": "1", "skill": "reading", "search": "hi",
+            },
         )
 
     assert resp.status_code == 200
@@ -49,18 +53,30 @@ def test_list_questions_endpoint(client):
     )
 
 
-def test_list_questions_endpoint_rejects_non_integer_paging(client):
-    resp = client.get("/api/admin/question?page=abc")
+def test_query_questions_endpoint_applies_defaults_on_empty_body(client):
+    with patch("routes.question.question_crud_routes.list_questions", return_value={
+        "items": [], "page": 1, "page_size": 20, "total": 0, "total_pages": 1
+    }) as mock_list:
+        resp = client.post("/api/admin/question/query", json={})
 
-    assert resp.status_code == 400
+    assert resp.status_code == 200
+    mock_list.assert_called_once_with(
+        page=1, page_size=20, category=None, level=None, lesson=None, skill=None, search=None,
+    )
+
+
+def test_query_questions_endpoint_rejects_bad_input(client):
+    resp = client.post("/api/admin/question/query", json={"page": 0})
+
+    assert resp.status_code == 422
     body = resp.get_json()
     assert body["success"] is False
 
 
-def test_list_questions_endpoint_propagates_service_validation_error(client):
+def test_query_questions_endpoint_propagates_service_validation_error(client):
     with patch("routes.question.question_crud_routes.list_questions",
                side_effect=QuestionServiceError("Field 'category' must be one of: exam, practice.")):
-        resp = client.get("/api/admin/question?category=bogus")
+        resp = client.post("/api/admin/question/query", json={"category": "bogus"})
 
     assert resp.status_code == 400
     body = resp.get_json()
