@@ -12,6 +12,8 @@ from entity.question.service import (
     get_practice_progress_group,
 )
 from entity.record.service import insert_practice_progress
+from routes.validation import parse_body, RequestValidationError
+from routes.practice.query_schemas import PracticeHistoryQuery
 
 # sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -271,13 +273,11 @@ def get_progress_group(level, lesson, progress):
     })
 
 
-@practice_bp.route('/history', methods=['GET'])
-@login_required
-def get_practice_history():
-    """List the current user's past practice/exam sessions for the review page.
-    Supports backend filters: level (HSK 1-6), category (practice/exam),
-    sort (recent/oldest), and page-based pagination."""
-    level = request.args.get('level')
+def _practice_history_response(level, category, sort, page) -> dict:
+    """Shared history logic for the GET and the validated POST /history/query.
+
+    The filter values stay permissive and are normalized here exactly as the GET
+    always did (level 'all'/1..6, category practice/exam, sort recent/oldest)."""
     hsk_level = None
     if level and level != 'all':
         try:
@@ -285,25 +285,51 @@ def get_practice_history():
         except (TypeError, ValueError):
             hsk_level = None
 
-    category = request.args.get('category')
     if category not in ('practice', 'exam'):
         category = None
 
-    sort = request.args.get('sort')
     if sort not in ('recent', 'oldest'):
         sort = 'recent'
 
-    try:
-        page = max(1, int(request.args.get('page', 1)))
-    except (TypeError, ValueError):
-        page = 1
+    page = max(1, page)
 
     sessions, has_more = get_practice_history_sessions(
         current_user.id,
         hsk_level=hsk_level, category=category, sort=sort, page=page,
     )
+    return {'sessions': sessions, 'page': page, 'has_more': has_more}
 
-    return jsonify({'sessions': sessions, 'page': page, 'has_more': has_more})
+
+@practice_bp.route('/history', methods=['GET'])
+@login_required
+def get_practice_history():
+    """List the current user's past practice/exam sessions for the review page.
+    Supports backend filters: level (HSK 1-6), category (practice/exam),
+    sort (recent/oldest), and page-based pagination."""
+    try:
+        page = int(request.args.get('page', 1))
+    except (TypeError, ValueError):
+        page = 1
+
+    return jsonify(_practice_history_response(
+        request.args.get('level'),
+        request.args.get('category'),
+        request.args.get('sort'),
+        page,
+    ))
+
+
+@practice_bp.route('/history/query', methods=['POST'])
+@login_required
+def get_practice_history_query():
+    """Validated-body twin of GET /history (the filters travel in the body)."""
+    try:
+        params = parse_body(PracticeHistoryQuery)
+    except RequestValidationError as exc:
+        return exc.response()
+    return jsonify(_practice_history_response(
+        params.level, params.category, params.sort, params.page,
+    ))
 
 
 @practice_bp.route('/history/<int:session_id>', methods=['GET'])

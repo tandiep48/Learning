@@ -44,6 +44,8 @@ from entity.user_saved_word.service import (
     get_user_saved_vocab_by_book,
     UserSavedWordServiceError,
 )
+from routes.validation import parse_body, RequestValidationError
+from routes.vocab.query_schemas import VocabSearchQuery, VocabReviewQuery, VocabTableQuery
 
 
 vocab_bp = Blueprint('vocab', __name__, url_prefix='/api/vocab')
@@ -285,19 +287,18 @@ def lookup_batch():
 
     return jsonify(result)
 
-@vocab_bp.route('/search', methods=['GET'])
-@login_required
-def search_vocab():
-    query = request.args.get("q", "").strip()
-    page = max(1, int(request.args.get("page", 1)))
-    page_size = min(100, max(5, int(request.args.get("page_size", 20))))
+def _vocab_search_response(query: str, page: int, page_size: int) -> dict:
+    """Shared search logic for the GET and the validated POST /search/query."""
+    query = (query or "").strip()
+    page = max(1, page)
+    page_size = min(100, max(5, page_size))
 
-    if not query or len(query) < 1:
-        return jsonify({"rows": [], "page": 1, "page_size": page_size, "total": 0, "total_pages": 1})
+    if not query:
+        return {"rows": [], "page": 1, "page_size": page_size, "total": 0, "total_pages": 1}
 
     full_records = get_full_lesson_records()
     if full_records.empty:
-        return jsonify({"rows": [], "page": 1, "page_size": page_size, "total": 0, "total_pages": 1})
+        return {"rows": [], "page": 1, "page_size": page_size, "total": 0, "total_pages": 1}
 
     q_lower = query.lower()
     mask = (
@@ -309,38 +310,54 @@ def search_vocab():
     matched = full_records[mask].reset_index(drop=True)
     rows = [normalize_vocab_row(row) for row in matched.to_dict("records")]
     page_rows, total, total_pages, page = paginate_rows(rows, page, page_size)
-    return jsonify({"rows": page_rows, "page": page, "page_size": page_size, "total": total, "total_pages": total_pages})
+    return {"rows": page_rows, "page": page, "page_size": page_size, "total": total, "total_pages": total_pages}
 
 
-@vocab_bp.route('/table', methods=['GET'])
+@vocab_bp.route('/search', methods=['GET'])
 @login_required
-def get_vocab_table():
-    table_mode = request.args.get("mode", "free")
-    hsk_level = normalize_hsk_level(request.args.get("hsk_level", ""))
-    lesson = request.args.get("lesson")
-    part = request.args.get("part")
-    page = max(1, int(request.args.get("page", 1)))
-    page_size = min(100, max(5, int(request.args.get("page_size", 20))))
+def search_vocab():
+    return jsonify(_vocab_search_response(
+        request.args.get("q", ""),
+        int(request.args.get("page", 1)),
+        int(request.args.get("page_size", 20)),
+    ))
+
+
+@vocab_bp.route('/search/query', methods=['POST'])
+@login_required
+def search_vocab_query():
+    """Validated-body twin of GET /search (the filter travels in the body)."""
+    try:
+        params = parse_body(VocabSearchQuery)
+    except RequestValidationError as exc:
+        return exc.response()
+    return jsonify(_vocab_search_response(params.q or "", params.page, params.page_size))
+
+
+def _vocab_table_response(*, mode, hsk_level, lesson, part, passages, book_code, page, page_size):
+    """Shared table logic for the GET and the validated POST /table/query.
+
+    Returns (body_dict, status_code). `hsk_level` is already normalized by the
+    caller; `passages` is a list (the GET splits its CSV, the POST sends a list).
+    """
+    page = max(1, page)
+    page_size = min(100, max(5, page_size))
 
     rows = []
     passage_id = None
 
-    if table_mode == "standard":
+    if mode == "standard":
         # Multiple lessons/parts: the client sends the selected passage_ids. Fall back
         # to a single lesson/part pair for backward compatibility.
-        passage_ids = [p for p in request.args.get("passages", "").split(",") if p]
+        passage_ids = [p for p in (passages or []) if p]
         if not passage_ids and hsk_level and lesson and part:
             passage_ids = [f"{hsk_to_passage_prefix(hsk_level)}_{lesson}_{part}"]
 
         if not passage_ids:
-            return jsonify({
-                "rows": [],
-                "page": 1,
-                "page_size": page_size,
-                "total": 0,
-                "total_pages": 1,
-                "passage_id": None
-            })
+            return {
+                "rows": [], "page": 1, "page_size": page_size,
+                "total": 0, "total_pages": 1, "passage_id": None,
+            }, 200
 
         seen = set()
         for pid in passage_ids:
@@ -352,36 +369,26 @@ def get_vocab_table():
                     rows.append(normalized)
         passage_id = passage_ids[0] if len(passage_ids) == 1 else None
 
-    elif table_mode == "free":
+    elif mode == "free":
         if not hsk_level:
-            return jsonify({
-                "rows": [],
-                "page": 1,
-                "page_size": page_size,
-                "total": 0,
-                "total_pages": 1
-            })
+            return {"rows": [], "page": 1, "page_size": page_size, "total": 0, "total_pages": 1}, 200
 
         full_lesson_records = get_full_lesson_records()
         if not full_lesson_records.empty:
             level_df = full_lesson_records[full_lesson_records["level"] == hsk_level].reset_index(drop=True)
             rows = [normalize_vocab_row(row) for row in level_df.to_dict("records")]
 
-    elif table_mode == "book":
-        book_code = (request.args.get("book_code") or "").strip()
+    elif mode == "book":
+        book_code = (book_code or "").strip()
         if not book_code:
-            return jsonify({
-                "rows": [],
-                "page": 1,
-                "page_size": page_size,
-                "total": 0,
-                "total_pages": 1,
-                "passage_id": None
-            })
+            return {
+                "rows": [], "page": 1, "page_size": page_size,
+                "total": 0, "total_pages": 1, "passage_id": None,
+            }, 200
         rows = [normalize_vocab_row(row) for row in get_user_saved_vocab_by_book(current_user.id, book_code)]
 
-    elif table_mode in ("unlearn", "unsure"):
-        if table_mode == "unlearn":
+    elif mode in ("unlearn", "unsure"):
+        if mode == "unlearn":
             words = get_unlearned_words_from_db(current_user.id)
         else:
             words = get_unsure_words_from_db(current_user.id)
@@ -390,17 +397,50 @@ def get_vocab_table():
         if not subset_df.empty:
             rows = [normalize_vocab_row(row) for row in subset_df.to_dict("records")]
     else:
-        return jsonify({"error": "Invalid table mode."}), 400
+        return {"error": "Invalid table mode."}, 400
 
     page_rows, total, total_pages, page = paginate_rows(rows, page, page_size)
-    return jsonify({
-        "rows": page_rows,
-        "page": page,
-        "page_size": page_size,
-        "total": total,
-        "total_pages": total_pages,
-        "passage_id": passage_id
-    })
+    return {
+        "rows": page_rows, "page": page, "page_size": page_size,
+        "total": total, "total_pages": total_pages, "passage_id": passage_id,
+    }, 200
+
+
+@vocab_bp.route('/table', methods=['GET'])
+@login_required
+def get_vocab_table():
+    body, status = _vocab_table_response(
+        mode=request.args.get("mode", "free"),
+        hsk_level=normalize_hsk_level(request.args.get("hsk_level", "")),
+        lesson=request.args.get("lesson"),
+        part=request.args.get("part"),
+        passages=[p for p in request.args.get("passages", "").split(",") if p],
+        book_code=request.args.get("book_code"),
+        page=int(request.args.get("page", 1)),
+        page_size=int(request.args.get("page_size", 20)),
+    )
+    return jsonify(body), status
+
+
+@vocab_bp.route('/table/query', methods=['POST'])
+@login_required
+def get_vocab_table_query():
+    """Validated-body twin of GET /table (the filter travels in the body)."""
+    try:
+        params = parse_body(VocabTableQuery)
+    except RequestValidationError as exc:
+        return exc.response()
+    body, status = _vocab_table_response(
+        mode=params.mode,
+        hsk_level=normalize_hsk_level(params.hsk_level or ""),
+        lesson=params.lesson,
+        part=params.part,
+        passages=params.passages,
+        book_code=params.book_code,
+        page=params.page,
+        page_size=params.page_size,
+    )
+    return jsonify(body), status
 
 @vocab_bp.route('/saved-books', methods=['GET'])
 @login_required
@@ -507,33 +547,49 @@ def resolve_words():
         return jsonify({"words": []})
     return jsonify({"words": [normalize_vocab_row(row) for row in subset_df.to_dict("records")]})
 
-@vocab_bp.route('/review', methods=['GET'])
-@login_required
-def get_review_list():
-    """Combined prioritized review list (unsure + unlearned) as normalized word rows for the
-    review page. Order follows get_review_words_flat: critical > unsure > incomplete."""
-    page = max(1, int(request.args.get("page", 1)))
-    page_size = min(200, max(5, int(request.args.get("page_size", 100))))
+def _vocab_review_response(page: int, page_size: int) -> dict:
+    """Shared review-list logic for the GET and the validated POST /review/query."""
+    page = max(1, page)
+    page_size = min(200, max(5, page_size))
 
     empty = {"rows": [], "page": 1, "page_size": page_size, "total": 0, "total_pages": 1}
 
     words = get_review_words_flat(current_user.id)
     if not words:
-        return jsonify(empty)
+        return empty
 
     subset_df = get_records_for_words(words)
     if subset_df.empty:
-        return jsonify(empty)
+        return empty
 
     rows = [normalize_vocab_row(row) for row in subset_df.to_dict("records")]
     page_rows, total, total_pages, page = paginate_rows(rows, page, page_size)
-    return jsonify({
-        "rows": page_rows,
-        "page": page,
-        "page_size": page_size,
-        "total": total,
-        "total_pages": total_pages
-    })
+    return {
+        "rows": page_rows, "page": page, "page_size": page_size,
+        "total": total, "total_pages": total_pages,
+    }
+
+
+@vocab_bp.route('/review', methods=['GET'])
+@login_required
+def get_review_list():
+    """Combined prioritized review list (unsure + unlearned) as normalized word rows for the
+    review page. Order follows get_review_words_flat: critical > unsure > incomplete."""
+    return jsonify(_vocab_review_response(
+        int(request.args.get("page", 1)),
+        int(request.args.get("page_size", 100)),
+    ))
+
+
+@vocab_bp.route('/review/query', methods=['POST'])
+@login_required
+def get_review_list_query():
+    """Validated-body twin of GET /review (paging travels in the body)."""
+    try:
+        params = parse_body(VocabReviewQuery)
+    except RequestValidationError as exc:
+        return exc.response()
+    return jsonify(_vocab_review_response(params.page, params.page_size))
 
 @vocab_bp.route('/review/count', methods=['GET'])
 @login_required

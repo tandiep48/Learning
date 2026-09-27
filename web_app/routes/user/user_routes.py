@@ -41,6 +41,8 @@ from entity.user.service import (
 from service.gcs_service import (
     GCSServiceError, avatar_url, delete_object, upload_avatar as upload_avatar_to_gcs,
 )
+from routes.validation import parse_body, RequestValidationError
+from routes.user.query_schemas import LearnedVocabQuery
 
 
 user_bp = Blueprint('user', __name__)
@@ -147,6 +149,13 @@ def profile_summary():
     return jsonify(summary)
 
 
+def _learned_vocab_response(page: int, page_size: int) -> dict:
+    """Shared logic for the GET and the validated POST /learned-vocab/query."""
+    result = get_mastered_words_page(current_user.id, page, page_size)
+    result["rows"] = [normalize_dashboard_vocab_row(row) for row in result.get("rows", [])]
+    return result
+
+
 @user_bp.route('/api/user/learned-vocab', methods=['GET'])
 @login_required
 def learned_vocab_page():
@@ -159,9 +168,18 @@ def learned_vocab_page():
     except (TypeError, ValueError):
         page_size = 24
 
-    result = get_mastered_words_page(current_user.id, page, page_size)
-    result["rows"] = [normalize_dashboard_vocab_row(row) for row in result.get("rows", [])]
-    return jsonify(result)
+    return jsonify(_learned_vocab_response(page, page_size))
+
+
+@user_bp.route('/api/user/learned-vocab/query', methods=['POST'])
+@login_required
+def learned_vocab_query():
+    """Validated-body twin of GET /api/user/learned-vocab (paging in the body)."""
+    try:
+        params = parse_body(LearnedVocabQuery)
+    except RequestValidationError as exc:
+        return exc.response()
+    return jsonify(_learned_vocab_response(params.page, params.page_size))
 
 
 @user_bp.route('/api/user/dashboard-vocab-buckets', methods=['GET'])
