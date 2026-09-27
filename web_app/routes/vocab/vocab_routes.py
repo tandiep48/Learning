@@ -17,11 +17,8 @@ from entity.learning.service import (
     get_unlearned_words_from_db,
     get_unsure_words_from_db,
     get_review_words_flat,
-    get_hard_semantic_learned_words,
-    get_hard_stroke_learned_words,
 )
 from entity.record.service import (
-    insert_learning_progress,
     insert_learning_progress_batch,
     has_vocab_history,
 )
@@ -29,7 +26,6 @@ from entity.vocabulary.service import (
     get_course_vocab,
     get_existing_vocab_words,
     get_vocabulary_by_words,
-    get_vocab_lessons,
 )
 from entity.passage_vocabulary.service import get_passage_vocab
 from entity.passage.service import get_passage_book_code
@@ -466,16 +462,6 @@ def remove_saved_word_route():
         return jsonify({"error": e.message}), e.status_code
 
 
-@vocab_bp.route('/flashcards', methods=['POST'])
-@login_required
-def get_flashcard_words():
-    data = request.json or {}
-    words = data.get("words", [])
-    subset_df = get_records_for_words(words)
-    if subset_df.empty:
-        return jsonify({"words": []})
-    return jsonify({"words": [normalize_vocab_row(row) for row in subset_df.to_dict("records")]})
-
 @vocab_bp.route('/words', methods=['POST'])
 @login_required
 def resolve_words():
@@ -599,91 +585,6 @@ def check_has_history():
     """Returns whether the current user has any vocab learning history."""
     result = has_vocab_history(current_user.id)
     return jsonify({"has_history": result})
-
-@vocab_bp.route('/lessons/<hsk_level>', methods=['GET'])
-@login_required
-def get_lessons_for_level(hsk_level):
-    """Returns lesson groups (chunks of 10 words) for a given HSK level."""
-    # Normalize: H1 -> HSK1
-    hsk_level = normalize_hsk_level(hsk_level)
-
-    lessons = get_vocab_lessons(hsk_level)
-    if not lessons:
-        return jsonify({"error": f"No vocabulary found for {hsk_level}."}), 404
-
-    return jsonify({"hsk_level": hsk_level, "lessons": lessons})
-
-@vocab_bp.route('/preview', methods=['POST'])
-@login_required
-def preview_mode():
-    data = request.json
-    mode = str(data.get("mode"))
-    
-    words = []
-    if mode == "2":
-        words = get_unlearned_words_from_db(current_user.id)
-    elif mode == "3":
-        words = get_unsure_words_from_db(current_user.id)
-    elif mode == "4":
-        words = get_hard_semantic_learned_words(current_user.id)
-    elif mode == "5":
-        words = get_hard_stroke_learned_words(current_user.id)
-    elif mode == "6":
-        passage_id = data.get("passage_id")
-        passage_vocab = number_vocab_rows() if is_number_part(passage_id) else get_passage_vocab(passage_id)
-        words = [w["cn"] for w in passage_vocab]
-    else:
-        return jsonify({"error": "Invalid preview mode."}), 400
-
-    if not words:
-        return jsonify({"words": []})
-        
-    full_lesson_records = get_full_lesson_records()
-    if full_lesson_records.empty:
-        if any(row["word"] in words for row in number_vocab_rows()):
-            word_list = [normalize_vocab_row(row) for row in number_vocab_rows() if row["word"] in words]
-            return jsonify({"words": word_list})
-        return jsonify({"words": []})
-        
-    subset_df = full_lesson_records[full_lesson_records["word"].isin(words)].drop_duplicates("word").reset_index(drop=True)
-    missing_number_rows = [
-        normalize_vocab_row(row)
-        for row in number_vocab_rows()
-        if row["word"] in words and row["word"] not in set(subset_df["word"].tolist())
-    ]
-    if missing_number_rows:
-        subset_df = pd.concat([subset_df, pd.DataFrame(missing_number_rows)], ignore_index=True)
-    word_list = subset_df.to_dict('records')
-    return jsonify({"words": word_list})
-
-@vocab_bp.route('/submit', methods=['POST'])
-@login_required
-def submit_progress():
-    data = request.json
-    session_id = data.get("session_id")
-    mode = data.get("type")
-    word = data.get("word")
-    round_num = data.get("round_num", 1)
-    user_answer = data.get("user_answer")
-    is_correct = data.get("is_correct")
-    response_time_ms = data.get("response_time_ms", 0)
-    game_info = data.get("game_info", "{}")
-    
-    insert_learning_progress(
-        user_id=current_user.id,
-        session_id=session_id,
-        mode=mode,
-        word=word,
-        round_num=round_num,
-        game_info=json.dumps(game_info, ensure_ascii=False),
-        user_answer=user_answer,
-        is_correct=is_correct,
-        response_time_ms=response_time_ms,
-        updated_at=datetime.now()
-    )
-
-    return jsonify({"status": "success"})
-
 
 @vocab_bp.route('/submit-batch', methods=['POST'])
 @login_required

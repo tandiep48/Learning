@@ -7,7 +7,6 @@ from flask_login import current_user, login_required
 from entity.competition.service import (
     create_competition_room,
     get_competition_room_state,
-    get_competition_scores,
     prepare_room_settings,
     get_competition_book_words_for_session,
 )
@@ -85,9 +84,3 @@ def room_detail(room_code):
     if not room:
         return jsonify({"error": "Room not found"}), 404
     return jsonify({"room": room})
-
-
-@competition_bp.route("/sessions/<int:session_id>/results", methods=["GET"])
-@login_required
-def session_results(session_id):
-    return jsonify({"session_id": session_id, "scores": get_competition_scores(session_id)})

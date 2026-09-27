@@ -3,20 +3,15 @@ import re
 from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
 from werkzeug.security import generate_password_hash
-
-from service.i18n_service import t
 from entity.progress.service import (
     get_recent_learning,
     set_recent_learning,
 )
 from entity.learning.service import (
     get_mastered_words_page,
-    get_unlearned_words_from_db,
-    get_unsure_words_from_db,
 )
 from entity.passage.service import get_lesson_passage_ids_like
 from entity.passage_vocabulary.service import get_passage_vocab
-from entity.vocabulary.service import get_vocabulary_by_words
 from entity.record.service import (
     get_learned_words,
     get_learned_words_last_3_days,
@@ -108,17 +103,6 @@ def paginate_dashboard_rows(rows, page, page_size):
     return rows[start:start + page_size], total, total_pages, page
 
 
-def dashboard_rows_for_words(words, limit=5):
-    ordered_words = [word for word in words if word]
-    if not ordered_words:
-        return []
-    by_word = {
-        row["word"]: normalize_dashboard_vocab_row(row)
-        for row in get_vocabulary_by_words(ordered_words)
-    }
-    return [by_word[word] for word in ordered_words if word in by_word][:limit]
-
-
 def format_dashboard_duration(ms):
     seconds = round((int(ms or 0)) / 1000)
     if seconds < 60:
@@ -159,39 +143,6 @@ def learned_vocab_query():
     except RequestValidationError as exc:
         return exc.response()
     return jsonify(_learned_vocab_response(params.page, params.page_size))
-
-
-@user_bp.route('/api/user/dashboard-vocab-buckets', methods=['GET'])
-@login_required
-def dashboard_vocab_buckets():
-    limit = 5
-    unsure_words = get_unsure_words_from_db(current_user.id)
-    unlearned_words = get_unlearned_words_from_db(current_user.id)
-    recent = get_mastered_words_page(current_user.id, 1, limit)
-    buckets = {
-        "unsure": {
-            "key": "unsure",
-            "title": t('dashboard.bucket_unsure'),
-            "mode": "unsure",
-            "total": len(unsure_words),
-            "rows": dashboard_rows_for_words(unsure_words, limit),
-        },
-        "unlearn": {
-            "key": "unlearn",
-            "title": t('dashboard.bucket_unlearned'),
-            "mode": "unlearn",
-            "total": len(unlearned_words),
-            "rows": dashboard_rows_for_words(unlearned_words, limit),
-        },
-        "recent": {
-            "key": "recent",
-            "title": t('dashboard.bucket_recent'),
-            "mode": "recent",
-            "total": recent.get("total", 0),
-            "rows": [normalize_dashboard_vocab_row(row) for row in recent.get("rows", [])],
-        },
-    }
-    return jsonify({"buckets": buckets, "order": ["unsure", "unlearn", "recent"]})
 
 
 @user_bp.route('/api/user/recent-learning', methods=['GET'])

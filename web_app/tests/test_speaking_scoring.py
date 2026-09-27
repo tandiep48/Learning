@@ -73,7 +73,10 @@ def test_speaking_endpoint_does_not_call_progress_insert(monkeypatch):
     def fail_insert(*args, **kwargs):
         raise AssertionError("speaking endpoint must not write vocab_records")
 
-    monkeypatch.setattr(vocab_routes, "insert_learning_progress", fail_insert)
+    # raising=False: insert_learning_progress is no longer imported into
+    # vocab_routes (its only caller, POST /submit, was removed). Setting it here
+    # still guards against a future regression that re-introduces the call.
+    monkeypatch.setattr(vocab_routes, "insert_learning_progress", fail_insert, raising=False)
 
     data = {
         "word": "\u4f60\u597d",
