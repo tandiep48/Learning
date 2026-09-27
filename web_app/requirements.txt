@@ -8,6 +8,7 @@ pandas
 openpyxl
 psycopg2-binary
 psycogreen
+pydantic>=2
 pypinyin
 pytest
 python-dotenv
