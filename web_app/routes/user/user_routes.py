@@ -1,6 +1,6 @@
 import re
 
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
 from werkzeug.security import generate_password_hash
 
@@ -128,12 +128,6 @@ def format_dashboard_duration(ms):
         return f"{minutes}m {remaining_seconds}s" if remaining_seconds else f"{minutes}m"
     hours, remaining_minutes = divmod(minutes, 60)
     return f"{hours}h {remaining_minutes}m" if remaining_minutes else f"{hours}h"
-
-
-@user_bp.route('/profile')
-@login_required
-def profile_page():
-    return render_template('profile/profile.html')
 
 
 @user_bp.route('/api/user/profile-summary', methods=['GET'])

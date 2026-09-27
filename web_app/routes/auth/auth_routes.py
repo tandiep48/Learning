@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, request, jsonify
 from flask_login import login_user, logout_user, login_required, current_user, UserMixin
 from werkzeug.security import check_password_hash
 
@@ -65,66 +65,12 @@ def _ok(data, status_code: int = 200):
 def _error(message: str, status_code: int):
     return jsonify({"success": False, "error": message}), status_code
 
-@auth_bp.route('/login', methods=['GET', 'POST'])
-def login():
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
-
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-
-        user_data = get_user_by_username(username)
-        if user_data and check_password_hash(user_data['password'], password):
-            user = User(user_data['id'], user_data['username'], user_data['email'], user_data['level'], user_data.get('avatar_path'), user_data.get('hanzi_font'), user_data.get('hanzi_script'), user_data.get('ui_language'))
-            login_user(user)
-            return redirect(url_for('index'))
-        else:
-            flash(t('flash.invalid_login'), 'error')
-
-    return render_template('shared/login.html')
-
-@auth_bp.route('/register', methods=['GET', 'POST'])
-def register():
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
-
-    if request.method == 'POST':
-        username = request.form.get('username')
-        email = request.form.get('email')
-        password = request.form.get('password')
-
-        if not username or not email or not password:
-            flash(t('flash.fill_all_fields'), 'error')
-            return redirect(url_for('auth.register'))
-
-        if username_or_email_exists(username, email):
-            flash(t('flash.user_exists'), 'error')
-            return redirect(url_for('auth.register'))
-
-        try:
-            create_user({"username": username, "email": email, "password": password, "level": 1})
-            flash(t('flash.registration_success'), 'success')
-            return redirect(url_for('auth.login'))
-        except UserServiceError:
-            flash(t('flash.database_error'), 'error')
-            return redirect(url_for('auth.register'))
-
-    return render_template('shared/register.html')
-
-@auth_bp.route('/logout')
-@login_required
-def logout():
-    logout_user()
-    return redirect(url_for('index'))
-
-
 # ---------------------------------------------------------------------------
 # JSON API — used by the Next.js frontend (yi-chinese-manage).
-# Session-cookie based, same as the Jinja routes above: login_user() /
-# current_user still drive Flask-Login, these endpoints just speak JSON
-# instead of rendering/redirecting. Requires CORS(app, supports_credentials=True)
-# in app.py and the frontend to fetch with credentials: 'include'.
+# Session-cookie based: login_user() / current_user drive Flask-Login, these
+# endpoints speak JSON. Requires CORS(app, supports_credentials=True) in app.py
+# and the frontend to fetch with credentials: 'include'. The former Jinja
+# login/register/logout pages were removed with the template layer.
 # ---------------------------------------------------------------------------
 
 @auth_bp.route('/api/auth/login', methods=['POST'])

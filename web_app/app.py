@@ -19,9 +19,9 @@ except Exception:
 
 import secrets
 from dotenv import load_dotenv
-from flask import Flask, render_template, redirect, url_for, request, send_from_directory, session
+from flask import Flask, redirect, request, jsonify
 from flask_cors import CORS
-from flask_login import LoginManager, login_required, current_user
+from flask_login import LoginManager
 from flask_socketio import SocketIO
 from routes.vocab import vocab_bp, vocab_crud_bp
 from routes.lesson import lesson_bp
@@ -40,8 +40,6 @@ from routes.chinese_stroke_info import chinese_stroke_info_bp
 from routes.grammar_rule import grammar_rule_crud_bp
 from routes.grammar_context import grammar_context_crud_bp
 from service.competition_socket import init_competition_socket
-from service.i18n_service import get_current_lang, get_translations, t as i18n_t, SUPPORTED_LANGUAGES
-from entity.user.service import update_user_ui_language
 from service import gcs_service
 
 load_dotenv()
@@ -60,11 +58,17 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode=os.getenv("SOCKETI
 # Setup Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'auth.login'
 
 @login_manager.user_loader
 def load_user(user_id):
     return get_user_by_id(user_id)
+
+@login_manager.unauthorized_handler
+def unauthorized():
+    """API-only: there is no login page to redirect to. A signed-out
+    @login_required request gets a JSON 401, which the Next.js frontend detects
+    (legacyApiFetch treats 401 as an UnauthenticatedError)."""
+    return jsonify({"success": False, "error": "Authentication required."}), 401
 
 # Register Blueprints
 app.register_blueprint(vocab_bp)
@@ -87,143 +91,17 @@ app.register_blueprint(grammar_rule_crud_bp)
 app.register_blueprint(grammar_context_crud_bp)
 init_competition_socket(socketio)
 
-@app.context_processor
-def inject_avatar_helpers():
-    return {
-        "avatar_url": gcs_service.avatar_url,
-        "hsk_image_url": gcs_service.hsk_image_url,
-        "badge_url": gcs_service.badge_url,
-    }
-
-# Jinja-only i18n wiring. Superseded by GET /api/i18n/translations (routes/i18n/i18n_routes.py)
-# for the Next.js frontend; remove this context processor once Jinja templates are gone.
-@app.context_processor
-def inject_i18n_helpers():
-    lang = get_current_lang()
-    return {"t": i18n_t, "current_lang": lang, "translations_json": get_translations(lang)}
-
-@app.route('/set-ui-language/<lang>')
-def set_ui_language(lang):
-    """Guest-facing language switch: no login required, persists to DB if already logged in."""
-    if lang in SUPPORTED_LANGUAGES:
-        session['ui_language'] = lang
-        if current_user.is_authenticated:
-            update_user_ui_language(current_user.id, lang)
-            current_user.ui_language = lang
-    return redirect(request.referrer or url_for('index'))
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    """API-only health check. The learner and admin UIs are served by the
+    Next.js frontend (yi-chinese-manage); this app is now JSON-only."""
+    return jsonify({"success": True, "data": {"service": "yi-chinese-api", "status": "ok"}})
 
-@app.route('/vocab')
-@login_required
-def vocab_page():
-    return render_template('vocab/vocab.html')
 
-@app.route('/vocab-training-batch')
-@login_required
-def vocab_training_batch_page():
-    return render_template('vocab/vocab_training_batch.html')
-
-@app.route('/vocab-review')
-@login_required
-def vocab_review_page():
-    return render_template('vocab/vocab_review.html')
-
-@app.route('/vocab-learning')
-@login_required
-def vocab_learning_dashboard():
-    return render_template('vocab_learning/vocab_learning.html')
-
-@app.route('/learning')
-@login_required
-def learning_page():
-    return render_template('learning/learning.html')
-
-@app.route('/translation')
-@login_required
-def translation_page():
-    return render_template('translation/translation.html')
-
-@app.route('/grammar')
-@login_required
-def grammar_page():
-    return render_template('grammar/grammar.html')
-
-@app.route('/lesson')
-@login_required
-def lesson_page():
-    return render_template('lesson/lesson.html')
-
-@app.route('/lesson/basic-pinyin')
-@login_required
-def basic_pinyin_page():
-    return render_template('lesson/basic_pinyin.html')
-
-@app.route('/lesson/advanced-pinyin')
-@login_required
-def advanced_pinyin_page():
-    return render_template('lesson/advanced_pinyin.html')
-
-@app.route('/reading')
-@login_required
-def reading_page():
-    return render_template('reading/reading.html')
-
-@app.route('/practice')
-@login_required
-def practice_dashboard():
-    category = request.args.get('category', 'practice')
-    if category not in ('practice', 'exam'):
-        category = 'practice'
-    return render_template('practice/practice_select.html', category=category)
-
-@app.route('/recommend')
-@login_required
-def recommend_page():
-    return render_template('recommend/recommend.html')
-
-@app.route('/review')
-@login_required
-def review_page():
-    return render_template('review/review.html')
-
-@app.route('/learn-together')
-@login_required
-def learn_together_page():
-    return render_template('competition/learn_together.html')
-
-@app.route('/practice/<int:number>')
-@login_required
-def practice_lesson_select(number):
-    category = request.args.get('category', 'practice')
-    if category not in ('practice', 'exam'):
-        category = 'practice'
-    return render_template('practice/practice_lesson_select.html', number=number, category=category)
-
-@app.route('/practice/<int:number>/<lesson_id>')
-@login_required
-def practice_page(number, lesson_id):
-    category = request.args.get('category', 'practice')
-    if category not in ('practice', 'exam'):
-        category = 'practice'
-    return render_template('practice/practice_standard.html', number=number, lesson_id=lesson_id, category=category)
-
-@app.route('/practice/<int:number>/<lesson_id>/<path:progress>')
-@login_required
-def practice_progress_group(number, lesson_id, progress):
-    """Deep-link: opens practice_standard.html scoped to a specific progress group."""
-    category = request.args.get('category', 'practice')
-    return render_template('practice/practice_standard.html', number=number, lesson_id=lesson_id,
-                           progress_filter=progress, category=category)
-
-@app.route('/practice/multi')
-@login_required
-def practice_multi():
-    """Multi-select practice mode."""
-    return render_template('practice/practice.html', multi_mode=True)
-
+# ---------------------------------------------------------------------------
+# Media redirects to Google Cloud Storage (used by the Next.js frontend).
+# ---------------------------------------------------------------------------
 @app.route('/practice_image/<int:level>/<path:filename>')
 def serve_practice_image(level, filename):
     category = request.args.get('category', 'practice')
