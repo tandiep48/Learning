@@ -313,20 +313,10 @@ def _vocab_search_response(query: str, page: int, page_size: int) -> dict:
     return {"rows": page_rows, "page": page, "page_size": page_size, "total": total, "total_pages": total_pages}
 
 
-@vocab_bp.route('/search', methods=['GET'])
-@login_required
-def search_vocab():
-    return jsonify(_vocab_search_response(
-        request.args.get("q", ""),
-        int(request.args.get("page", 1)),
-        int(request.args.get("page_size", 20)),
-    ))
-
-
 @vocab_bp.route('/search/query', methods=['POST'])
 @login_required
 def search_vocab_query():
-    """Validated-body twin of GET /search (the filter travels in the body)."""
+    """Search vocabulary by word/pinyin/meaning from a validated JSON body."""
     try:
         params = parse_body(VocabSearchQuery)
     except RequestValidationError as exc:
@@ -406,26 +396,10 @@ def _vocab_table_response(*, mode, hsk_level, lesson, part, passages, book_code,
     }, 200
 
 
-@vocab_bp.route('/table', methods=['GET'])
-@login_required
-def get_vocab_table():
-    body, status = _vocab_table_response(
-        mode=request.args.get("mode", "free"),
-        hsk_level=normalize_hsk_level(request.args.get("hsk_level", "")),
-        lesson=request.args.get("lesson"),
-        part=request.args.get("part"),
-        passages=[p for p in request.args.get("passages", "").split(",") if p],
-        book_code=request.args.get("book_code"),
-        page=int(request.args.get("page", 1)),
-        page_size=int(request.args.get("page_size", 20)),
-    )
-    return jsonify(body), status
-
-
 @vocab_bp.route('/table/query', methods=['POST'])
 @login_required
 def get_vocab_table_query():
-    """Validated-body twin of GET /table (the filter travels in the body)."""
+    """Load a page of the training-selection table from a validated JSON body."""
     try:
         params = parse_body(VocabTableQuery)
     except RequestValidationError as exc:
@@ -570,21 +544,11 @@ def _vocab_review_response(page: int, page_size: int) -> dict:
     }
 
 
-@vocab_bp.route('/review', methods=['GET'])
-@login_required
-def get_review_list():
-    """Combined prioritized review list (unsure + unlearned) as normalized word rows for the
-    review page. Order follows get_review_words_flat: critical > unsure > incomplete."""
-    return jsonify(_vocab_review_response(
-        int(request.args.get("page", 1)),
-        int(request.args.get("page_size", 100)),
-    ))
-
-
 @vocab_bp.route('/review/query', methods=['POST'])
 @login_required
 def get_review_list_query():
-    """Validated-body twin of GET /review (paging travels in the body)."""
+    """Combined prioritized review list (critical > unsure > incomplete) as
+    normalized word rows, paged from a validated JSON body."""
     try:
         params = parse_body(VocabReviewQuery)
     except RequestValidationError as exc:

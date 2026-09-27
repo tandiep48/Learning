@@ -80,7 +80,7 @@ def count_of(client):
 
 
 def list_total_of(client):
-    response = client.get("/api/vocab/review")
+    response = client.post("/api/vocab/review/query", json={})
     assert response.status_code == 200
     return response.get_json()["total"]
 

@@ -156,25 +156,10 @@ def _learned_vocab_response(page: int, page_size: int) -> dict:
     return result
 
 
-@user_bp.route('/api/user/learned-vocab', methods=['GET'])
-@login_required
-def learned_vocab_page():
-    try:
-        page = int(request.args.get('page', 1))
-    except (TypeError, ValueError):
-        page = 1
-    try:
-        page_size = int(request.args.get('page_size', 24))
-    except (TypeError, ValueError):
-        page_size = 24
-
-    return jsonify(_learned_vocab_response(page, page_size))
-
-
 @user_bp.route('/api/user/learned-vocab/query', methods=['POST'])
 @login_required
 def learned_vocab_query():
-    """Validated-body twin of GET /api/user/learned-vocab (paging in the body)."""
+    """The user's mastered words (recent first), paged from a validated JSON body."""
     try:
         params = parse_body(LearnedVocabQuery)
     except RequestValidationError as exc:

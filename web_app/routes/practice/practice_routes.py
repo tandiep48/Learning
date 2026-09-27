@@ -300,29 +300,12 @@ def _practice_history_response(level, category, sort, page) -> dict:
     return {'sessions': sessions, 'page': page, 'has_more': has_more}
 
 
-@practice_bp.route('/history', methods=['GET'])
-@login_required
-def get_practice_history():
-    """List the current user's past practice/exam sessions for the review page.
-    Supports backend filters: level (HSK 1-6), category (practice/exam),
-    sort (recent/oldest), and page-based pagination."""
-    try:
-        page = int(request.args.get('page', 1))
-    except (TypeError, ValueError):
-        page = 1
-
-    return jsonify(_practice_history_response(
-        request.args.get('level'),
-        request.args.get('category'),
-        request.args.get('sort'),
-        page,
-    ))
-
-
 @practice_bp.route('/history/query', methods=['POST'])
 @login_required
 def get_practice_history_query():
-    """Validated-body twin of GET /history (the filters travel in the body)."""
+    """List the current user's past practice/exam sessions for the review page,
+    from a validated JSON body: level (HSK 1-6/all), category (practice/exam),
+    sort (recent/oldest), page."""
     try:
         params = parse_body(PracticeHistoryQuery)
     except RequestValidationError as exc:
