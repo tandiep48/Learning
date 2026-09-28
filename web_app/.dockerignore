@@ -1,0 +1,22 @@
+# Virtualenvs and caches — reinstalled inside the image
+.venv
+venv
+__pycache__
+**/__pycache__
+*.pyc
+
+# Secrets and local env — provided at deploy time, never baked into the image
+.env
+.env.*
+chinese-service.json
+
+# A locally-downloaded Vosk model — the image fetches it via a build arg instead
+models
+
+# Tests, logs, VCS
+tests
+logs
+*.log
+.git
+.gitignore
+.pytest_cache

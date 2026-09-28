@@ -23,9 +23,13 @@ DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME", "chinese")
 DB_USER = os.getenv("DB_USER", "postgres")
 DB_PASS = os.getenv("DB_PASSWORD", "admin")
+# Managed Postgres (e.g. DigitalOcean) serves TLS; set DB_SSLMODE=require in prod.
+# Unset locally, the URL is unchanged and psycopg2's default ("prefer") applies.
+DB_SSLMODE = os.getenv("DB_SSLMODE")
 
+_ssl_query = f"?sslmode={DB_SSLMODE}" if DB_SSLMODE else ""
 DATABASE_URL = (
-    f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}{_ssl_query}"
 )
 
 # ---------------------------------------------------------------------------
