@@ -709,7 +709,7 @@ async function checkAnswer(task, userAnswer, correctAnswer, element) {
             setTimeout(() => {
                 resetTaskUI(element, isCorrect, task);
                 nextTask();
-            }, 3000);
+            }, 800);
         }
     } else {
         setSkipButtonMode('next');

@@ -124,6 +124,8 @@ function trainerConfig(rows) {
         container: document.getElementById('activity-area'),
         words: rows,
         activityTypes: selectedActivityTypes || undefined,
+        keyboardShortcuts: true,  // 1-5 number badges + shortcuts on match source cards
+
         onAnswer: recordAnswer,
         onProgress: updateProgress,
         mountAction: mountBottomAction,

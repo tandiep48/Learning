@@ -688,12 +688,14 @@ function applyLessonLearnerHanText(container) {
 let summaryAutoPlayActive = false;
 let summaryAutoPlayItems = [];
 let summaryAutoPlayPos = 0;
+let playingLineIndex = null;              // single-line playback in progress, if any
 
 function toggleLessonSummaryAutoPlay() {
     if (summaryAutoPlayActive) {
         stopLessonSummaryAutoPlay();
         return;
     }
+    stopPassageLineAudio();
     const lines = getLessonLines();
     summaryAutoPlayItems = [];
     lines.forEach((line, i) => { if (getLessonAudioSrc(line)) summaryAutoPlayItems.push(i); });
@@ -714,7 +716,11 @@ function playNextSummaryAutoPlay() {
     const src = getLessonAudioSrc(getLessonLines()[index]);
     document.querySelectorAll('.lesson-preview-line').forEach(el => el.classList.remove('playing-highlight'));
     const lineEl = document.getElementById(`lesson-preview-line-${index}`);
-    if (lineEl) lineEl.classList.add('playing-highlight');
+    if (lineEl) {
+        lineEl.classList.add('playing-highlight');
+        lineEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    setLineAudioIcon(index, 'fa-solid fa-stop');
     if (currentAudio) {
         currentAudio.pause();
         currentAudio.onended = null;
@@ -723,6 +729,7 @@ function playNextSummaryAutoPlay() {
     currentAudio = new Audio(src);
     const advance = () => {
         if (lineEl) lineEl.classList.remove('playing-highlight');
+        setLineAudioIcon(index);
         if (!summaryAutoPlayActive) return;
         summaryAutoPlayPos++;
         playNextSummaryAutoPlay();
@@ -744,6 +751,8 @@ function stopLessonSummaryAutoPlay() {
         currentAudio.pause();
     }
     document.querySelectorAll('.lesson-preview-line').forEach(el => el.classList.remove('playing-highlight'));
+    document.querySelectorAll('.lesson-preview-line .lesson-passage-audio-btn i')
+        .forEach(icon => { icon.className = 'fa-solid fa-volume-high'; });
     setSummaryAutoPlayBtn(false);
 }
 
@@ -757,30 +766,68 @@ function setSummaryAutoPlayBtn(playing) {
     btn.classList.toggle('primary', playing);
 }
 
+// Set a line's play button icon; defaults back to the idle volume icon.
+function setLineAudioIcon(index, iconClass) {
+    const icon = document.querySelector(`#lesson-preview-line-${index} .lesson-passage-audio-btn i`);
+    if (icon) icon.className = iconClass || 'fa-solid fa-volume-high';
+}
+
+// Stop the current single-line playback (if any) and reset its highlight + icon.
+function stopPassageLineAudio() {
+    if (playingLineIndex == null) return;
+    const index = playingLineIndex;
+    playingLineIndex = null;
+    setLineAudioIcon(index);
+    document.getElementById(`lesson-preview-line-${index}`)?.classList.remove('playing-highlight');
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.onended = null;
+        currentAudio.onerror = null;
+    }
+}
+
 function playPassageLineAudio(index) {
+    // During play-all, clicking the line that is currently playing just stops the sequence.
+    if (summaryAutoPlayActive && index === summaryAutoPlayItems[summaryAutoPlayPos]) {
+        stopLessonSummaryAutoPlay();
+        return;
+    }
     stopLessonSummaryAutoPlay();
-    const lines = getLessonLines();
-    const line = lines[index];
+    // A second click on the line already playing stops it.
+    if (playingLineIndex === index) {
+        stopPassageLineAudio();
+        return;
+    }
+    stopPassageLineAudio();
+
+    const line = getLessonLines()[index];
     if (!line) return;
     const src = getLessonAudioSrc(line);
-    if (src) {
-        document.querySelectorAll('.lesson-preview-line').forEach(el => el.classList.remove('playing-highlight'));
-        const lineEl = document.getElementById(`lesson-preview-line-${index}`);
-        if (lineEl) lineEl.classList.add('playing-highlight');
+    if (!src) return;
 
-        if (currentAudio) {
-            currentAudio.pause();
-            currentAudio.onended = null;
-            currentAudio.onerror = null;
-        }
-        currentAudio = new Audio(src);
-        currentAudio.onended = () => { if (lineEl) lineEl.classList.remove('playing-highlight'); };
-        currentAudio.onerror = () => { if (lineEl) lineEl.classList.remove('playing-highlight'); };
-        currentAudio.play().catch(e => {
-            if (lineEl) lineEl.classList.remove('playing-highlight');
-            console.warn("Audio failed", e);
-        });
+    document.querySelectorAll('.lesson-preview-line').forEach(el => el.classList.remove('playing-highlight'));
+    const lineEl = document.getElementById(`lesson-preview-line-${index}`);
+    if (lineEl) lineEl.classList.add('playing-highlight');
+    setLineAudioIcon(index, 'fa-solid fa-stop');
+    playingLineIndex = index;
+
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.onended = null;
+        currentAudio.onerror = null;
     }
+    currentAudio = new Audio(src);
+    const done = () => {
+        if (lineEl) lineEl.classList.remove('playing-highlight');
+        setLineAudioIcon(index);
+        if (playingLineIndex === index) playingLineIndex = null;
+    };
+    currentAudio.onended = done;
+    currentAudio.onerror = done;
+    currentAudio.play().catch(e => {
+        done();
+        console.warn("Audio failed", e);
+    });
 }
 
 function backToPartPicker() {
@@ -1204,17 +1251,17 @@ function showWordPopup(word) {
 
     const cached = _wordCache.get(word);
     const notFound = cached === null || cached === undefined;
-    const pinyin    = cached?.pinyin     || '';
-    const meaningVn = cached?.meaning_vn || '';
-    const meaningEn = cached?.meaning_en || '';
-    _popupAudioKey  = cached?.audio_key  || null;
+    const pinyin   = cached?.pinyin || '';
+    _popupAudioKey = cached?.audio_key || null;
 
     document.getElementById('word-popup-hanzi').textContent = word;
     document.getElementById('word-popup-pinyin').textContent = pinyin;
-    document.getElementById('word-popup-meaning-vn').textContent = notFound ? '' : meaningVn;
-    document.getElementById('word-popup-meaning-en').textContent = meaningEn;
+    // Show only the meaning matching the user's UI language (pickMeaning honors currentLang).
+    const meaningEl = document.getElementById('word-popup-meaning-vn');
     if (notFound) {
-        document.getElementById('word-popup-meaning-vn').innerHTML = '<span class="word-popup-not-found">Not found in vocabulary</span>';
+        meaningEl.innerHTML = '<span class="word-popup-not-found">Not found in vocabulary</span>';
+    } else {
+        meaningEl.textContent = pickMeaning(cached);
     }
     document.getElementById('word-popup-stroke-area').style.display = 'none';
     document.getElementById('word-stroke-tabs').innerHTML = '';

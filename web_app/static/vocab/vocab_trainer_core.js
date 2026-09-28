@@ -422,6 +422,11 @@
 
         const total = activity.words.length;
         let solved = 0;
+        // One-shot advance: the board can be finished either by the auto-advance timer or
+        // by a manual Continue click; the guard stops those two racing into a double
+        // advance (which would skip the next activity).
+        let boardAdvanced = false;
+        const finishBoard = () => { if (boardAdvanced) return; boardAdvanced = true; advanceActivity(); };
         const selected = { left: null, right: null };
         // Per left (anchor) word: when it was first selected, and how many mismatches
         // it took before being solved. Time + penalties are scored per pair on solve.
@@ -468,7 +473,7 @@
             continueBtn.className = 'btn primary bt-primary-action';
             continueBtn.innerText = t('lesson.continue');
             continueBtn.disabled = true;
-            continueBtn.addEventListener('click', advanceActivity);
+            continueBtn.addEventListener('click', finishBoard);
         }
 
         area.appendChild(wrap);
@@ -541,8 +546,15 @@
                 selected.right = null;
                 solved++;
                 if (solved === total) {
-                    if (cfg.autoAdvance) setTimeout(advanceActivity, 500);
-                    else continueBtn.disabled = false;
+                    // Solo mode advances on its own too (mirroring the typing activity):
+                    // reveal Continue for anyone who wants to click ahead, but also flow
+                    // to the next activity after a short beat.
+                    if (cfg.autoAdvance) {
+                        setTimeout(finishBoard, 500);
+                    } else {
+                        continueBtn.disabled = false;
+                        setTimeout(finishBoard, 600);
+                    }
                 }
             } else {
                 wrongAttempts[leftWord] = (wrongAttempts[leftWord] || 0) + 1;
