@@ -166,7 +166,7 @@
     padding-inline: 42px;
 }
 
-.bt-key-hint {
+.bt-match-item .bt-key-hint {
     position: absolute;
     top: 50%;
     left: 8px;
@@ -180,8 +180,8 @@
     font-size: 0.85rem;
     font-weight: 800;
     line-height: 1;
-    color: #ffffff;
-    background: var(--primary);
+    color: #ffffff !important;
+    background: var(--primary, #4a7c59);
     border-radius: 6px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
     pointer-events: none;
