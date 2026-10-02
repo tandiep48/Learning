@@ -310,7 +310,7 @@ def lookup_batch():
 def search_vocab():
     query = request.args.get("q", "").strip()
     page = max(1, int(request.args.get("page", 1)))
-    page_size = min(100, max(5, int(request.args.get("page_size", 20))))
+    page_size = min(1000, max(5, int(request.args.get("page_size", 20))))
 
     if not query or len(query) < 1:
         return jsonify({"rows": [], "page": 1, "page_size": page_size, "total": 0, "total_pages": 1})
@@ -340,7 +340,7 @@ def get_vocab_table():
     lesson = request.args.get("lesson")
     part = request.args.get("part")
     page = max(1, int(request.args.get("page", 1)))
-    page_size = min(100, max(5, int(request.args.get("page_size", 20))))
+    page_size = min(1000, max(5, int(request.args.get("page_size", 20))))
 
     rows = []
     passage_id = None

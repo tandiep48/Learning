@@ -277,7 +277,7 @@
         let autoSolved = 0;
         function autoComplete() {
             autoSolved++;
-            if (autoSolved === activity.words.length) setTimeout(advanceActivity, 350);
+            if (autoSolved === activity.words.length) setTimeout(advanceActivity, 1000);
         }
 
         // Manual mode: once every word in the group is typed correctly, score the group
@@ -287,11 +287,11 @@
         function maybeAutoFinishManual() {
             if (autoFinished) return;
             const allCorrect = [...wrap.querySelectorAll('.bt-type-input')]
-                .every((inp, i) => inp.value.trim() === (activity.words[i].word || ''));
+                .every((inp, i) => inp.value.trim() === expected(activity.words[i].word || ''));
             if (!allCorrect) return;
             autoFinished = true;
             checkTypingGroup(activity, wrap, checkBtn);
-            setTimeout(advanceActivity, 600);
+            setTimeout(advanceActivity, 1000);
         }
 
         // Enter on the last input triggers the group check (manual mode only).
@@ -306,7 +306,7 @@
             // When the typed value matches: reveal pinyin + meaning and play the audio once.
             input.addEventListener('input', () => {
                 if (input.disabled) return;
-                if (input.value.trim() === (row.word || '')) {
+                if (input.value.trim() === expected(row.word || '')) {
                     if (input.dataset.autoplayed !== '1') {
                         input.dataset.autoplayed = '1';
                         // Stamp when this word was first completed, for per-word timing.
@@ -380,7 +380,7 @@
             const input = rowEl.querySelector('.bt-type-input');
             const result = rowEl.querySelector('.bt-type-result');
             const answer = input.value.trim();
-            const isCorrect = answer === row.word;
+            const isCorrect = answer === expected(row.word);
 
             input.disabled = true;
             rowEl.classList.remove('correct', 'incorrect');
@@ -550,10 +550,10 @@
                     // reveal Continue for anyone who wants to click ahead, but also flow
                     // to the next activity after a short beat.
                     if (cfg.autoAdvance) {
-                        setTimeout(finishBoard, 500);
+                        setTimeout(finishBoard, 1000);
                     } else {
                         continueBtn.disabled = false;
-                        setTimeout(finishBoard, 600);
+                        setTimeout(finishBoard, 1000);
                     }
                 }
             } else {
@@ -604,6 +604,13 @@
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────────
+    // The expected written form in the learner's active script. When Traditional is
+    // selected the on-screen prompt is converted, so a typed answer must be checked
+    // against the converted form; falls back to the original when no converter is active.
+    function expected(word) {
+        return window.HanziSettings?.convertText?.(word ?? '') ?? (word ?? '');
+    }
+
     function wordByKey(rows, word) {
         return rows.find(r => r.word === word) || { word };
     }

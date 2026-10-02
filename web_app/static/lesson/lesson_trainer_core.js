@@ -85,7 +85,7 @@
             if (task.type === 'typing' || task.type === 'reorder') {
                 playAudioToEnd(task).then(advance);
             } else {
-                setTimeout(advance, 800);
+                setTimeout(advance, 1000);
             }
         } else {
             setAction(t('lesson.next'), advance);
@@ -175,7 +175,7 @@
         grid.querySelectorAll('.lt-mc-btn').forEach(btn => {
             const label = btn.querySelector('.mc-btn-inner');
             const value = label ? label.textContent.slice(1).trim() : btn.innerText.trim();
-            if (answersMatch(value, task.correct_answer)) btn.classList.add('lt-correct');
+            if (answersMatch(value, expected(task.correct_answer))) btn.classList.add('lt-correct');
             btn.disabled = true;
         });
     }
@@ -213,7 +213,7 @@
         input.addEventListener('input', () => {
             if (answered) return;
             highlightTyping(target, targetText, input.value);
-            if (answersMatch(input.value, task.correct_answer)) {
+            if (answersMatch(input.value, expected(task.correct_answer))) {
                 settle(task, true, () => revealTyping(task, input, wrap));
             }
         });
@@ -408,6 +408,13 @@
 
     function answersMatch(a, b) {
         return normalizeAnswer(a) === normalizeAnswer(b);
+    }
+
+    // The expected answer in the learner's active script. With Traditional selected the
+    // prompt and options are converted on screen, so a typed answer / revealed option is
+    // judged against the converted form; falls back to the original when no converter runs.
+    function expected(text) {
+        return window.HanziSettings?.convertText?.(text ?? '') ?? (text ?? '');
     }
 
     // Determine which chip the dragged chip should be inserted before, based on cursor X.
