@@ -277,7 +277,7 @@
         let autoSolved = 0;
         function autoComplete() {
             autoSolved++;
-            if (autoSolved === activity.words.length) setTimeout(advanceActivity, 350);
+            if (autoSolved === activity.words.length) setTimeout(advanceActivity, 1000);
         }
 
         // Manual mode: once every word in the group is typed correctly, score the group
@@ -291,7 +291,7 @@
             if (!allCorrect) return;
             autoFinished = true;
             checkTypingGroup(activity, wrap, checkBtn);
-            setTimeout(advanceActivity, 600);
+            setTimeout(advanceActivity, 1000);
         }
 
         // Enter on the last input triggers the group check (manual mode only).
@@ -550,10 +550,10 @@
                     // reveal Continue for anyone who wants to click ahead, but also flow
                     // to the next activity after a short beat.
                     if (cfg.autoAdvance) {
-                        setTimeout(finishBoard, 500);
+                        setTimeout(finishBoard, 1000);
                     } else {
                         continueBtn.disabled = false;
-                        setTimeout(finishBoard, 600);
+                        setTimeout(finishBoard, 1000);
                     }
                 }
             } else {
