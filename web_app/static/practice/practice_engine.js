@@ -1042,11 +1042,9 @@ function renderType1(block, q, blockId, skill) {
         block.appendChild(img);
     }
 
-    // Show the judged text for reading TF and for any non-audio TF. HSK 1-3 reading
-    // TF rows are sometimes tagged/defaulted as "listening", so gating purely on
-    // skill hid their statement — only genuine audio (listening) TF stays text-free.
-    const hasAudio = Array.isArray(q.audio_key) && q.audio_key.length > 0;
-    const showJudgedText = skill === 'reading' || !hasAudio;
+    // Always show the judged statement/question so the learner can see what is being
+    // asked, including listening TF (the audio button stays available alongside it).
+    const showJudgedText = true;
 
     // Statement to judge (true/false carries it in content, not question)
     if (showJudgedText && q.content && !isImageFilename(q.content)) {
