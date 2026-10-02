@@ -131,9 +131,10 @@
     }
 
     async function loadSavedScript() {
+        // Apply the saved script even on pages without the selector (e.g. the focused
+        // trainer screens), so Traditional carries into those flows too.
         const select = document.getElementById('hanzi-script-select');
-        if (!select) return;
-        applyScript(select.dataset.currentScript || DEFAULT_SCRIPT);
+        applyScript(select?.dataset.currentScript || DEFAULT_SCRIPT);
         try {
             const res = await fetch('/api/user/hanzi-script');
             const data = await res.json();
