@@ -609,6 +609,7 @@
         "correct_order": "Thứ tự đúng: {order}",
         "submitting": "Đang nộp bài...",
         "previous": "Câu trước",
+        "next": "Câu sau",
         "skip": "Bỏ qua",
         "finish": "Hoàn thành",
         "question_number": "Câu {n}"

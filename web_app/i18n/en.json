@@ -609,6 +609,7 @@
         "correct_order": "Correct order: {order}",
         "submitting": "Submitting...",
         "previous": "Previous",
+        "next": "Next",
         "skip": "Skip",
         "finish": "Finish",
         "question_number": "Question {n}"
