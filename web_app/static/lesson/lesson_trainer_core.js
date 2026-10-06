@@ -85,7 +85,7 @@
             if (task.type === 'typing' || task.type === 'reorder') {
                 playAudioToEnd(task).then(advance);
             } else {
-                setTimeout(advance, 1000);
+                setTimeout(advance, 1500);
             }
         } else {
             setAction(t('lesson.next'), advance);
