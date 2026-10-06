@@ -25,6 +25,14 @@ function jumpToGroup(i) {
     renderGroup();
 }
 
+// Step one question at a time, regardless of answered state.
+function goPrevQuestion() {
+    if (currentGroupIndex > 0) jumpToGroup(currentGroupIndex - 1);
+}
+function goNextQuestion() {
+    if (currentGroupIndex < groups.length - 1) jumpToGroup(currentGroupIndex + 1);
+}
+
 function renderSidebar() {
     const list = document.getElementById('ps-sidebar-list');
     list.innerHTML = '';
@@ -60,6 +68,8 @@ function updateNav() {
     const checked = !!groupSaved[idx]?.checked;
     const everyChecked = allGroupsChecked();
 
+    setNavBtn('btn-prev', idx > 0);
+    setNavBtn('btn-next', idx < groups.length - 1);
     setNavBtn('btn-check', !checked);
     setNavBtn('btn-finish', everyChecked);
 
