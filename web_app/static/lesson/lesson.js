@@ -574,19 +574,20 @@ function renderTypingTarget(task) {
 // target character based on the character typed at the same position.
 function updateTypingHighlight(value) {
     const target = [...typingTargetText];
-    const typed = [...value];
     const spans = document.getElementById('word-display').children;
-    let ti = 0; // pointer into the typed text; '、' positions consume no input
+    // Grade Chinese characters only. Punctuation is optional so it is never judged on
+    // either side, and non-Han input (IME pinyin mid-composition) is ignored so it never
+    // glows red. Target Han chars are matched against the typed Han chars in order, which
+    // keeps alignment when punctuation is present or a character is skipped.
+    const typedHan = [...value].filter(ch => /[一-鿿]/.test(ch));
+    let hi = 0; // pointer into the typed Han characters
     for (let i = 0; i < spans.length; i++) {
         spans[i].classList.remove('char-correct', 'char-wrong');
-        if (target[i] === '、') continue;
-        // Only judge a position once a Chinese character sits there — while typing
-        // pinyin/latin (IME composition) the field holds non-Chinese text that
-        // should not glow red.
-        if (ti < typed.length && /[一-鿿]/.test(typed[ti])) {
-            spans[i].classList.add(typed[ti] === target[i] ? 'char-correct' : 'char-wrong');
+        if (!/[一-鿿]/.test(target[i])) continue;
+        if (hi < typedHan.length) {
+            spans[i].classList.add(typedHan[hi] === target[i] ? 'char-correct' : 'char-wrong');
         }
-        ti++;
+        hi++;
     }
 }
 

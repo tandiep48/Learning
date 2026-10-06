@@ -1042,9 +1042,9 @@ function renderType1(block, q, blockId, skill) {
         block.appendChild(img);
     }
 
-    // Always show the judged statement/question so the learner can see what is being
-    // asked, including listening TF (the audio button stays available alongside it).
-    const showJudgedText = true;
+    // Reading shows the judged statement/question. Listening hides it so the learner
+    // must rely on the audio (the audio button is the only prompt).
+    const showJudgedText = skill !== 'listening';
 
     // Statement to judge (true/false carries it in content, not question)
     if (showJudgedText && q.content && !isImageFilename(q.content)) {
@@ -1222,7 +1222,7 @@ function renderType5Blank(block, q, blockId, skill) {
 
 function renderType5Match(block, q, blockId, skill) {
     if (skill === 'listening' && q.audio_key?.length) block.appendChild(makeAudioBtn(q.audio_key[0], null, q.level, q.category));
-    if (q.content) {
+    if (skill !== 'listening' && q.content) {
         const para = document.createElement('div');
         para.className = 'p-paragraph p-centered';
         para.textContent = q.content;

@@ -85,7 +85,7 @@
             if (task.type === 'typing' || task.type === 'reorder') {
                 playAudioToEnd(task).then(advance);
             } else {
-                setTimeout(advance, 1000);
+                setTimeout(advance, 1500);
             }
         } else {
             setAction(t('lesson.next'), advance);
@@ -233,16 +233,21 @@
 
     function highlightTyping(target, targetText, value) {
         const targetChars = [...targetText];
-        const typed = [...value];
         const spans = target.children;
-        let ti = 0; // pointer into the typed text; '、' positions consume no input
+        // Grade Chinese characters only. Punctuation is optional (mirrors normalizeAnswer)
+        // so it is never judged on either side, and non-Han input (IME pinyin mid-
+        // composition) is ignored so it never glows red. Target Han chars are matched
+        // against the typed Han chars in order, which keeps alignment when punctuation is
+        // present or a character is skipped.
+        const typedHan = [...value].filter(ch => /[一-鿿]/.test(ch));
+        let hi = 0; // pointer into the typed Han characters
         for (let i = 0; i < spans.length; i++) {
             spans[i].classList.remove('char-correct', 'char-wrong');
-            if (targetChars[i] === '、') continue;
-            if (ti < typed.length && /[一-鿿]/.test(typed[ti])) {
-                spans[i].classList.add(typed[ti] === targetChars[i] ? 'char-correct' : 'char-wrong');
+            if (!/[一-鿿]/.test(targetChars[i])) continue;
+            if (hi < typedHan.length) {
+                spans[i].classList.add(typedHan[hi] === targetChars[i] ? 'char-correct' : 'char-wrong');
             }
-            ti++;
+            hi++;
         }
     }
 

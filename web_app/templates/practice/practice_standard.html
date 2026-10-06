@@ -61,8 +61,14 @@
 
                     <!-- Bottom Nav -->
                     <div class="p-nav">
+                        <button class="p-btn p-btn-nav" id="btn-prev" onclick="goPrevQuestion()" style="display:none">
+                            ← {{ t('practice.previous') }}
+                        </button>
                         <button class="p-btn p-btn-check" id="btn-check" onclick="checkAnswers()" disabled>
                             {{ t('practice.check') }}
+                        </button>
+                        <button class="p-btn p-btn-nav" id="btn-next" onclick="goNextQuestion()" style="display:none">
+                            {{ t('practice.next') }} →
                         </button>
                         <button class="p-btn p-btn-finish" id="btn-finish" onclick="finishPractice()" style="display:none">
                             {{ t('practice.finish') }}
@@ -99,7 +105,7 @@
 
     <audio id="audio-player" preload="auto"></audio>
     <script src="/static/shared/han_text.js?v=4"></script>
-    <script src="/static/practice/practice_engine.js?v=4"></script>
-    <script src="/static/practice/practice_standard.js?v=1"></script>
+    <script src="/static/practice/practice_engine.js?v=5"></script>
+    <script src="/static/practice/practice_standard.js?v=2"></script>
 </body>
 </html>
