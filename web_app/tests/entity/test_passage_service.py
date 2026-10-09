@@ -120,7 +120,7 @@ def test_get_passage_content_shapes_lines():
 
 
 # ---------------------------------------------------------------------------
-# get_passage_book_code / get_lesson_passage_ids_like
+# get_passage_book_code / get_lesson_passage_ids
 # ---------------------------------------------------------------------------
 
 def test_get_passage_book_code_delegates_to_repository():
@@ -189,14 +189,14 @@ def test_add_passage_line_rejects_missing_line_id_before_touching_db():
     session_local.assert_not_called()
 
 
-def test_get_lesson_passage_ids_like_delegates_to_repository():
+def test_get_lesson_passage_ids_delegates_to_repository():
     session, session_local = _mock_session()
     repo = MagicMock()
-    repo.get_ids_like.return_value = ["H1_2_1", "H1_2_2"]
+    repo.get_ids_by_prefix.return_value = ["H1_2_1", "H1_2_2"]
 
     with patch.object(service, "SessionLocal", session_local), \
          patch.object(service, "PassageRepository", return_value=repo):
-        result = service.get_lesson_passage_ids_like("H1_2_%")
+        result = service.get_lesson_passage_ids("H1_2_")
 
     assert result == ["H1_2_1", "H1_2_2"]
-    repo.get_ids_like.assert_called_once_with("H1_2_%")
+    repo.get_ids_by_prefix.assert_called_once_with("H1_2_")

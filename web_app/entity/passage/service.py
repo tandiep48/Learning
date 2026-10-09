@@ -320,11 +320,11 @@ def get_passage_book_code(passage_id: str) -> str | None:
         SessionLocal.remove()
 
 
-def get_lesson_passage_ids_like(pattern: str) -> list[str]:
-    """Passage ids matching a LIKE pattern (e.g. 'H1_2_%'), ordered."""
+def get_lesson_passage_ids(prefix: str) -> list[str]:
+    """Passage ids that start with `prefix` (e.g. 'H1_2_'), ordered."""
     session = SessionLocal()
     try:
-        return PassageRepository(session).get_ids_like(pattern)
+        return PassageRepository(session).get_ids_by_prefix(prefix)
     finally:
         SessionLocal.remove()
 
