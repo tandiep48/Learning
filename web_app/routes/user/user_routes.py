@@ -10,7 +10,7 @@ from entity.progress.service import (
 from entity.learning.service import (
     get_mastered_words_page,
 )
-from entity.passage.service import get_lesson_passage_ids_like
+from entity.passage.service import get_lesson_passage_ids
 from entity.passage_vocabulary.service import get_passage_vocab
 from entity.record.service import (
     get_learned_words,
@@ -256,8 +256,8 @@ def dashboard_current_lesson():
     if not parsed:
         return jsonify({"error": "Recent lesson has an unsupported passage id."}), 400
 
-    lesson_pattern = f"{parsed['passage_prefix']}_{parsed['lesson']}_%"
-    passage_ids = get_lesson_passage_ids_like(lesson_pattern)
+    lesson_prefix = f"{parsed['passage_prefix']}_{parsed['lesson']}_"
+    passage_ids = get_lesson_passage_ids(lesson_prefix)
     if not passage_ids:
         passage_ids = [recent["passage_id"]]
 

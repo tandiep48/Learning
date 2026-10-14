@@ -97,11 +97,17 @@ class PassageRepository:
         ).first()
         return row[0] if row else None
 
-    def get_ids_like(self, pattern: str) -> list[str]:
-        """Passage ids matching a LIKE pattern (e.g. 'H1_2_%'), ordered."""
+    def get_ids_by_prefix(self, prefix: str) -> list[str]:
+        """Passage ids that start with `prefix` (e.g. 'H1_2_'), ordered.
+
+        startswith(autoescape=True) rather than a raw LIKE prefix + '%': the
+        underscores in a passage-id prefix are LIKE single-character wildcards, so
+        'H1_2_%' would also match H1_20_*, H1_21_* … — every lesson sharing the
+        first digit. autoescape escapes them so the prefix is matched literally.
+        """
         rows = self.session.execute(
             select(LessonPassage.passage_id)
-            .where(LessonPassage.passage_id.like(pattern))
+            .where(LessonPassage.passage_id.startswith(prefix, autoescape=True))
             .order_by(LessonPassage.passage_id)
         ).all()
         return [r[0] for r in rows]
