@@ -1,16 +1,24 @@
+# Redeploy the backend (api) on the Compute Engine VM when main_2.0 is pushed.
+# Mirrors the frontend workflow in tandiep48/yi-chinese-manage (deploys `web` on
+# master); this one runs `deploy.sh api`. Both reuse the same GCE_* secrets, which
+# must also be set in THIS repo's Settings → Secrets and variables → Actions.
 name: Deploy backend to GCE
+
 on:
   push:
     branches: [main_2.0]
   workflow_dispatch: {}
+
 concurrency:
   group: deploy-api
   cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: appleboy/ssh-action@v1.2.0
+      - name: Rebuild & restart api over SSH
+        uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.GCE_HOST }}
           username: ${{ secrets.GCE_USER }}
