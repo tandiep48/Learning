@@ -474,38 +474,49 @@ def resolve_words():
     if single:
         passage_ids.insert(0, single)
 
-    collected = []
-    seen = set()
+    # Passage rows already carry their own meaning_vn / meaning_en / pinyin / audio.
+    # Keep them as-is: re-resolving every word through the master vocabulary table
+    # (get_records_for_words) blanked out the Vietnamese meaning whenever the master
+    # row's meaning_vn was empty, so the trainer showed English in VI mode while the
+    # lesson's own vocab table (which reads these same passage rows) showed Vietnamese.
+    # Only bare `words` strings, which have no row data, still go to the master table.
+    rows_by_word = {}
+    order = []
 
-    def add(word):
-        word = str(word or "").strip()
-        if word and word not in seen:
-            seen.add(word)
-            collected.append(word)
+    def add_row(row):
+        word = str(row.get("cn") or row.get("word") or "").strip()
+        if word and word not in rows_by_word:
+            rows_by_word[word] = row
+            order.append(word)
 
     if passage_ids:
         for pid in passage_ids:
             if is_number_part(pid):
-                rows = number_vocab_rows()
+                source_rows = number_vocab_rows()
             else:
-                rows = get_passage_vocab(pid)
+                source_rows = get_passage_vocab(pid)
                 # Book lessons keep their words in the user's personal list, not
                 # passage_vocabulary — fold those in so the trainer can run.
                 if get_passage_book_code(pid):
-                    rows = rows + get_user_saved_vocab(current_user.id, pid)
-            for row in rows:
-                add(row.get("cn"))
+                    source_rows = source_rows + get_user_saved_vocab(current_user.id, pid)
+            for row in source_rows:
+                add_row(row)
 
-    for word in words:
-        add(word)
+    # Bare words (no row data) are resolved against the master table, skipping any a
+    # passage above already supplied so the richer passage row is the one that wins.
+    extra_words = [
+        w for w in (str(x or "").strip() for x in words) if w and w not in rows_by_word
+    ]
+    if extra_words:
+        subset_df = get_records_for_words(extra_words)
+        if not subset_df.empty:
+            for row in subset_df.to_dict("records"):
+                add_row(row)
 
-    if not collected:
+    if not order:
         return jsonify({"words": []})
 
-    subset_df = get_records_for_words(collected)
-    if subset_df.empty:
-        return jsonify({"words": []})
-    return jsonify({"words": [normalize_vocab_row(row) for row in subset_df.to_dict("records")]})
+    return jsonify({"words": [normalize_vocab_row(rows_by_word[w]) for w in order]})
 
 def _vocab_review_response(page: int, page_size: int) -> dict:
     """Shared review-list logic for the GET and the validated POST /review/query."""
