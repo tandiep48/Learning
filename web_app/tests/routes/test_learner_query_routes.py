@@ -74,6 +74,41 @@ def test_table_query_accepts_large_page_size(client):
     assert resp.status_code == 200
 
 
+def test_table_query_book_without_parts_loads_whole_book(client, monkeypatch):
+    # No Lesson/Part chosen: the whole book's saved vocab loads, as before.
+    calls = []
+    monkeypatch.setattr(
+        vocab_routes, "get_user_saved_vocab_by_book",
+        lambda uid, code: calls.append(("book", uid, code)) or [],
+    )
+    monkeypatch.setattr(
+        vocab_routes, "get_user_saved_vocab_by_book_passages",
+        lambda *a: calls.append(("passages", *a)) or [],
+    )
+    resp = client.post("/api/vocab/table/query", json={"mode": "book", "book_code": "AML"})
+    assert resp.status_code == 200
+    assert calls == [("book", 1, "AML")]
+
+
+def test_table_query_book_filters_by_selected_passages(client, monkeypatch):
+    # Lesson/Part chosen: only the selected passages' saved vocab loads.
+    calls = []
+    monkeypatch.setattr(
+        vocab_routes, "get_user_saved_vocab_by_book",
+        lambda *a: calls.append(("book", *a)) or [],
+    )
+    monkeypatch.setattr(
+        vocab_routes, "get_user_saved_vocab_by_book_passages",
+        lambda uid, code, pids: calls.append(("passages", uid, code, pids)) or [],
+    )
+    resp = client.post(
+        "/api/vocab/table/query",
+        json={"mode": "book", "book_code": "AML", "passages": ["AML_1_1", "AML_2_1"]},
+    )
+    assert resp.status_code == 200
+    assert calls == [("passages", 1, "AML", ["AML_1_1", "AML_2_1"])]
+
+
 # ── /api/vocab/words (batch vocab trainer resolution) ──────────────────────
 def test_words_keeps_passage_vietnamese_meaning(client, monkeypatch):
     # The passage vocab carries a Vietnamese meaning; the master vocabulary table

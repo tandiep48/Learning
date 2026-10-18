@@ -86,6 +86,36 @@ def get_user_saved_vocab_by_book(user_id: int, book_code: str) -> list[dict]:
         SessionLocal.remove()
 
 
+def get_user_saved_vocab_by_book_passages(
+    user_id: int, book_code: str, passage_ids: list[str]
+) -> list[dict]:
+    """Vocabulary rows a user saved in specific passages of one book — the Book-mode
+    Lesson/Part filter — shaped like get_user_saved_vocab_by_book."""
+    book_code = (book_code or "").strip()
+    passage_ids = [str(p) for p in (passage_ids or []) if p]
+    if not book_code or not passage_ids:
+        return []
+
+    session = SessionLocal()
+    try:
+        items = UserSavedWordRepository(session).list_vocab_by_book_passages(
+            user_id, book_code, passage_ids
+        )
+        return [
+            {
+                "cn": v.cn,
+                "pinyin": v.pinyin or "",
+                "meaning_vn": v.meaning_vn or "",
+                "meaning_en": v.meaning_en or "",
+                "audio_key": v.audio_key or "",
+                "hsk_level": v.hsk_level or "",
+            }
+            for v in items
+        ]
+    finally:
+        SessionLocal.remove()
+
+
 def get_user_saved_book_passages(user_id: int, book_code: str) -> list[str]:
     """Distinct book passages the user has saved words in, for the Learn Together book
     picker (Book -> Lesson -> Part)."""
