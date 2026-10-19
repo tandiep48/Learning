@@ -3,7 +3,9 @@ Flask-SocketIO
 flask-cors
 flask-login
 eventlet
-gunicorn
+# gunicorn 24+ removed the bundled eventlet worker (gunicorn.workers.geventlet);
+# 22.x still ships it and supports Python 3.12. Pin until we migrate off eventlet.
+gunicorn==22.0.0
 pandas
 openpyxl
 psycopg2-binary
