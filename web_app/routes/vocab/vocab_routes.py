@@ -38,6 +38,7 @@ from entity.user_saved_word.service import (
     remove_saved_word,
     get_user_saved_vocab,
     get_user_saved_vocab_by_book,
+    get_user_saved_vocab_by_book_passages,
     UserSavedWordServiceError,
 )
 from routes.validation import parse_body, RequestValidationError
@@ -371,7 +372,15 @@ def _vocab_table_response(*, mode, hsk_level, lesson, part, passages, book_code,
                 "rows": [], "page": 1, "page_size": page_size,
                 "total": 0, "total_pages": 1, "passage_id": None,
             }, 200
-        rows = [normalize_vocab_row(row) for row in get_user_saved_vocab_by_book(current_user.id, book_code)]
+        # Lesson/Part filter (passage_ids), mirroring standard mode. With none chosen
+        # the whole book's saved vocab loads, as before.
+        passage_ids = [p for p in (passages or []) if p]
+        saved = (
+            get_user_saved_vocab_by_book_passages(current_user.id, book_code, passage_ids)
+            if passage_ids
+            else get_user_saved_vocab_by_book(current_user.id, book_code)
+        )
+        rows = [normalize_vocab_row(row) for row in saved]
 
     elif mode in ("unlearn", "unsure"):
         if mode == "unlearn":

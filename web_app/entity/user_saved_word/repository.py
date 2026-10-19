@@ -55,6 +55,28 @@ class UserSavedWordRepository:
             .all()
         )
 
+    def list_vocab_by_book_passages(
+        self, user_id: int, book_code: str, passage_ids: list[str]
+    ) -> list[Vocabulary]:
+        """Every Vocabulary the user saved in specific passages of one book, deduped by
+        word and ordered by cn. Drives the Book -> Lesson -> Part vocab filter; the
+        book_code join ignores any passage_id that is not part of the book."""
+        if not passage_ids:
+            return []
+        return (
+            self.session.query(Vocabulary)
+            .join(UserSavedWord, UserSavedWord.cn == Vocabulary.cn)
+            .join(LessonPassage, LessonPassage.passage_id == UserSavedWord.passage_id)
+            .filter(
+                UserSavedWord.user_id == user_id,
+                LessonPassage.book_code == book_code,
+                UserSavedWord.passage_id.in_(passage_ids),
+            )
+            .distinct()
+            .order_by(Vocabulary.cn)
+            .all()
+        )
+
     def list_book_passage_ids(self, user_id: int, book_code: str) -> list[str]:
         """Distinct book passages the user has saved words in, ordered by passage_id.
         A book passage_id encodes {CODE}_{lesson}_{part}, so this drives the
