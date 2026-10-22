@@ -218,6 +218,42 @@ def test_leave_competition_room_error_rolls_back_false():
 
 
 # ---------------------------------------------------------------------------
+# list_open_competition_rooms
+# ---------------------------------------------------------------------------
+
+def test_list_open_competition_rooms_shapes_rows_and_drops_empty_rooms():
+    session, session_local = _mock_session()
+    repo = MagicMock()
+    repo.list_waiting_rooms.return_value = [
+        ("ABC123", "host_user", 8, "vocab", 1, datetime(2026, 8, 1), 3),
+        ("EMPTY1", "ghost", 8, "lesson", 2, datetime(2026, 8, 2), 0),
+    ]
+
+    with patch.object(service, "SessionLocal", session_local), \
+         patch.object(service, "CompetitionRepository", return_value=repo):
+        rooms = service.list_open_competition_rooms()
+
+    # The empty room (everyone left) is dropped; the live one is shaped for the client.
+    assert rooms == [{
+        "room_code": "ABC123", "owner_username": "host_user", "max_users": 8,
+        "category": "vocab", "level": 1, "member_count": 3,
+        "created_at": "2026-08-01T00:00:00",
+    }]
+
+
+def test_list_open_competition_rooms_returns_empty_on_error():
+    session, session_local = _mock_session()
+    repo = MagicMock()
+    repo.list_waiting_rooms.side_effect = RuntimeError("boom")
+
+    with patch.object(service, "SessionLocal", session_local), \
+         patch.object(service, "CompetitionRepository", return_value=repo):
+        assert service.list_open_competition_rooms() == []
+
+    session_local.remove.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
 # get_competition_room_state
 # ---------------------------------------------------------------------------
 

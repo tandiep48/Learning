@@ -104,6 +104,32 @@ class CompetitionRepository:
             .values(status="waiting", updated_at=func.now())
         )
 
+    def list_waiting_rooms(self, limit=50):
+        """Rooms that are open to join (status 'waiting'), newest first, with the host's
+        username and the count of active (not-left) members. Used by the browse list."""
+        r = CompetitionRoom
+        m = CompetitionRoomMember
+        host = User
+        member_count = (
+            select(func.count())
+            .select_from(m)
+            .where(m.room_id == r.id, m.status != "left")
+            .correlate(r)
+            .scalar_subquery()
+            .label("member_count")
+        )
+        return self.session.execute(
+            select(
+                r.room_code, host.username, r.max_users, r.category, r.level,
+                r.created_at, member_count,
+            )
+            .select_from(r)
+            .join(host, host.id == r.host_user_id)
+            .where(r.status == "waiting")
+            .order_by(r.created_at.desc())
+            .limit(limit)
+        ).all()
+
     # ------------------------------------------------------------------
     # Room membership
     # ------------------------------------------------------------------
