@@ -10,6 +10,7 @@ from entity.competition.service import (
     get_competition_scores,
     join_competition_room,
     leave_competition_room,
+    list_open_competition_rooms,
     mark_competition_participant_finished,
     record_competition_lesson_answer,
     record_competition_vocab_answer,
@@ -19,6 +20,10 @@ from entity.competition.service import (
 
 
 socketio = None
+
+# Every client on the setup screen joins this socket room to receive the live list
+# of open (joinable) rooms. It is separate from the per-room_code rooms the game uses.
+OPEN_ROOMS_CHANNEL = "competition_open_rooms"
 
 
 def init_competition_socket(socketio_instance):
@@ -41,6 +46,12 @@ def broadcast_room_state(room_code):
         socketio.emit("room_state", {"room": state}, to=room_code)
 
 
+def broadcast_open_rooms():
+    """Push the current open-room list to everyone watching the setup screen. Called
+    whenever the waiting-room set can change (join, leave, edit, start, finish)."""
+    socketio.emit("open_rooms", {"rooms": list_open_competition_rooms()}, to=OPEN_ROOMS_CHANNEL)
+
+
 def emit_session_event(room_code, state):
     if not state:
         return
@@ -48,6 +59,8 @@ def emit_session_event(room_code, state):
         socketio.emit("session_finished", {"session": state, "scores": state.get("scores", [])}, to=room_code)
         socketio.emit("ranking_update", {"scores": state.get("scores", [])}, to=room_code)
         broadcast_room_state(room_code)
+        # The room reopened to "waiting", so it is joinable again.
+        broadcast_open_rooms()
     else:
         socketio.emit("session_started", {"session": state}, to=room_code)
         schedule_session_timeout(state)
@@ -89,6 +102,20 @@ def maybe_finalize(room_code, session_id):
 
 
 def register_handlers():
+    @socketio.on("browse_open_rooms")
+    def handle_browse_open_rooms(data=None):
+        """The setup screen subscribes to the live open-room list and gets it at once."""
+        if not authenticated():
+            emit_error("Login required")
+            return
+        socket_join_room(OPEN_ROOMS_CHANNEL)
+        emit("open_rooms", {"rooms": list_open_competition_rooms()})
+
+    @socketio.on("stop_browse_open_rooms")
+    def handle_stop_browse_open_rooms(data=None):
+        """Leaving the setup screen (joined a room) unsubscribes from the list."""
+        socket_leave_room(OPEN_ROOMS_CHANNEL)
+
     @socketio.on("join_room")
     def handle_join_room(data):
         if not authenticated():
@@ -105,6 +132,8 @@ def register_handlers():
         socket_join_room(room_code)
         emit("joined_room", {"room": state})
         socketio.emit("room_state", {"room": state}, to=room_code)
+        # Joining changed the room's member count (and a brand-new room just appeared).
+        broadcast_open_rooms()
         active = get_active_competition_session(room_code)
         if active and active.get("status") == "running":
             emit("session_started", {"session": active})
@@ -121,6 +150,8 @@ def register_handlers():
         leave_competition_room(room_code, current_user.id)
         socket_leave_room(room_code)
         broadcast_room_state(room_code)
+        # Leaving changed the member count (and may have emptied the room).
+        broadcast_open_rooms()
 
     @socketio.on("chat_message")
     def handle_chat_message(data):
@@ -144,6 +175,8 @@ def register_handlers():
             emit_error(error)
             return
         broadcast_room_state(room_code)
+        # Capacity / mode / level shown in the browse list may have changed.
+        broadcast_open_rooms()
         emit("room_settings_saved", {"room": state})
 
     @socketio.on("host_start_session")
@@ -159,6 +192,8 @@ def register_handlers():
             return
         emit_session_event(room_code, state)
         broadcast_room_state(room_code)
+        # The room is now "running", so it drops out of the open-room list.
+        broadcast_open_rooms()
 
     @socketio.on("vocab_answer")
     def handle_vocab_answer(data):

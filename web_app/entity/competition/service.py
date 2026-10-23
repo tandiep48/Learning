@@ -172,6 +172,36 @@ def get_competition_room_by_code(room_code):
         SessionLocal.remove()
 
 
+def list_open_competition_rooms(limit=50):
+    """Waiting (joinable) rooms for the browse list: room_code, host username, active
+    member count and capacity. Rooms whose members have all left are omitted so the
+    list only shows rooms someone can actually join."""
+    session = SessionLocal()
+    try:
+        rows = CompetitionRepository(session).list_waiting_rooms(limit=limit)
+    except Exception as e:
+        print(f"Database list_open_competition_rooms failed: {e}")
+        return []
+    finally:
+        SessionLocal.remove()
+
+    rooms = []
+    for row in rows:
+        member_count = int(row[6] or 0)
+        if member_count <= 0:
+            continue
+        rooms.append({
+            "room_code": row[0],
+            "owner_username": row[1] or "User",
+            "max_users": row[2],
+            "category": row[3] or "vocab",
+            "level": row[4],
+            "member_count": member_count,
+            "created_at": row[5].isoformat() if row[5] else None,
+        })
+    return rooms
+
+
 def join_competition_room(room_code, user_id):
     room = get_competition_room_by_code(room_code)
     if not room:
