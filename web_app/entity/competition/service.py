@@ -211,6 +211,10 @@ def join_competition_room(room_code, user_id):
         repo = CompetitionRepository(session)
         active_count = repo.get_active_member_count(room["id"])
         already_member = repo.is_room_member(room["id"], user_id)
+        # A closed room (its round finished, or the host/everyone left) is not joinable
+        # by a newcomer; a past member may still reopen it to review the result.
+        if room.get("status") == "closed" and not already_member:
+            return None, "This room is closed"
         if not already_member and active_count >= int(room["max_users"] or 8):
             return None, "Room is full"
 
@@ -232,7 +236,14 @@ def leave_competition_room(room_code, user_id):
         return False
     session = SessionLocal()
     try:
-        CompetitionRepository(session).mark_member_left(room["id"], user_id)
+        repo = CompetitionRepository(session)
+        repo.mark_member_left(room["id"], user_id)
+        # Close the room once it can no longer be a live lobby: the host left (the room
+        # is theirs) or the last member just left. A closed room drops out of the browse
+        # list and can't be joined by a newcomer, so abandoned rooms don't linger.
+        host_left = int(room["host_user_id"]) == int(user_id)
+        if host_left or repo.get_active_member_count(room["id"]) == 0:
+            repo.update_room_status(room["id"], "closed")
         session.commit()
         return True
     except Exception as e:
@@ -639,9 +650,10 @@ def competition_all_participants_finished(session_id):
 
 
 def finalize_competition_session(session_id):
-    """Rank participants, mark the session ranked and free the room back to waiting.
-    Called when everyone has finished or the room timer expires. Idempotent: a
-    session already ranked is returned as-is."""
+    """Rank participants, mark the session ranked and close the room. A finished round
+    ends the room instead of reopening it to waiting, so it drops out of the browse
+    list rather than lingering as joinable. Called when everyone has finished or the
+    room timer expires. Idempotent: a session already ranked is returned as-is."""
     state = get_competition_session_state(session_id)
     if not state:
         return None
@@ -652,7 +664,7 @@ def finalize_competition_session(session_id):
         repo = CompetitionRepository(session)
         repo.update_session_status(session_id, "ranked", finished=True)
         repo.rank_scores(session_id)
-        repo.reopen_room_for_session(session_id)
+        repo.close_room_for_session(session_id)
         session.commit()
         return get_competition_session_state(session_id)
     except Exception as e:
