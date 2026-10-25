@@ -94,14 +94,17 @@ class CompetitionRepository:
             .values(status=status, updated_at=func.now())
         )
 
-    def reopen_room_for_session(self, session_id):
+    def close_room_for_session(self, session_id):
+        """Close the room behind a session. A finished round ends the room rather than
+        reopening it to 'waiting', so it leaves the browse list and can no longer be
+        joined by a newcomer."""
         self.session.execute(
             update(CompetitionRoom)
             .where(
                 CompetitionSession.id == session_id,
                 CompetitionRoom.id == CompetitionSession.room_id,
             )
-            .values(status="waiting", updated_at=func.now())
+            .values(status="closed", updated_at=func.now())
         )
 
     def list_waiting_rooms(self, limit=50):

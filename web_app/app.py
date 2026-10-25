@@ -28,6 +28,7 @@ from routes.lesson import lesson_bp
 from routes.practice import practice_bp
 from routes.competition import competition_bp
 from routes.auth import auth_bp, get_user_by_id
+from service.token_service import load_auth_token
 from routes.user import user_bp, user_crud_bp
 from routes.passage import passage_crud_bp
 from routes.passage_vocab import passage_vocab_crud_bp
@@ -61,6 +62,21 @@ login_manager.init_app(app)
 
 @login_manager.user_loader
 def load_user(user_id):
+    return get_user_by_id(user_id)
+
+@login_manager.request_loader
+def load_user_from_token(req):
+    """Mobile auth: authenticate from an `Authorization: Bearer <token>` header.
+    This single hook makes every existing @login_required route accept the
+    signed mobile token transparently; session-cookie auth (user_loader) keeps
+    working for the Next.js web frontend. Returns None when there is no bearer
+    token or it is invalid/expired, so Flask-Login falls back to the session."""
+    header = req.headers.get('Authorization', '')
+    if not header.startswith('Bearer '):
+        return None
+    user_id = load_auth_token(header[len('Bearer '):].strip())
+    if user_id is None:
+        return None
     return get_user_by_id(user_id)
 
 @login_manager.unauthorized_handler

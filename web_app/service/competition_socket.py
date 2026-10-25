@@ -59,7 +59,7 @@ def emit_session_event(room_code, state):
         socketio.emit("session_finished", {"session": state, "scores": state.get("scores", [])}, to=room_code)
         socketio.emit("ranking_update", {"scores": state.get("scores", [])}, to=room_code)
         broadcast_room_state(room_code)
-        # The room reopened to "waiting", so it is joinable again.
+        # The round finished and the room is now closed, so it drops out of the list.
         broadcast_open_rooms()
     else:
         socketio.emit("session_started", {"session": state}, to=room_code)

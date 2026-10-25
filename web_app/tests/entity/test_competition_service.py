@@ -166,6 +166,42 @@ def test_join_competition_room_success_delegates_to_room_state():
     assert error is None
 
 
+def test_join_competition_room_closed_blocks_a_newcomer():
+    session, session_local = _mock_session()
+    repo = MagicMock()
+    repo.get_active_member_count.return_value = 1
+    repo.is_room_member.return_value = False
+    room = {"id": 1, "max_users": 8, "host_user_id": 42, "status": "closed"}
+
+    with patch.object(service, "SessionLocal", session_local), \
+         patch.object(service, "CompetitionRepository", return_value=repo), \
+         patch.object(service, "get_competition_room_by_code", return_value=room):
+        result, error = service.join_competition_room("ABC123", 99)
+
+    assert result is None
+    assert error == "This room is closed"
+    repo.upsert_join_member.assert_not_called()
+    session.commit.assert_not_called()
+
+
+def test_join_competition_room_closed_lets_a_past_member_back_in():
+    session, session_local = _mock_session()
+    repo = MagicMock()
+    repo.get_active_member_count.return_value = 1
+    repo.is_room_member.return_value = True  # already played in this room
+    room = {"id": 1, "max_users": 8, "host_user_id": 42, "status": "closed"}
+
+    with patch.object(service, "SessionLocal", session_local), \
+         patch.object(service, "CompetitionRepository", return_value=repo), \
+         patch.object(service, "get_competition_room_by_code", return_value=room), \
+         patch.object(service, "get_competition_room_state", return_value={"id": 1}):
+        result, error = service.join_competition_room("ABC123", 42)
+
+    assert error is None
+    assert result == {"id": 1}
+    repo.upsert_join_member.assert_called_once()
+
+
 def test_join_competition_room_error_rolls_back():
     session, session_local = _mock_session()
     repo = MagicMock()
@@ -191,16 +227,49 @@ def test_leave_competition_room_not_found_returns_false():
         assert service.leave_competition_room("NOPE", 1) is False
 
 
-def test_leave_competition_room_success_commits_true():
+def test_leave_competition_room_non_host_with_members_left_keeps_room_open():
     session, session_local = _mock_session()
     repo = MagicMock()
+    repo.get_active_member_count.return_value = 1  # someone still in the room
 
     with patch.object(service, "SessionLocal", session_local), \
          patch.object(service, "CompetitionRepository", return_value=repo), \
-         patch.object(service, "get_competition_room_by_code", return_value={"id": 1}):
+         patch.object(service, "get_competition_room_by_code",
+                      return_value={"id": 1, "host_user_id": 42}):
         assert service.leave_competition_room("ABC123", 99) is True
 
     repo.mark_member_left.assert_called_once_with(1, 99)
+    repo.update_room_status.assert_not_called()
+    session.commit.assert_called_once()
+
+
+def test_leave_competition_room_host_leaving_closes_the_room():
+    session, session_local = _mock_session()
+    repo = MagicMock()
+    repo.get_active_member_count.return_value = 2  # others remain, but the host left
+
+    with patch.object(service, "SessionLocal", session_local), \
+         patch.object(service, "CompetitionRepository", return_value=repo), \
+         patch.object(service, "get_competition_room_by_code",
+                      return_value={"id": 1, "host_user_id": 42}):
+        assert service.leave_competition_room("ABC123", 42) is True
+
+    repo.update_room_status.assert_called_once_with(1, "closed")
+    session.commit.assert_called_once()
+
+
+def test_leave_competition_room_last_member_leaving_closes_the_room():
+    session, session_local = _mock_session()
+    repo = MagicMock()
+    repo.get_active_member_count.return_value = 0  # the room is now empty
+
+    with patch.object(service, "SessionLocal", session_local), \
+         patch.object(service, "CompetitionRepository", return_value=repo), \
+         patch.object(service, "get_competition_room_by_code",
+                      return_value={"id": 1, "host_user_id": 42}):
+        assert service.leave_competition_room("ABC123", 99) is True
+
+    repo.update_room_status.assert_called_once_with(1, "closed")
     session.commit.assert_called_once()
 
 
@@ -816,7 +885,7 @@ def test_finalize_competition_session_already_ranked_is_idempotent():
     session_local.assert_not_called()
 
 
-def test_finalize_competition_session_ranks_and_reopens_room():
+def test_finalize_competition_session_ranks_and_closes_room():
     session, session_local = _mock_session()
     repo = MagicMock()
     running_state = {"status": "running", "id": 7}
@@ -829,7 +898,8 @@ def test_finalize_competition_session_ranks_and_reopens_room():
 
     repo.update_session_status.assert_called_once_with(7, "ranked", finished=True)
     repo.rank_scores.assert_called_once_with(7)
-    repo.reopen_room_for_session.assert_called_once_with(7)
+    # A finished round closes the room rather than reopening it to "waiting".
+    repo.close_room_for_session.assert_called_once_with(7)
     session.commit.assert_called_once()
     assert result == final_state
 

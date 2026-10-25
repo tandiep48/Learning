@@ -11,6 +11,7 @@ from entity.user.service import (
 )
 from service.i18n_service import t
 from service.gcs_service import avatar_url
+from service.token_service import generate_auth_token
 
 auth_bp = Blueprint('auth', __name__)
 DEFAULT_HANZI_FONT = 'Noto Sans'
@@ -91,6 +92,27 @@ def api_login():
     user = _build_user(user_data)
     login_user(user)
     return _ok(_serialize_user(user))
+
+
+@auth_bp.route('/api/auth/token', methods=['POST'])
+def api_token():
+    """Mobile bearer-token login. Same credential check as `api_login`, but
+    instead of starting a cookie session it returns a signed token the client
+    sends as `Authorization: Bearer <token>` on every subsequent call. The
+    `request_loader` in app.py verifies it, so all `@login_required` routes
+    accept it transparently."""
+    data = request.get_json(silent=True) or {}
+    username = str(data.get('username') or '').strip()
+    password = str(data.get('password') or '')
+    if not username or not password:
+        return _error("Username and password are required.", 400)
+
+    user_data = get_user_by_username(username)
+    if not user_data or not check_password_hash(user_data['password'], password):
+        return _error(t('flash.invalid_login'), 401)
+
+    user = _build_user(user_data)
+    return _ok({"token": generate_auth_token(user.id), "user": _serialize_user(user)})
 
 
 @auth_bp.route('/api/auth/register', methods=['POST'])
