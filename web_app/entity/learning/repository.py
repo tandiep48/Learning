@@ -185,6 +185,25 @@ class LearningRepository:
         )
         return [r[0] for r in self.session.execute(stmt).all()]
 
+    def get_latest_attempt_at_for_words(self, user_id, words):
+        """{word: latest attempt timestamp} across the user's round-1 mastery-mode
+        records, for the given words. Lets a caller order the review list by how
+        recently each word was last practised. Words with no matching record are
+        absent from the map (the caller sorts them last)."""
+        if not words:
+            return {}
+        stmt = (
+            select(VocabRecord.word, func.max(VocabRecord.updated_at))
+            .where(
+                VocabRecord.user_id == user_id,
+                VocabRecord.word.in_(list(words)),
+                VocabRecord.round_num == 1,
+                VocabRecord.mode.in_(_MASTERY_MODES),
+            )
+            .group_by(VocabRecord.word)
+        )
+        return {word: ts for word, ts in self.session.execute(stmt).all()}
+
     # ------------------------------------------------------------------
     # Practice recommendations
     # ------------------------------------------------------------------
