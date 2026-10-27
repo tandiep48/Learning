@@ -303,6 +303,89 @@ def test_get_review_words_flat_returns_word_list_only():
 
 
 # ---------------------------------------------------------------------------
+# get_recent_review_words
+# ---------------------------------------------------------------------------
+
+def _recent_review_repo(unsure, unlearned, recency):
+    repo = MagicMock()
+    repo.get_unsure_words.return_value = unsure
+    repo.get_unlearned_words.return_value = unlearned
+    repo.get_latest_attempt_at_for_words.return_value = recency
+    return repo
+
+
+def test_get_recent_review_words_orders_by_recency_newest_first():
+    session, session_local = _mock_session()
+    repo = _recent_review_repo(
+        unsure=["a", "b"],
+        unlearned=["c"],
+        recency={
+            "a": datetime(2026, 1, 1),
+            "b": datetime(2026, 3, 1),
+            "c": datetime(2026, 2, 1),
+        },
+    )
+    with patch.object(service, "SessionLocal", session_local), \
+         patch.object(service, "LearningRepository", return_value=repo):
+        assert service.get_recent_review_words(1) == ["b", "c", "a"]
+
+
+def test_get_recent_review_words_dedups_across_both_lists():
+    session, session_local = _mock_session()
+    # "b" is both unsure and unlearned (a "critical" word) — it must appear once.
+    repo = _recent_review_repo(
+        unsure=["a", "b"],
+        unlearned=["b", "c"],
+        recency={"a": datetime(2026, 1, 1), "b": datetime(2026, 2, 1), "c": datetime(2026, 3, 1)},
+    )
+    with patch.object(service, "SessionLocal", session_local), \
+         patch.object(service, "LearningRepository", return_value=repo):
+        assert service.get_recent_review_words(1) == ["c", "b", "a"]
+
+
+def test_get_recent_review_words_sorts_words_without_a_timestamp_last():
+    session, session_local = _mock_session()
+    repo = _recent_review_repo(
+        unsure=["a", "b"],
+        unlearned=["c"],
+        recency={"b": datetime(2026, 2, 1)},  # a, c have never been attempted
+    )
+    with patch.object(service, "SessionLocal", session_local), \
+         patch.object(service, "LearningRepository", return_value=repo):
+        # "b" (has a timestamp) first; then a, c keep their union order.
+        assert service.get_recent_review_words(1) == ["b", "a", "c"]
+
+
+def test_get_recent_review_words_caps_at_the_limit():
+    session, session_local = _mock_session()
+    words = [f"w{i}" for i in range(10)]
+    repo = _recent_review_repo(unsure=words, unlearned=[], recency={})
+    with patch.object(service, "SessionLocal", session_local), \
+         patch.object(service, "LearningRepository", return_value=repo):
+        assert service.get_recent_review_words(1, limit=3) == ["w0", "w1", "w2"]
+
+
+def test_get_recent_review_words_empty_when_nothing_to_review():
+    session, session_local = _mock_session()
+    repo = _recent_review_repo(unsure=[], unlearned=[], recency={})
+    with patch.object(service, "SessionLocal", session_local), \
+         patch.object(service, "LearningRepository", return_value=repo):
+        assert service.get_recent_review_words(1) == []
+    # Never bothered the recency query when there are no words.
+    repo.get_latest_attempt_at_for_words.assert_not_called()
+
+
+def test_get_recent_review_words_returns_empty_list_on_error():
+    session, session_local = _mock_session()
+    repo = MagicMock()
+    repo.get_unsure_words.side_effect = RuntimeError("boom")
+    with patch.object(service, "SessionLocal", session_local), \
+         patch.object(service, "LearningRepository", return_value=repo):
+        assert service.get_recent_review_words(1) == []
+    session_local.remove.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
 # get_hard_semantic_learned_words / get_hard_stroke_learned_words
 # ---------------------------------------------------------------------------
 

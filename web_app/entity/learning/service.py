@@ -340,6 +340,44 @@ def get_review_words_flat(user_id):
     return [entry["word"] for entry in get_review_words(user_id)]
 
 
+def get_recent_review_words(user_id, limit=100):
+    """Unlearned ∪ unsure words, deduplicated, ordered by most recent practice
+    attempt (newest first), capped at `limit`.
+
+    Unlike get_review_words_flat()'s priority tiers, this is a flat merge ordered by
+    recency — the "Review word" tab shows the words the learner has touched most
+    recently and still needs to revisit. Words never practised in a round-1 mastery
+    mode sort last (stable among themselves by the union order below).
+    """
+    session = SessionLocal()
+    try:
+        repo = LearningRepository(session)
+        unsure = repo.get_unsure_words(user_id)
+        unlearned = repo.get_unlearned_words(user_id)
+        # dict.fromkeys keeps first-seen order and dedupes across the two lists.
+        words = list(dict.fromkeys([*unsure, *unlearned]))
+        if not words:
+            return []
+        recency = repo.get_latest_attempt_at_for_words(user_id, words)
+        # Split rather than sort with a sentinel: comparing real timestamps against a
+        # placeholder risks a naive/aware TypeError, and all real timestamps come from
+        # one column so they compare cleanly. Words with a timestamp come first (newest
+        # first); the rest keep the stable union order after them.
+        with_ts = sorted(
+            (w for w in words if recency.get(w) is not None),
+            key=lambda w: recency[w],
+            reverse=True,
+        )
+        without_ts = [w for w in words if recency.get(w) is None]
+        ordered = with_ts + without_ts
+        return ordered[:max(0, int(limit))]
+    except Exception as e:
+        print(f"⚠️ Database query failed (get_recent_review_words): {e}")
+        return []
+    finally:
+        SessionLocal.remove()
+
+
 def get_hard_semantic_learned_words(user_id):
     """
     Returns a list of learned words (by the given user) but difficult in semantic.

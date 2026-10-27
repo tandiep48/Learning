@@ -17,6 +17,7 @@ from entity.learning.service import (
     get_unlearned_words_from_db,
     get_unsure_words_from_db,
     get_review_words_flat,
+    get_recent_review_words,
 )
 from entity.record.service import (
     insert_learning_progress_batch,
@@ -560,6 +561,54 @@ def get_review_list_query():
     except RequestValidationError as exc:
         return exc.response()
     return jsonify(_vocab_review_response(params.page, params.page_size))
+
+
+# The "Review word" tab shows at most this many words (the most recently practised
+# unlearned/unsure words), matching the "Recent learn word" tab's cap.
+RECENT_REVIEW_LIMIT = 100
+
+
+def _recent_review_response(page: int, page_size: int) -> dict:
+    """Shared logic for the recency-ordered review tab: unlearned ∪ unsure words,
+    newest attempt first, capped at RECENT_REVIEW_LIMIT, hydrated to normalized rows
+    and paged. get_records_for_words() preserves the input word order, so the
+    recency order the service produced carries through to the page."""
+    page = max(1, page)
+    page_size = min(100, max(5, page_size))
+
+    empty = {"rows": [], "page": 1, "page_size": page_size, "total": 0, "total_pages": 1}
+
+    words = get_recent_review_words(current_user.id, limit=RECENT_REVIEW_LIMIT)
+    if not words:
+        return empty
+
+    subset_df = get_records_for_words(words)
+    if subset_df.empty:
+        return empty
+
+    # get_records_for_words() can reorder to its own word order; re-impose the
+    # recency order the service returned so the page stays newest-first.
+    order_map = {word: index for index, word in enumerate(words)}
+    rows = [normalize_vocab_row(row) for row in subset_df.to_dict("records")]
+    rows.sort(key=lambda r: order_map.get(r.get("word"), len(order_map)))
+
+    page_rows, total, total_pages, page = paginate_rows(rows, page, page_size)
+    return {
+        "rows": page_rows, "page": page, "page_size": page_size,
+        "total": total, "total_pages": total_pages,
+    }
+
+
+@vocab_bp.route('/review-recent/query', methods=['POST'])
+@login_required
+def get_recent_review_list_query():
+    """The "Review word" tab: unlearned ∪ unsure words ordered by most recent
+    practice attempt, capped at RECENT_REVIEW_LIMIT, paged from a validated body."""
+    try:
+        params = parse_body(VocabReviewQuery)
+    except RequestValidationError as exc:
+        return exc.response()
+    return jsonify(_recent_review_response(params.page, params.page_size))
 
 @vocab_bp.route('/review/count', methods=['GET'])
 @login_required
