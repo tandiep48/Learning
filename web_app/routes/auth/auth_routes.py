@@ -16,7 +16,7 @@ from service.token_service import generate_auth_token
 auth_bp = Blueprint('auth', __name__)
 DEFAULT_HANZI_FONT = 'Noto Sans'
 DEFAULT_HANZI_SCRIPT = 'simplified'
-DEFAULT_UI_LANGUAGE = 'en'
+DEFAULT_UI_LANGUAGE = 'vi'
 
 class User(UserMixin):
     def __init__(self, id, username, email, level, avatar_path=None, hanzi_font=None, hanzi_script=None, ui_language=None):

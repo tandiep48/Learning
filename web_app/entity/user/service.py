@@ -361,7 +361,7 @@ def recompute_user_level(user_id: int) -> int | None:
 
 DEFAULT_HANZI_FONT = "Noto Sans"
 DEFAULT_HANZI_SCRIPT = "simplified"
-DEFAULT_UI_LANGUAGE = "en"
+DEFAULT_UI_LANGUAGE = "vi"
 
 
 def _update_setting(user_id: int, **values) -> bool:

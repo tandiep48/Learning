@@ -47,7 +47,7 @@ DEFAULT_HANZI_FONT = 'Noto Sans'
 ALLOWED_HANZI_SCRIPTS = {'simplified', 'traditional'}
 DEFAULT_HANZI_SCRIPT = 'simplified'
 ALLOWED_UI_LANGUAGES = {'en', 'vi'}
-DEFAULT_UI_LANGUAGE = 'en'
+DEFAULT_UI_LANGUAGE = 'vi'
 
 
 def serialize_current_user():

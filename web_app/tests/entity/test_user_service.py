@@ -252,6 +252,20 @@ def test_get_user_hanzi_font_falls_back_to_default_when_unset():
         assert service.get_user_hanzi_font(1) == service.DEFAULT_HANZI_FONT
 
 
+def test_get_user_ui_language_falls_back_to_vietnamese_default_when_unset():
+    # The platform defaults to Vietnamese: a user with no saved ui_language
+    # resolves to 'vi', not 'en'.
+    assert service.DEFAULT_UI_LANGUAGE == "vi"
+
+    session, session_local = _mock_session()
+    repo = MagicMock()
+    repo.get_by_id.return_value = FakeUser()  # ui_language is None
+
+    with patch.object(service, "SessionLocal", session_local), \
+         patch.object(service, "UserRepository", return_value=repo):
+        assert service.get_user_ui_language(1) == "vi"
+
+
 def test_update_user_password_hashes_via_update_setting():
     session, session_local = _mock_session()
     repo = MagicMock()
