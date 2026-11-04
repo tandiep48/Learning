@@ -7,7 +7,7 @@ from flask_login import current_user
 # Loads and looks up UI translation strings from web_app/i18n/<lang>.json.
 _I18N_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'i18n')
 SUPPORTED_LANGUAGES = ('en', 'vi')
-DEFAULT_LANGUAGE = 'en'
+DEFAULT_LANGUAGE = 'vi'
 
 _translations = {}
 
