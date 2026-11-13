@@ -1,5 +1,6 @@
 Flask
 Flask-SocketIO
+simple-websocket
 flask-cors
 flask-login
 eventlet

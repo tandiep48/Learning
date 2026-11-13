@@ -1,4 +1,5 @@
-from flask_login import current_user
+from flask import request
+from flask_login import current_user, login_user
 from flask_socketio import emit, join_room as socket_join_room, leave_room as socket_leave_room
 
 from entity.competition.service import (
@@ -101,7 +102,50 @@ def maybe_finalize(room_code, session_id):
         emit_session_event(room_code, final_state)
 
 
+def authenticate_socket(auth):
+    """Resolve and bind the connecting user. Web clients arrive with a Flask-Login
+    session cookie, so `current_user` is already authenticated. Mobile clients have
+    no cookie: they pass their signed bearer token via the socket.io `auth` option
+    (or an `Authorization: Bearer` handshake header), which we verify and bind to
+    this socket's session with `login_user` — after which every handler's
+    `current_user` works unchanged. Returns True when authenticated."""
+    if authenticated():
+        return True
+
+    token = None
+    if isinstance(auth, dict):
+        token = auth.get("token")
+    if not token:
+        header = request.headers.get("Authorization", "")
+        if header.startswith("Bearer "):
+            token = header[len("Bearer "):].strip()
+    if not token:
+        return False
+
+    # Imported lazily to avoid a circular import at module load (app.py imports
+    # this module while wiring the socket).
+    from service.token_service import load_auth_token
+    from routes.auth import get_user_by_id
+
+    user_id = load_auth_token(token)
+    if user_id is None:
+        return False
+    user = get_user_by_id(user_id)
+    if not user:
+        return False
+    login_user(user)
+    return True
+
+
 def register_handlers():
+    @socketio.on("connect")
+    def handle_connect(auth=None):
+        """Reject anonymous handshakes so the room handlers can assume an
+        authenticated `current_user`."""
+        if not authenticate_socket(auth):
+            return False
+        return None
+
     @socketio.on("browse_open_rooms")
     def handle_browse_open_rooms(data=None):
         """The setup screen subscribes to the live open-room list and gets it at once."""
