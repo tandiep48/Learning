@@ -9,6 +9,7 @@ from entity.user.service import (
     username_or_email_exists,
     create_user,
 )
+from entity.role.service import DEFAULT_ROLE, get_permissions
 from service.i18n_service import t
 from service.gcs_service import avatar_url
 from service.token_service import generate_auth_token
@@ -19,7 +20,7 @@ DEFAULT_HANZI_SCRIPT = 'simplified'
 DEFAULT_UI_LANGUAGE = 'vi'
 
 class User(UserMixin):
-    def __init__(self, id, username, email, level, avatar_path=None, hanzi_font=None, hanzi_script=None, ui_language=None):
+    def __init__(self, id, username, email, level, avatar_path=None, hanzi_font=None, hanzi_script=None, ui_language=None, role=None):
         self.id = id
         self.username = username
         self.email = email
@@ -28,6 +29,7 @@ class User(UserMixin):
         self.hanzi_font = hanzi_font or DEFAULT_HANZI_FONT
         self.hanzi_script = hanzi_script or DEFAULT_HANZI_SCRIPT
         self.ui_language = ui_language or DEFAULT_UI_LANGUAGE
+        self.role = role or DEFAULT_ROLE
 
 def get_user_by_username(username):
     return get_user_auth_by_username(username)
@@ -39,12 +41,14 @@ def get_user_by_id(user_id):
     return User(
         data['id'], data['username'], data['email'], data['level'],
         data['avatar_path'], data['hanzi_font'], data['hanzi_script'], data['ui_language'],
+        data.get('role'),
     )
 
 def _build_user(data: dict) -> User:
     return User(
         data['id'], data['username'], data['email'], data['level'],
         data.get('avatar_path'), data.get('hanzi_font'), data.get('hanzi_script'), data.get('ui_language'),
+        data.get('role'),
     )
 
 def _serialize_user(user: User) -> dict:
@@ -58,6 +62,8 @@ def _serialize_user(user: User) -> dict:
         "hanzi_font": user.hanzi_font,
         "hanzi_script": user.hanzi_script,
         "ui_language": user.ui_language,
+        "role": user.role,
+        "permissions": sorted(get_permissions(user.role)),
     }
 
 def _ok(data, status_code: int = 200):

@@ -3,7 +3,7 @@ routes/vocab_crud_routes.py
 -----------------------------
 CRUD API Blueprint for the `vocabulary` table.
 
-All endpoints are publicly accessible (no @login_required).
+Every endpoint requires a role permission (see routes.auth.permissions).
 
 Prefix: /api/admin/vocab
 
@@ -27,8 +27,10 @@ from entity.vocabulary.service import (
 )
 from entity.vocabulary.schemas import VocabQuery
 from routes.validation import parse_body, RequestValidationError
+from routes.auth.permissions import guard_admin_blueprint
 
 vocab_crud_bp = Blueprint("vocab_crud", __name__, url_prefix="/api/admin/vocab")
+guard_admin_blueprint(vocab_crud_bp, "vocab")
 
 
 def _ok(data, status_code: int = 200):

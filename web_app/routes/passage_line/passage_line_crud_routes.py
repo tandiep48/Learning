@@ -8,7 +8,7 @@ LessonPassage is the aggregate root (see entity/passage/repository.py) —
 these endpoints let an admin add/update/delete one line at a time instead
 of resending the whole "lines" array via PUT /api/admin/passage/<id>.
 
-All endpoints are publicly accessible (no @login_required).
+Every endpoint requires a role permission (see routes.auth.permissions).
 
 Prefix: /api/admin/passage/<passage_id>/lines
 
@@ -42,12 +42,14 @@ from entity.passage.service import (
     update_passage_line,
     delete_passage_line,
 )
+from routes.auth.permissions import guard_admin_blueprint
 
 passage_line_crud_bp = Blueprint(
     "passage_line_crud",
     __name__,
     url_prefix="/api/admin/passage/<string:passage_id>/lines",
 )
+guard_admin_blueprint(passage_line_crud_bp, "passage")
 
 
 def _ok(data, status_code: int = 200):
