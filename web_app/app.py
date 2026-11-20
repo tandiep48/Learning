@@ -30,6 +30,7 @@ from routes.competition import competition_bp
 from routes.auth import auth_bp, get_user_by_id
 from service.token_service import load_auth_token
 from routes.user import user_bp, user_crud_bp
+from routes.support import support_bp, support_admin_bp
 from routes.passage import passage_crud_bp
 from routes.passage_vocab import passage_vocab_crud_bp
 from routes.passage_line import passage_line_crud_bp
@@ -105,6 +106,8 @@ app.register_blueprint(book_crud_bp)
 app.register_blueprint(chinese_stroke_info_bp)
 app.register_blueprint(grammar_rule_crud_bp)
 app.register_blueprint(grammar_context_crud_bp)
+app.register_blueprint(support_bp)
+app.register_blueprint(support_admin_bp)
 init_competition_socket(socketio)
 
 
