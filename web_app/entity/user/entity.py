@@ -9,12 +9,14 @@ Schema reference (schema.sql):
     email     VARCHAR(50)  NOT NULL UNIQUE
     password  VARCHAR(255) NOT NULL          -- werkzeug password hash
     level     SMALLINT     DEFAULT 1
+    role      VARCHAR(30)  NOT NULL DEFAULT 'student' REFERENCES roles(name)
 
 Note: `to_dict()` never exposes the password hash.
 """
 
-from sqlalchemy import Column, BigInteger, SmallInteger, String, Text
+from sqlalchemy import Column, BigInteger, ForeignKey, SmallInteger, String, Text
 from entity.database import Base
+from entity.role.entity import Role  # noqa: F401  (registers the roles table the FK points at)
 
 
 class User(Base):
@@ -30,6 +32,7 @@ class User(Base):
     hanzi_font = Column(Text, nullable=True)
     hanzi_script = Column(Text, nullable=True)
     ui_language = Column(Text, nullable=True)
+    role = Column(String(30), ForeignKey("roles.name"), nullable=False, default="student")
 
     def to_dict(self) -> dict:
         """Serialize to a plain dict for JSON responses (password excluded)."""
@@ -38,6 +41,7 @@ class User(Base):
             "username": self.username,
             "email": self.email,
             "level": self.level,
+            "role": self.role,
         }
 
     def to_auth_dict(self) -> dict:
@@ -52,6 +56,7 @@ class User(Base):
             "hanzi_font": self.hanzi_font,
             "hanzi_script": self.hanzi_script,
             "ui_language": self.ui_language,
+            "role": self.role,
         }
 
     def __repr__(self) -> str:

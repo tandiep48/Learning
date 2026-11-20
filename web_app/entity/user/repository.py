@@ -12,6 +12,7 @@ from typing import Optional
 from sqlalchemy import and_, cast, distinct, func, Integer
 from sqlalchemy.orm import Session
 
+from entity.role.service import DEFAULT_ROLE
 from entity.user.entity import User
 from entity.passage.entity import LessonPassage
 from entity.lesson_line.entity import LessonLine  # noqa: F401  (registers the mapper LessonPassage.lines references)
@@ -224,7 +225,7 @@ class UserRepository:
 
         Args:
             data: Dict with keys "username", "email", "password" (already
-                  hashed by the service layer) and optional "level".
+                  hashed by the service layer) and optional "level" and "role".
 
         Returns:
             The newly created User (after flush).
@@ -237,6 +238,7 @@ class UserRepository:
             email=data["email"],
             password=data["password"],
             level=data.get("level", 1),
+            role=data.get("role", DEFAULT_ROLE),
         )
         self.session.add(user)
         self.session.flush()  # flush to get the auto-generated id
@@ -266,7 +268,7 @@ class UserRepository:
 
         updatable_fields = {
             "username", "email", "password", "level",
-            "avatar_path", "hanzi_font", "hanzi_script", "ui_language",
+            "avatar_path", "hanzi_font", "hanzi_script", "ui_language", "role",
         }
         for field in updatable_fields:
             if field in data:

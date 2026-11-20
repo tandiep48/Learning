@@ -513,3 +513,49 @@ CREATE TABLE IF NOT EXISTS books (
 -- passages without a title (e.g. book part 2, or un-titled HSK parts).
 ALTER TABLE lesson_passages ADD COLUMN IF NOT EXISTS title_en VARCHAR(255);
 ALTER TABLE lesson_passages ADD COLUMN IF NOT EXISTS title_vn VARCHAR(255);
+
+-- ==========================================
+-- Role-based access control (manage / admin area)
+-- ==========================================
+-- roles:            who a user can be (default 'student').
+-- permissions:      what can be done, named '<resource>:<read|write|delete>', plus 'manage:access'.
+-- role_permissions: which permissions each role holds.
+
+CREATE TABLE IF NOT EXISTS roles (
+    name        VARCHAR(30) PRIMARY KEY,
+    description VARCHAR(200)
+);
+
+CREATE TABLE IF NOT EXISTS permissions (
+    name        VARCHAR(60) PRIMARY KEY,
+    description VARCHAR(200)
+);
+
+CREATE TABLE IF NOT EXISTS role_permissions (
+    role       VARCHAR(30) NOT NULL REFERENCES roles(name) ON DELETE CASCADE ON UPDATE CASCADE,
+    permission VARCHAR(60) NOT NULL REFERENCES permissions(name) ON DELETE CASCADE ON UPDATE CASCADE,
+    PRIMARY KEY (role, permission)
+);
+
+INSERT INTO roles (name, description) VALUES
+    ('student', 'Learner with no access to the manage area'),
+    ('admin',   'Full access to the manage area')
+ON CONFLICT (name) DO NOTHING;
+
+INSERT INTO permissions (name, description)
+SELECT r || ':' || a, 'Can ' || a || ' ' || r
+FROM unnest(ARRAY['vocab', 'passage', 'book', 'question', 'grammar_rule', 'grammar_context', 'user']) AS r
+CROSS JOIN unnest(ARRAY['read', 'write', 'delete']) AS a
+ON CONFLICT (name) DO NOTHING;
+
+INSERT INTO permissions (name, description) VALUES
+    ('manage:access', 'Can sign in to the manage area')
+ON CONFLICT (name) DO NOTHING;
+
+-- The admin role holds every permission (re-run safe: picks up permissions added later).
+INSERT INTO role_permissions (role, permission)
+SELECT 'admin', name FROM permissions
+ON CONFLICT DO NOTHING;
+
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS role VARCHAR(30) NOT NULL DEFAULT 'student' REFERENCES roles(name) ON UPDATE CASCADE;
