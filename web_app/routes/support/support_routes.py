@@ -24,6 +24,7 @@ from entity.support.service import (
     list_my_tickets,
 )
 from routes.validation import RequestValidationError, parse_body
+from service.rate_limit import limiter, SENSITIVE_WRITE_LIMIT
 
 support_bp = Blueprint("support", __name__, url_prefix="/api/support")
 
@@ -37,6 +38,7 @@ def _error(exc: SupportServiceError):
 
 
 @support_bp.route("/tickets", methods=["POST"])
+@limiter.limit(SENSITIVE_WRITE_LIMIT)
 @login_required
 def create_ticket_endpoint():
     try:
@@ -66,6 +68,7 @@ def get_ticket_endpoint(ticket_id: int):
 
 
 @support_bp.route("/tickets/<int:ticket_id>/messages", methods=["POST"])
+@limiter.limit(SENSITIVE_WRITE_LIMIT)
 @login_required
 def add_message_endpoint(ticket_id: int):
     try:

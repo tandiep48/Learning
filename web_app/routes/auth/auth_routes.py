@@ -13,6 +13,7 @@ from entity.role.service import DEFAULT_ROLE, get_permissions
 from service.i18n_service import t
 from service.gcs_service import avatar_url
 from service.token_service import generate_auth_token
+from service.rate_limit import limiter, AUTH_LIMIT
 
 auth_bp = Blueprint('auth', __name__)
 DEFAULT_HANZI_FONT = 'Noto Sans'
@@ -81,6 +82,7 @@ def _error(message: str, status_code: int):
 # ---------------------------------------------------------------------------
 
 @auth_bp.route('/api/auth/login', methods=['POST'])
+@limiter.limit(AUTH_LIMIT)
 def api_login():
     if current_user.is_authenticated:
         return _ok(_serialize_user(current_user))
@@ -101,6 +103,7 @@ def api_login():
 
 
 @auth_bp.route('/api/auth/token', methods=['POST'])
+@limiter.limit(AUTH_LIMIT)
 def api_token():
     """Mobile bearer-token login. Same credential check as `api_login`, but
     instead of starting a cookie session it returns a signed token the client
@@ -122,6 +125,7 @@ def api_token():
 
 
 @auth_bp.route('/api/auth/register', methods=['POST'])
+@limiter.limit(AUTH_LIMIT)
 def api_register():
     if current_user.is_authenticated:
         return _ok(_serialize_user(current_user))
