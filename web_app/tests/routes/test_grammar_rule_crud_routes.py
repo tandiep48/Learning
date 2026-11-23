@@ -12,7 +12,9 @@ from entity.grammar_rule.service import GrammarRuleServiceError
 
 
 @pytest.fixture
-def client():
+def client(monkeypatch):
+    # Permission checks have their own tests (test_admin_permissions.py).
+    monkeypatch.setattr("routes.auth.permissions.check_permission", lambda permission: None)
     app = Flask(__name__)
     app.register_blueprint(grammar_rule_crud_bp)
     app.testing = True

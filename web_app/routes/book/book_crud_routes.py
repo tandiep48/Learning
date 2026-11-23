@@ -3,7 +3,7 @@ routes/book_crud_routes.py
 ----------------------------
 CRUD API Blueprint for `books`.
 
-All endpoints are publicly accessible (no @login_required).
+Every endpoint requires a role permission (see routes.auth.permissions).
 
 Prefix: /api/admin/book
 
@@ -32,8 +32,10 @@ from entity.book.service import (
     update_book,
     delete_book,
 )
+from routes.auth.permissions import guard_admin_blueprint
 
 book_crud_bp = Blueprint("book_crud", __name__, url_prefix="/api/admin/book")
+guard_admin_blueprint(book_crud_bp, "book")
 
 
 def _ok(data, status_code: int = 200):

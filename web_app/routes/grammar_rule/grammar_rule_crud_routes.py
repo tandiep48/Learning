@@ -3,8 +3,7 @@ routes/grammar_rule_crud_routes.py
 -------------------------------------
 CRUD API Blueprint for the `grammar_rule` table.
 
-All endpoints are publicly accessible (no @login_required), matching the
-other /api/admin CRUD blueprints.
+Every endpoint requires a role permission (see routes.auth.permissions).
 
 Prefix: /api/admin/grammar_rule
 
@@ -30,8 +29,10 @@ from entity.grammar_rule.service import (
 )
 from entity.grammar_rule.schemas import GrammarRuleQuery
 from routes.validation import parse_body, RequestValidationError
+from routes.auth.permissions import guard_admin_blueprint
 
 grammar_rule_crud_bp = Blueprint("grammar_rule_crud", __name__, url_prefix="/api/admin/grammar_rule")
+guard_admin_blueprint(grammar_rule_crud_bp, "grammar_rule")
 
 
 def _ok(data, status_code: int = 200):

@@ -3,8 +3,7 @@ routes/question_crud_routes.py
 --------------------------------
 CRUD API Blueprint for the `question_bank` table (admin management).
 
-All endpoints are publicly accessible (no @login_required), matching the
-other /api/admin CRUD blueprints.
+Every endpoint requires a role permission (see routes.auth.permissions).
 
 Prefix: /api/admin/question
 
@@ -30,8 +29,10 @@ from entity.question.service import (
 )
 from entity.question.schemas import QuestionQuery
 from routes.validation import parse_body, RequestValidationError
+from routes.auth.permissions import guard_admin_blueprint
 
 question_crud_bp = Blueprint("question_crud", __name__, url_prefix="/api/admin/question")
+guard_admin_blueprint(question_crud_bp, "question")
 
 
 def _ok(data, status_code: int = 200):

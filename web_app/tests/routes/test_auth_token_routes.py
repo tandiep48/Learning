@@ -49,6 +49,7 @@ def client(monkeypatch):
     )
     # avatar_url otherwise reaches gcs config; serialization only needs a value.
     monkeypatch.setattr(auth_routes, "avatar_url", lambda path: None)
+    monkeypatch.setattr(auth_routes, "get_permissions", lambda role: frozenset())
 
     app = Flask(__name__)
     app.secret_key = SECRET

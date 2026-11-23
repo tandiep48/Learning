@@ -44,6 +44,7 @@ from entity.user_saved_word.service import (
 )
 from routes.validation import parse_body, RequestValidationError
 from routes.vocab.query_schemas import VocabSearchQuery, VocabReviewQuery, VocabTableQuery
+from service.rate_limit import limiter, HEAVY_LIMIT
 
 
 vocab_bp = Blueprint('vocab', __name__, url_prefix='/api/vocab')
@@ -552,6 +553,7 @@ def _vocab_review_response(page: int, page_size: int) -> dict:
 
 
 @vocab_bp.route('/review/query', methods=['POST'])
+@limiter.limit(HEAVY_LIMIT)
 @login_required
 def get_review_list_query():
     """Combined prioritized review list (critical > unsure > incomplete) as
@@ -693,6 +695,7 @@ def submit_progress_batch():
 
 
 @vocab_bp.route('/speaking/score', methods=['POST'])
+@limiter.limit(HEAVY_LIMIT)
 @login_required
 def score_speaking_attempt():
     word = (request.form.get("word") or "").strip()

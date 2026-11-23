@@ -21,6 +21,7 @@ from werkzeug.security import generate_password_hash
 from entity.database import SessionLocal
 from entity.user.repository import UserRepository
 from entity.record.service import get_learned_words
+from entity.role.service import list_roles
 
 
 # ---------------------------------------------------------------------------
@@ -93,6 +94,15 @@ def _validate_password(password) -> str:
     return password
 
 
+def _validate_role(role) -> str:
+    if not isinstance(role, str) or not role.strip():
+        raise UserServiceError("Field 'role' must be a non-empty string.")
+    role = role.strip()
+    if role not in list_roles():
+        raise UserServiceError(f"Role '{role}' does not exist.")
+    return role
+
+
 # ---------------------------------------------------------------------------
 # Service functions
 # ---------------------------------------------------------------------------
@@ -160,7 +170,7 @@ def create_user(data: dict) -> dict:
     Create a new user.
 
     Required fields: "username", "email", "password"
-    Optional fields: "level" (defaults to 1)
+    Optional fields: "level" (defaults to 1), "role" (defaults to 'student')
 
     Raises:
         UserServiceError(400): validation failure.
@@ -170,6 +180,7 @@ def create_user(data: dict) -> dict:
     email = _validate_email(data.get("email", ""))
     password = _validate_password(data.get("password"))
     level = _validate_level(data["level"]) if "level" in data else 1
+    role = _validate_role(data["role"]) if "role" in data else None
 
     session = SessionLocal()
     try:
@@ -184,6 +195,7 @@ def create_user(data: dict) -> dict:
             "email": email,
             "password": generate_password_hash(password),
             "level": level,
+            **({"role": role} if role else {}),
         })
         session.commit()
         return user.to_dict()
@@ -204,7 +216,7 @@ def update_user(user_id: int, data: dict) -> dict:
     """
     Update an existing user. Only provided fields are changed.
 
-    Allowed fields: "username", "email", "password", "level"
+    Allowed fields: "username", "email", "password", "level", "role"
     A provided "password" is re-hashed; it is never stored in plain text.
 
     Raises:
@@ -224,6 +236,8 @@ def update_user(user_id: int, data: dict) -> dict:
         payload["level"] = _validate_level(data["level"])
     if "password" in data:
         payload["password"] = generate_password_hash(_validate_password(data.get("password")))
+    if "role" in data:
+        payload["role"] = _validate_role(data["role"])
 
     if not payload:
         raise UserServiceError("No updatable fields provided.")

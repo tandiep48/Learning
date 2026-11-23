@@ -37,6 +37,7 @@ from service.gcs_service import (
     GCSServiceError, avatar_url, delete_object, upload_avatar as upload_avatar_to_gcs,
 )
 from routes.validation import parse_body, RequestValidationError
+from service.rate_limit import limiter, SENSITIVE_WRITE_LIMIT
 from routes.user.query_schemas import LearnedVocabQuery
 
 
@@ -376,6 +377,7 @@ def time_learned_last_3_days():
 
 
 @user_bp.route('/api/user/change-password', methods=['POST'])
+@limiter.limit(SENSITIVE_WRITE_LIMIT)
 @login_required
 def change_password():
     data = request.get_json(silent=True) or {}
@@ -396,6 +398,7 @@ def change_password():
 
 
 @user_bp.route('/api/user/avatar', methods=['POST'])
+@limiter.limit(SENSITIVE_WRITE_LIMIT)
 @login_required
 def upload_avatar():
     try:

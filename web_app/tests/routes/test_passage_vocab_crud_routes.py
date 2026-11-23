@@ -12,7 +12,9 @@ from entity.passage_vocabulary.service import PassageVocabularyServiceError
 
 
 @pytest.fixture
-def client():
+def client(monkeypatch):
+    # Permission checks have their own tests (test_admin_permissions.py).
+    monkeypatch.setattr("routes.auth.permissions.check_permission", lambda permission: None)
     app = Flask(__name__)
     app.register_blueprint(passage_vocab_crud_bp)
     app.testing = True

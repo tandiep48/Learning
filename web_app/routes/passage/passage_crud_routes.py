@@ -3,7 +3,7 @@ routes/passage_crud_routes.py
 -------------------------------
 CRUD API Blueprint for `lesson_passages` + `lesson_lines`.
 
-All endpoints are publicly accessible (no @login_required).
+Every endpoint requires a role permission (see routes.auth.permissions).
 
 Prefix: /api/admin/passage
 
@@ -45,8 +45,10 @@ from entity.passage.service import (
 )
 from entity.passage.schemas import PassageQuery
 from routes.validation import parse_body, RequestValidationError
+from routes.auth.permissions import guard_admin_blueprint
 
 passage_crud_bp = Blueprint("passage_crud", __name__, url_prefix="/api/admin/passage")
+guard_admin_blueprint(passage_crud_bp, "passage")
 
 
 def _ok(data, status_code: int = 200):

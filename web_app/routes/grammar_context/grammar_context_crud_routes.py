@@ -3,8 +3,7 @@ routes/grammar_context_crud_routes.py
 ----------------------------------------
 CRUD API Blueprint for the `grammar_context` table.
 
-All endpoints are publicly accessible (no @login_required), matching the
-other /api/admin CRUD blueprints.
+Every endpoint requires a role permission (see routes.auth.permissions).
 
 Prefix: /api/admin/grammar_context
 
@@ -30,10 +29,12 @@ from entity.grammar_context.service import (
 )
 from entity.grammar_context.schemas import GrammarContextQuery
 from routes.validation import parse_body, RequestValidationError
+from routes.auth.permissions import guard_admin_blueprint
 
 grammar_context_crud_bp = Blueprint(
     "grammar_context_crud", __name__, url_prefix="/api/admin/grammar_context"
 )
+guard_admin_blueprint(grammar_context_crud_bp, "grammar_context")
 
 
 def _ok(data, status_code: int = 200):

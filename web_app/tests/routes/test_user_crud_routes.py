@@ -12,7 +12,9 @@ from entity.user.service import UserServiceError
 
 
 @pytest.fixture
-def client():
+def client(monkeypatch):
+    # Permission checks have their own tests (test_admin_permissions.py).
+    monkeypatch.setattr("routes.auth.permissions.check_permission", lambda permission: None)
     app = Flask(__name__)
     app.register_blueprint(user_crud_bp)
     app.testing = True
@@ -173,3 +175,11 @@ def test_delete_user_endpoint_not_found(client):
 
     assert resp.status_code == 404
     assert resp.get_json()["success"] is False
+
+
+def test_list_roles_endpoint(client):
+    with patch("routes.user.user_crud_routes.list_roles", return_value=["admin", "student"]):
+        resp = client.get("/api/admin/user/roles")
+
+    assert resp.status_code == 200
+    assert resp.get_json()["data"] == ["admin", "student"]

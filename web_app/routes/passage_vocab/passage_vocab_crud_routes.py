@@ -4,7 +4,7 @@ routes/passage_vocab_crud_routes.py
 CRUD API Blueprint for the `passage_vocabulary` join table — the vocabulary
 words that appear inside a given passage.
 
-All endpoints are publicly accessible (no @login_required).
+Every endpoint requires a role permission (see routes.auth.permissions).
 
 Prefix: /api/admin/passage/<passage_id>/vocabulary
 
@@ -22,12 +22,14 @@ from entity.passage_vocabulary.service import (
     add_passage_vocab,
     remove_passage_vocab,
 )
+from routes.auth.permissions import guard_admin_blueprint
 
 passage_vocab_crud_bp = Blueprint(
     "passage_vocab_crud",
     __name__,
     url_prefix="/api/admin/passage/<string:passage_id>/vocabulary",
 )
+guard_admin_blueprint(passage_vocab_crud_bp, "passage")
 
 
 def _ok(data, status_code: int = 200):

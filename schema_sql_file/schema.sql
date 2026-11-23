@@ -513,3 +513,98 @@ CREATE TABLE IF NOT EXISTS books (
 -- passages without a title (e.g. book part 2, or un-titled HSK parts).
 ALTER TABLE lesson_passages ADD COLUMN IF NOT EXISTS title_en VARCHAR(255);
 ALTER TABLE lesson_passages ADD COLUMN IF NOT EXISTS title_vn VARCHAR(255);
+
+-- ==========================================
+-- Role-based access control (manage / admin area)
+-- ==========================================
+-- roles:            who a user can be (default 'student').
+-- permissions:      what can be done, named '<resource>:<read|write|delete>', plus 'manage:access'.
+-- role_permissions: which permissions each role holds.
+
+CREATE TABLE IF NOT EXISTS roles (
+    name        VARCHAR(30) PRIMARY KEY,
+    description VARCHAR(200)
+);
+
+CREATE TABLE IF NOT EXISTS permissions (
+    name        VARCHAR(60) PRIMARY KEY,
+    description VARCHAR(200)
+);
+
+CREATE TABLE IF NOT EXISTS role_permissions (
+    role       VARCHAR(30) NOT NULL REFERENCES roles(name) ON DELETE CASCADE ON UPDATE CASCADE,
+    permission VARCHAR(60) NOT NULL REFERENCES permissions(name) ON DELETE CASCADE ON UPDATE CASCADE,
+    PRIMARY KEY (role, permission)
+);
+
+INSERT INTO roles (name, description) VALUES
+    ('student', 'Learner with no access to the manage area'),
+    ('admin',   'Full access to the manage area')
+ON CONFLICT (name) DO NOTHING;
+
+INSERT INTO permissions (name, description)
+SELECT r || ':' || a, 'Can ' || a || ' ' || r
+FROM unnest(ARRAY['vocab', 'passage', 'book', 'question', 'grammar_rule', 'grammar_context', 'user']) AS r
+CROSS JOIN unnest(ARRAY['read', 'write', 'delete']) AS a
+ON CONFLICT (name) DO NOTHING;
+
+INSERT INTO permissions (name, description) VALUES
+    ('manage:access', 'Can sign in to the manage area')
+ON CONFLICT (name) DO NOTHING;
+
+-- The admin role holds every permission (re-run safe: picks up permissions added later).
+INSERT INTO role_permissions (role, permission)
+SELECT 'admin', name FROM permissions
+ON CONFLICT DO NOTHING;
+
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS role VARCHAR(30) NOT NULL DEFAULT 'student' REFERENCES roles(name) ON UPDATE CASCADE;
+
+-- ==========================================
+-- Support tickets (students <-> editors/admins)
+-- ==========================================
+-- A ticket is a thread a student opens about a specific item (item_type/item_id,
+-- both optional for a general question); staff reply and resolve it from /manage.
+
+CREATE TABLE IF NOT EXISTS support_tickets (
+    id          BIGSERIAL PRIMARY KEY,
+    user_id     BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    subject     VARCHAR(200) NOT NULL,
+    item_type   VARCHAR(30),
+    item_id     VARCHAR(100),
+    page_url    VARCHAR(500),
+    status      VARCHAR(20) NOT NULL DEFAULT 'open',
+    assignee_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_user ON support_tickets(user_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_status ON support_tickets(status, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS support_messages (
+    id         BIGSERIAL PRIMARY KEY,
+    ticket_id  BIGINT NOT NULL REFERENCES support_tickets(id) ON DELETE CASCADE,
+    sender_id  BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    is_staff   BOOLEAN NOT NULL DEFAULT FALSE,
+    body       TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_support_messages_ticket ON support_messages(ticket_id, id);
+
+INSERT INTO permissions (name, description) VALUES
+    ('support:read',  'Can read support tickets'),
+    ('support:write', 'Can reply to and update support tickets')
+ON CONFLICT (name) DO NOTHING;
+
+INSERT INTO roles (name, description) VALUES
+    ('editor', 'Edits content and answers support tickets, without user management')
+ON CONFLICT (name) DO NOTHING;
+
+-- admin holds every permission (re-run safe); editor holds all but user:*.
+INSERT INTO role_permissions (role, permission)
+SELECT 'admin', name FROM permissions
+ON CONFLICT DO NOTHING;
+
+INSERT INTO role_permissions (role, permission)
+SELECT 'editor', name FROM permissions WHERE name NOT LIKE 'user:%'
+ON CONFLICT DO NOTHING;

@@ -3,12 +3,13 @@ routes/user_crud_routes.py
 ----------------------------
 CRUD API Blueprint for the `users` table (admin management).
 
-All endpoints are publicly accessible (no @login_required), matching the
-other /api/admin CRUD blueprints. Password hashes are never returned.
+Every endpoint requires the matching user:read|write|delete permission (see
+routes.auth.permissions). Password hashes are never returned.
 
 Prefix: /api/admin/user
 
 Endpoints:
+    GET    /api/admin/user/roles            → role names (for the role dropdown)
     POST   /api/admin/user/query            → list (paginated, validated body, optional search)
     GET    /api/admin/user/<int:user_id>    → get single
     POST   /api/admin/user                  → create
@@ -17,6 +18,7 @@ Endpoints:
 """
 
 from flask import Blueprint, request, jsonify
+from flask_login import current_user
 
 from entity.user.service import (
     UserServiceError,
@@ -26,10 +28,13 @@ from entity.user.service import (
     update_user,
     delete_user,
 )
+from entity.role.service import list_roles
 from entity.user.schemas import UserQuery
 from routes.validation import parse_body, RequestValidationError
+from routes.auth.permissions import guard_admin_blueprint
 
 user_crud_bp = Blueprint("user_crud", __name__, url_prefix="/api/admin/user")
+guard_admin_blueprint(user_crud_bp, "user")
 
 
 def _ok(data, status_code: int = 200):
@@ -59,6 +64,15 @@ def query_users_endpoint():
 
     result = list_users(page=params.page, page_size=params.page_size, search=params.search)
     return _ok(result, 200)
+
+
+# ---------------------------------------------------------------------------
+# GET /api/admin/user/roles
+# ---------------------------------------------------------------------------
+@user_crud_bp.route("/roles", methods=["GET"])
+def list_roles_endpoint():
+    """List the role names a user can be assigned."""
+    return _ok(list_roles(), 200)
 
 
 # ---------------------------------------------------------------------------
@@ -93,7 +107,7 @@ def create_user_endpoint():
 
 # ---------------------------------------------------------------------------
 # PUT /api/admin/user/<user_id>
-# Body (JSON): any subset of { username, email, password, level }
+# Body (JSON): any subset of { username, email, password, level, role }
 # ---------------------------------------------------------------------------
 @user_crud_bp.route("/<int:user_id>", methods=["PUT"])
 def update_user_endpoint(user_id: int):
@@ -101,6 +115,12 @@ def update_user_endpoint(user_id: int):
     data = request.get_json(silent=True)
     if not data or not isinstance(data, dict):
         return _error("Request body must be a JSON object.", 400)
+    if (
+        "role" in data
+        and str(current_user.get_id()) == str(user_id)
+        and data["role"] != current_user.role
+    ):
+        return _error("You cannot change your own role.", 400)
     try:
         result = update_user(user_id, data)
         return _ok(result, 200)
