@@ -34,6 +34,8 @@ class PassageRepository:
         page: int = 1,
         page_size: int = 20,
         hsk_level: Optional[str] = None,
+        book_code: Optional[str] = None,
+        q: Optional[str] = None,
     ) -> tuple[list[LessonPassage], int]:
         """
         Return a paginated list of passages (without lines) and total count.
@@ -42,6 +44,8 @@ class PassageRepository:
             page:      1-indexed page number.
             page_size: Items per page (max 100).
             hsk_level: Optional filter (e.g. "HSK1").
+            book_code: Optional filter (e.g. "AML").
+            q:         Optional case-insensitive part of a passage_id.
 
         Returns:
             (items, total_count)
@@ -49,6 +53,13 @@ class PassageRepository:
         query = self.session.query(LessonPassage)
         if hsk_level:
             query = query.filter(LessonPassage.hsk_level == hsk_level)
+        if book_code:
+            query = query.filter(LessonPassage.book_code == book_code)
+        if q:
+            # autoescape keeps the underscores in ids from acting as wildcards.
+            query = query.filter(
+                func.lower(LessonPassage.passage_id).contains(q.lower(), autoescape=True)
+            )
 
         total = query.count()
         items = (

@@ -65,7 +65,8 @@ def _handle_service_error(exc: PassageServiceError):
 
 # ---------------------------------------------------------------------------
 # POST /api/admin/passage/query
-# Body (JSON): { "page": 1, "page_size": 20, "hsk_level": "HSK1" }  (all optional)
+# Body (JSON): { "page": 1, "page_size": 20, "hsk_level": "HSK1",
+#                "book_code": "AML", "q": "1_2" }  (all optional)
 # Replaces the former GET list — the filter now travels in a validated body.
 # ---------------------------------------------------------------------------
 @passage_crud_bp.route("/query", methods=["POST"])
@@ -76,7 +77,7 @@ def query_passages_endpoint():
     except RequestValidationError as exc:
         return exc.response()
 
-    result = list_passages(page=params.page, page_size=params.page_size, hsk_level=params.hsk_level)
+    result = list_passages(**params.model_dump())
     return _ok(result, 200)
 
 

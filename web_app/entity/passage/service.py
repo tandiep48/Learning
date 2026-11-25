@@ -156,6 +156,8 @@ def list_passages(
     page: int = 1,
     page_size: int = 20,
     hsk_level: str | None = None,
+    book_code: str | None = None,
+    q: str | None = None,
 ) -> dict:
     """
     Return a paginated list of passages (without lines).
@@ -175,7 +177,9 @@ def list_passages(
     session = SessionLocal()
     try:
         repo = PassageRepository(session)
-        items, total = repo.get_all(page=page, page_size=page_size, hsk_level=hsk_level or None)
+        items, total = repo.get_all(
+            page=page, page_size=page_size, hsk_level=hsk_level, book_code=book_code, q=q
+        )
         total_pages = max(1, (total + page_size - 1) // page_size)
         return {
             "items": [p.to_dict(include_lines=False) for p in items],

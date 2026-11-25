@@ -137,3 +137,27 @@ def test_update_passage_titles_leaves_lines_alone(db):
 def test_update_passage_rejects_a_long_title(db):
     with pytest.raises(PassageServiceError):
         db.update_passage("H1_1_1", {"title_en": "x" * 256})
+
+
+# ---------------------------------------------------------------------------
+# finding passages
+# ---------------------------------------------------------------------------
+
+def test_search_matches_part_of_the_id_literally_in_any_case(db):
+    for passage_id in ("H1_10_1", "H1x1_1", "AML_1_1"):
+        db.create_passage({"passage_id": passage_id})
+
+    assert [p["passage_id"] for p in db.list_passages(q="h1_1")["items"]] == ["H1_10_1", "H1_1_1"]
+
+
+def test_book_code_filters_the_list(db):
+    db.create_passage({"passage_id": "AML_1_1"})
+    session = db.SessionLocal()
+    session.get(LessonPassage, "AML_1_1").book_code = "AML"
+    session.commit()
+    db.SessionLocal.remove()
+
+    result = db.list_passages(book_code="AML")
+
+    assert result["total"] == 1
+    assert result["items"][0]["passage_id"] == "AML_1_1"
