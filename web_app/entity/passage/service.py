@@ -19,7 +19,7 @@ from sqlalchemy.exc import IntegrityError
 
 from entity.database import SessionLocal
 from entity.passage.repository import PassageRepository
-from entity.validation import optional_str, optional_int, optional_list, optional_one_of, require_int
+from entity.validation import optional_str, optional_int, optional_list, optional_one_of, require_int, require_one_of
 
 
 # ---------------------------------------------------------------------------
@@ -91,6 +91,8 @@ def _validate_line(line: dict, index: int) -> dict:
         clean["line_id"] = optional_int(PassageServiceError, f"lines[{index}].line_id", clean["line_id"])
     if "tokens" in clean:
         clean["tokens"] = optional_list(PassageServiceError, f"lines[{index}].tokens", clean["tokens"])
+    if "flag" in clean:
+        clean["flag"] = require_one_of(PassageServiceError, f"lines[{index}].flag", clean["flag"], {0, 1})
     return clean
 
 

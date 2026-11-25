@@ -128,6 +128,7 @@ class PassageRepository:
             translation_en=line_data.get("translation_en"),
             translation_vi=line_data.get("translation_vi"),
             tokens=line_data.get("tokens"),
+            flag=line_data.get("flag"),
         )
 
     # ------------------------------------------------------------------
@@ -258,7 +259,7 @@ class PassageRepository:
 
         updatable_fields = {
             "line_id", "speaker", "content", "pinyin",
-            "audio_key", "translation_en", "translation_vi", "tokens",
+            "audio_key", "translation_en", "translation_vi", "tokens", "flag",
         }
         for field in updatable_fields:
             if field in data:
