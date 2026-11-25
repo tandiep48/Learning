@@ -104,3 +104,20 @@ def test_older_mismatched_line_can_still_edit_other_fields(db):
     )
 
     assert line["translation_en"] == "Good"
+
+
+# ---------------------------------------------------------------------------
+# duplicate line numbers
+# ---------------------------------------------------------------------------
+
+def test_replacing_lines_with_a_repeated_number_is_a_conflict(db):
+    with pytest.raises(PassageServiceError) as caught:
+        db.update_passage("H1_1_1", {"lines": [{"line_id": 1}, {"line_id": 1}]})
+
+    assert caught.value.status_code == 409
+    assert len(db.get_passage("H1_1_1")["lines"]) == 2
+
+
+def test_creating_a_passage_with_a_repeated_number_is_a_conflict(db):
+    with pytest.raises(PassageServiceError, match="more than once"):
+        db.create_passage({"passage_id": "H1_1_2", "lines": [{"line_id": 3}, {"line_id": 3}]})

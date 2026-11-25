@@ -97,6 +97,22 @@ def _validate_line(line: dict, index: int) -> dict:
     return clean
 
 
+def _validate_lines(lines) -> list[dict]:
+    """Validate a whole "lines" array, including that no line_id repeats."""
+    if not isinstance(lines, list):
+        raise PassageServiceError("Field 'lines' must be an array.")
+    clean = [_validate_line(line, i) for i, line in enumerate(lines)]
+    seen: set[int] = set()
+    for line in clean:
+        line_id = line.get("line_id")
+        if line_id is None:
+            continue
+        if line_id in seen:
+            raise PassageServiceError(f"Line {line_id} appears more than once.", 409)
+        seen.add(line_id)
+    return clean
+
+
 def _spoken_text(text: str) -> str:
     """`text` without punctuation, spaces or invisible characters."""
     return "".join(c for c in text if unicodedata.category(c)[0] not in "PZC")
@@ -206,10 +222,7 @@ def create_passage(data: dict) -> dict:
     payload = _validate_hsk_level(data)
     payload["passage_id"] = pid
 
-    lines = data.get("lines", [])
-    if not isinstance(lines, list):
-        raise PassageServiceError("Field 'lines' must be an array.")
-    payload["lines"] = [_validate_line(line, i) for i, line in enumerate(lines)]
+    payload["lines"] = _validate_lines(data.get("lines", []))
 
     session = SessionLocal()
     try:
@@ -251,11 +264,8 @@ def update_passage(passage_id: str, data: dict) -> dict:
 
     payload = _validate_hsk_level(data)
 
-    lines = data.get("lines")
-    if lines is not None:
-        if not isinstance(lines, list):
-            raise PassageServiceError("Field 'lines' must be an array.")
-        payload["lines"] = [_validate_line(line, i) for i, line in enumerate(lines)]
+    if data.get("lines") is not None:
+        payload["lines"] = _validate_lines(data["lines"])
 
     if not payload:
         raise PassageServiceError("No updatable fields provided.")
