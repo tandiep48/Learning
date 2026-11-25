@@ -177,3 +177,22 @@ def test_delete_passage_line_endpoint_not_found(client):
 
     assert resp.status_code == 404
     assert resp.get_json()["success"] is False
+
+
+# ---------------------------------------------------------------------------
+# PUT /api/admin/passage/<passage_id>/lines/order
+# ---------------------------------------------------------------------------
+
+def test_reorder_passage_lines_endpoint(client):
+    with patch("routes.passage_line.passage_line_crud_routes.reorder_passage_lines",
+               return_value=[LINE_DICT]) as mock_reorder:
+        resp = client.put("/api/admin/passage/H1_1_1/lines/order", json={"line_ids": [2, 1]})
+
+    assert resp.status_code == 200
+    mock_reorder.assert_called_once_with("H1_1_1", [2, 1])
+
+
+def test_reorder_passage_lines_endpoint_requires_a_body(client):
+    resp = client.put("/api/admin/passage/H1_1_1/lines/order")
+
+    assert resp.status_code == 400

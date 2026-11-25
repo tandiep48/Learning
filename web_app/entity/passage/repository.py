@@ -283,6 +283,20 @@ class PassageRepository:
         self.session.flush()
         return line
 
+    def renumber_lines(self, lines: list[LessonLine], numbers: list[int]) -> None:
+        """
+        Give lines[i] the line_id numbers[i]. Rows first move to unused numbers
+        so the unique (passage_id, line_id) index never sees a duplicate.
+        """
+        moves = [(line, number) for line, number in zip(lines, numbers) if line.line_id != number]
+        spare = min([0, *numbers])
+        for offset, (line, _) in enumerate(moves, start=1):
+            line.line_id = spare - offset
+        self.session.flush()
+        for line, number in moves:
+            line.line_id = number
+        self.session.flush()
+
     def delete_line(self, passage_id: str, line_id: int) -> bool:
         """
         Delete a single line from a passage.

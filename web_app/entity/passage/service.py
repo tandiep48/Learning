@@ -533,6 +533,46 @@ def update_passage_line(passage_id: str, line_id: int, data: dict) -> dict:
         SessionLocal.remove()
 
 
+def reorder_passage_lines(passage_id: str, line_ids) -> list[dict]:
+    """
+    Reorder a passage's lines. `line_ids` is every current line_id in the wanted
+    order; the same numbers are handed out again in that order. Each line keeps
+    its audio_key and other fields. lesson_records history is not rewritten.
+
+    Raises:
+        PassageServiceError(400): if line_ids is not a list of integers.
+        PassageServiceError(404): if the passage does not exist.
+        PassageServiceError(409): if line_ids is not exactly the current lines.
+    """
+    if not isinstance(line_ids, list) or not line_ids:
+        raise PassageServiceError("Field 'line_ids' must be a non-empty array.")
+    wanted = [require_int(PassageServiceError, "line_ids", value) for value in line_ids]
+
+    session = SessionLocal()
+    try:
+        repo = PassageRepository(session)
+        passage = repo.get_by_id(passage_id)
+        if not passage:
+            raise PassageServiceError(f"Passage '{passage_id}' not found.", 404)
+        by_number = {line.line_id: line for line in passage.lines}
+        if None in by_number:
+            raise PassageServiceError("A line without a line_id cannot be reordered.", 409)
+        if sorted(wanted) != sorted(by_number):
+            raise PassageServiceError(
+                "The lines of this passage have changed. Reload and try again.", 409
+            )
+
+        ordered = [by_number[number] for number in wanted]
+        repo.renumber_lines(ordered, sorted(wanted))
+        session.commit()
+        return [line.to_dict() for line in ordered]
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        SessionLocal.remove()
+
+
 def delete_passage_line(passage_id: str, line_id: int) -> dict:
     """
     Delete a single line from a passage.

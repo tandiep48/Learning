@@ -7,7 +7,7 @@ import pytest
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -29,6 +29,10 @@ def db():
     engine = create_engine("sqlite://", poolclass=StaticPool)
     LessonPassage.__table__.create(engine)
     LessonLine.__table__.create(engine)
+    with engine.begin() as connection:  # the production unique index
+        connection.execute(text(
+            "CREATE UNIQUE INDEX idx_lesson_lines_passage_line ON lesson_lines(passage_id, line_id)"
+        ))
     with patch.object(service, "SessionLocal", scoped_session(sessionmaker(bind=engine))):
         service.create_passage({
             "passage_id": "H1_1_1",
@@ -161,3 +165,41 @@ def test_book_code_filters_the_list(db):
 
     assert result["total"] == 1
     assert result["items"][0]["passage_id"] == "AML_1_1"
+
+
+# ---------------------------------------------------------------------------
+# reordering
+# ---------------------------------------------------------------------------
+
+def test_reorder_swaps_numbers_and_keeps_audio_with_the_text(db):
+    db.reorder_passage_lines("H1_1_1", [2, 1])
+
+    lines = db.get_passage("H1_1_1")["lines"]
+    assert [(l["line_id"], l["content"], l["audio_key"], l["flag"]) for l in lines] == [
+        (1, "再见", "H1_1_1_2", 1),
+        (2, "你好！", "H1_1_1_1", 0),
+    ]
+
+
+def test_reorder_reuses_numbers_with_gaps(db):
+    db.add_passage_line("H1_1_1", {"line_id": 7, "content": "好"})
+
+    result = db.reorder_passage_lines("H1_1_1", [7, 1, 2])
+
+    assert [(l["line_id"], l["content"]) for l in result] == [(1, "好"), (2, "你好！"), (7, "再见")]
+
+
+@pytest.mark.parametrize("line_ids", [[1], [1, 1], [1, 2, 3]])
+def test_reorder_needs_exactly_the_current_lines(db, line_ids):
+    with pytest.raises(PassageServiceError) as caught:
+        db.reorder_passage_lines("H1_1_1", line_ids)
+
+    assert caught.value.status_code == 409
+
+
+@pytest.mark.parametrize("line_ids", [None, [], ["a"]])
+def test_reorder_rejects_a_bad_list(db, line_ids):
+    with pytest.raises(PassageServiceError) as caught:
+        db.reorder_passage_lines("H1_1_1", line_ids)
+
+    assert caught.value.status_code == 400
