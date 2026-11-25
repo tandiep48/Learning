@@ -14,6 +14,7 @@ Responsibilities:
 from __future__ import annotations
 
 import re
+import unicodedata
 
 from sqlalchemy.exc import IntegrityError
 
@@ -94,6 +95,25 @@ def _validate_line(line: dict, index: int) -> dict:
     if "flag" in clean:
         clean["flag"] = require_one_of(PassageServiceError, f"lines[{index}].flag", clean["flag"], {0, 1})
     return clean
+
+
+def _spoken_text(text: str) -> str:
+    """`text` without punctuation, spaces or invisible characters."""
+    return "".join(c for c in text if unicodedata.category(c)[0] not in "PZC")
+
+
+def _require_matching_tokens(content: str | None, tokens: list | None) -> None:
+    """
+    Non-empty tokens must spell out the content (punctuation aside), because the
+    lesson summary and reorder tasks show the tokens instead of the content.
+    Empty tokens are allowed: both fall back to the content or skip the line.
+    """
+    if not tokens:
+        return
+    if not all(isinstance(token, str) and token for token in tokens):
+        raise PassageServiceError("Field 'tokens' must contain only non-empty strings.")
+    if _spoken_text("".join(tokens)) != _spoken_text(content or ""):
+        raise PassageServiceError("Field 'tokens' does not match the line content.")
 
 
 def _validate_line_id(line_id) -> int:
@@ -417,6 +437,7 @@ def add_passage_line(passage_id: str, data: dict) -> dict:
     clean = _validate_line(data, 0)
     line_id = _validate_line_id(data.get("line_id"))
     clean["line_id"] = line_id
+    _require_matching_tokens(clean.get("content"), clean.get("tokens"))
 
     session = SessionLocal()
     try:
@@ -464,6 +485,16 @@ def update_passage_line(passage_id: str, line_id: int, data: dict) -> dict:
     session = SessionLocal()
     try:
         repo = PassageRepository(session)
+        current = repo.get_line(passage_id, line_id)
+        # Only a change to either side is checked, so older mismatched rows can
+        # still have their other fields edited.
+        if current and any(
+            field in clean and clean[field] != getattr(current, field)
+            for field in ("content", "tokens")
+        ):
+            _require_matching_tokens(
+                clean.get("content", current.content), clean.get("tokens", current.tokens)
+            )
         line = repo.update_line(passage_id, line_id, clean)
         if not line:
             raise PassageServiceError(f"Line {line_id} not found in passage '{passage_id}'.", 404)

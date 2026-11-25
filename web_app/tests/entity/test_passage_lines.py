@@ -62,3 +62,45 @@ def test_update_line_changes_flag(db):
 def test_update_line_rejects_unknown_flag(db, flag):
     with pytest.raises(PassageServiceError):
         db.update_passage_line("H1_1_1", 1, {"flag": flag})
+
+
+# ---------------------------------------------------------------------------
+# tokens must match content
+# ---------------------------------------------------------------------------
+
+def test_content_change_with_stale_tokens_is_rejected(db):
+    with pytest.raises(PassageServiceError, match="does not match"):
+        db.update_passage_line("H1_1_1", 1, {"content": "您好！"})
+
+    assert db.get_passage_line("H1_1_1", 1)["content"] == "你好！"
+
+
+def test_tokens_may_omit_punctuation(db):
+    line = db.update_passage_line("H1_1_1", 1, {"content": "您好！", "tokens": ["您", "好"]})
+
+    assert line["tokens"] == ["您", "好"]
+
+
+def test_empty_tokens_are_allowed(db):
+    assert db.update_passage_line("H1_1_1", 1, {"content": "您好", "tokens": []})["tokens"] == []
+
+
+@pytest.mark.parametrize("tokens", [["再"], ["再见", ""], [1]])
+def test_bad_tokens_are_rejected(db, tokens):
+    with pytest.raises(PassageServiceError):
+        db.update_passage_line("H1_1_1", 2, {"tokens": tokens})
+
+
+def test_add_line_rejects_mismatched_tokens(db):
+    with pytest.raises(PassageServiceError):
+        db.add_passage_line("H1_1_1", {"line_id": 3, "content": "好", "tokens": ["坏"]})
+
+
+def test_older_mismatched_line_can_still_edit_other_fields(db):
+    db.update_passage("H1_1_1", {"lines": [{"line_id": 1, "content": "好", "tokens": ["坏"]}]})
+
+    line = db.update_passage_line(
+        "H1_1_1", 1, {"content": "好", "tokens": ["坏"], "translation_en": "Good"}
+    )
+
+    assert line["translation_en"] == "Good"
