@@ -54,10 +54,14 @@ def _validate_passage_id(passage_id) -> str:
     return pid
 
 
-def _validate_hsk_level(data: dict) -> dict:
+def _validate_passage_fields(data: dict) -> dict:
+    """The editable passage columns present in `data`, validated."""
     payload: dict = {}
     if "hsk_level" in data:
         payload["hsk_level"] = optional_one_of(PassageServiceError, "hsk_level", data["hsk_level"], HSK_LEVELS)
+    for field in ("title_en", "title_vn"):
+        if field in data:
+            payload[field] = optional_str(PassageServiceError, field, data[field], 255)
     return payload
 
 
@@ -209,7 +213,7 @@ def create_passage(data: dict) -> dict:
     Create a new passage (and optionally its lines).
 
     Required fields: "passage_id"
-    Optional fields: "hsk_level", "lines" (list of line objects)
+    Optional fields: "hsk_level", "title_en", "title_vn", "lines" (list of line objects)
 
     Line object fields (all optional):
         line_id, speaker, content, pinyin, audio_key,
@@ -219,7 +223,7 @@ def create_passage(data: dict) -> dict:
         PassageServiceError(400): validation failure or duplicate.
     """
     pid = _validate_passage_id(data.get("passage_id", ""))
-    payload = _validate_hsk_level(data)
+    payload = _validate_passage_fields(data)
     payload["passage_id"] = pid
 
     payload["lines"] = _validate_lines(data.get("lines", []))
@@ -252,7 +256,7 @@ def update_passage(passage_id: str, data: dict) -> dict:
     """
     Update an existing passage.
 
-    Allowed fields: "hsk_level", "lines"
+    Allowed fields: "hsk_level", "title_en", "title_vn", "lines"
     If "lines" is included, all existing lines are replaced.
 
     Raises:
@@ -262,7 +266,7 @@ def update_passage(passage_id: str, data: dict) -> dict:
     if not data:
         raise PassageServiceError("No fields provided to update.")
 
-    payload = _validate_hsk_level(data)
+    payload = _validate_passage_fields(data)
 
     if data.get("lines") is not None:
         payload["lines"] = _validate_lines(data["lines"])

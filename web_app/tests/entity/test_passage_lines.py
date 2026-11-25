@@ -121,3 +121,19 @@ def test_replacing_lines_with_a_repeated_number_is_a_conflict(db):
 def test_creating_a_passage_with_a_repeated_number_is_a_conflict(db):
     with pytest.raises(PassageServiceError, match="more than once"):
         db.create_passage({"passage_id": "H1_1_2", "lines": [{"line_id": 3}, {"line_id": 3}]})
+
+
+# ---------------------------------------------------------------------------
+# passage titles
+# ---------------------------------------------------------------------------
+
+def test_update_passage_titles_leaves_lines_alone(db):
+    result = db.update_passage("H1_1_1", {"title_en": " Greetings ", "title_vn": ""})
+
+    assert (result["title_en"], result["title_vn"]) == ("Greetings", None)
+    assert len(result["lines"]) == 2
+
+
+def test_update_passage_rejects_a_long_title(db):
+    with pytest.raises(PassageServiceError):
+        db.update_passage("H1_1_1", {"title_en": "x" * 256})

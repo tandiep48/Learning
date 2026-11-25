@@ -102,7 +102,7 @@ def create_passage_endpoint():
     Create a new passage.
 
     Required: passage_id
-    Optional: hsk_level, lines (array of line objects)
+    Optional: hsk_level, title_en, title_vn, lines (array of line objects)
     """
     data = request.get_json(silent=True)
     if not data or not isinstance(data, dict):
@@ -122,7 +122,7 @@ def update_passage_endpoint(passage_id: str):
     """
     Update an existing passage.
 
-    Allowed fields: hsk_level, lines
+    Allowed fields: hsk_level, title_en, title_vn, lines
     If "lines" is provided, all existing lines are replaced with the new set.
     """
     data = request.get_json(silent=True)

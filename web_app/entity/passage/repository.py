@@ -143,6 +143,7 @@ class PassageRepository:
             data: Dict with keys:
                   - "passage_id"  (required, str)
                   - "hsk_level"   (optional, str)
+                  - "title_en", "title_vn" (optional, str)
                   - "lines"       (optional, list of line dicts)
 
         Returns:
@@ -154,6 +155,8 @@ class PassageRepository:
         passage = LessonPassage(
             passage_id=data["passage_id"],
             hsk_level=data.get("hsk_level"),
+            title_en=data.get("title_en"),
+            title_vn=data.get("title_vn"),
         )
         self.session.add(passage)
         self.session.flush()  # ensure passage_id is persisted before lines
@@ -186,8 +189,9 @@ class PassageRepository:
         if not passage:
             return None
 
-        if "hsk_level" in data:
-            passage.hsk_level = data["hsk_level"]
+        for field in ("hsk_level", "title_en", "title_vn"):
+            if field in data:
+                setattr(passage, field, data[field])
 
         if "lines" in data:
             # Replace lines: delete existing then re-insert
