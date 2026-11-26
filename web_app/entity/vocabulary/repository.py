@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 from entity.vocabulary.entity import Vocabulary
+from entity.vocabulary.pinyin_search import fold_pinyin, folded_pinyin_column
 
 
 class VocabRepository:
@@ -38,8 +39,8 @@ class VocabRepository:
             page:      1-indexed page number.
             page_size: Number of items per page (max 100).
             hsk_level: Optional filter (e.g. "HSK1").
-            search:    Optional case-insensitive match on the `cn` (Chinese word)
-                       or `pinyin` columns.
+            search:    Optional match on the `cn` (Chinese word) column, or on
+                       `pinyin` ignoring case, tone marks and spacing.
 
         Returns:
             (items, total_count)
@@ -48,10 +49,11 @@ class VocabRepository:
         if hsk_level:
             query = query.filter(Vocabulary.hsk_level == hsk_level)
         if search:
-            pattern = f"%{search}%"
-            query = query.filter(
-                Vocabulary.cn.ilike(pattern) | Vocabulary.pinyin.ilike(pattern)
-            )
+            matches = Vocabulary.cn.ilike(f"%{search}%")
+            pinyin = fold_pinyin(search)
+            if pinyin:
+                matches |= folded_pinyin_column(Vocabulary.pinyin).like(f"%{pinyin}%")
+            query = query.filter(matches)
 
         total = query.count()
         items = (

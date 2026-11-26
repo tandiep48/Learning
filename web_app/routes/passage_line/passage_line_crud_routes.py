@@ -17,6 +17,7 @@ Endpoints:
     GET    /api/admin/passage/<passage_id>/lines/<int:line_id>    → get single line
     POST   /api/admin/passage/<passage_id>/lines                  → add a line
     PUT    /api/admin/passage/<passage_id>/lines/<int:line_id>    → update a line
+    PUT    /api/admin/passage/<passage_id>/lines/order            → reorder all lines
     DELETE /api/admin/passage/<passage_id>/lines/<int:line_id>    → delete a line
 
 Example POST body:
@@ -41,6 +42,7 @@ from entity.passage.service import (
     add_passage_line,
     update_passage_line,
     delete_passage_line,
+    reorder_passage_lines,
 )
 from routes.auth.permissions import guard_admin_blueprint
 
@@ -119,6 +121,23 @@ def update_passage_line_endpoint(passage_id: str, line_id: int):
         return _error("Request body must be a JSON object.", 400)
     try:
         result = update_passage_line(passage_id, line_id, data)
+        return _ok(result, 200)
+    except PassageServiceError as exc:
+        return _handle_service_error(exc)
+
+
+# ---------------------------------------------------------------------------
+# PUT /api/admin/passage/<passage_id>/lines/order
+# Body (JSON): { "line_ids": [2, 1, 3] }  every current line_id, in the new order
+# ---------------------------------------------------------------------------
+@passage_line_crud_bp.route("/order", methods=["PUT"])
+def reorder_passage_lines_endpoint(passage_id: str):
+    """Reorder a passage's lines and return them with their new line_ids."""
+    data = request.get_json(silent=True)
+    if not data or not isinstance(data, dict):
+        return _error("Request body must be a JSON object.", 400)
+    try:
+        result = reorder_passage_lines(passage_id, data.get("line_ids"))
         return _ok(result, 200)
     except PassageServiceError as exc:
         return _handle_service_error(exc)

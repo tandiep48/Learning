@@ -34,6 +34,8 @@ class PassageRepository:
         page: int = 1,
         page_size: int = 20,
         hsk_level: Optional[str] = None,
+        book_code: Optional[str] = None,
+        q: Optional[str] = None,
     ) -> tuple[list[LessonPassage], int]:
         """
         Return a paginated list of passages (without lines) and total count.
@@ -42,6 +44,8 @@ class PassageRepository:
             page:      1-indexed page number.
             page_size: Items per page (max 100).
             hsk_level: Optional filter (e.g. "HSK1").
+            book_code: Optional filter (e.g. "AML").
+            q:         Optional case-insensitive part of a passage_id.
 
         Returns:
             (items, total_count)
@@ -49,6 +53,13 @@ class PassageRepository:
         query = self.session.query(LessonPassage)
         if hsk_level:
             query = query.filter(LessonPassage.hsk_level == hsk_level)
+        if book_code:
+            query = query.filter(LessonPassage.book_code == book_code)
+        if q:
+            # autoescape keeps the underscores in ids from acting as wildcards.
+            query = query.filter(
+                func.lower(LessonPassage.passage_id).contains(q.lower(), autoescape=True)
+            )
 
         total = query.count()
         items = (
@@ -128,6 +139,7 @@ class PassageRepository:
             translation_en=line_data.get("translation_en"),
             translation_vi=line_data.get("translation_vi"),
             tokens=line_data.get("tokens"),
+            flag=line_data.get("flag"),
         )
 
     # ------------------------------------------------------------------
@@ -142,6 +154,7 @@ class PassageRepository:
             data: Dict with keys:
                   - "passage_id"  (required, str)
                   - "hsk_level"   (optional, str)
+                  - "title_en", "title_vn" (optional, str)
                   - "lines"       (optional, list of line dicts)
 
         Returns:
@@ -153,6 +166,8 @@ class PassageRepository:
         passage = LessonPassage(
             passage_id=data["passage_id"],
             hsk_level=data.get("hsk_level"),
+            title_en=data.get("title_en"),
+            title_vn=data.get("title_vn"),
         )
         self.session.add(passage)
         self.session.flush()  # ensure passage_id is persisted before lines
@@ -185,8 +200,9 @@ class PassageRepository:
         if not passage:
             return None
 
-        if "hsk_level" in data:
-            passage.hsk_level = data["hsk_level"]
+        for field in ("hsk_level", "title_en", "title_vn"):
+            if field in data:
+                setattr(passage, field, data[field])
 
         if "lines" in data:
             # Replace lines: delete existing then re-insert
@@ -258,7 +274,7 @@ class PassageRepository:
 
         updatable_fields = {
             "line_id", "speaker", "content", "pinyin",
-            "audio_key", "translation_en", "translation_vi", "tokens",
+            "audio_key", "translation_en", "translation_vi", "tokens", "flag",
         }
         for field in updatable_fields:
             if field in data:
@@ -266,6 +282,20 @@ class PassageRepository:
 
         self.session.flush()
         return line
+
+    def renumber_lines(self, lines: list[LessonLine], numbers: list[int]) -> None:
+        """
+        Give lines[i] the line_id numbers[i]. Rows first move to unused numbers
+        so the unique (passage_id, line_id) index never sees a duplicate.
+        """
+        moves = [(line, number) for line, number in zip(lines, numbers) if line.line_id != number]
+        spare = min([0, *numbers])
+        for offset, (line, _) in enumerate(moves, start=1):
+            line.line_id = spare - offset
+        self.session.flush()
+        for line, number in moves:
+            line.line_id = number
+        self.session.flush()
 
     def delete_line(self, passage_id: str, line_id: int) -> bool:
         """

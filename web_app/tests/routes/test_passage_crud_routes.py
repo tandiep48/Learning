@@ -44,7 +44,7 @@ def test_query_passages_endpoint(client):
     body = resp.get_json()
     assert body["success"] is True
     assert body["data"]["items"][0]["passage_id"] == "H1_1_1"
-    mock_list.assert_called_once_with(page=1, page_size=20, hsk_level="HSK1")
+    mock_list.assert_called_once_with(page=1, page_size=20, hsk_level="HSK1", book_code=None, q=None)
 
 
 def test_query_passages_endpoint_applies_defaults_on_empty_body(client):
@@ -54,7 +54,7 @@ def test_query_passages_endpoint_applies_defaults_on_empty_body(client):
         resp = client.post("/api/admin/passage/query", json={})
 
     assert resp.status_code == 200
-    mock_list.assert_called_once_with(page=1, page_size=20, hsk_level=None)
+    mock_list.assert_called_once_with(page=1, page_size=20, hsk_level=None, book_code=None, q=None)
 
 
 def test_query_passages_endpoint_rejects_bad_input(client):

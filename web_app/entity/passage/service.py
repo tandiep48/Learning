@@ -14,12 +14,13 @@ Responsibilities:
 from __future__ import annotations
 
 import re
+import unicodedata
 
 from sqlalchemy.exc import IntegrityError
 
 from entity.database import SessionLocal
 from entity.passage.repository import PassageRepository
-from entity.validation import optional_str, optional_int, optional_list, optional_one_of, require_int
+from entity.validation import optional_str, optional_int, optional_list, optional_one_of, require_int, require_one_of
 
 
 # ---------------------------------------------------------------------------
@@ -53,10 +54,14 @@ def _validate_passage_id(passage_id) -> str:
     return pid
 
 
-def _validate_hsk_level(data: dict) -> dict:
+def _validate_passage_fields(data: dict) -> dict:
+    """The editable passage columns present in `data`, validated."""
     payload: dict = {}
     if "hsk_level" in data:
         payload["hsk_level"] = optional_one_of(PassageServiceError, "hsk_level", data["hsk_level"], HSK_LEVELS)
+    for field in ("title_en", "title_vn"):
+        if field in data:
+            payload[field] = optional_str(PassageServiceError, field, data[field], 255)
     return payload
 
 
@@ -91,7 +96,44 @@ def _validate_line(line: dict, index: int) -> dict:
         clean["line_id"] = optional_int(PassageServiceError, f"lines[{index}].line_id", clean["line_id"])
     if "tokens" in clean:
         clean["tokens"] = optional_list(PassageServiceError, f"lines[{index}].tokens", clean["tokens"])
+    if "flag" in clean:
+        clean["flag"] = require_one_of(PassageServiceError, f"lines[{index}].flag", clean["flag"], {0, 1})
     return clean
+
+
+def _validate_lines(lines) -> list[dict]:
+    """Validate a whole "lines" array, including that no line_id repeats."""
+    if not isinstance(lines, list):
+        raise PassageServiceError("Field 'lines' must be an array.")
+    clean = [_validate_line(line, i) for i, line in enumerate(lines)]
+    seen: set[int] = set()
+    for line in clean:
+        line_id = line.get("line_id")
+        if line_id is None:
+            continue
+        if line_id in seen:
+            raise PassageServiceError(f"Line {line_id} appears more than once.", 409)
+        seen.add(line_id)
+    return clean
+
+
+def _spoken_text(text: str) -> str:
+    """`text` without punctuation, spaces or invisible characters."""
+    return "".join(c for c in text if unicodedata.category(c)[0] not in "PZC")
+
+
+def _require_matching_tokens(content: str | None, tokens: list | None) -> None:
+    """
+    Non-empty tokens must spell out the content (punctuation aside), because the
+    lesson summary and reorder tasks show the tokens instead of the content.
+    Empty tokens are allowed: both fall back to the content or skip the line.
+    """
+    if not tokens:
+        return
+    if not all(isinstance(token, str) and token for token in tokens):
+        raise PassageServiceError("Field 'tokens' must contain only non-empty strings.")
+    if _spoken_text("".join(tokens)) != _spoken_text(content or ""):
+        raise PassageServiceError("Field 'tokens' does not match the line content.")
 
 
 def _validate_line_id(line_id) -> int:
@@ -114,6 +156,8 @@ def list_passages(
     page: int = 1,
     page_size: int = 20,
     hsk_level: str | None = None,
+    book_code: str | None = None,
+    q: str | None = None,
 ) -> dict:
     """
     Return a paginated list of passages (without lines).
@@ -133,7 +177,9 @@ def list_passages(
     session = SessionLocal()
     try:
         repo = PassageRepository(session)
-        items, total = repo.get_all(page=page, page_size=page_size, hsk_level=hsk_level or None)
+        items, total = repo.get_all(
+            page=page, page_size=page_size, hsk_level=hsk_level, book_code=book_code, q=q
+        )
         total_pages = max(1, (total + page_size - 1) // page_size)
         return {
             "items": [p.to_dict(include_lines=False) for p in items],
@@ -171,7 +217,7 @@ def create_passage(data: dict) -> dict:
     Create a new passage (and optionally its lines).
 
     Required fields: "passage_id"
-    Optional fields: "hsk_level", "lines" (list of line objects)
+    Optional fields: "hsk_level", "title_en", "title_vn", "lines" (list of line objects)
 
     Line object fields (all optional):
         line_id, speaker, content, pinyin, audio_key,
@@ -181,13 +227,10 @@ def create_passage(data: dict) -> dict:
         PassageServiceError(400): validation failure or duplicate.
     """
     pid = _validate_passage_id(data.get("passage_id", ""))
-    payload = _validate_hsk_level(data)
+    payload = _validate_passage_fields(data)
     payload["passage_id"] = pid
 
-    lines = data.get("lines", [])
-    if not isinstance(lines, list):
-        raise PassageServiceError("Field 'lines' must be an array.")
-    payload["lines"] = [_validate_line(line, i) for i, line in enumerate(lines)]
+    payload["lines"] = _validate_lines(data.get("lines", []))
 
     session = SessionLocal()
     try:
@@ -217,7 +260,7 @@ def update_passage(passage_id: str, data: dict) -> dict:
     """
     Update an existing passage.
 
-    Allowed fields: "hsk_level", "lines"
+    Allowed fields: "hsk_level", "title_en", "title_vn", "lines"
     If "lines" is included, all existing lines are replaced.
 
     Raises:
@@ -227,13 +270,10 @@ def update_passage(passage_id: str, data: dict) -> dict:
     if not data:
         raise PassageServiceError("No fields provided to update.")
 
-    payload = _validate_hsk_level(data)
+    payload = _validate_passage_fields(data)
 
-    lines = data.get("lines")
-    if lines is not None:
-        if not isinstance(lines, list):
-            raise PassageServiceError("Field 'lines' must be an array.")
-        payload["lines"] = [_validate_line(line, i) for i, line in enumerate(lines)]
+    if data.get("lines") is not None:
+        payload["lines"] = _validate_lines(data["lines"])
 
     if not payload:
         raise PassageServiceError("No updatable fields provided.")
@@ -415,6 +455,7 @@ def add_passage_line(passage_id: str, data: dict) -> dict:
     clean = _validate_line(data, 0)
     line_id = _validate_line_id(data.get("line_id"))
     clean["line_id"] = line_id
+    _require_matching_tokens(clean.get("content"), clean.get("tokens"))
 
     session = SessionLocal()
     try:
@@ -462,6 +503,16 @@ def update_passage_line(passage_id: str, line_id: int, data: dict) -> dict:
     session = SessionLocal()
     try:
         repo = PassageRepository(session)
+        current = repo.get_line(passage_id, line_id)
+        # Only a change to either side is checked, so older mismatched rows can
+        # still have their other fields edited.
+        if current and any(
+            field in clean and clean[field] != getattr(current, field)
+            for field in ("content", "tokens")
+        ):
+            _require_matching_tokens(
+                clean.get("content", current.content), clean.get("tokens", current.tokens)
+            )
         line = repo.update_line(passage_id, line_id, clean)
         if not line:
             raise PassageServiceError(f"Line {line_id} not found in passage '{passage_id}'.", 404)
@@ -475,6 +526,46 @@ def update_passage_line(passage_id: str, line_id: int, data: dict) -> dict:
         raise PassageServiceError(
             f"Line {data.get('line_id')} already exists in passage '{passage_id}'.", 409
         )
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        SessionLocal.remove()
+
+
+def reorder_passage_lines(passage_id: str, line_ids) -> list[dict]:
+    """
+    Reorder a passage's lines. `line_ids` is every current line_id in the wanted
+    order; the same numbers are handed out again in that order. Each line keeps
+    its audio_key and other fields. lesson_records history is not rewritten.
+
+    Raises:
+        PassageServiceError(400): if line_ids is not a list of integers.
+        PassageServiceError(404): if the passage does not exist.
+        PassageServiceError(409): if line_ids is not exactly the current lines.
+    """
+    if not isinstance(line_ids, list) or not line_ids:
+        raise PassageServiceError("Field 'line_ids' must be a non-empty array.")
+    wanted = [require_int(PassageServiceError, "line_ids", value) for value in line_ids]
+
+    session = SessionLocal()
+    try:
+        repo = PassageRepository(session)
+        passage = repo.get_by_id(passage_id)
+        if not passage:
+            raise PassageServiceError(f"Passage '{passage_id}' not found.", 404)
+        by_number = {line.line_id: line for line in passage.lines}
+        if None in by_number:
+            raise PassageServiceError("A line without a line_id cannot be reordered.", 409)
+        if sorted(wanted) != sorted(by_number):
+            raise PassageServiceError(
+                "The lines of this passage have changed. Reload and try again.", 409
+            )
+
+        ordered = [by_number[number] for number in wanted]
+        repo.renumber_lines(ordered, sorted(wanted))
+        session.commit()
+        return [line.to_dict() for line in ordered]
     except Exception:
         session.rollback()
         raise

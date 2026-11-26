@@ -45,6 +45,8 @@ class LessonPassage(Base):
             "passage_id": self.passage_id,
             "hsk_level": self.hsk_level,
             "book_code": self.book_code,
+            "title_en": self.title_en,
+            "title_vn": self.title_vn,
         }
         if include_lines:
             data["lines"] = [line.to_dict() for line in self.lines]

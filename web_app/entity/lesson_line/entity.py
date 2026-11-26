@@ -14,6 +14,7 @@ Schema (created by migrate_lessons.py):
     translation_en  TEXT
     translation_vi  TEXT
     tokens          JSONB                  -- tokenised word list
+    flag            SMALLINT               -- 1 (or NULL) = quizzed, 0 = review only
 """
 
 from sqlalchemy import Column, Integer, SmallInteger, String, Text, ForeignKey
@@ -57,6 +58,7 @@ class LessonLine(Base):
             "translation_en": self.translation_en,
             "translation_vi": self.translation_vi,
             "tokens": self.tokens if self.tokens is not None else [],
+            "flag": 1 if self.flag is None else self.flag,
         }
 
     def __repr__(self) -> str:
